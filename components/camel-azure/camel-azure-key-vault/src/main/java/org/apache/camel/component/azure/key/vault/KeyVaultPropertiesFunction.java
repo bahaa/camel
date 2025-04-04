@@ -88,6 +88,15 @@ public class KeyVaultPropertiesFunction extends ServiceSupport implements Proper
     private SecretClient client;
     private final Set<String> secrets = new HashSet<>();
 
+    public KeyVaultPropertiesFunction() {
+        super();
+    }
+
+    public KeyVaultPropertiesFunction(SecretClient client) {
+        super();
+        this.client = client;
+    }
+
     @Override
     protected void doStart() throws Exception {
         super.doStart();
@@ -158,9 +167,9 @@ public class KeyVaultPropertiesFunction extends ServiceSupport implements Proper
         String returnValue = null;
         String defaultValue = null;
         String version = null;
-        if (remainder.contains("/")) {
-            key = StringHelper.before(remainder, "/");
-            subkey = StringHelper.after(remainder, "/");
+        if (remainder.contains("#")) {
+            key = StringHelper.before(remainder, "#");
+            subkey = StringHelper.after(remainder, "#");
             defaultValue = StringHelper.after(subkey, ":");
             if (ObjectHelper.isNotEmpty(defaultValue)) {
                 if (defaultValue.contains("@")) {
@@ -193,7 +202,8 @@ public class KeyVaultPropertiesFunction extends ServiceSupport implements Proper
             try {
                 returnValue = getSecretFromSource(key, subkey, defaultValue, version);
             } catch (JsonProcessingException e) {
-                throw new RuntimeCamelException("Something went wrong while recovering " + key + " from vault");
+                throw new RuntimeCamelException(
+                        "Error getting secret from vault using key: " + key + " due to: " + e.getMessage(), e);
             }
         }
 

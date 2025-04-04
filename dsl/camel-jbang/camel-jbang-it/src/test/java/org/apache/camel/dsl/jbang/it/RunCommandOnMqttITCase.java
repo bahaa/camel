@@ -51,11 +51,21 @@ public class RunCommandOnMqttITCase extends JBangTestSupport {
         final String pid = executeBackground(String.format("run --property=brokerUrl=%s %s/%s",
                 "tcp://" + ipAddr + ":1883",
                 mountPoint(), TestResources.MQQT_CONSUMER.getName()));
-        checkLogContains("Started mqtt5-source");
+        checkLogContains("Started route1 (kamelet://mqtt5-source)");
         final String payloadFile = "payload.json";
         newFileInDataFolder(payloadFile, "{\"value\": 21}");
         sendCmd(String.format("%s/%s", mountPoint(), payloadFile), pid);
         checkLogContains("The temperature is 21");
+    }
+
+    @Test
+    public void testStub() throws IOException {
+        copyResourceInDataFolder(TestResources.STUB_ROUTE);
+        final String ipAddr = getIpAddr(service.getContainer());
+        final String pid = executeBackground(String.format("run %s/%s --stub=jms",
+                mountPoint(), TestResources.STUB_ROUTE.getName()));
+        checkCommandOutputs("cmd send --body=\"Hello camel from stubbed jms\"" + pid, "jms://inbox : Sent (success)");
+        checkCommandOutputs("cmd stub --browse", "Hello camel from stubbed jms");
     }
 
     private String getIpAddr(final GenericContainer container) {

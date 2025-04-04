@@ -16,6 +16,7 @@
  */
 package org.apache.camel.impl.engine;
 
+import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -106,8 +107,8 @@ public class CamelPostProcessorHelper implements CamelContextAware {
         Endpoint endpoint = getEndpointInjection(bean, endpointUri, endpointProperty, injectionPointName, true);
         if (endpoint != null) {
             boolean multipleConsumer = false;
-            if (endpoint instanceof MultipleConsumersSupport) {
-                multipleConsumer = ((MultipleConsumersSupport) endpoint).isMultipleConsumersSupported();
+            if (endpoint instanceof MultipleConsumersSupport consumersSupport) {
+                multipleConsumer = consumersSupport.isMultipleConsumersSupported();
             }
             try {
                 SubscribeMethodProcessor processor = getConsumerProcessor(endpoint);
@@ -170,8 +171,8 @@ public class CamelPostProcessorHelper implements CamelContextAware {
             answer = doGetEndpointInjection(uri, injectionPointName, mandatory);
         }
         // it may be a delegate endpoint via ref component
-        if (answer instanceof DelegateEndpoint) {
-            answer = ((DelegateEndpoint) answer).getEndpoint();
+        if (answer instanceof DelegateEndpoint delegateEndpoint) {
+            answer = delegateEndpoint.getEndpoint();
         }
         return answer;
     }
@@ -211,8 +212,8 @@ public class CamelPostProcessorHelper implements CamelContextAware {
             }
             if (value == null) {
                 return null;
-            } else if (value instanceof Endpoint) {
-                return (Endpoint) value;
+            } else if (value instanceof Endpoint endpoint) {
+                return endpoint;
             } else {
                 String uriOrRef = getCamelContext().getTypeConverter().mandatoryConvertTo(String.class, value);
                 return getCamelContext().getEndpoint(uriOrRef);
@@ -277,8 +278,7 @@ public class CamelPostProcessorHelper implements CamelContextAware {
     }
 
     public Object getInjectionPropertyValue(
-            Class<?> type, Type genericType, String propertyName, String propertyDefaultValue, String separator,
-            String injectionPointName, Object bean, String beanName) {
+            Class<?> type, Type genericType, String propertyName, String propertyDefaultValue, String separator) {
         try {
             String key;
             String prefix = PropertiesComponent.PREFIX_TOKEN;
@@ -321,59 +321,77 @@ public class CamelPostProcessorHelper implements CamelContextAware {
             CamelContext camelContext, Class<?> type, Type genericType,
             String value, String separator)
             throws NoTypeConversionAvailableException {
-        String[] arr = value.split(separator);
-
         if (type.isArray()) {
-            Object[] values = new Object[arr.length];
-            Class<?> ct = type.getComponentType();
-            for (int i = 0; i < arr.length; i++) {
-                String v = arr[i].trim(); // trim values as user may have whitespace noise
-                values[i] = camelContext.getTypeConverter().mandatoryConvertTo(ct, v);
-            }
-            return values;
+            return convertArrayUsingSeparator(camelContext, type, value, separator);
         } else if (Collection.class.isAssignableFrom(type)) {
-            Class<?> ct = Object.class;
-            if (genericType != null) {
-                String name = StringHelper.between(genericType.getTypeName(), "<", ">");
-                if (name != null) {
-                    Class<?> clazz = camelContext.getClassResolver().resolveClass(name.trim());
-                    if (clazz != null) {
-                        ct = clazz;
-                    }
-                }
-            }
-            boolean set = type.isAssignableFrom(Set.class);
-            Collection values = set ? new LinkedHashSet() : new ArrayList();
-            for (int i = 0; i < arr.length; i++) {
-                String v = arr[i].trim(); // trim values as user may have whitespace noise
-                values.add(camelContext.getTypeConverter().mandatoryConvertTo(ct, v));
-            }
-            return values;
+            return convertCollectionUsingSeparator(camelContext, type, genericType, value, separator);
         } else if (Map.class.isAssignableFrom(type)) {
-            Class<?> ct = Object.class;
-            if (genericType != null) {
-                String name = StringHelper.between(genericType.getTypeName(), "<", ">");
-                name = StringHelper.afterLast(name, ",");
-                if (name != null) {
-                    Class<?> clazz = camelContext.getClassResolver().resolveClass(name.trim());
-                    if (clazz != null) {
-                        ct = clazz;
-                    }
-                }
-            }
-            Map<String, Object> values = new LinkedHashMap<>();
-            for (int i = 0; i < arr.length; i++) {
-                String v = arr[i].trim(); // trim values as user may have whitespace noise
-                if (v.contains("=")) {
-                    String k = StringHelper.before(v, "=").trim();
-                    String e = StringHelper.after(v, "=").trim();
-                    values.put(k, camelContext.getTypeConverter().mandatoryConvertTo(ct, e));
-                }
-            }
-            return values;
+            return convertMapUsingSeparator(camelContext, genericType, value, separator);
+        } else {
+            return null;
         }
+    }
 
-        return null;
+    private static Map<String, Object> convertMapUsingSeparator(
+            CamelContext camelContext, Type genericType, String value, String separator)
+            throws NoTypeConversionAvailableException {
+        Class<?> ct = Object.class;
+        if (genericType != null) {
+            String name = StringHelper.between(genericType.getTypeName(), "<", ">");
+            name = StringHelper.afterLast(name, ",");
+            if (name != null) {
+                Class<?> clazz = camelContext.getClassResolver().resolveClass(name.trim());
+                if (clazz != null) {
+                    ct = clazz;
+                }
+            }
+        }
+        Map<String, Object> values = new LinkedHashMap<>();
+        String[] arr = value.split(separator);
+        for (String s : arr) {
+            String v = s.trim(); // trim values as user may have whitespace noise
+            if (v.contains("=")) {
+                String k = StringHelper.before(v, "=").trim();
+                String e = StringHelper.after(v, "=").trim();
+                values.put(k, camelContext.getTypeConverter().mandatoryConvertTo(ct, e));
+            }
+        }
+        return values;
+    }
+
+    private static Collection<?> convertCollectionUsingSeparator(
+            CamelContext camelContext, Class<?> type, Type genericType, String value, String separator)
+            throws NoTypeConversionAvailableException {
+        Class<?> ct = Object.class;
+        if (genericType != null) {
+            String name = StringHelper.between(genericType.getTypeName(), "<", ">");
+            if (name != null) {
+                Class<?> clazz = camelContext.getClassResolver().resolveClass(name.trim());
+                if (clazz != null) {
+                    ct = clazz;
+                }
+            }
+        }
+        boolean set = type.isAssignableFrom(Set.class);
+        Collection<Object> values = set ? new LinkedHashSet<>() : new ArrayList<>();
+        String[] arr = value.split(separator);
+        for (String s : arr) {
+            String v = s.trim(); // trim values as user may have whitespace noise
+            values.add(camelContext.getTypeConverter().mandatoryConvertTo(ct, v));
+        }
+        return values;
+    }
+
+    private static Object[] convertArrayUsingSeparator(CamelContext camelContext, Class<?> type, String value, String separator)
+            throws NoTypeConversionAvailableException {
+        String[] arr = value.split(separator);
+        Object[] values = new Object[arr.length];
+        Class<?> ct = type.getComponentType();
+        for (int i = 0; i < arr.length; i++) {
+            String v = arr[i].trim(); // trim values as user may have whitespace noise
+            values[i] = camelContext.getTypeConverter().mandatoryConvertTo(ct, v);
+        }
+        return values;
     }
 
     public Object getInjectionBeanValue(Class<?> type, String name) {
@@ -503,11 +521,11 @@ public class CamelPostProcessorHelper implements CamelContextAware {
 
     public Object getInjectionBeanMethodValue(
             CamelContext context,
-            Method method, Object bean, String beanName) {
+            Method method, Object bean, String beanName, String annotationName) {
         Class<?> returnType = method.getReturnType();
         if (returnType == Void.TYPE) {
             throw new IllegalArgumentException(
-                    "@BindToRegistry on class: " + method.getDeclaringClass()
+                    "@" + annotationName + " on class: " + method.getDeclaringClass()
                                                + " method: " + method.getName() + " with void return type is not allowed");
         }
 
@@ -546,8 +564,7 @@ public class CamelPostProcessorHelper implements CamelContextAware {
                     if (ann.annotationType() == PropertyInject.class) {
                         PropertyInject pi = (PropertyInject) ann;
                         Object result
-                                = getInjectionPropertyValue(type, genericType, pi.value(), pi.defaultValue(), pi.separator(),
-                                        null, null, null);
+                                = getInjectionPropertyValue(type, genericType, pi.value(), pi.defaultValue(), pi.separator());
                         parameters[i] = result;
                     } else if (ann.annotationType() == BeanConfigInject.class) {
                         BeanConfigInject pi = (BeanConfigInject) ann;
@@ -675,10 +692,31 @@ public class CamelPostProcessorHelper implements CamelContextAware {
      * @return      <tt>true</tt> if its singleton scoped, for prototype scoped <tt>false</tt> is returned.
      */
     protected boolean isSingleton(Object bean, String beanName) {
-        if (bean instanceof IsSingleton) {
-            IsSingleton singleton = (IsSingleton) bean;
+        if (bean instanceof IsSingleton singleton) {
             return singleton.isSingleton();
         }
         return true;
+    }
+
+    /**
+     * Find the best init method to use for the given bean
+     */
+    public static String initMethodCandidate(Object bean) {
+        if (bean instanceof Service) {
+            return "start";
+        }
+        return null;
+    }
+
+    /**
+     * Find the best destroy method to use for the given bean
+     */
+    public static String destroyMethodCandidate(Object bean) {
+        if (bean instanceof Service) {
+            return "stop";
+        } else if (bean instanceof Closeable) {
+            return "close";
+        }
+        return null;
     }
 }

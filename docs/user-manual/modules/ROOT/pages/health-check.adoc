@@ -14,19 +14,19 @@ Camel provides the following health checks out of the box:
 
 - _context_ - A `HealthCheck` which performs check whether the `CamelContext` is started. This can be used for readiness checks; to know when Camel is fully started and ready to handle traffic.
 - _routes_ - A `HealthCheckRegistry` which discovers all the available routes in `CamelContext` and checks whether they are all started.
-  This can be used for readiness checks; to know when Camel is fully started and ready to handle traffic.
-  Combining with the supervised `RouteController` this allows to perform readiness check for routes that are under supervising,
-  such as troublesome routes that may not start up the first time, and are retried to be started in the background with backoff delays.
+This can be used for readiness checks; to know when Camel is fully started and ready to handle traffic.
+Combining with the supervised `RouteController` this allows to perform readiness check for routes that are under supervising,
+such as troublesome routes that may not start up the first time, and are retried to be started in the background with backoff delays.
 - _consumers_ A `HealthCheckRegistry` which discovers all the consumers from all the routes in `CamelContext`
-  enabling fine-grained checks for the route input. This means if the consumer is failing to poll new messages
-  then the health check can detect this and report as un-healthy. Note that the consumer will be DOWN during its initialization and until at least
-  one poll run has been executed, to know whether that poll was a success or not. And if the poll was a success
-  then the consumer is UP. This is on purpose to avoid having the health check to be initially UP
-  and then after first poll run then DOWN again because the consumer cannot poll from external system;
-  which causes the health check to be _flaky_.
+enabling fine-grained checks for the route input. This means if the consumer is failing to poll new messages
+then the health check can detect this and report as un-healthy. Note that the consumer will be DOWN during its initialization and until at least
+one poll run has been executed, to know whether that poll was a success or not. And if the poll was a success
+then the consumer is UP. This is on purpose to avoid having the health check to be initially UP
+and then after first poll run then DOWN again because the consumer cannot poll from external system;
+which causes the health check to be _flaky_.
 - _producers_ A `HealthCheckRegistry` which are for producer based health-checks. There are a few components
-  which comes with producer health checks such as `camel-kafka` and many of the `AWS` components.
-  However, producer health checks are by default disabled. See further below for how to enable producer health checks.
+which comes with producer health checks such as `camel-kafka` and many of the `AWS` components.
+However, producer health checks are by default disabled. See further below for how to enable producer health checks.
 - _registry_ - A `HealthCheckRegistry` which discovers all the available custom `HealthCheck` instances in the `Registry`.
 
 == IDs
@@ -41,7 +41,18 @@ is named foo, then the ID is `consumer:foo`.
 
 == Readiness and Liveness
 
-A health check is by default usable for both readiness and liveness checks.
+Readiness and Liveness probes serve distinct purposes. Readiness indicates whether the application is ready to serve requests or traffic.
+Liveness probes indicates whether the application is alive and functioning. A health check is by default usable for both readiness and liveness checks.
+
+To check wether a health check is usable for readiness or livesness:
+
+[source,java]
+----
+HealthCheck healthCheck = HealthCheckHelper.getHealthCheck(camelContext, healthCheckId);
+
+System.out.println("Readiness=" + healthCheck.isReadiness());
+System.out.println("Live=" + healthCheck.isLiveness());
+----
 
 To specify a custom health check as only usable for liveness checks,
 you would need to turn off readiness, by overriding the `isReadiness` method and return `false`.
@@ -76,6 +87,88 @@ camel.health.consumersEnabled=false
 camel.health.registryEnabled=false
 ----
 
+The same can also be done programmatically using the Camel health api:
+
+[source,java]
+----
+HealthCheckRepository consumersHealthCheckRepository = HealthCheckHelper.getHealthCheckRepository(context, "consumers");
+
+if (consumersHealthCheckRepository != null) {
+    consumersHealthCheckRepository.setEnabled(false);
+}
+----
+
+=== How to consume the health check
+
+Once you have the health check exposed as a service and the application is up and running, you can check it by accessing the related endpoint:
+
+```
+$ curl http://localhost:8080/q/health
+{
+    "status": "UP"
+,
+    "checks": [
+        {
+            "name": "context",
+            "status": "UP"        },
+        {
+            "name": "route:route1",
+            "status": "UP"        },
+        {
+            "name": "consumer:route1",
+            "status": "UP"        }
+    ]
+}
+```
+
+NOTE: the path can change depending on the runtime used and the configuration.
+
+When you're running on certain runtimes you will get more information by default. This is also possible in the `camel-main` runtime provider. However, you'll need to specify that as a request parameter:
+
+```
+$ curl http://localhost:8080/q/health?data=true
+{
+    "status": "UP"
+,
+    "checks": [
+        {
+            "name": "context",
+            "status": "UP",
+            "data": {
+                 "check.group": "camel",
+                 "check.id": "context",
+                 "check.kind": "ALL",
+                 "context.name": "camel-1",
+                 "context.phase": "5",
+                 "context.status": "Started",
+                 "context.version": "4.11.0-SNAPSHOT",
+                 "failure.count": "0",
+                 "invocation.count": "2",
+                 "invocation.time": "2025-03-20T09:43:01.870896479+01:00[Europe/Madrid]",
+                 "success.count": "2",
+                 "success.start.time": "2025-03-20T09:42:59.074646004+01:00[Europe/Madrid]",
+                 "success.time": "2025-03-20T09:43:01.870896479+01:00[Europe/Madrid]"
+            }
+        },
+...
+```
+
+=== Configuring initial state
+
+The initial state of health-checks (readiness). There are the following states: UP, DOWN, UNKNOWN.
+
+By default, the state is DOWN, is regarded as being pessimistic/careful. This means that the overall health
+checks may report as DOWN during startup and then only if everything is up and running flip to being UP.
+
+Setting the initial state to UP, is regarded as being optimistic. This means that the overall health checks may
+report as UP during startup and then if a consumer or other service is in fact un-healthy, then the health-checks
+can flip being DOWN.
+
+Setting the state to UNKNOWN means that some health-check would be reported in unknown state, especially during
+early bootstrap where a consumer may not be fully initialized or validated a connection to a remote system.
+
+This option allows to pre-configure the state for different modes.
+
 === Excluding health-checks
 
 By default, all enabled health-checks are invoked by Camel when check the health status.
@@ -93,6 +186,11 @@ You can specify multiple patterns (and use wildcards) such as:
 ----
 camel.health.exclude-pattern = myroute,foo,bar*
 ----
+
+==== Routes that are not automatically started
+
+If a route is configured to not to automatically start (`autoStartup=false`),
+then the route and its corresponding consumer health checks is always up as it is externally managed.
 
 === Turning off consumer level health-checks
 
@@ -114,7 +212,6 @@ camel.health.exclude-pattern = consumer:myroute*
 ----
 
 which will turn off checks for all consumers on routes that starts with `myroute` in the route ID.
-
 
 Or you can turn off producer based health checks by their component name:
 
@@ -267,7 +364,7 @@ And in Spring Boot:
 camel.springboot.load-health-checks = true
 ----
 
-And if you use the classic Spring XML or Blueprint XML, you can enable this on `<camelContext>` as shown:
+And if you use the classic Spring XML, you can enable this on `<camelContext>` as shown:
 
 [source,xml]
 ----

@@ -31,15 +31,15 @@ public class OnCompletionModeBeforeConsumerExceptionSuppressedTest extends Conte
         Exception fooException = out.getException();
         assertIsInstanceOf(FooException.class, fooException);
         Throwable[] suppressed = fooException.getSuppressed();
-        assertEquals(suppressed.length, 1);
+        assertEquals(1, suppressed.length);
         assertIsInstanceOf(SuppressedException.class, suppressed[0]);
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:foo")
                         .process(exchange -> {
                             throw new FooException();

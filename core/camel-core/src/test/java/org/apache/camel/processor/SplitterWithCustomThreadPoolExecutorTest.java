@@ -36,7 +36,7 @@ public class SplitterWithCustomThreadPoolExecutorTest extends ContextTestSupport
             = new ThreadPoolExecutor(8, 16, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
     @Test
-    public void testSplitterWithCustomThreadPoolExecutor() throws Exception {
+    public void testSplitterWithCustomThreadPoolExecutor() {
         ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) getSplitter().getExecutorServiceBean();
         if (threadPoolExecutor == null) {
             threadPoolExecutor = context.getRegistry().lookupByNameAndType(getSplitter().getExecutorService(),
@@ -68,8 +68,8 @@ public class SplitterWithCustomThreadPoolExecutorTest extends ContextTestSupport
         SplitDefinition result = null;
 
         for (ProcessorDefinition<?> processorType : outputs) {
-            if (processorType instanceof SplitDefinition) {
-                result = (SplitDefinition) processorType;
+            if (processorType instanceof SplitDefinition splitDefinition) {
+                result = splitDefinition;
             } else {
                 result = firstSplitterType(processorType.getOutputs());
             }

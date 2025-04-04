@@ -23,7 +23,6 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 
 import org.apache.camel.Endpoint;
 import org.apache.camel.ExchangePattern;
-import org.apache.camel.Message;
 import org.apache.camel.builder.EndpointProducerBuilder;
 import org.apache.camel.spi.Metadata;
 
@@ -33,7 +32,7 @@ import org.apache.camel.spi.Metadata;
 @Metadata(label = "eip,routing")
 @XmlRootElement(name = "to")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ToDefinition extends SendDefinition<ToDefinition> implements CopyableProcessorDefinition {
+public class ToDefinition extends SendDefinition<ToDefinition> {
 
     @XmlAttribute
     private String variableSend;
@@ -44,6 +43,13 @@ public class ToDefinition extends SendDefinition<ToDefinition> implements Copyab
     private String pattern;
 
     public ToDefinition() {
+    }
+
+    protected ToDefinition(ToDefinition source) {
+        super(source);
+        this.variableSend = source.variableSend;
+        this.variableReceive = source.variableReceive;
+        this.pattern = source.pattern;
     }
 
     public ToDefinition(String uri) {
@@ -74,13 +80,6 @@ public class ToDefinition extends SendDefinition<ToDefinition> implements Copyab
     public ToDefinition(EndpointProducerBuilder endpoint, ExchangePattern pattern) {
         this(endpoint);
         this.pattern = pattern.name();
-    }
-
-    protected ToDefinition(ToDefinition source) {
-        super(source);
-        this.variableSend = source.variableSend;
-        this.variableReceive = source.variableReceive;
-        this.pattern = source.pattern;
     }
 
     @Override
@@ -114,8 +113,8 @@ public class ToDefinition extends SendDefinition<ToDefinition> implements Copyab
      * and to easily control what data to use for sending and receiving.
      *
      * Important: When using send variable then the message body is taken from this variable instead of the current
-     * {@link Message}, however the headers from the {@link Message} will still be used as well. In other words, the
-     * variable is used instead of the message body, but everything else is as usual.
+     * message, however the headers from the message will still be used as well. In other words, the variable is used
+     * instead of the message body, but everything else is as usual.
      */
     public void setVariableSend(String variableSend) {
         this.variableSend = variableSend;
@@ -126,17 +125,17 @@ public class ToDefinition extends SendDefinition<ToDefinition> implements Copyab
     }
 
     /**
-     * To use a variable to store the received message body (only body, not headers). This is handy for easy access to
-     * the received message body via variables.
+     * To use a variable to store the received message body (only body, not headers). This makes it handy to use
+     * variables for user data and to easily control what data to use for sending and receiving.
      *
-     * Important: When using receive variable then the received body is stored only in this variable and <b>not</b> on
-     * the current {@link org.apache.camel.Message}.
+     * Important: When using receive variable then the received body is stored only in this variable and not on the
+     * current message.
      */
     public void setVariableReceive(String variableReceive) {
         this.variableReceive = variableReceive;
     }
 
-    public ToDefinition copy() {
+    public ToDefinition copyDefinition() {
         return new ToDefinition(this);
     }
 }

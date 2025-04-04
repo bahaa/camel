@@ -349,10 +349,10 @@ public class BacklogDebuggerTest extends ManagementTestSupport {
         assertNotNull(xml);
         log.info(xml);
 
-        assertTrue(xml.contains("<body>[Body is null]</body>"), "Should not contain our body");
         assertTrue(xml.contains("<toNode>bar</toNode>"), "Should contain bar node");
         assertFalse(xml.contains("<header"), "Should not contain any headers");
         assertFalse(xml.contains("<exchangeProperty key=\"food\""), "Should not contain exchange property 'food'");
+        assertTrue(xml.contains("<body></body>"), "Should not contain our body");
 
         resetMocks();
         mock.expectedMessageCount(1);
@@ -897,7 +897,7 @@ public class BacklogDebuggerTest extends ManagementTestSupport {
         assertTrue(response.getClass().isAssignableFrom(String.class));
         String history = (String) response;
         int count = (history.split("messageHistoryEntry", -1).length) - 1;
-        assertEquals(3, count);
+        assertEquals(4, count);
         assertTrue(history.contains("processor=\"from[seda://start?concurrentConsumers=2]\""));
         assertTrue(history.contains("routeId=\"route1\""));
         assertTrue(history.contains("processorId=\"route1\""));
@@ -988,10 +988,10 @@ public class BacklogDebuggerTest extends ManagementTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 context.setUseBreadcrumb(false);
                 context.setDebugging(true);
                 context.setMessageHistory(true);

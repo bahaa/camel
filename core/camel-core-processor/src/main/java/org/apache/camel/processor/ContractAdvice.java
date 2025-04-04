@@ -84,7 +84,6 @@ public class ContractAdvice implements CamelInternalProcessorAdvice<Object> {
     @Override
     public void after(Exchange exchange, Object data) throws Exception {
         if (exchange.isFailed()) {
-            // TODO can we add FAULT_TYPE processing?
             return;
         }
 
@@ -181,10 +180,6 @@ public class ContractAdvice implements CamelInternalProcessorAdvice<Object> {
             return true;
         }
         return false;
-    }
-
-    private Class<?> getClazz(String type, CamelContext context) throws Exception {
-        return context.getClassResolver().resolveMandatoryClass(type);
     }
 
     private void doValidate(Message message, DataType type) throws ValidationException {

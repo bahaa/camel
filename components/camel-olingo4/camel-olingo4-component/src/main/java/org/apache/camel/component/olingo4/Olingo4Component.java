@@ -68,6 +68,9 @@ public class Olingo4Component extends AbstractApiComponent<Olingo4ApiName, Oling
     @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
         // parse remaining to extract resourcePath and queryParams
+        if (remaining.startsWith("DEFAULT/")) {
+            remaining = remaining.substring(8);
+        }
         final String[] pathSegments = remaining.split("/", -1);
         final String methodName = pathSegments[0];
 
@@ -119,10 +122,13 @@ public class Olingo4Component extends AbstractApiComponent<Olingo4ApiName, Oling
     public Olingo4AppWrapper createApiProxy(Olingo4Configuration endpointConfiguration) {
         final Olingo4AppWrapper result;
         if (endpointConfiguration.equals(getConfiguration())) {
-            synchronized (this) {
+            lock.lock();
+            try {
                 if (apiProxy == null) {
                     apiProxy = createOlingo4App(getConfiguration());
                 }
+            } finally {
+                lock.unlock();
             }
             result = apiProxy;
         } else {

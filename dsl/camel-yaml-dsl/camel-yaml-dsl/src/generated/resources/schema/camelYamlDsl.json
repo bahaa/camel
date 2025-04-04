@@ -73,12 +73,6 @@
           "multicast" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.MulticastDefinition"
           },
-          "onFallback" : {
-            "$ref" : "#/items/definitions/org.apache.camel.model.OnFallbackDefinition"
-          },
-          "otherwise" : {
-            "$ref" : "#/items/definitions/org.apache.camel.model.OtherwiseDefinition"
-          },
           "pausable" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.PausableDefinition"
           },
@@ -87,6 +81,9 @@
           },
           "policy" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.PolicyDefinition"
+          },
+          "poll" : {
+            "$ref" : "#/items/definitions/org.apache.camel.model.PollDefinition"
           },
           "pollEnrich" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.PollEnrichDefinition"
@@ -181,6 +178,9 @@
           "toD" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.ToDynamicDefinition"
           },
+          "tokenizer" : {
+            "$ref" : "#/items/definitions/org.apache.camel.model.TokenizerDefinition"
+          },
           "transacted" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.TransactedDefinition"
           },
@@ -196,12 +196,6 @@
           "validate" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.ValidateDefinition"
           },
-          "when" : {
-            "$ref" : "#/items/definitions/org.apache.camel.model.WhenDefinition"
-          },
-          "whenSkipSendToEndpoint" : {
-            "$ref" : "#/items/definitions/org.apache.camel.model.WhenSkipSendToEndpointDefinition"
-          },
           "wireTap" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.WireTapDefinition"
           },
@@ -214,7 +208,14 @@
         "type" : "array",
         "additionalProperties" : false,
         "items" : {
-          "$ref" : "#/items/definitions/org.apache.camel.model.app.RegistryBeanDefinition"
+          "$ref" : "#/items/definitions/org.apache.camel.model.BeanFactoryDefinition"
+        }
+      },
+      "org.apache.camel.dsl.yaml.deserializers.DataFormatsDefinitionDeserializer" : {
+        "type" : "array",
+        "additionalProperties" : false,
+        "items" : {
+          "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.DataFormatsDefinition"
         }
       },
       "org.apache.camel.dsl.yaml.deserializers.ErrorHandlerDeserializer" : {
@@ -288,6 +289,11 @@
           } ]
         } ],
         "properties" : {
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "The id of this node"
+          },
           "deadLetterChannel" : { },
           "defaultErrorHandler" : { },
           "jtaTransactionErrorHandler" : { },
@@ -567,6 +573,76 @@
           }
         } ]
       },
+      "org.apache.camel.model.BeanFactoryDefinition" : {
+        "title" : "Bean Factory",
+        "description" : "Define custom beans that can be used in your Camel routes and in general.",
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "builderClass" : {
+            "type" : "string",
+            "title" : "Builder Class",
+            "description" : "Fully qualified class name of builder class to use for creating and configuring the bean. The builder will use the properties values to configure the bean."
+          },
+          "builderMethod" : {
+            "type" : "string",
+            "title" : "Builder Method",
+            "description" : "Name of method when using builder class. This method is invoked after configuring to create the actual bean. This method is often named build (used by default).",
+            "default" : "build"
+          },
+          "constructors" : {
+            "type" : "object",
+            "title" : "Constructors",
+            "description" : "Optional constructor arguments for creating the bean. Arguments correspond to specific index of the constructor argument list, starting from zero."
+          },
+          "destroyMethod" : {
+            "type" : "string",
+            "title" : "Destroy Method",
+            "description" : "The name of the custom destroy method to invoke on bean shutdown, such as when Camel is shutting down. The method must have no arguments, but may throw any exception."
+          },
+          "factoryBean" : {
+            "type" : "string",
+            "title" : "Factory Bean",
+            "description" : "Name of factory bean (bean id) to use for creating the bean."
+          },
+          "factoryMethod" : {
+            "type" : "string",
+            "title" : "Factory Method",
+            "description" : "Name of method to invoke when creating the bean via a factory bean."
+          },
+          "initMethod" : {
+            "type" : "string",
+            "title" : "Init Method",
+            "description" : "The name of the custom initialization method to invoke after setting bean properties. The method must have no arguments, but may throw any exception."
+          },
+          "name" : {
+            "type" : "string",
+            "title" : "Name",
+            "description" : "The name of the bean (bean id)"
+          },
+          "properties" : {
+            "type" : "object",
+            "title" : "Properties",
+            "description" : "Optional properties to set on the created bean."
+          },
+          "script" : {
+            "type" : "string",
+            "title" : "Script",
+            "description" : "The script to execute that creates the bean when using scripting languages. If the script use the prefix resource: such as resource:classpath:com/foo/myscript.groovy, resource:file:/var/myscript.groovy, then its loaded from the external resource."
+          },
+          "scriptLanguage" : {
+            "type" : "string",
+            "title" : "Script Language",
+            "description" : "The script language to use when using inlined script for creating the bean, such as groovy, java, javascript etc."
+          },
+          "type" : {
+            "type" : "string",
+            "title" : "Type",
+            "description" : "The class name (fully qualified) of the bean"
+          }
+        },
+        "required" : [ "name", "type" ]
+      },
       "org.apache.camel.model.CatchDefinition" : {
         "title" : "Do Catch",
         "description" : "Catches exceptions as part of a try, catch, finally block",
@@ -598,8 +674,8 @@
           },
           "onWhen" : {
             "title" : "On When",
-            "description" : "Sets an additional predicate that should be true before the onCatch is triggered. To be used for fine grained controlling whether a thrown exception should be intercepted by this exception type or not.",
-            "$ref" : "#/items/definitions/org.apache.camel.model.WhenDefinition"
+            "description" : "Used for triggering doCatch in specific situations",
+            "$ref" : "#/items/definitions/org.apache.camel.model.OnWhenDefinition"
           },
           "steps" : {
             "type" : "array",
@@ -1346,12 +1422,12 @@
           "variableReceive" : {
             "type" : "string",
             "title" : "Variable Receive",
-            "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+            "description" : "To use a variable as the source for the message body to send. This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using send variable then the message body is taken from this variable instead of the current message, however the headers from the message will still be used as well. In other words, the variable is used instead of the message body, but everything else is as usual."
           },
           "variableSend" : {
             "type" : "string",
             "title" : "Variable Send",
-            "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+            "description" : "To use a variable to store the received message body (only body, not headers). This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using receive variable then the received body is stored only in this variable and not on the current message."
           },
           "constant" : { },
           "csimple" : { },
@@ -2284,6 +2360,11 @@
             "title" : "Id",
             "description" : "Sets the id of this node"
           },
+          "onWhen" : {
+            "title" : "On When",
+            "description" : "To use an expression to only trigger intercepting in specific situations",
+            "$ref" : "#/items/definitions/org.apache.camel.model.OnWhenDefinition"
+          },
           "steps" : {
             "type" : "array",
             "items" : {
@@ -2315,6 +2396,11 @@
               "type" : "string",
               "title" : "Id",
               "description" : "Sets the id of this node"
+            },
+            "onWhen" : {
+              "title" : "On When",
+              "description" : "To use an expression to only trigger intercepting in specific situations",
+              "$ref" : "#/items/definitions/org.apache.camel.model.OnWhenDefinition"
             },
             "steps" : {
               "type" : "array",
@@ -2358,6 +2444,11 @@
               "type" : "string",
               "title" : "Id",
               "description" : "Sets the id of this node"
+            },
+            "onWhen" : {
+              "title" : "On When",
+              "description" : "To use an expression to only trigger intercepting sending to an endpoint in specific situations",
+              "$ref" : "#/items/definitions/org.apache.camel.model.OnWhenDefinition"
             },
             "skipSendToOriginalEndpoint" : {
               "type" : "string",
@@ -2421,64 +2512,64 @@
               "anyOf" : [ {
                 "required" : [ "customLoadBalancer" ]
               }, {
-                "required" : [ "failover" ]
+                "required" : [ "failoverLoadBalancer" ]
               }, {
-                "required" : [ "random" ]
+                "required" : [ "randomLoadBalancer" ]
               }, {
-                "required" : [ "roundRobin" ]
+                "required" : [ "roundRobinLoadBalancer" ]
               }, {
-                "required" : [ "sticky" ]
+                "required" : [ "stickyLoadBalancer" ]
               }, {
-                "required" : [ "topic" ]
+                "required" : [ "topicLoadBalancer" ]
               }, {
-                "required" : [ "weighted" ]
+                "required" : [ "weightedLoadBalancer" ]
               } ]
             }
           }, {
             "type" : "object",
-            "required" : [ "failover" ],
+            "required" : [ "failoverLoadBalancer" ],
             "properties" : {
-              "failover" : {
+              "failoverLoadBalancer" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.loadbalancer.FailoverLoadBalancerDefinition"
               }
             }
           }, {
             "type" : "object",
-            "required" : [ "random" ],
+            "required" : [ "randomLoadBalancer" ],
             "properties" : {
-              "random" : {
+              "randomLoadBalancer" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.loadbalancer.RandomLoadBalancerDefinition"
               }
             }
           }, {
             "type" : "object",
-            "required" : [ "roundRobin" ],
+            "required" : [ "roundRobinLoadBalancer" ],
             "properties" : {
-              "roundRobin" : {
+              "roundRobinLoadBalancer" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.loadbalancer.RoundRobinLoadBalancerDefinition"
               }
             }
           }, {
             "type" : "object",
-            "required" : [ "sticky" ],
+            "required" : [ "stickyLoadBalancer" ],
             "properties" : {
-              "sticky" : {
+              "stickyLoadBalancer" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.loadbalancer.StickyLoadBalancerDefinition"
               }
             }
           }, {
             "type" : "object",
-            "required" : [ "topic" ],
+            "required" : [ "topicLoadBalancer" ],
             "properties" : {
-              "topic" : {
+              "topicLoadBalancer" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.loadbalancer.TopicLoadBalancerDefinition"
               }
             }
           }, {
             "type" : "object",
-            "required" : [ "weighted" ],
+            "required" : [ "weightedLoadBalancer" ],
             "properties" : {
-              "weighted" : {
+              "weightedLoadBalancer" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.loadbalancer.WeightedLoadBalancerDefinition"
               }
             }
@@ -2500,11 +2591,6 @@
             "title" : "Id",
             "description" : "Sets the id of this node"
           },
-          "inheritErrorHandler" : {
-            "type" : "boolean",
-            "title" : "Inherit Error Handler",
-            "description" : "Sets whether or not to inherit the configured error handler. The default value is true. You can use this to disable using the inherited error handler for a given DSL such as a load balancer where you want to use a custom error handler strategy."
-          },
           "steps" : {
             "type" : "array",
             "items" : {
@@ -2512,17 +2598,17 @@
             }
           },
           "customLoadBalancer" : { },
-          "failover" : { },
-          "random" : { },
-          "roundRobin" : { },
-          "sticky" : { },
-          "topic" : { },
-          "weighted" : { }
+          "failoverLoadBalancer" : { },
+          "randomLoadBalancer" : { },
+          "roundRobinLoadBalancer" : { },
+          "stickyLoadBalancer" : { },
+          "topicLoadBalancer" : { },
+          "weightedLoadBalancer" : { }
         }
       },
       "org.apache.camel.model.LogDefinition" : {
-        "title" : "Log",
-        "description" : "Logs the defined message to the logger",
+        "title" : "Logger",
+        "description" : "Used for printing custom messages to the logger.",
         "oneOf" : [ {
           "type" : "string"
         }, {
@@ -2544,10 +2630,15 @@
               "title" : "Id",
               "description" : "Sets the id of this node"
             },
+            "logLanguage" : {
+              "type" : "string",
+              "title" : "Log Language",
+              "description" : "To configure the language to use. By default, the simple language is used. However, Camel also supports other languages such as groovy."
+            },
             "logName" : {
               "type" : "string",
               "title" : "Log Name",
-              "description" : "Sets the name of the logger"
+              "description" : "Sets the name of the logger. The name is default the routeId or the source:line if source location is enabled. You can also specify the name using tokens: ${class} - the logger class name (org.apache.camel.processor.LogProcessor) ${contextId} - the camel context id ${routeId} - the route id ${groupId} - the route group id ${nodeId} - the node id ${nodePrefixId} - the node prefix id ${source} - the source:line (source location must be enabled) ${source.name} - the source filename (source location must be enabled) ${source.line} - the source line number (source location must be enabled) For example to use the route and node id you can specify the name as: ${routeId}/${nodeId}"
             },
             "logger" : {
               "type" : "string",
@@ -2684,6 +2775,11 @@
             "title" : "Id",
             "description" : "Sets the id of this node"
           },
+          "onPrepare" : {
+            "type" : "string",
+            "title" : "On Prepare",
+            "description" : "Uses the Processor when preparing the org.apache.camel.Exchange for each loop iteration. This can be used to deep-clone messages, or any custom logic needed before the looping executes."
+          },
           "steps" : {
             "type" : "array",
             "items" : {
@@ -2756,11 +2852,15 @@
               }, {
                 "required" : [ "custom" ]
               }, {
+                "required" : [ "dfdl" ]
+              }, {
                 "required" : [ "fhirJson" ]
               }, {
                 "required" : [ "fhirXml" ]
               }, {
                 "required" : [ "flatpack" ]
+              }, {
+                "required" : [ "fury" ]
               }, {
                 "required" : [ "grok" ]
               }, {
@@ -2789,6 +2889,8 @@
                 "required" : [ "protobuf" ]
               }, {
                 "required" : [ "rss" ]
+              }, {
+                "required" : [ "smooks" ]
               }, {
                 "required" : [ "soap" ]
               }, {
@@ -2893,6 +2995,14 @@
             }
           }, {
             "type" : "object",
+            "required" : [ "dfdl" ],
+            "properties" : {
+              "dfdl" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.DfdlDataFormat"
+              }
+            }
+          }, {
+            "type" : "object",
             "required" : [ "fhirJson" ],
             "properties" : {
               "fhirJson" : {
@@ -2913,6 +3023,14 @@
             "properties" : {
               "flatpack" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.FlatpackDataFormat"
+              }
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "fury" ],
+            "properties" : {
+              "fury" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.FuryDataFormat"
               }
             }
           }, {
@@ -3025,6 +3143,14 @@
             "properties" : {
               "rss" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.RssDataFormat"
+              }
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "smooks" ],
+            "properties" : {
+              "smooks" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.SmooksDataFormat"
               }
             }
           }, {
@@ -3160,12 +3286,12 @@
           "variableReceive" : {
             "type" : "string",
             "title" : "Variable Receive",
-            "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+            "description" : "To use a variable to store the received message body (only body, not headers). This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using receive variable then the received body is stored only in this variable and not on the current message."
           },
           "variableSend" : {
             "type" : "string",
             "title" : "Variable Send",
-            "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+            "description" : "To use a variable as the source for the message body to send. This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using send variable then the message body is taken from this variable instead of the current message, however the headers from the message will still be used as well. In other words, the variable is used instead of the message body, but everything else is as usual."
           },
           "asn1" : { },
           "avro" : { },
@@ -3177,9 +3303,11 @@
           "crypto" : { },
           "csv" : { },
           "custom" : { },
+          "dfdl" : { },
           "fhirJson" : { },
           "fhirXml" : { },
           "flatpack" : { },
+          "fury" : { },
           "grok" : { },
           "gzipDeflater" : { },
           "hl7" : { },
@@ -3194,6 +3322,7 @@
           "pgp" : { },
           "protobuf" : { },
           "rss" : { },
+          "smooks" : { },
           "soap" : { },
           "swiftMt" : { },
           "swiftMx" : { },
@@ -3259,12 +3388,13 @@
           "parallelAggregate" : {
             "type" : "boolean",
             "title" : "Parallel Aggregate",
-            "description" : "If enabled then the aggregate method on AggregationStrategy can be called concurrently. Notice that this would require the implementation of AggregationStrategy to be implemented as thread-safe. By default this is false meaning that Camel synchronizes the call to the aggregate method. Though in some use-cases this can be used to archive higher performance when the AggregationStrategy is implemented as thread-safe."
+            "description" : "If enabled then the aggregate method on AggregationStrategy can be called concurrently. Notice that this would require the implementation of AggregationStrategy to be implemented as thread-safe. By default this is false meaning that Camel synchronizes the call to the aggregate method. Though in some use-cases this can be used to archive higher performance when the AggregationStrategy is implemented as thread-safe.",
+            "deprecated" : true
           },
           "parallelProcessing" : {
             "type" : "boolean",
             "title" : "Parallel Processing",
-            "description" : "If enabled then sending messages to the multicasts occurs concurrently. Note the caller thread will still wait until all messages has been fully processed, before it continues. Its only the sending and processing the replies from the multicasts which happens concurrently. When parallel processing is enabled, then the Camel routing engin will continue processing using last used thread from the parallel thread pool. However, if you want to use the original thread that called the multicast, then make sure to enable the synchronous option as well."
+            "description" : "If enabled then sending messages to the multicasts occurs concurrently. Note the caller thread will still wait until all messages has been fully processed, before it continues. Its only the sending and processing the replies from the multicasts which happens concurrently. When parallel processing is enabled, then the Camel routing engin will continue processing using last used thread from the parallel thread pool. However, if you want to use the original thread that called the multicast, then make sure to enable the synchronous option as well. In parallel processing mode, you may want to also synchronous = true to force this EIP to process the sub-tasks using the upper bounds of the thread-pool. If using synchronous = false then Camel will allow its reactive routing engine to use as many threads as possible, which may be available due to sub-tasks using other thread-pools such as CompletableFuture.runAsync or others."
           },
           "shareUnitOfWork" : {
             "type" : "boolean",
@@ -3345,8 +3475,8 @@
           },
           "onWhen" : {
             "title" : "On When",
-            "description" : "Sets an additional predicate that should be true before the onCompletion is triggered. To be used for fine grained controlling whether a completion callback should be invoked or not",
-            "$ref" : "#/items/definitions/org.apache.camel.model.WhenDefinition"
+            "description" : "To use an expression to only trigger routing this completion steps in specific situations",
+            "$ref" : "#/items/definitions/org.apache.camel.model.OnWhenDefinition"
           },
           "parallelProcessing" : {
             "type" : "boolean",
@@ -3417,8 +3547,8 @@
           },
           "onWhen" : {
             "title" : "On When",
-            "description" : "Sets an additional predicate that should be true before the onException is triggered. To be used for fine grained controlling whether a thrown exception should be intercepted by this exception type or not.",
-            "$ref" : "#/items/definitions/org.apache.camel.model.WhenDefinition"
+            "description" : "To use an expression to only trigger this in specific situations",
+            "$ref" : "#/items/definitions/org.apache.camel.model.OnWhenDefinition"
           },
           "redeliveryPolicy" : {
             "title" : "Redelivery Policy",
@@ -3464,11 +3594,6 @@
             "title" : "Description",
             "description" : "Sets the description of this node"
           },
-          "disabled" : {
-            "type" : "boolean",
-            "title" : "Disabled",
-            "description" : "Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled later at runtime."
-          },
           "fallbackViaNetwork" : {
             "type" : "boolean",
             "title" : "Fallback Via Network",
@@ -3485,6 +3610,123 @@
               "$ref" : "#/items/definitions/org.apache.camel.model.ProcessorDefinition"
             }
           }
+        }
+      },
+      "org.apache.camel.model.OnWhenDefinition" : {
+        "title" : "On When",
+        "description" : "To use a predicate to determine when to trigger this.",
+        "type" : "object",
+        "additionalProperties" : false,
+        "anyOf" : [ {
+          "oneOf" : [ {
+            "$ref" : "#/items/definitions/org.apache.camel.model.language.ExpressionDefinition"
+          }, {
+            "not" : {
+              "anyOf" : [ {
+                "required" : [ "expression" ]
+              }, {
+                "required" : [ "constant" ]
+              }, {
+                "required" : [ "csimple" ]
+              }, {
+                "required" : [ "datasonnet" ]
+              }, {
+                "required" : [ "exchangeProperty" ]
+              }, {
+                "required" : [ "groovy" ]
+              }, {
+                "required" : [ "header" ]
+              }, {
+                "required" : [ "hl7terser" ]
+              }, {
+                "required" : [ "java" ]
+              }, {
+                "required" : [ "joor" ]
+              }, {
+                "required" : [ "jq" ]
+              }, {
+                "required" : [ "js" ]
+              }, {
+                "required" : [ "jsonpath" ]
+              }, {
+                "required" : [ "language" ]
+              }, {
+                "required" : [ "method" ]
+              }, {
+                "required" : [ "mvel" ]
+              }, {
+                "required" : [ "ognl" ]
+              }, {
+                "required" : [ "python" ]
+              }, {
+                "required" : [ "ref" ]
+              }, {
+                "required" : [ "simple" ]
+              }, {
+                "required" : [ "spel" ]
+              }, {
+                "required" : [ "tokenize" ]
+              }, {
+                "required" : [ "variable" ]
+              }, {
+                "required" : [ "wasm" ]
+              }, {
+                "required" : [ "xpath" ]
+              }, {
+                "required" : [ "xquery" ]
+              }, {
+                "required" : [ "xtokenize" ]
+              } ]
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "expression" ],
+            "properties" : {
+              "expression" : {
+                "title" : "Expression",
+                "$ref" : "#/items/definitions/org.apache.camel.model.language.ExpressionDefinition"
+              }
+            }
+          } ]
+        } ],
+        "properties" : {
+          "description" : {
+            "type" : "string",
+            "title" : "Description",
+            "description" : "Sets the description of this node"
+          },
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "Sets the id of this node"
+          },
+          "constant" : { },
+          "csimple" : { },
+          "datasonnet" : { },
+          "exchangeProperty" : { },
+          "groovy" : { },
+          "header" : { },
+          "hl7terser" : { },
+          "java" : { },
+          "joor" : { },
+          "jq" : { },
+          "js" : { },
+          "jsonpath" : { },
+          "language" : { },
+          "method" : { },
+          "mvel" : { },
+          "ognl" : { },
+          "python" : { },
+          "ref" : { },
+          "simple" : { },
+          "spel" : { },
+          "tokenize" : { },
+          "variable" : { },
+          "wasm" : { },
+          "xpath" : { },
+          "xquery" : { },
+          "xtokenize" : { },
+          "expression" : { }
         }
       },
       "org.apache.camel.model.OptimisticLockRetryPolicyDefinition" : {
@@ -3536,7 +3778,7 @@
           "disabled" : {
             "type" : "boolean",
             "title" : "Disabled",
-            "description" : "Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled later at runtime."
+            "description" : "Disables this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled late at runtime."
           },
           "id" : {
             "type" : "string",
@@ -3731,6 +3973,53 @@
         },
         "required" : [ "ref" ]
       },
+      "org.apache.camel.model.PollDefinition" : {
+        "title" : "Poll",
+        "description" : "Polls a message from a static endpoint",
+        "oneOf" : [ {
+          "type" : "string"
+        }, {
+          "type" : "object",
+          "additionalProperties" : false,
+          "properties" : {
+            "description" : {
+              "type" : "string",
+              "title" : "Description",
+              "description" : "Sets the description of this node"
+            },
+            "disabled" : {
+              "type" : "boolean",
+              "title" : "Disabled",
+              "description" : "Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled later at runtime."
+            },
+            "id" : {
+              "type" : "string",
+              "title" : "Id",
+              "description" : "Sets the id of this node"
+            },
+            "parameters" : {
+              "type" : "object"
+            },
+            "timeout" : {
+              "type" : "string",
+              "title" : "Timeout",
+              "description" : "Timeout in millis when polling from the external service. The timeout has influence about the poll enrich behavior. It basically operations in three different modes: negative value - Waits until a message is available and then returns it. Warning that this method could block indefinitely if no messages are available. 0 - Attempts to receive a message exchange immediately without waiting and returning null if a message exchange is not available yet. positive value - Attempts to receive a message exchange, waiting up to the given timeout to expire if a message is not yet available. Returns null if timed out The default value is 20000 (20 seconds).",
+              "default" : "20000"
+            },
+            "uri" : {
+              "type" : "string",
+              "title" : "Uri",
+              "description" : "Sets the uri of the endpoint to poll from."
+            },
+            "variableReceive" : {
+              "type" : "string",
+              "title" : "Variable Receive",
+              "description" : "To use a variable to store the received message body (only body, not headers). This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using receive variable then the received body is stored only in this variable and not on the current message."
+            }
+          }
+        } ],
+        "required" : [ "uri" ]
+      },
       "org.apache.camel.model.PollEnrichDefinition" : {
         "title" : "Poll Enrich",
         "description" : "Enriches messages with data polled from a secondary resource",
@@ -3830,6 +4119,11 @@
             "title" : "Aggregation Strategy Method Name",
             "description" : "This option can be used to explicit declare the method name to use, when using POJOs as the AggregationStrategy."
           },
+          "allowOptimisedComponents" : {
+            "type" : "boolean",
+            "title" : "Allow Optimised Components",
+            "description" : "Whether to allow components to optimise if they are org.apache.camel.spi.SendDynamicAware ."
+          },
           "autoStartComponents" : {
             "type" : "boolean",
             "title" : "Auto Start Components",
@@ -3869,7 +4163,7 @@
           "variableReceive" : {
             "type" : "string",
             "title" : "Variable Receive",
-            "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+            "description" : "To use a variable to store the received message body (only body, not headers). This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using receive variable then the received body is stored only in this variable and not on the current message."
           },
           "constant" : { },
           "csimple" : { },
@@ -3924,7 +4218,7 @@
           "ref" : {
             "type" : "string",
             "title" : "Ref",
-            "description" : "Reference to the Processor to lookup in the registry to use. Can also be used for creating new beans by their class name by prefixing with #class, eg #class:com.foo.MyClassType. And it is also possible to refer to singleton beans by their type in the registry by prefixing with #type: syntax, eg #type:com.foo.MyClassType"
+            "description" : "Reference to the Processor to lookup in the registry to use. A Processor is a class of type org.apache.camel.Processor, which can are to be called by this EIP. In this processor you have custom Java code, that can work with the message, such as to do custom business logic, special message manipulations and so on. By default, the ref, will lookup the bean in the Camel registry. The ref can use prefix that controls how the processor is obtained. You can use #bean:myBean where myBean is the id of the Camel processor (lookup). Can also be used for creating new beans by their class name by prefixing with #class, eg #class:com.foo.MyClassType. And it is also possible to refer to singleton beans by their type in the registry by prefixing with #type: syntax, eg #type:com.foo.MyClassType"
           }
         },
         "required" : [ "ref" ]
@@ -4200,12 +4494,13 @@
           "parallelAggregate" : {
             "type" : "boolean",
             "title" : "Parallel Aggregate",
-            "description" : "If enabled then the aggregate method on AggregationStrategy can be called concurrently. Notice that this would require the implementation of AggregationStrategy to be implemented as thread-safe. By default this is false meaning that Camel synchronizes the call to the aggregate method. Though in some use-cases this can be used to archive higher performance when the AggregationStrategy is implemented as thread-safe."
+            "description" : "If enabled then the aggregate method on AggregationStrategy can be called concurrently. Notice that this would require the implementation of AggregationStrategy to be implemented as thread-safe. By default this is false meaning that Camel synchronizes the call to the aggregate method. Though in some use-cases this can be used to archive higher performance when the AggregationStrategy is implemented as thread-safe.",
+            "deprecated" : true
           },
           "parallelProcessing" : {
             "type" : "boolean",
             "title" : "Parallel Processing",
-            "description" : "If enabled then sending messages to the recipients occurs concurrently. Note the caller thread will still wait until all messages has been fully processed, before it continues. Its only the sending and processing the replies from the recipients which happens concurrently. When parallel processing is enabled, then the Camel routing engin will continue processing using last used thread from the parallel thread pool. However, if you want to use the original thread that called the recipient list, then make sure to enable the synchronous option as well."
+            "description" : "If enabled then sending messages to the recipients occurs concurrently. Note the caller thread will still wait until all messages has been fully processed, before it continues. Its only the sending and processing the replies from the recipients which happens concurrently. When parallel processing is enabled, then the Camel routing engin will continue processing using last used thread from the parallel thread pool. However, if you want to use the original thread that called the recipient list, then make sure to enable the synchronous option as well. In parallel processing mode, you may want to also synchronous = true to force this EIP to process the sub-tasks using the upper bounds of the thread-pool. If using synchronous = false then Camel will allow its reactive routing engine to use as many threads as possible, which may be available due to sub-tasks using other thread-pools such as CompletableFuture.runAsync or others."
           },
           "shareUnitOfWork" : {
             "type" : "boolean",
@@ -5187,34 +5482,6 @@
         },
         "required" : [ "from" ]
       },
-      "org.apache.camel.model.RouteTemplateBeanDefinition" : {
-        "type" : "object",
-        "additionalProperties" : false,
-        "properties" : {
-          "name" : {
-            "type" : "string"
-          },
-          "properties" : {
-            "type" : "object"
-          },
-          "property" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/items/definitions/org.apache.camel.model.PropertyDefinition"
-            }
-          },
-          "script" : {
-            "type" : "string"
-          },
-          "scriptLanguage" : {
-            "type" : "string"
-          },
-          "type" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "name", "type" ]
-      },
       "org.apache.camel.model.RouteTemplateDefinition" : {
         "type" : "object",
         "additionalProperties" : false,
@@ -5222,7 +5489,7 @@
           "beans" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/items/definitions/org.apache.camel.model.RouteTemplateBeanDefinition"
+              "$ref" : "#/items/definitions/org.apache.camel.model.BeanFactoryDefinition"
             }
           },
           "description" : {
@@ -5979,6 +6246,8 @@
           },
           "headers" : {
             "type" : "array",
+            "title" : "Headers",
+            "description" : "Contains the headers to be set",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.SetHeaderDefinition"
             }
@@ -6271,6 +6540,8 @@
           },
           "variables" : {
             "type" : "array",
+            "title" : "Variables",
+            "description" : "Contains the variables to be set",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.SetVariableDefinition"
             }
@@ -6533,12 +6804,13 @@
           "parallelAggregate" : {
             "type" : "boolean",
             "title" : "Parallel Aggregate",
-            "description" : "If enabled then the aggregate method on AggregationStrategy can be called concurrently. Notice that this would require the implementation of AggregationStrategy to be implemented as thread-safe. By default this is false meaning that Camel synchronizes the call to the aggregate method. Though in some use-cases this can be used to archive higher performance when the AggregationStrategy is implemented as thread-safe."
+            "description" : "If enabled then the aggregate method on AggregationStrategy can be called concurrently. Notice that this would require the implementation of AggregationStrategy to be implemented as thread-safe. By default this is false meaning that Camel synchronizes the call to the aggregate method. Though in some use-cases this can be used to archive higher performance when the AggregationStrategy is implemented as thread-safe.",
+            "deprecated" : true
           },
           "parallelProcessing" : {
             "type" : "boolean",
             "title" : "Parallel Processing",
-            "description" : "If enabled then processing each split messages occurs concurrently. Note the caller thread will still wait until all messages has been fully processed, before it continues. It's only processing the sub messages from the splitter which happens concurrently. When parallel processing is enabled, then the Camel routing engin will continue processing using last used thread from the parallel thread pool. However, if you want to use the original thread that called the splitter, then make sure to enable the synchronous option as well."
+            "description" : "If enabled then processing each split messages occurs concurrently. Note the caller thread will still wait until all messages has been fully processed, before it continues. It's only processing the sub messages from the splitter which happens concurrently. When parallel processing is enabled, then the Camel routing engin will continue processing using last used thread from the parallel thread pool. However, if you want to use the original thread that called the splitter, then make sure to enable the synchronous option as well. In parallel processing mode, you may want to also synchronous = true to force this EIP to process the sub-tasks using the upper bounds of the thread-pool. If using synchronous = false then Camel will allow its reactive routing engine to use as many threads as possible, which may be available due to sub-tasks using other thread-pools such as CompletableFuture.runAsync or others."
           },
           "shareUnitOfWork" : {
             "type" : "boolean",
@@ -6653,34 +6925,6 @@
           }
         }
       },
-      "org.apache.camel.model.TemplatedRouteBeanDefinition" : {
-        "type" : "object",
-        "additionalProperties" : false,
-        "properties" : {
-          "name" : {
-            "type" : "string"
-          },
-          "properties" : {
-            "type" : "object"
-          },
-          "property" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/items/definitions/org.apache.camel.model.PropertyDefinition"
-            }
-          },
-          "script" : {
-            "type" : "string"
-          },
-          "scriptLanguage" : {
-            "type" : "string"
-          },
-          "type" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "name", "type" ]
-      },
       "org.apache.camel.model.TemplatedRouteDefinition" : {
         "type" : "object",
         "additionalProperties" : false,
@@ -6688,7 +6932,7 @@
           "beans" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/items/definitions/org.apache.camel.model.TemplatedRouteBeanDefinition"
+              "$ref" : "#/items/definitions/org.apache.camel.model.BeanFactoryDefinition"
             }
           },
           "parameters" : {
@@ -7105,12 +7349,12 @@
             "variableReceive" : {
               "type" : "string",
               "title" : "Variable Receive",
-              "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+              "description" : "To use a variable to store the received message body (only body, not headers). This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using receive variable then the received body is stored only in this variable and not on the current message."
             },
             "variableSend" : {
               "type" : "string",
               "title" : "Variable Send",
-              "description" : "To use a variable as the source for the message body to send. This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using send variable then the message body is taken from this variable instead of the current Message , however the headers from the Message will still be used as well. In other words, the variable is used instead of the message body, but everything else is as usual."
+              "description" : "To use a variable as the source for the message body to send. This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using send variable then the message body is taken from this variable instead of the current message, however the headers from the message will still be used as well. In other words, the variable is used instead of the message body, but everything else is as usual."
             }
           }
         } ],
@@ -7182,11 +7426,105 @@
             "variableSend" : {
               "type" : "string",
               "title" : "Variable Send",
-              "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+              "description" : "To use a variable as the source for the message body to send. This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using send variable then the message body is taken from this variable instead of the current message, however the headers from the message will still be used as well. In other words, the variable is used instead of the message body, but everything else is as usual."
             }
           }
         } ],
         "required" : [ "uri" ]
+      },
+      "org.apache.camel.model.TokenizerDefinition" : {
+        "title" : "Specialized tokenizer for AI applications",
+        "description" : "Represents a Camel tokenizer for AI.",
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "description" : {
+            "type" : "string",
+            "title" : "Description",
+            "description" : "Sets the description of this node"
+          },
+          "disabled" : {
+            "type" : "boolean",
+            "title" : "Disabled",
+            "description" : "Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled later at runtime."
+          },
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "Sets the id of this node"
+          },
+          "langChain4jCharacterTokenizer" : { },
+          "langChain4jLineTokenizer" : { },
+          "langChain4jParagraphTokenizer" : { },
+          "langChain4jSentenceTokenizer" : { },
+          "langChain4jWordTokenizer" : { }
+        },
+        "anyOf" : [ {
+          "oneOf" : [ {
+            "type" : "object",
+            "required" : [ "langChain4jCharacterTokenizer" ],
+            "properties" : {
+              "langChain4jCharacterTokenizer" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.tokenizer.LangChain4jCharacterTokenizerDefinition"
+              }
+            }
+          }, {
+            "not" : {
+              "anyOf" : [ {
+                "required" : [ "langChain4jCharacterTokenizer" ]
+              }, {
+                "required" : [ "langChain4jLineTokenizer" ]
+              }, {
+                "required" : [ "langChain4jParagraphTokenizer" ]
+              }, {
+                "required" : [ "langChain4jSentenceTokenizer" ]
+              }, {
+                "required" : [ "langChain4jWordTokenizer" ]
+              } ]
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "langChain4jLineTokenizer" ],
+            "properties" : {
+              "langChain4jLineTokenizer" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.tokenizer.LangChain4jTokenizerDefinition"
+              }
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "langChain4jParagraphTokenizer" ],
+            "properties" : {
+              "langChain4jParagraphTokenizer" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.tokenizer.LangChain4jParagraphTokenizerDefinition"
+              }
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "langChain4jSentenceTokenizer" ],
+            "properties" : {
+              "langChain4jSentenceTokenizer" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.tokenizer.LangChain4jSentenceTokenizerDefinition"
+              }
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "langChain4jWordTokenizer" ],
+            "properties" : {
+              "langChain4jWordTokenizer" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.tokenizer.LangChain4jWordTokenizerDefinition"
+              }
+            }
+          } ]
+        } ]
+      },
+      "org.apache.camel.model.TokenizerImplementationDefinition" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          }
+        }
       },
       "org.apache.camel.model.TransactedDefinition" : {
         "title" : "Transacted",
@@ -7373,11 +7711,15 @@
           },
           "doCatch" : {
             "type" : "array",
+            "title" : "Do Catch",
+            "description" : "Catches exceptions as part of a try, catch, finally block",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.CatchDefinition"
             }
           },
           "doFinally" : {
+            "title" : "Do Finally",
+            "description" : "Path traversed when a try, catch, finally block exits",
             "$ref" : "#/items/definitions/org.apache.camel.model.FinallyDefinition"
           },
           "id" : {
@@ -7422,12 +7764,12 @@
           "variableReceive" : {
             "type" : "string",
             "title" : "Variable Receive",
-            "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+            "description" : "To use a variable to store the received message body (only body, not headers). This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using receive variable then the received body is stored only in this variable and not on the current message."
           },
           "variableSend" : {
             "type" : "string",
             "title" : "Variable Send",
-            "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+            "description" : "To use a variable as the source for the message body to send. This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using send variable then the message body is taken from this variable instead of the current message, however the headers from the message will still be used as well. In other words, the variable is used instead of the message body, but everything else is as usual."
           },
           "asn1" : { },
           "avro" : { },
@@ -7439,9 +7781,11 @@
           "crypto" : { },
           "csv" : { },
           "custom" : { },
+          "dfdl" : { },
           "fhirJson" : { },
           "fhirXml" : { },
           "flatpack" : { },
+          "fury" : { },
           "grok" : { },
           "gzipDeflater" : { },
           "hl7" : { },
@@ -7456,6 +7800,7 @@
           "pgp" : { },
           "protobuf" : { },
           "rss" : { },
+          "smooks" : { },
           "soap" : { },
           "swiftMt" : { },
           "swiftMx" : { },
@@ -7503,11 +7848,15 @@
               }, {
                 "required" : [ "custom" ]
               }, {
+                "required" : [ "dfdl" ]
+              }, {
                 "required" : [ "fhirJson" ]
               }, {
                 "required" : [ "fhirXml" ]
               }, {
                 "required" : [ "flatpack" ]
+              }, {
+                "required" : [ "fury" ]
               }, {
                 "required" : [ "grok" ]
               }, {
@@ -7536,6 +7885,8 @@
                 "required" : [ "protobuf" ]
               }, {
                 "required" : [ "rss" ]
+              }, {
+                "required" : [ "smooks" ]
               }, {
                 "required" : [ "soap" ]
               }, {
@@ -7640,6 +7991,14 @@
             }
           }, {
             "type" : "object",
+            "required" : [ "dfdl" ],
+            "properties" : {
+              "dfdl" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.DfdlDataFormat"
+              }
+            }
+          }, {
+            "type" : "object",
             "required" : [ "fhirJson" ],
             "properties" : {
               "fhirJson" : {
@@ -7660,6 +8019,14 @@
             "properties" : {
               "flatpack" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.FlatpackDataFormat"
+              }
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "fury" ],
+            "properties" : {
+              "fury" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.FuryDataFormat"
               }
             }
           }, {
@@ -7772,6 +8139,14 @@
             "properties" : {
               "rss" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.RssDataFormat"
+              }
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "smooks" ],
+            "properties" : {
+              "smooks" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.SmooksDataFormat"
               }
             }
           }, {
@@ -8121,136 +8496,7 @@
           "disabled" : {
             "type" : "boolean",
             "title" : "Disabled",
-            "description" : "Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled later at runtime."
-          },
-          "id" : {
-            "type" : "string",
-            "title" : "Id",
-            "description" : "Sets the id of this node"
-          },
-          "steps" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/items/definitions/org.apache.camel.model.ProcessorDefinition"
-            }
-          },
-          "constant" : { },
-          "csimple" : { },
-          "datasonnet" : { },
-          "exchangeProperty" : { },
-          "groovy" : { },
-          "header" : { },
-          "hl7terser" : { },
-          "java" : { },
-          "joor" : { },
-          "jq" : { },
-          "js" : { },
-          "jsonpath" : { },
-          "language" : { },
-          "method" : { },
-          "mvel" : { },
-          "ognl" : { },
-          "python" : { },
-          "ref" : { },
-          "simple" : { },
-          "spel" : { },
-          "tokenize" : { },
-          "variable" : { },
-          "wasm" : { },
-          "xpath" : { },
-          "xquery" : { },
-          "xtokenize" : { },
-          "expression" : { }
-        }
-      },
-      "org.apache.camel.model.WhenSkipSendToEndpointDefinition" : {
-        "title" : "When Skip Send To Endpoint",
-        "description" : "Predicate to determine if the message should be sent or not to the endpoint, when using interceptSentToEndpoint.",
-        "type" : "object",
-        "additionalProperties" : false,
-        "anyOf" : [ {
-          "oneOf" : [ {
-            "$ref" : "#/items/definitions/org.apache.camel.model.language.ExpressionDefinition"
-          }, {
-            "not" : {
-              "anyOf" : [ {
-                "required" : [ "expression" ]
-              }, {
-                "required" : [ "constant" ]
-              }, {
-                "required" : [ "csimple" ]
-              }, {
-                "required" : [ "datasonnet" ]
-              }, {
-                "required" : [ "exchangeProperty" ]
-              }, {
-                "required" : [ "groovy" ]
-              }, {
-                "required" : [ "header" ]
-              }, {
-                "required" : [ "hl7terser" ]
-              }, {
-                "required" : [ "java" ]
-              }, {
-                "required" : [ "joor" ]
-              }, {
-                "required" : [ "jq" ]
-              }, {
-                "required" : [ "js" ]
-              }, {
-                "required" : [ "jsonpath" ]
-              }, {
-                "required" : [ "language" ]
-              }, {
-                "required" : [ "method" ]
-              }, {
-                "required" : [ "mvel" ]
-              }, {
-                "required" : [ "ognl" ]
-              }, {
-                "required" : [ "python" ]
-              }, {
-                "required" : [ "ref" ]
-              }, {
-                "required" : [ "simple" ]
-              }, {
-                "required" : [ "spel" ]
-              }, {
-                "required" : [ "tokenize" ]
-              }, {
-                "required" : [ "variable" ]
-              }, {
-                "required" : [ "wasm" ]
-              }, {
-                "required" : [ "xpath" ]
-              }, {
-                "required" : [ "xquery" ]
-              }, {
-                "required" : [ "xtokenize" ]
-              } ]
-            }
-          }, {
-            "type" : "object",
-            "required" : [ "expression" ],
-            "properties" : {
-              "expression" : {
-                "title" : "Expression",
-                "description" : "Expression used as the predicate to evaluate whether the message should be sent or not to the endpoint",
-                "$ref" : "#/items/definitions/org.apache.camel.model.language.ExpressionDefinition"
-              }
-            }
-          } ]
-        } ],
-        "properties" : {
-          "description" : {
-            "type" : "string",
-            "title" : "Description",
-            "description" : "Sets the description of this node"
-          },
-          "disabled" : {
-            "type" : "boolean",
-            "title" : "Disabled",
-            "description" : "Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled later at runtime."
+            "description" : "Disables this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled late at runtime."
           },
           "id" : {
             "type" : "string",
@@ -8375,7 +8621,7 @@
           "variableSend" : {
             "type" : "string",
             "title" : "Variable Send",
-            "description" : "To use a variable to store the received message body (only body, not headers). This is handy for easy access to the received message body via variables. Important: When using receive variable then the received body is stored only in this variable and not on the current org.apache.camel.Message ."
+            "description" : "To use a variable as the source for the message body to send. This makes it handy to use variables for user data and to easily control what data to use for sending and receiving. Important: When using send variable then the message body is taken from this variable instead of the current message, however the headers from the message will still be used as well. In other words, the variable is used instead of the message body, but everything else is as usual."
           }
         },
         "required" : [ "uri" ]
@@ -8440,49 +8686,6 @@
             "type" : "string"
           }
         }
-      },
-      "org.apache.camel.model.app.RegistryBeanDefinition" : {
-        "type" : "object",
-        "additionalProperties" : false,
-        "properties" : {
-          "builderClass" : {
-            "type" : "string"
-          },
-          "builderMethod" : {
-            "type" : "string"
-          },
-          "constructors" : {
-            "type" : "object"
-          },
-          "destroyMethod" : {
-            "type" : "string"
-          },
-          "factoryBean" : {
-            "type" : "string"
-          },
-          "factoryMethod" : {
-            "type" : "string"
-          },
-          "initMethod" : {
-            "type" : "string"
-          },
-          "name" : {
-            "type" : "string"
-          },
-          "properties" : {
-            "type" : "object"
-          },
-          "script" : {
-            "type" : "string"
-          },
-          "scriptLanguage" : {
-            "type" : "string"
-          },
-          "type" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "name", "type" ]
       },
       "org.apache.camel.model.cloud.BlacklistServiceCallServiceFilterConfiguration" : {
         "title" : "Blacklist Service Filter",
@@ -10306,7 +10509,7 @@
             "quote" : {
               "type" : "string",
               "title" : "Quote",
-              "description" : "Sets the quote which by default is"
+              "description" : "Sets the quote to use which by default is double-quote character"
             },
             "quoteDisabled" : {
               "type" : "boolean",
@@ -10430,6 +10633,9 @@
           "flatpack" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.FlatpackDataFormat"
           },
+          "fury" : {
+            "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.FuryDataFormat"
+          },
           "grok" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.GrokDataFormat"
           },
@@ -10471,6 +10677,9 @@
           },
           "rss" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.RssDataFormat"
+          },
+          "smooks" : {
+            "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.SmooksDataFormat"
           },
           "soap" : {
             "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.SoapDataFormat"
@@ -10515,6 +10724,39 @@
             "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.ZipFileDataFormat"
           }
         }
+      },
+      "org.apache.camel.model.dataformat.DfdlDataFormat" : {
+        "title" : "DFDL",
+        "description" : "Handle DFDL (Data Format Description Language) transformation.",
+        "oneOf" : [ {
+          "type" : "string"
+        }, {
+          "type" : "object",
+          "additionalProperties" : false,
+          "properties" : {
+            "id" : {
+              "type" : "string",
+              "title" : "Id",
+              "description" : "The id of this node"
+            },
+            "rootElement" : {
+              "type" : "string",
+              "title" : "Root Element",
+              "description" : "The root element name of the schema to use. If not specified, the first root element in the schema will be used."
+            },
+            "rootNamespace" : {
+              "type" : "string",
+              "title" : "Root Namespace",
+              "description" : "The root namespace of the schema to use."
+            },
+            "schemaUri" : {
+              "type" : "string",
+              "title" : "Schema Uri",
+              "description" : "The path to the DFDL schema file."
+            }
+          }
+        } ],
+        "required" : [ "schemaUri" ]
       },
       "org.apache.camel.model.dataformat.FhirJsonDataFormat" : {
         "title" : "FHIR JSon",
@@ -10777,6 +11019,39 @@
             "type" : "string",
             "title" : "Text Qualifier",
             "description" : "If the text is qualified with a character. Uses quote character by default."
+          }
+        }
+      },
+      "org.apache.camel.model.dataformat.FuryDataFormat" : {
+        "title" : "Fury",
+        "description" : "Serialize and deserialize messages using Apache Fury",
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "allowAutoWiredFury" : {
+            "type" : "boolean",
+            "title" : "Allow Auto Wired Fury",
+            "description" : "Whether to auto-discover Fury from the registry"
+          },
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "The id of this node"
+          },
+          "requireClassRegistration" : {
+            "type" : "boolean",
+            "title" : "Require Class Registration",
+            "description" : "Whether to require register classes"
+          },
+          "threadSafe" : {
+            "type" : "boolean",
+            "title" : "Thread Safe",
+            "description" : "Whether to use the threadsafe fury"
+          },
+          "unmarshalType" : {
+            "type" : "string",
+            "title" : "Unmarshal Type",
+            "description" : "Class of the java type to use when unmarshalling"
           }
         }
       },
@@ -11126,6 +11401,11 @@
             "type" : "string",
             "title" : "Collection Type",
             "description" : "Refers to a custom collection type to lookup in the registry to use. This option should rarely be used, but allows using different collection types than java.util.Collection based as default."
+          },
+          "combineUnicodeSurrogates" : {
+            "type" : "boolean",
+            "title" : "Combine Unicode Surrogates",
+            "description" : "Force generator that outputs JSON content to combine surrogate pairs (if any) into 4-byte characters. This should be preferred when using 4-byte characters such as Japanese."
           },
           "contentTypeHeader" : {
             "type" : "boolean",
@@ -11533,6 +11813,25 @@
             "description" : "The id of this node"
           }
         }
+      },
+      "org.apache.camel.model.dataformat.SmooksDataFormat" : {
+        "title" : "Smooks",
+        "description" : "Transform and bind XML as well as non-XML data, including EDI, CSV, JSON, and YAML using Smooks.",
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "The id of this node"
+          },
+          "smooksConfig" : {
+            "type" : "string",
+            "title" : "Smooks Config",
+            "description" : "Path to the Smooks configuration file."
+          }
+        },
+        "required" : [ "smooksConfig" ]
       },
       "org.apache.camel.model.dataformat.SoapDataFormat" : {
         "title" : "SOAP",
@@ -14021,7 +14320,7 @@
         "required" : [ "ref" ]
       },
       "org.apache.camel.model.loadbalancer.FailoverLoadBalancerDefinition" : {
-        "title" : "Failover",
+        "title" : "Failover Load Balancer",
         "description" : "In case of failures the exchange will be tried on the next endpoint.",
         "type" : "object",
         "additionalProperties" : false,
@@ -14042,7 +14341,7 @@
           "maximumFailoverAttempts" : {
             "type" : "string",
             "title" : "Maximum Failover Attempts",
-            "description" : "A value to indicate after X failover attempts we should exhaust (give up). Use -1 to indicate never give up and continuously try to failover. Use 0 to never failover. And use e.g. 3 to failover at most 3 times before giving up. his option can be used whether or not roundRobin is enabled or not.",
+            "description" : "A value to indicate after X failover attempts we should exhaust (give up). Use -1 to indicate never give up and continuously try to failover. Use 0 to never failover. And use e.g. 3 to failover at most 3 times before giving up. This option can be used whether roundRobin is enabled or not.",
             "default" : "-1"
           },
           "roundRobin" : {
@@ -14058,7 +14357,7 @@
         }
       },
       "org.apache.camel.model.loadbalancer.RandomLoadBalancerDefinition" : {
-        "title" : "Random",
+        "title" : "Random Load Balancer",
         "description" : "The destination endpoints are selected randomly.",
         "type" : "object",
         "additionalProperties" : false,
@@ -14071,7 +14370,7 @@
         }
       },
       "org.apache.camel.model.loadbalancer.RoundRobinLoadBalancerDefinition" : {
-        "title" : "Round Robin",
+        "title" : "Round Robin Load Balancer",
         "description" : "The destination endpoints are selected in a round-robin fashion. This is a well-known and classic policy, which spreads the load evenly.",
         "type" : "object",
         "additionalProperties" : false,
@@ -14084,7 +14383,7 @@
         }
       },
       "org.apache.camel.model.loadbalancer.StickyLoadBalancerDefinition" : {
-        "title" : "Sticky",
+        "title" : "Sticky Load Balancer",
         "description" : "Sticky load balancing using an expression to calculate a correlation key to perform the sticky load balancing.",
         "type" : "object",
         "additionalProperties" : false,
@@ -14102,7 +14401,7 @@
         }
       },
       "org.apache.camel.model.loadbalancer.TopicLoadBalancerDefinition" : {
-        "title" : "Topic",
+        "title" : "Topic Load Balancer",
         "description" : "Topic which sends to all destinations.",
         "type" : "object",
         "additionalProperties" : false,
@@ -14115,7 +14414,7 @@
         }
       },
       "org.apache.camel.model.loadbalancer.WeightedLoadBalancerDefinition" : {
-        "title" : "Weighted",
+        "title" : "Weighted Load Balancer",
         "description" : "Uses a weighted load distribution ratio for each server with respect to others.",
         "type" : "object",
         "additionalProperties" : false,
@@ -14291,6 +14590,8 @@
           },
           "param" : {
             "type" : "array",
+            "title" : "Param",
+            "description" : "Information about parameters for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ParamDefinition"
             }
@@ -14307,6 +14608,8 @@
           },
           "responseMessage" : {
             "type" : "array",
+            "title" : "Response Message",
+            "description" : "Response details for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ResponseMessageDefinition"
             }
@@ -14318,6 +14621,8 @@
           },
           "security" : {
             "type" : "array",
+            "title" : "Security",
+            "description" : "Security settings for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.SecurityDefinition"
             }
@@ -14326,6 +14631,11 @@
             "type" : "boolean",
             "title" : "Skip Binding On Error Code",
             "description" : "Whether to skip binding on output if there is a custom HTTP error code header. This allows to build custom error messages that do not bind to json / xml etc, as success messages otherwise will do. This option will override what may be configured on a parent level"
+          },
+          "streamCache" : {
+            "type" : "boolean",
+            "title" : "Stream Cache",
+            "description" : "Whether stream caching is enabled on this rest operation."
           },
           "to" : {
             "title" : "To",
@@ -14404,6 +14714,8 @@
           },
           "param" : {
             "type" : "array",
+            "title" : "Param",
+            "description" : "Information about parameters for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ParamDefinition"
             }
@@ -14420,6 +14732,8 @@
           },
           "responseMessage" : {
             "type" : "array",
+            "title" : "Response Message",
+            "description" : "Response details for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ResponseMessageDefinition"
             }
@@ -14431,6 +14745,8 @@
           },
           "security" : {
             "type" : "array",
+            "title" : "Security",
+            "description" : "Security settings for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.SecurityDefinition"
             }
@@ -14439,6 +14755,11 @@
             "type" : "boolean",
             "title" : "Skip Binding On Error Code",
             "description" : "Whether to skip binding on output if there is a custom HTTP error code header. This allows to build custom error messages that do not bind to json / xml etc, as success messages otherwise will do. This option will override what may be configured on a parent level"
+          },
+          "streamCache" : {
+            "type" : "boolean",
+            "title" : "Stream Cache",
+            "description" : "Whether stream caching is enabled on this rest operation."
           },
           "to" : {
             "title" : "To",
@@ -14517,6 +14838,8 @@
           },
           "param" : {
             "type" : "array",
+            "title" : "Param",
+            "description" : "Information about parameters for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ParamDefinition"
             }
@@ -14533,6 +14856,8 @@
           },
           "responseMessage" : {
             "type" : "array",
+            "title" : "Response Message",
+            "description" : "Response details for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ResponseMessageDefinition"
             }
@@ -14544,6 +14869,8 @@
           },
           "security" : {
             "type" : "array",
+            "title" : "Security",
+            "description" : "Security settings for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.SecurityDefinition"
             }
@@ -14552,6 +14879,11 @@
             "type" : "boolean",
             "title" : "Skip Binding On Error Code",
             "description" : "Whether to skip binding on output if there is a custom HTTP error code header. This allows to build custom error messages that do not bind to json / xml etc, as success messages otherwise will do. This option will override what may be configured on a parent level"
+          },
+          "streamCache" : {
+            "type" : "boolean",
+            "title" : "Stream Cache",
+            "description" : "Whether stream caching is enabled on this rest operation."
           },
           "to" : {
             "title" : "To",
@@ -14844,6 +15176,8 @@
           },
           "param" : {
             "type" : "array",
+            "title" : "Param",
+            "description" : "Information about parameters for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ParamDefinition"
             }
@@ -14860,6 +15194,8 @@
           },
           "responseMessage" : {
             "type" : "array",
+            "title" : "Response Message",
+            "description" : "Response details for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ResponseMessageDefinition"
             }
@@ -14871,6 +15207,8 @@
           },
           "security" : {
             "type" : "array",
+            "title" : "Security",
+            "description" : "Security settings for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.SecurityDefinition"
             }
@@ -14879,6 +15217,11 @@
             "type" : "boolean",
             "title" : "Skip Binding On Error Code",
             "description" : "Whether to skip binding on output if there is a custom HTTP error code header. This allows to build custom error messages that do not bind to json / xml etc, as success messages otherwise will do. This option will override what may be configured on a parent level"
+          },
+          "streamCache" : {
+            "type" : "boolean",
+            "title" : "Stream Cache",
+            "description" : "Whether stream caching is enabled on this rest operation."
           },
           "to" : {
             "title" : "To",
@@ -14957,6 +15300,8 @@
           },
           "param" : {
             "type" : "array",
+            "title" : "Param",
+            "description" : "Information about parameters for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ParamDefinition"
             }
@@ -14973,6 +15318,8 @@
           },
           "responseMessage" : {
             "type" : "array",
+            "title" : "Response Message",
+            "description" : "Response details for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ResponseMessageDefinition"
             }
@@ -14984,6 +15331,8 @@
           },
           "security" : {
             "type" : "array",
+            "title" : "Security",
+            "description" : "Security settings for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.SecurityDefinition"
             }
@@ -14992,6 +15341,11 @@
             "type" : "boolean",
             "title" : "Skip Binding On Error Code",
             "description" : "Whether to skip binding on output if there is a custom HTTP error code header. This allows to build custom error messages that do not bind to json / xml etc, as success messages otherwise will do. This option will override what may be configured on a parent level"
+          },
+          "streamCache" : {
+            "type" : "boolean",
+            "title" : "Stream Cache",
+            "description" : "Whether stream caching is enabled on this rest operation."
           },
           "to" : {
             "title" : "To",
@@ -15070,6 +15424,8 @@
           },
           "param" : {
             "type" : "array",
+            "title" : "Param",
+            "description" : "Information about parameters for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ParamDefinition"
             }
@@ -15086,6 +15442,8 @@
           },
           "responseMessage" : {
             "type" : "array",
+            "title" : "Response Message",
+            "description" : "Response details for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.ResponseMessageDefinition"
             }
@@ -15097,6 +15455,8 @@
           },
           "security" : {
             "type" : "array",
+            "title" : "Security",
+            "description" : "Security settings for this REST operation",
             "items" : {
               "$ref" : "#/items/definitions/org.apache.camel.model.rest.SecurityDefinition"
             }
@@ -15105,6 +15465,11 @@
             "type" : "boolean",
             "title" : "Skip Binding On Error Code",
             "description" : "Whether to skip binding on output if there is a custom HTTP error code header. This allows to build custom error messages that do not bind to json / xml etc, as success messages otherwise will do. This option will override what may be configured on a parent level"
+          },
+          "streamCache" : {
+            "type" : "boolean",
+            "title" : "Stream Cache",
+            "description" : "Whether stream caching is enabled on this rest operation."
           },
           "to" : {
             "title" : "To",
@@ -15413,7 +15778,7 @@
             "title" : "Host Name Resolver",
             "description" : "If no hostname has been explicit configured, then this resolver is used to compute the hostname the REST service will be using.",
             "default" : "allLocalIp",
-            "enum" : [ "allLocalIp", "localHostName", "localIp" ]
+            "enum" : [ "allLocalIp", "localHostName", "localIp", "none" ]
           },
           "inlineRoutes" : {
             "type" : "boolean",
@@ -15680,6 +16045,176 @@
         },
         "required" : [ "key" ]
       },
+      "org.apache.camel.model.tokenizer.LangChain4jCharacterTokenizerDefinition" : {
+        "title" : "LangChain4J Tokenizer with character splitter",
+        "description" : "Camel AI: Tokenizer for splitting by character.",
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "The id of this node"
+          },
+          "maxOverlap" : {
+            "type" : "number",
+            "title" : "Max Overlap",
+            "description" : "Sets the maximum number of tokens that can overlap in each segment"
+          },
+          "maxTokens" : {
+            "type" : "number",
+            "title" : "Max Tokens",
+            "description" : "Sets the maximum number of tokens on each segment"
+          },
+          "tokenizerType" : {
+            "type" : "string",
+            "title" : "Tokenizer Type",
+            "description" : "Sets the tokenizer type",
+            "enum" : [ "OPEN_AI", "AZURE", "QWEN" ]
+          }
+        },
+        "required" : [ "maxOverlap", "maxTokens" ]
+      },
+      "org.apache.camel.model.tokenizer.LangChain4jLineTokenizerDefinition" : {
+        "title" : "LangChain4J Tokenizer with line splitter",
+        "description" : "Camel AI: Tokenizer for splitting line by line.",
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "The id of this node"
+          },
+          "maxOverlap" : {
+            "type" : "number",
+            "title" : "Max Overlap",
+            "description" : "Sets the maximum number of tokens that can overlap in each segment"
+          },
+          "maxTokens" : {
+            "type" : "number",
+            "title" : "Max Tokens",
+            "description" : "Sets the maximum number of tokens on each segment"
+          },
+          "tokenizerType" : {
+            "type" : "string",
+            "title" : "Tokenizer Type",
+            "description" : "Sets the tokenizer type",
+            "enum" : [ "OPEN_AI", "AZURE", "QWEN" ]
+          }
+        },
+        "required" : [ "maxOverlap", "maxTokens" ]
+      },
+      "org.apache.camel.model.tokenizer.LangChain4jParagraphTokenizerDefinition" : {
+        "title" : "LangChain4J Tokenizer with paragraph splitter",
+        "description" : "Camel AI: Tokenizer for splitting by paragraphs.",
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "The id of this node"
+          },
+          "maxOverlap" : {
+            "type" : "number",
+            "title" : "Max Overlap",
+            "description" : "Sets the maximum number of tokens that can overlap in each segment"
+          },
+          "maxTokens" : {
+            "type" : "number",
+            "title" : "Max Tokens",
+            "description" : "Sets the maximum number of tokens on each segment"
+          },
+          "tokenizerType" : {
+            "type" : "string",
+            "title" : "Tokenizer Type",
+            "description" : "Sets the tokenizer type",
+            "enum" : [ "OPEN_AI", "AZURE", "QWEN" ]
+          }
+        },
+        "required" : [ "maxOverlap", "maxTokens" ]
+      },
+      "org.apache.camel.model.tokenizer.LangChain4jSentenceTokenizerDefinition" : {
+        "title" : "LangChain4J Tokenizer with sentence splitter",
+        "description" : "Camel AI: Tokenizer for splitting by sentences.",
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "The id of this node"
+          },
+          "maxOverlap" : {
+            "type" : "number",
+            "title" : "Max Overlap",
+            "description" : "Sets the maximum number of tokens that can overlap in each segment"
+          },
+          "maxTokens" : {
+            "type" : "number",
+            "title" : "Max Tokens",
+            "description" : "Sets the maximum number of tokens on each segment"
+          },
+          "tokenizerType" : {
+            "type" : "string",
+            "title" : "Tokenizer Type",
+            "description" : "Sets the tokenizer type",
+            "enum" : [ "OPEN_AI", "AZURE", "QWEN" ]
+          }
+        },
+        "required" : [ "maxOverlap", "maxTokens" ]
+      },
+      "org.apache.camel.model.tokenizer.LangChain4jTokenizerDefinition" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "maxOverlap" : {
+            "type" : "number"
+          },
+          "maxTokens" : {
+            "type" : "number"
+          },
+          "tokenizerType" : {
+            "type" : "string",
+            "enum" : [ "OPEN_AI", "AZURE", "QWEN" ]
+          }
+        },
+        "required" : [ "maxOverlap", "maxTokens" ]
+      },
+      "org.apache.camel.model.tokenizer.LangChain4jWordTokenizerDefinition" : {
+        "title" : "LangChain4J Tokenizer with word splitter",
+        "description" : "Camel AI: Tokenizer for splitting by word.",
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "title" : "Id",
+            "description" : "The id of this node"
+          },
+          "maxOverlap" : {
+            "type" : "number",
+            "title" : "Max Overlap",
+            "description" : "Sets the maximum number of tokens that can overlap in each segment"
+          },
+          "maxTokens" : {
+            "type" : "number",
+            "title" : "Max Tokens",
+            "description" : "Sets the maximum number of tokens on each segment"
+          },
+          "tokenizerType" : {
+            "type" : "string",
+            "title" : "Tokenizer Type",
+            "description" : "Sets the tokenizer type",
+            "enum" : [ "OPEN_AI", "AZURE", "QWEN" ]
+          }
+        },
+        "required" : [ "maxOverlap", "maxTokens" ]
+      },
       "org.apache.camel.model.transformer.CustomTransformerDefinition" : {
         "type" : "object",
         "additionalProperties" : false,
@@ -15745,6 +16280,8 @@
               }, {
                 "required" : [ "flatpack" ]
               }, {
+                "required" : [ "fury" ]
+              }, {
                 "required" : [ "grok" ]
               }, {
                 "required" : [ "gzipDeflater" ]
@@ -15772,6 +16309,8 @@
                 "required" : [ "protobuf" ]
               }, {
                 "required" : [ "rss" ]
+              }, {
+                "required" : [ "smooks" ]
               }, {
                 "required" : [ "soap" ]
               }, {
@@ -15900,6 +16439,14 @@
             }
           }, {
             "type" : "object",
+            "required" : [ "fury" ],
+            "properties" : {
+              "fury" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.FuryDataFormat"
+              }
+            }
+          }, {
+            "type" : "object",
             "required" : [ "grok" ],
             "properties" : {
               "grok" : {
@@ -16008,6 +16555,14 @@
             "properties" : {
               "rss" : {
                 "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.RssDataFormat"
+              }
+            }
+          }, {
+            "type" : "object",
+            "required" : [ "smooks" ],
+            "properties" : {
+              "smooks" : {
+                "$ref" : "#/items/definitions/org.apache.camel.model.dataformat.SmooksDataFormat"
               }
             }
           }, {
@@ -16150,6 +16705,7 @@
           "fhirJson" : { },
           "fhirXml" : { },
           "flatpack" : { },
+          "fury" : { },
           "grok" : { },
           "gzipDeflater" : { },
           "hl7" : { },
@@ -16164,6 +16720,7 @@
           "pgp" : { },
           "protobuf" : { },
           "rss" : { },
+          "smooks" : { },
           "soap" : { },
           "swiftMt" : { },
           "swiftMx" : { },
@@ -16326,6 +16883,9 @@
     "properties" : {
       "beans" : {
         "$ref" : "#/items/definitions/org.apache.camel.dsl.yaml.deserializers.BeansDeserializer"
+      },
+      "dataFormats" : {
+        "$ref" : "#/items/definitions/org.apache.camel.dsl.yaml.deserializers.DataFormatsDefinitionDeserializer"
       },
       "errorHandler" : {
         "$ref" : "#/items/definitions/org.apache.camel.dsl.yaml.deserializers.ErrorHandlerDeserializer"

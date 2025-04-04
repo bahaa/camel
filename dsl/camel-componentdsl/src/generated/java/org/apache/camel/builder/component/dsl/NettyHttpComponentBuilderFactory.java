@@ -725,7 +725,12 @@ public interface NettyHttpComponentBuilderFactory {
         /**
          * Sets the cap on the number of objects that can be allocated by the
          * pool (checked out to clients, or idle awaiting checkout) at a given
-         * time. Use a negative value for no limit.
+         * time. Use a negative value for no limit. Be careful to not set this
+         * value too low (such as 1) as the pool must have space to create a
+         * producer such as when performing retries. Be mindful that the option
+         * producerPoolBlockWhenExhausted is default true, and the pool will
+         * then block when there is no space, which can lead to the application
+         * to hang.
          * 
          * The option is a: &lt;code&gt;int&lt;/code&gt; type.
          * 
@@ -829,23 +834,6 @@ public interface NettyHttpComponentBuilderFactory {
          */
         default NettyHttpComponentBuilder useByteBuf(boolean useByteBuf) {
             doSetProperty("useByteBuf", useByteBuf);
-            return this;
-        }
-    
-        
-        /**
-         * To enable/disable hostname verification on SSLEngine.
-         * 
-         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
-         * 
-         * Default: false
-         * Group:  security
-         * 
-         * @param hostnameVerification the value to set
-         * @return the dsl builder
-         */
-        default NettyHttpComponentBuilder hostnameVerification(boolean hostnameVerification) {
-            doSetProperty("hostnameVerification", hostnameVerification);
             return this;
         }
     
@@ -1292,6 +1280,23 @@ public interface NettyHttpComponentBuilderFactory {
             return this;
         }
     
+        
+        /**
+         * To enable/disable hostname verification on SSLEngine.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param hostnameVerification the value to set
+         * @return the dsl builder
+         */
+        default NettyHttpComponentBuilder hostnameVerification(boolean hostnameVerification) {
+            doSetProperty("hostnameVerification", hostnameVerification);
+            return this;
+        }
+    
         /**
          * Client side certificate keystore to be used for encryption.
          * 
@@ -1591,7 +1596,6 @@ public interface NettyHttpComponentBuilderFactory {
             case "producerPoolMinIdle": getOrCreateConfiguration((NettyHttpComponent) component).setProducerPoolMinIdle((int) value); return true;
             case "udpConnectionlessSending": getOrCreateConfiguration((NettyHttpComponent) component).setUdpConnectionlessSending((boolean) value); return true;
             case "useByteBuf": getOrCreateConfiguration((NettyHttpComponent) component).setUseByteBuf((boolean) value); return true;
-            case "hostnameVerification": getOrCreateConfiguration((NettyHttpComponent) component).setHostnameVerification((boolean) value); return true;
             case "allowSerializedHeaders": getOrCreateConfiguration((NettyHttpComponent) component).setAllowSerializedHeaders((boolean) value); return true;
             case "autowiredEnabled": ((NettyHttpComponent) component).setAutowiredEnabled((boolean) value); return true;
             case "channelGroup": getOrCreateConfiguration((NettyHttpComponent) component).setChannelGroup((io.netty.channel.group.ChannelGroup) value); return true;
@@ -1616,6 +1620,7 @@ public interface NettyHttpComponentBuilderFactory {
             case "encoding": getOrCreateConfiguration((NettyHttpComponent) component).setEncoding((java.lang.String) value); return true;
             case "textline": getOrCreateConfiguration((NettyHttpComponent) component).setTextline((boolean) value); return true;
             case "enabledProtocols": getOrCreateConfiguration((NettyHttpComponent) component).setEnabledProtocols((java.lang.String) value); return true;
+            case "hostnameVerification": getOrCreateConfiguration((NettyHttpComponent) component).setHostnameVerification((boolean) value); return true;
             case "keyStoreFile": getOrCreateConfiguration((NettyHttpComponent) component).setKeyStoreFile((java.io.File) value); return true;
             case "keyStoreFormat": getOrCreateConfiguration((NettyHttpComponent) component).setKeyStoreFormat((java.lang.String) value); return true;
             case "keyStoreResource": getOrCreateConfiguration((NettyHttpComponent) component).setKeyStoreResource((java.lang.String) value); return true;

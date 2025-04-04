@@ -202,6 +202,11 @@ public class ManagedBacklogDebugger implements ManagedBacklogDebuggerMBean {
     }
 
     @Override
+    public void stepOver() {
+        backlogDebugger.stepOver();
+    }
+
+    @Override
     public Set<String> suspendedBreakpointNodeIds() {
         return backlogDebugger.getSuspendedBreakpointNodeIds();
     }
@@ -272,7 +277,7 @@ public class ManagedBacklogDebugger implements ManagedBacklogDebuggerMBean {
     }
 
     @Override
-    @Deprecated
+    @Deprecated(since = "4.2.0")
     public String dumpTracedMessagesAsXml(String nodeId, boolean includeExchangeProperties) {
         return dumpTracedMessagesAsXml(nodeId);
     }

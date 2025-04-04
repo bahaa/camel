@@ -34,7 +34,7 @@ public abstract class DefaultConfigurationProperties<T> {
 
     private String name;
     private String description;
-    @Metadata(defaultValue = "Default")
+    @Metadata(defaultValue = "Default", enums = "Verbose,Default,Brief,Oneline,Off")
     private StartupSummaryLevel startupSummaryLevel;
     private int durationMaxSeconds;
     private int durationMaxIdleSeconds;
@@ -56,6 +56,7 @@ public abstract class DefaultConfigurationProperties<T> {
     private boolean loadTypeConverters;
     private boolean loadHealthChecks;
     private boolean devConsoleEnabled;
+    @Deprecated(since = "4.10")
     private boolean modeline;
     private int logDebugMaxChars;
     private boolean streamCachingEnabled = true;
@@ -82,7 +83,10 @@ public abstract class DefaultConfigurationProperties<T> {
     private boolean messageHistory;
     private boolean logMask;
     private boolean logExhaustedMessageBody;
+    private String logName;
+    private String logLanguage;
     private boolean autoStartup = true;
+    private String autoStartupExcludePattern;
     private boolean allowUseOriginalMessage;
     private boolean caseInsensitiveHeaders = true;
     private boolean autowiredEnabled = true;
@@ -93,9 +97,9 @@ public abstract class DefaultConfigurationProperties<T> {
     private boolean useDataType;
     private boolean useBreadcrumb;
     private boolean beanPostProcessorEnabled = true;
-    @Metadata(defaultValue = "Default")
+    @Metadata(defaultValue = "Default", enums = "ContextOnly,RoutesOnly,Default")
     private ManagementMBeansLevel jmxManagementMBeansLevel = ManagementMBeansLevel.Default;
-    @Metadata(defaultValue = "Default")
+    @Metadata(defaultValue = "Default", enums = "Extended,Default,RoutesOnly,Off")
     private ManagementStatisticsLevel jmxManagementStatisticsLevel = ManagementStatisticsLevel.Default;
     private String jmxManagementNamePattern = "#name#";
     private boolean jmxUpdateRouteEnabled;
@@ -126,7 +130,6 @@ public abstract class DefaultConfigurationProperties<T> {
     @Metadata(defaultValue = "true")
     private boolean routesReloadRemoveAllRoutes = true;
     private boolean routesReloadRestartDuration;
-    private boolean lightweight;
     @Metadata(defaultValue = "default", enums = "default,prototype,pooled")
     private String exchangeFactory = "default";
     private int exchangeFactoryCapacity = 100;
@@ -148,6 +151,7 @@ public abstract class DefaultConfigurationProperties<T> {
     private String startupRecorderProfile = "default";
     private long startupRecorderDuration;
     private String startupRecorderDir;
+    private String cloudPropertiesLocation;
 
     // getter and setters
     // --------------------------------------------------------------
@@ -411,6 +415,7 @@ public abstract class DefaultConfigurationProperties<T> {
         this.devConsoleEnabled = devConsoleEnabled;
     }
 
+    @Deprecated(since = "4.10")
     public boolean isModeline() {
         return modeline;
     }
@@ -419,6 +424,7 @@ public abstract class DefaultConfigurationProperties<T> {
      * Whether camel-k style modeline is also enabled when not using camel-k. Enabling this allows to use a camel-k like
      * experience by being able to configure various settings using modeline directly in your route source code.
      */
+    @Deprecated(since = "4.10")
     public void setModeline(boolean modeline) {
         this.modeline = modeline;
     }
@@ -706,7 +712,7 @@ public abstract class DefaultConfigurationProperties<T> {
     /**
      * Whether to capture precise source location:line-number for all EIPs in Camel routes.
      *
-     * Enabling this will impact parsing Java based routes (also Groovy, Kotlin, etc.) on startup as this uses JDK
+     * Enabling this will impact parsing Java based routes (also Groovy etc.) on startup as this uses JDK
      * StackTraceElement to calculate the location from the Camel route, which comes with a performance cost. This only
      * impact startup, not the performance of the routes at runtime.
      */
@@ -740,6 +746,45 @@ public abstract class DefaultConfigurationProperties<T> {
         this.logExhaustedMessageBody = logExhaustedMessageBody;
     }
 
+    public String getLogName() {
+        return logName;
+    }
+
+    /**
+     * The global name to use for Log EIP
+     *
+     * The name is default the routeId or the source:line if source location is enabled. You can also specify the name
+     * using tokens:
+     *
+     * <br/>
+     * ${class} - the logger class name (org.apache.camel.processor.LogProcessor) <br/>
+     * ${contextId} - the camel context id <br/>
+     * ${routeId} - the route id <br/>
+     * ${groupId} - the route group id <br/>
+     * ${nodeId} - the node id <br/>
+     * ${nodePrefixId} - the node prefix id <br/>
+     * ${source} - the source:line (source location must be enabled) <br/>
+     * ${source.name} - the source filename (source location must be enabled) <br/>
+     * ${source.line} - the source line number (source location must be enabled)
+     *
+     * For example to use the route and node id you can specify the name as: ${routeId}/${nodeId}
+     */
+    public void setLogName(String logName) {
+        this.logName = logName;
+    }
+
+    public String getLogLanguage() {
+        return logLanguage;
+    }
+
+    /**
+     * To configure the language to use for Log EIP. By default, the simple language is used. However, Camel also
+     * supports other languages such as groovy.
+     */
+    public void setLogLanguage(String logLanguage) {
+        this.logLanguage = logLanguage;
+    }
+
     public boolean isAutoStartup() {
         return autoStartup;
     }
@@ -755,6 +800,22 @@ public abstract class DefaultConfigurationProperties<T> {
      */
     public void setAutoStartup(boolean autoStartup) {
         this.autoStartup = autoStartup;
+    }
+
+    public String getAutoStartupExcludePattern() {
+        return autoStartupExcludePattern;
+    }
+
+    /**
+     * Used for exclusive filtering of routes to not automatically start with Camel starts.
+     *
+     * The pattern support matching by route id or endpoint urls.
+     *
+     * Multiple patterns can be specified separated by comma, as example, to exclude all the routes starting from kafka
+     * or jms use: kafka,jms.
+     */
+    public void setAutoStartupExcludePattern(String autoStartupExcludePattern) {
+        this.autoStartupExcludePattern = autoStartupExcludePattern;
     }
 
     public boolean isAllowUseOriginalMessage() {
@@ -825,8 +886,8 @@ public abstract class DefaultConfigurationProperties<T> {
     }
 
     /**
-     * Sets whether context load statistics is enabled (something like the unix load average). The statistics requires
-     * to have camel-management on the classpath as JMX is required.
+     * Sets whether Camel load (inflight messages, not cpu) statistics is enabled (something like the unix load
+     * average). The statistics requires to have camel-management on the classpath as JMX is required.
      *
      * The default value is false.
      */
@@ -908,7 +969,7 @@ public abstract class DefaultConfigurationProperties<T> {
      *
      * Turning this off should only be done if you are sure you do not use any of these Camel features.
      *
-     * Not all runtimes allow turning this off (such as camel-blueprint or camel-cdi with XML).
+     * Not all runtimes allow turning this off.
      *
      * The default value is true (enabled).
      */
@@ -1334,18 +1395,6 @@ public abstract class DefaultConfigurationProperties<T> {
         this.jmxUpdateRouteEnabled = jmxUpdateRouteEnabled;
     }
 
-    public boolean isLightweight() {
-        return lightweight;
-    }
-
-    /**
-     * Configure the context to be lightweight. This will trigger some optimizations and memory reduction options.
-     * Lightweight context have some limitations. At this moment, dynamic endpoint destinations are not supported.
-     */
-    public void setLightweight(boolean lightweight) {
-        this.lightweight = lightweight;
-    }
-
     public String getExchangeFactory() {
         return exchangeFactory;
     }
@@ -1408,8 +1457,8 @@ public abstract class DefaultConfigurationProperties<T> {
     /**
      * Controls what to include in output for route dumping.
      *
-     * Possible values: all, routes, rests, routeConfigurations, routeTemplates, beans. Multiple values can be separated
-     * by comma. Default is routes.
+     * Possible values: all, routes, rests, routeConfigurations, routeTemplates, beans, dataFormats. Multiple values can
+     * be separated by comma. Default is routes.
      */
     public void setDumpRoutesInclude(String dumpRoutesInclude) {
         this.dumpRoutesInclude = dumpRoutesInclude;
@@ -1760,6 +1809,7 @@ public abstract class DefaultConfigurationProperties<T> {
      * Whether camel-k style modeline is also enabled when not using camel-k. Enabling this allows to use a camel-k like
      * experience by being able to configure various settings using modeline directly in your route source code.
      */
+    @Deprecated
     public T withModeline(boolean modeline) {
         this.modeline = modeline;
         return (T) this;
@@ -1974,7 +2024,7 @@ public abstract class DefaultConfigurationProperties<T> {
     /**
      * Whether to capture precise source location:line-number for all EIPs in Camel routes.
      *
-     * Enabling this will impact parsing Java based routes (also Groovy, Kotlin, etc.) on startup as this uses JDK
+     * Enabling this will impact parsing Java based routes (also Groovy, etc.) on startup as this uses JDK
      * StackTraceElement to calculate the location from the Camel route, which comes with a performance cost. This only
      * impact startup, not the performance of the routes at runtime.
      */
@@ -2004,6 +2054,39 @@ public abstract class DefaultConfigurationProperties<T> {
     }
 
     /**
+     * The global name to use for Log EIP
+     *
+     * The name is default the routeId or the source:line if source location is enabled. You can also specify the name
+     * using tokens:
+     *
+     * <br/>
+     * ${class} - the logger class name (org.apache.camel.processor.LogProcessor) <br/>
+     * ${contextId} - the camel context id <br/>
+     * ${routeId} - the route id <br/>
+     * ${groupId} - the route group id <br/>
+     * ${nodeId} - the node id <br/>
+     * ${nodePrefixId} - the node prefix id <br/>
+     * ${source} - the source:line (source location must be enabled) <br/>
+     * ${source.name} - the source filename (source location must be enabled) <br/>
+     * ${source.line} - the source line number (source location must be enabled)
+     *
+     * For example to use the route and node id you can specify the name as: ${routeId}/${nodeId}
+     */
+    public T withLogName(String logName) {
+        this.logName = logName;
+        return (T) this;
+    }
+
+    /**
+     * To configure the language to use for Log EIP. By default, the simple language is used. However, Camel also
+     * supports other languages such as groovy.
+     */
+    public T withLogLanguage(String logLanguage) {
+        this.logLanguage = logLanguage;
+        return (T) this;
+    }
+
+    /**
      * Sets whether the object should automatically start when Camel starts. Important: Currently only routes can be
      * disabled, as CamelContext's are always started. Note: When setting auto startup false on CamelContext then that
      * takes precedence and no routes is started. You would need to start CamelContext explicit using the
@@ -2014,6 +2097,19 @@ public abstract class DefaultConfigurationProperties<T> {
      */
     public T withAutoStartup(boolean autoStartup) {
         this.autoStartup = autoStartup;
+        return (T) this;
+    }
+
+    /**
+     * Used for exclusive filtering of routes to not automatically start with Camel starts.
+     *
+     * The pattern support matching by route id or endpoint urls.
+     *
+     * Multiple patterns can be specified separated by comma, as example, to exclude all the routes starting from kafka
+     * or jms use: kafka,jms.
+     */
+    public T withAutoStartupExcludePattern(String autoStartupExcludePattern) {
+        this.autoStartupExcludePattern = autoStartupExcludePattern;
         return (T) this;
     }
 
@@ -2123,7 +2219,7 @@ public abstract class DefaultConfigurationProperties<T> {
      *
      * Turning this off should only be done if you are sure you do not use any of these Camel features.
      *
-     * Not all runtimes allow turning this off (such as camel-blueprint or camel-cdi with XML).
+     * Not all runtimes allow turning this off.
      *
      * The default value is true (enabled).
      */
@@ -2474,18 +2570,6 @@ public abstract class DefaultConfigurationProperties<T> {
     }
 
     /**
-     * Configure the context to be lightweight. This will trigger some optimizations and memory reduction options.
-     * <p/>
-     * Lightweight context have some limitations. At the moment, dynamic endpoint destinations are not supported. Also,
-     * this should only be done on a JVM with a single Camel application (microservice like camel-main, camel-quarkus,
-     * camel-spring-boot). As this affects the entire JVM where Camel JARs are on the classpath.
-     */
-    public T withLightweight(boolean lightweight) {
-        this.lightweight = lightweight;
-        return (T) this;
-    }
-
-    /**
      * Controls whether to pool (reuse) exchanges or create new fresh exchanges (default). Using pooled will reduce JVM
      * garbage collection overhead by avoiding to re-create Exchange instances per message each consumer receives.
      */
@@ -2527,8 +2611,8 @@ public abstract class DefaultConfigurationProperties<T> {
     /**
      * Controls what to include in output for route dumping.
      *
-     * Possible values: all, routes, rests, routeConfigurations, routeTemplates, beans. Multiple values can be separated
-     * by comma. Default is routes.
+     * Possible values: all, routes, rests, routeConfigurations, routeTemplates, beans, dataFormats. Multiple values can
+     * be separated by comma. Default is routes.
      */
     public T withDumpRoutesInclude(String dumpRoutesInclude) {
         this.dumpRoutesInclude = dumpRoutesInclude;
@@ -2672,6 +2756,26 @@ public abstract class DefaultConfigurationProperties<T> {
      */
     public T withStartupRecorderDir(String startupRecorderDir) {
         this.startupRecorderDir = startupRecorderDir;
+        return (T) this;
+    }
+
+    public String getCloudPropertiesLocation() {
+        return cloudPropertiesLocation;
+    }
+
+    /**
+     * Sets the locations (comma separated values) where to find properties configuration as defined for cloud native
+     * environments such as Kubernetes. You should only scan text based mounted configuration.
+     */
+    public void setCloudPropertiesLocation(String cloudPropertiesLocation) {
+        this.cloudPropertiesLocation = cloudPropertiesLocation;
+    }
+
+    /**
+     * Whether to use cloud properties location setting. Default is none.
+     */
+    public T withCloudPropertiesLocation(boolean dumpRoutesResolvePlaceholders) {
+        this.cloudPropertiesLocation = cloudPropertiesLocation;
         return (T) this;
     }
 

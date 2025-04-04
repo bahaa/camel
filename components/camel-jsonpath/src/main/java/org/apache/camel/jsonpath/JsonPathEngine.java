@@ -105,7 +105,11 @@ public class JsonPathEngine {
 
     private ObjectMapper findRegisteredMapper(CamelContext context) {
         if (context != null) {
-            return context.getRegistry().findSingleByType(ObjectMapper.class);
+            ObjectMapper mapper = context.getRegistry().findSingleByType(ObjectMapper.class);
+            // do not use XML mapper
+            if (mapper != null && !mapper.getClass().getSimpleName().equals("XmlMapper")) {
+                return mapper;
+            }
         }
         return null;
     }
@@ -194,15 +198,15 @@ public class JsonPathEngine {
         if (json instanceof String) {
             LOG.trace("JSonPath: {} is read as String: {}", path, json);
             String str = (String) json;
-            answer = JsonPath.using(configuration).parse(str).read(path);
+            return JsonPath.using(configuration).parse(str).read(path);
         } else if (json instanceof Map) {
             LOG.trace("JSonPath: {} is read as Map: {}", path, json);
             Map map = (Map) json;
-            answer = JsonPath.using(configuration).parse(map).read(path);
+            return JsonPath.using(configuration).parse(map).read(path);
         } else if (json instanceof List) {
             LOG.trace("JSonPath: {} is read as List: {}", path, json);
             List list = (List) json;
-            answer = JsonPath.using(configuration).parse(list).read(path);
+            return JsonPath.using(configuration).parse(list).read(path);
         } else {
             //try to auto convert into inputStream
             answer = readWithInputStream(path, exchange);

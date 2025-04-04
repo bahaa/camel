@@ -45,7 +45,9 @@ public interface TimerEndpointBuilderFactory {
         }
 
         /**
-         * Delay before first event is triggered.
+         * The number of milliseconds to wait before the first event is
+         * generated. Should not be used in conjunction with the time option.
+         * The default value is 1000.
          * 
          * The option is a: <code>long</code> type.
          * 
@@ -60,7 +62,9 @@ public interface TimerEndpointBuilderFactory {
             return this;
         }
         /**
-         * Delay before first event is triggered.
+         * The number of milliseconds to wait before the first event is
+         * generated. Should not be used in conjunction with the time option.
+         * The default value is 1000.
          * 
          * The option will be converted to a <code>long</code> type.
          * 
@@ -139,7 +143,8 @@ public interface TimerEndpointBuilderFactory {
             return this;
         }
         /**
-         * If greater than 0, generate periodic events every period.
+         * Generate periodic events every period. Must be zero or positive
+         * value. The default value is 1000.
          * 
          * The option is a: <code>long</code> type.
          * 
@@ -154,7 +159,8 @@ public interface TimerEndpointBuilderFactory {
             return this;
         }
         /**
-         * If greater than 0, generate periodic events every period.
+         * Generate periodic events every period. Must be zero or positive
+         * value. The default value is 1000.
          * 
          * The option will be converted to a <code>long</code> type.
          * 
@@ -169,9 +175,10 @@ public interface TimerEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specifies a maximum limit of number of fires. So if you set it to 1,
-         * the timer will only fire once. If you set it to 5, it will only fire
-         * five times. A value of zero or negative means fire forever.
+         * Specifies a maximum limit for the number of fires. Therefore, if you
+         * set it to 1, the timer will only fire once. If you set it to 5, it
+         * will only fire five times. A value of zero or negative means fire
+         * forever.
          * 
          * The option is a: <code>long</code> type.
          * 
@@ -185,9 +192,10 @@ public interface TimerEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specifies a maximum limit of number of fires. So if you set it to 1,
-         * the timer will only fire once. If you set it to 5, it will only fire
-         * five times. A value of zero or negative means fire forever.
+         * Specifies a maximum limit for the number of fires. Therefore, if you
+         * set it to 1, the timer will only fire once. If you set it to 5, it
+         * will only fire five times. A value of zero or negative means fire
+         * forever.
          * 
          * The option will be converted to a <code>long</code> type.
          * 
@@ -363,8 +371,8 @@ public interface TimerEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specifies whether or not the thread associated with the timer
-         * endpoint runs as a daemon. The default value is true.
+         * Specifies whether the thread associated with the timer endpoint runs
+         * as a daemon. The default value is true.
          * 
          * The option is a: <code>boolean</code> type.
          * 
@@ -379,8 +387,8 @@ public interface TimerEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specifies whether or not the thread associated with the timer
-         * endpoint runs as a daemon. The default value is true.
+         * Specifies whether the thread associated with the timer endpoint runs
+         * as a daemon. The default value is true.
          * 
          * The option will be converted to a <code>boolean</code> type.
          * 

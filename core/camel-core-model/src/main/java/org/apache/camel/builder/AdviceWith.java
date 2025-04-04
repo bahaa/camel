@@ -204,8 +204,7 @@ public final class AdviceWith {
 
         // inject this route into the advice route builder so it can access this route
         // and offer features to manipulate the route directly
-        if (builder instanceof AdviceWithRouteBuilder) {
-            AdviceWithRouteBuilder arb = (AdviceWithRouteBuilder) builder;
+        if (builder instanceof AdviceWithRouteBuilder arb) {
             arb.setOriginalRoute(definition);
         }
 
@@ -213,10 +212,11 @@ public final class AdviceWith {
         RoutesDefinition routes = builder.configureRoutes(camelContext);
 
         // was logging enabled or disabled
-        boolean logRoutesAsXml = true;
-        if (builder instanceof AdviceWithRouteBuilder) {
-            AdviceWithRouteBuilder arb = (AdviceWithRouteBuilder) builder;
+        boolean logRoutesAsXml;
+        if (builder instanceof AdviceWithRouteBuilder arb) {
             logRoutesAsXml = arb.isLogRouteAsXml();
+        } else {
+            logRoutesAsXml = true;
         }
 
         LOG.debug("AdviceWith routes: {}", routes);
@@ -252,8 +252,8 @@ public final class AdviceWith {
         model.removeRouteDefinition(definition);
 
         // any advice with tasks we should execute first?
-        if (builder instanceof AdviceWithRouteBuilder) {
-            List<AdviceWithTask> tasks = ((AdviceWithRouteBuilder) builder).getAdviceWithTasks();
+        if (builder instanceof AdviceWithRouteBuilder adviceWithRouteBuilder) {
+            List<AdviceWithTask> tasks = adviceWithRouteBuilder.getAdviceWithTasks();
             for (AdviceWithTask task : tasks) {
                 task.task();
             }
@@ -276,7 +276,7 @@ public final class AdviceWith {
             LOG.info("AdviceWith route after: {}", merged);
         }
 
-        if (beforeAsXml != null && logRoutesAsXml && LOG.isInfoEnabled()) {
+        if (beforeAsXml != null && LOG.isInfoEnabled()) {
             try {
                 ModelToXMLDumper modelToXMLDumper = PluginHelper.getModelToXMLDumper(ecc);
                 String afterAsXml = modelToXMLDumper.dumpModelAsXml(camelContext, merged);
@@ -300,8 +300,8 @@ public final class AdviceWith {
         }
 
         RouteDefinition rd;
-        if (routeId instanceof RouteDefinition) {
-            rd = (RouteDefinition) routeId;
+        if (routeId instanceof RouteDefinition routeDefinition) {
+            rd = routeDefinition;
         } else {
             String id = mcc.getTypeConverter().convertTo(String.class, routeId);
             if (id != null) {

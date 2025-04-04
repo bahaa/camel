@@ -38,10 +38,10 @@ public class FlipRoutePolicyTest extends ContextTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 // create the flip route policy
                 RoutePolicy policy = new FlipRoutePolicy("foo", "bar");
 
@@ -51,7 +51,7 @@ public class FlipRoutePolicyTest extends ContextTestSupport {
 
                 // use the flip route policy in the bar route and do NOT start
                 // this route on startup
-                from("timer://bar?delay=0&period=10").routeId("bar").routePolicy(policy).noAutoStartup().setBody()
+                from("timer://bar?delay=0&period=10").routeId("bar").routePolicy(policy).autoStartup(false).setBody()
                         .constant("Bar message").to("log:bar").to("mock:bar");
             }
         };

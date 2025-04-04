@@ -130,18 +130,18 @@ public class DistributedOptimisticLockFailingTest extends AbstractDistributedTes
 
     private Object sendTask(int choice, int count, int id) {
         if (choice == 0) {
-            template.sendBodyAndHeader("direct:everysecondone", "" + count, "id", id);
+            template.sendBodyAndHeader("direct:everysecondone", Integer.toString(count), "id", id);
         } else {
-            template2.sendBodyAndHeader("direct:everysecondone", "" + count, "id", id);
+            template2.sendBodyAndHeader("direct:everysecondone", Integer.toString(count), "id", id);
         }
         return null;
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:fails").aggregate(header("id"), new BodyInAggregatingStrategy())
                         .aggregationRepository(new AlwaysFailingRepository()).optimisticLocking()
                         // do not use retry delay to speedup test

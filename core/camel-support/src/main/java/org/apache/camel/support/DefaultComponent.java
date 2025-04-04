@@ -37,6 +37,7 @@ import org.apache.camel.component.extension.ComponentExtension;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.PropertyConfigurer;
 import org.apache.camel.spi.PropertyConfigurerAware;
+import org.apache.camel.support.component.RawParameterHelper;
 import org.apache.camel.support.service.ServiceSupport;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.PropertiesHelper;
@@ -132,7 +133,7 @@ public abstract class DefaultComponent extends ServiceSupport implements Compone
             // parameters using raw syntax: RAW(value)
             // should have the token removed, so its only the value we have in parameters, as we are about to create
             // an endpoint and want to have the parameter values without the RAW tokens
-            URISupport.resolveRawParameterValues(parameters);
+            RawParameterHelper.resolveRawParameterValues(camelContext, parameters);
         }
 
         // use encoded or raw uri?
@@ -175,8 +176,7 @@ public abstract class DefaultComponent extends ServiceSupport implements Compone
         endpoint.setCamelContext(getCamelContext());
 
         // and setup those global options afterwards
-        if (endpoint instanceof DefaultEndpoint) {
-            DefaultEndpoint de = (DefaultEndpoint) endpoint;
+        if (endpoint instanceof DefaultEndpoint de) {
             de.setBridgeErrorHandler(bridge);
             de.setLazyStartProducer(lazy);
             de.setAutowiredEnabled(autowire);
@@ -192,8 +192,8 @@ public abstract class DefaultComponent extends ServiceSupport implements Compone
         }
 
         // allow custom configuration after properties has been configured
-        if (endpoint instanceof AfterPropertiesConfigured) {
-            ((AfterPropertiesConfigured) endpoint).afterPropertiesConfigured(getCamelContext());
+        if (endpoint instanceof AfterPropertiesConfigured afterPropertiesConfigured) {
+            afterPropertiesConfigured.afterPropertiesConfigured(getCamelContext());
         }
 
         afterConfiguration(uri, path, endpoint, parameters);
@@ -448,8 +448,8 @@ public abstract class DefaultComponent extends ServiceSupport implements Compone
             configurer = getComponentPropertyConfigurer();
         } else if (bean instanceof Endpoint) {
             configurer = getEndpointPropertyConfigurer();
-        } else if (bean instanceof PropertyConfigurerAware) {
-            configurer = ((PropertyConfigurerAware) bean).getPropertyConfigurer(bean);
+        } else if (bean instanceof PropertyConfigurerAware propertyConfigurerAware) {
+            configurer = propertyConfigurerAware.getPropertyConfigurer(bean);
         } else {
             configurer = null;
         }
@@ -542,8 +542,7 @@ public abstract class DefaultComponent extends ServiceSupport implements Compone
             Map<String, Object> parameters, String key, Class<T> type, T defaultValue) {
         // the parameter may be the the type already (such as from endpoint-dsl)
         Object value = parameters.remove(key);
-        if (value instanceof String) {
-            String str = (String) value;
+        if (value instanceof String str) {
             if (EndpointHelper.isReferenceParameter(str)) {
                 return EndpointHelper.resolveReferenceParameter(getCamelContext(), str, type);
             }
@@ -599,8 +598,7 @@ public abstract class DefaultComponent extends ServiceSupport implements Compone
     public <T> T resolveAndRemoveReferenceParameter(Map<String, Object> parameters, String key, Class<T> type, T defaultValue) {
         // the parameter may be the the type already (such as from endpoint-dsl)
         Object value = parameters.remove(key);
-        if (value instanceof String) {
-            String str = (String) value;
+        if (value instanceof String str) {
             if (EndpointHelper.isReferenceParameter(str)) {
                 return EndpointHelper.resolveReferenceParameter(getCamelContext(), str, type);
             }

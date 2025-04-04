@@ -22,9 +22,9 @@ import java.nio.charset.StandardCharsets;
 import org.apache.camel.Exchange;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.engine.DefaultTransformerRegistry;
-import org.apache.camel.impl.engine.TransformerKey;
 import org.apache.camel.spi.DataType;
 import org.apache.camel.spi.Transformer;
+import org.apache.camel.spi.TransformerKey;
 import org.apache.camel.support.DefaultExchange;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -86,7 +86,7 @@ public class ByteArrayDataTypeTransformerTest {
     }
 
     @Test
-    public void shouldResolveTransformer() throws Exception {
+    public void shouldResolveTransformer() {
         DefaultTransformerRegistry transformerRegistry = new DefaultTransformerRegistry(camelContext);
         Transformer transformer = transformerRegistry.resolveTransformer(new TransformerKey("application-octet-stream"));
         Assertions.assertNotNull(transformer);

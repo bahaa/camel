@@ -20,16 +20,15 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import org.apache.camel.tooling.model.ArtifactModel;
 import org.apache.camel.tooling.model.BaseModel;
+import org.apache.camel.tooling.model.BaseOptionModel;
 import org.apache.camel.tooling.model.ComponentModel;
 import org.apache.camel.tooling.model.DataFormatModel;
 import org.apache.camel.tooling.model.DevConsoleModel;
 import org.apache.camel.tooling.model.EipModel;
-import org.apache.camel.tooling.model.EntityRef;
 import org.apache.camel.tooling.model.Kind;
 import org.apache.camel.tooling.model.LanguageModel;
 import org.apache.camel.tooling.model.MainModel;
@@ -224,37 +223,20 @@ public interface CamelCatalog {
     List<String> findBeansNames();
 
     /**
-     * Find all the capability names from the Camel catalog
-     */
-    List<String> findCapabilityNames();
-
-    /**
      * @param  kind the kind to look for
      * @return      the list of part names of the given {@link Kind} available in this {@link CamelCatalog}
      */
     default List<String> findNames(Kind kind) {
-        switch (kind) {
-            case component:
-                return findComponentNames();
-            case dataformat:
-                return findDataFormatNames();
-            case language:
-                return findLanguageNames();
-            case transformer:
-                return findTransformerNames();
-            case console:
-                return findDevConsoleNames();
-            case other:
-                return findOtherNames();
-            case eip:
-                return findModelNames();
-            case bean:
-                return findBeansNames();
-            case model:
-                return findModelNames();
-            default:
-                throw new IllegalArgumentException("Unexpected kind " + kind);
-        }
+        return switch (kind) {
+            case component -> findComponentNames();
+            case dataformat -> findDataFormatNames();
+            case language -> findLanguageNames();
+            case transformer -> findTransformerNames();
+            case console -> findDevConsoleNames();
+            case other -> findOtherNames();
+            case eip, model -> findModelNames();
+            case bean -> findBeansNames();
+        };
     }
 
     /**
@@ -614,29 +596,17 @@ public interface CamelCatalog {
      * @param  name the name to look up
      * @return      the requested model or {@code null} in case it is not available in this {@link CamelCatalog}
      */
-    default BaseModel<?> model(Kind kind, String name) {
-        switch (kind) {
-            case component:
-                return componentModel(name);
-            case dataformat:
-                return dataFormatModel(name);
-            case language:
-                return languageModel(name);
-            case transformer:
-                return transformerModel(name);
-            case console:
-                return devConsoleModel(name);
-            case other:
-                return otherModel(name);
-            case eip:
-                return eipModel(name);
-            case bean:
-                return pojoBeanModel(name);
-            case model:
-                return eipModel(name);
-            default:
-                throw new IllegalArgumentException("Unexpected kind " + kind);
-        }
+    default BaseModel<? extends BaseOptionModel> model(Kind kind, String name) {
+        return switch (kind) {
+            case component -> componentModel(name);
+            case dataformat -> dataFormatModel(name);
+            case language -> languageModel(name);
+            case transformer -> transformerModel(name);
+            case console -> devConsoleModel(name);
+            case other -> otherModel(name);
+            case eip, model -> eipModel(name);
+            case bean -> pojoBeanModel(name);
+        };
     }
 
     /**
@@ -668,8 +638,4 @@ public interface CamelCatalog {
      */
     List<ReleaseModel> camelQuarkusReleases();
 
-    /**
-     * Find the entity the given capability maps to.
-     */
-    Optional<EntityRef> findCapabilityRef(String capability);
 }

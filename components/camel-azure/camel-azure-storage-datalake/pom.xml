@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-azure-parent</artifactId>
-        <version>4.6.0-SNAPSHOT</version>
+        <version>4.11.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-azure-storage-datalake</artifactId>
@@ -53,16 +53,7 @@
             <version>${commons-io-version}</version>
         </dependency>
         
-        <!-- optional CloudEvent support -->
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-cloudevents</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-
         <!-- test dependencies -->
-
         <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-test-junit5</artifactId>
@@ -80,18 +71,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-            <version>${awaitility-version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>${assertj-version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
+       <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-test-infra-azure-storage-datalake</artifactId>
             <version>${project.version}</version>

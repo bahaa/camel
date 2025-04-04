@@ -16,6 +16,8 @@
  */
 package org.apache.camel.catalog.impl;
 
+import java.io.LineNumberReader;
+import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
@@ -517,8 +519,8 @@ public abstract class AbstractCamelCatalog {
             // grab authority part and grab username and/or password
             String authority = u.getAuthority();
             if (authority != null && authority.contains("@")) {
-                String username = null;
-                String password = null;
+                String username;
+                String password;
 
                 // grab unserinfo part before @
                 String userInfo = authority.substring(0, authority.indexOf('@'));
@@ -529,6 +531,7 @@ public abstract class AbstractCamelCatalog {
                 } else {
                     // only username
                     username = userInfo;
+                    password = null;
                 }
 
                 // remember the username and/or password which we add later to the options
@@ -854,16 +857,15 @@ public abstract class AbstractCamelCatalog {
         return null;
     }
 
-    public String asEndpointUri(String scheme, Map<String, String> properties, boolean encode) throws URISyntaxException {
+    public String asEndpointUri(String scheme, Map<String, String> properties, boolean encode) {
         return doAsEndpointUri(scheme, properties, "&", encode);
     }
 
-    public String asEndpointUriXml(String scheme, Map<String, String> properties, boolean encode) throws URISyntaxException {
+    public String asEndpointUriXml(String scheme, Map<String, String> properties, boolean encode) {
         return doAsEndpointUri(scheme, properties, "&amp;", encode);
     }
 
-    String doAsEndpointUri(String scheme, Map<String, String> properties, String ampersand, boolean encode)
-            throws URISyntaxException {
+    String doAsEndpointUri(String scheme, Map<String, String> properties, String ampersand, boolean encode) {
         // grab the syntax
         ComponentModel model = componentModel(scheme);
         if (model == null) {
@@ -1270,7 +1272,7 @@ public abstract class AbstractCamelCatalog {
             if (!optionPlaceholder && !lookup && javaType != null
                     && (javaType.startsWith("java.util.Map") || javaType.startsWith("java.util.Properties"))) {
                 // there must be a valid suffix
-                if (suffix == null || suffix.isEmpty() || suffix.equals(".")) {
+                if (isValidSuffix(suffix)) {
                     result.addInvalidMap(longKey, value);
                 } else if (suffix.startsWith("[") && !suffix.contains("]")) {
                     result.addInvalidMap(longKey, value);
@@ -1278,7 +1280,7 @@ public abstract class AbstractCamelCatalog {
             }
             if (!optionPlaceholder && !lookup && javaType != null && "array".equals(row.getType())) {
                 // there must be a suffix and it must be using [] style
-                if (suffix == null || suffix.isEmpty() || suffix.equals(".")) {
+                if (isValidSuffix(suffix)) {
                     result.addInvalidArray(longKey, value);
                 } else if (!suffix.startsWith("[") && !suffix.contains("]")) {
                     result.addInvalidArray(longKey, value);
@@ -1292,6 +1294,10 @@ public abstract class AbstractCamelCatalog {
                 }
             }
         }
+    }
+
+    private static boolean isValidSuffix(String suffix) {
+        return suffix == null || suffix.isEmpty() || suffix.equals(".");
     }
 
     private static boolean acceptConfigurationPropertyKey(String key) {
@@ -1318,14 +1324,14 @@ public abstract class AbstractCamelCatalog {
         // if there are {{ }}} property placeholders then we need to resolve them to something else
         // as the simple parse cannot resolve them before parsing as we dont run the actual Camel application
         // with property placeholders setup so we need to dummy this by replace the {{ }} to something else
-        // therefore we use an more unlikely character: {{XXX}} to ~^XXX^~
+        // therefore we use a more unlikely character: {{XXX}} to ~^XXX^~
         String resolved = simple.replaceAll("\\{\\{(.+)\\}\\}", "~^$1^~");
 
         LanguageValidationResult answer = new LanguageValidationResult(simple);
 
-        Object context = null;
+        Object context;
         Object instance = null;
-        Class<?> clazz = null;
+        Class<?> clazz;
 
         try {
             // need a simple camel context for the simple language parser to be able to parse
@@ -1340,7 +1346,7 @@ public abstract class AbstractCamelCatalog {
             answer.setError(e.getMessage());
         }
 
-        if (clazz != null && context != null && instance != null) {
+        if (clazz != null) {
             Throwable cause = null;
             try {
                 if (predicate) {
@@ -1408,9 +1414,109 @@ public abstract class AbstractCamelCatalog {
         return answer;
     }
 
+    private LanguageValidationResult doValidateGroovy(ClassLoader classLoader, String groovy, boolean predicate) {
+        if (classLoader == null) {
+            classLoader = getClass().getClassLoader();
+        }
+
+        // if there are {{ }}} property placeholders then we need to resolve them to something else
+        // as the simple parse cannot resolve them before parsing as we dont run the actual Camel application
+        // with property placeholders setup so we need to dummy this by replace the {{ }} to something else
+        // therefore we use a more unlikely character: {{XXX}} to ~^XXX^~
+        String resolved = groovy.replaceAll("\\{\\{(.+)\\}\\}", "~^$1^~");
+
+        LanguageValidationResult answer = new LanguageValidationResult(groovy);
+
+        Object context;
+        Object instance = null;
+        Class<?> clazz;
+
+        try {
+            // need a simple camel context for the groovy language parser to be able to parse
+            clazz = classLoader.loadClass("org.apache.camel.impl.engine.SimpleCamelContext");
+            context = clazz.getDeclaredConstructor(boolean.class).newInstance(false);
+            clazz = classLoader.loadClass("org.apache.camel.language.groovy.GroovyLanguage");
+            instance = clazz.getDeclaredConstructor().newInstance();
+            clazz = classLoader.loadClass("org.apache.camel.CamelContext");
+            instance.getClass().getMethod("setCamelContext", clazz).invoke(instance, context);
+        } catch (Exception e) {
+            clazz = null;
+            answer.setError(e.getMessage());
+        }
+
+        if (clazz != null) {
+            Throwable cause = null;
+            try {
+                if (predicate) {
+                    instance.getClass().getMethod("validatePredicate", String.class).invoke(instance, resolved);
+                } else {
+                    instance.getClass().getMethod("validateExpression", String.class).invoke(instance, resolved);
+                }
+            } catch (InvocationTargetException e) {
+                cause = e.getTargetException();
+            } catch (Exception e) {
+                cause = e;
+            }
+
+            if (cause != null) {
+
+                // reverse ~^XXX^~ back to {{XXX}}
+                String errMsg = cause.getMessage();
+                errMsg = errMsg.replaceAll("\\~\\^(.+)\\^\\~", "{{$1}}");
+
+                answer.setError(errMsg);
+
+                // is it simple parser exception then we can grab the index where the problem is
+                if (cause.getClass().getName().equals("org.apache.camel.language.groovy.GroovyValidationException")) {
+                    try {
+                        // we need to grab the index field from those simple parser exceptions
+                        Method method = cause.getClass().getMethod("getIndex");
+                        Object result = method.invoke(cause);
+                        if (result != null) {
+                            int index = (int) result;
+                            answer.setIndex(index);
+                        }
+                    } catch (Exception i) {
+                        // ignore
+                    }
+                }
+
+                // we need to grab the short message field from this simple syntax exception
+                if (answer.getShortError() == null) {
+                    // fallback and try to make existing message short instead
+                    String msg = answer.getError();
+                    // grab everything before " @ " which would be regarded as the short message
+                    LineNumberReader lnr = new LineNumberReader(new StringReader(msg));
+                    try {
+                        String line = lnr.readLine();
+                        do {
+                            if (line.contains(" @ ")) {
+                                // skip leading Scrip_xxxx.groovy: N:
+                                if (line.startsWith("Script_") && StringHelper.countChar(line, ':') > 2) {
+                                    line = StringHelper.after(line, ":", line);
+                                    line = StringHelper.after(line, ":", line);
+                                    line = line.trim();
+                                }
+                                answer.setShortError(line);
+                                break;
+                            }
+                            line = lnr.readLine();
+                        } while (line != null);
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }
+        }
+
+        return answer;
+    }
+
     public LanguageValidationResult validateLanguagePredicate(ClassLoader classLoader, String language, String text) {
         if ("simple".equals(language)) {
             return doValidateSimple(classLoader, text, true);
+        } else if ("groovy".equals(language)) {
+            return doValidateGroovy(classLoader, text, true);
         } else {
             return doValidateLanguage(classLoader, language, text, true);
         }
@@ -1419,6 +1525,8 @@ public abstract class AbstractCamelCatalog {
     public LanguageValidationResult validateLanguageExpression(ClassLoader classLoader, String language, String text) {
         if ("simple".equals(language)) {
             return doValidateSimple(classLoader, text, false);
+        } else if ("groovy".equals(language)) {
+            return doValidateGroovy(classLoader, text, false);
         } else {
             return doValidateLanguage(classLoader, language, text, false);
         }

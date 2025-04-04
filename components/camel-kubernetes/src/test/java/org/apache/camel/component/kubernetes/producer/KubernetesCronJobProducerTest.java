@@ -16,13 +16,20 @@
  */
 package org.apache.camel.component.kubernetes.producer;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.PodTemplateSpecBuilder;
-import io.fabric8.kubernetes.api.model.batch.v1.*;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJobBuilder;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJobListBuilder;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJobSpec;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJobSpecBuilder;
+import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.fabric8.kubernetes.api.model.batch.v1.JobSpecBuilder;
+import io.fabric8.kubernetes.api.model.batch.v1.JobTemplateSpecBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
@@ -50,30 +57,50 @@ public class KubernetesCronJobProducerTest extends KubernetesTestSupport {
 
     @Test
     void listTest() {
-        server.expect().withPath("/apis/batch/v1/namespaces/test/cronjobs")
+        server.expect().withPath("/apis/batch/v1/cronjobs")
                 .andReturn(200, new CronJobListBuilder().addNewItem().and().addNewItem().and().addNewItem().and().build())
                 .once();
-        List<?> result = template.requestBody("direct:listCronJob", "", List.class);
-
+        server.expect().withPath("/apis/batch/v1/namespaces/test/cronjobs")
+                .andReturn(200, new CronJobListBuilder().addNewItem().and().addNewItem().and().build())
+                .always();
+        List<?> result = template.requestBody("direct:list", "", List.class);
         assertEquals(3, result.size());
+
+        Exchange ex = template.request("direct:list",
+                exchange -> exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_NAMESPACE_NAME, "test"));
+        assertEquals(2, ex.getMessage().getBody(List.class).size());
     }
 
     @Test
     void listByLabelsTest() throws Exception {
+        Map<String, String> labels = Map.of(
+                "key1", "value1",
+                "key2", "value2");
+
+        String urlEncodedLabels = toUrlEncoded(labels.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue())
+                .collect(Collectors.joining(",")));
+
         server.expect()
-                .withPath("/apis/batch/v1/namespaces/test/cronjobs?labelSelector=" + toUrlEncoded("key1=value1,key2=value2"))
+                .withPath("/apis/batch/v1/cronjobs?labelSelector=" + urlEncodedLabels)
                 .andReturn(200, new CronJobListBuilder().addNewItem().and().addNewItem().and().addNewItem().and().build())
-                .once();
-        Exchange ex = template.request("direct:listByLabels", exchange -> {
-            Map<String, String> labels = new HashMap<>();
-            labels.put("key1", "value1");
-            labels.put("key2", "value2");
-            exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_CRON_JOB_LABELS, labels);
-        });
+                .always();
+        server.expect()
+                .withPath("/apis/batch/v1/namespaces/test/cronjobs?labelSelector=" + urlEncodedLabels)
+                .andReturn(200, new CronJobListBuilder().addNewItem().and().addNewItem().and().build())
+                .always();
+
+        Exchange ex = template.request("direct:listByLabels",
+                exchange -> exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_CRON_JOB_LABELS, labels));
 
         List<?> result = ex.getMessage().getBody(List.class);
-
         assertEquals(3, result.size());
+
+        ex = template.request("direct:listByLabels", exchange -> {
+            exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_CRON_JOB_LABELS, labels);
+            exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_NAMESPACE_NAME, "test");
+        });
+
+        assertEquals(2, ex.getMessage().getBody(List.class).size());
     }
 
     @Test
@@ -111,6 +138,32 @@ public class KubernetesCronJobProducerTest extends KubernetesTestSupport {
         assertEquals("test", result.getMetadata().getNamespace());
         assertEquals("j1", result.getMetadata().getName());
         assertEquals(labels, result.getMetadata().getLabels());
+    }
+
+    @Test
+    void createJobWithAnnotationsTest() {
+        Map<String, String> labels = Map.of("my.label.key", "my.label.value");
+        Map<String, String> annotations = Map.of("my.annotation.key", "my.annotation.value");
+        CronJobSpec spec = new CronJobSpecBuilder().build();
+        CronJob j1 = new CronJobBuilder().withNewMetadata().withName("j1").withNamespace("test").withLabels(labels)
+                .withAnnotations(annotations).and()
+                .withSpec(spec).build();
+        server.expect().post().withPath("/apis/batch/v1/namespaces/test/cronjobs").andReturn(200, j1).once();
+
+        Exchange ex = template.request("direct:create", exchange -> {
+            exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_NAMESPACE_NAME, "test");
+            exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_CRON_JOB_LABELS, labels);
+            exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_CRON_JOB_ANNOTATIONS, annotations);
+            exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_CRON_JOB_NAME, "j1");
+            exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_CRON_JOB_SPEC, spec);
+        });
+
+        CronJob result = ex.getMessage().getBody(CronJob.class);
+
+        assertEquals("test", result.getMetadata().getNamespace());
+        assertEquals("j1", result.getMetadata().getName());
+        assertEquals(labels, result.getMetadata().getLabels());
+        assertEquals(annotations, result.getMetadata().getAnnotations());
     }
 
     @Test
@@ -162,7 +215,7 @@ public class KubernetesCronJobProducerTest extends KubernetesTestSupport {
             public void configure() {
                 // the kubernetes-client is autowired on the component
 
-                from("direct:listCronJob").to("kubernetes-cronjob:foo?operation=listCronJob");
+                from("direct:list").to("kubernetes-cronjob:foo?operation=listCronJob");
                 from("direct:listByLabels").to("kubernetes-cronjob:foo?operation=listCronJobByLabels");
                 from("direct:get").to("kubernetes-cronjob:foo?operation=getCronJob");
                 from("direct:create").to("kubernetes-cronjob:foo?operation=createCronJob");

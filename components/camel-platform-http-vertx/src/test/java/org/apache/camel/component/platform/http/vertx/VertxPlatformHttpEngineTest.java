@@ -19,7 +19,9 @@ package org.apache.camel.component.platform.http.vertx;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -48,9 +50,11 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.platform.http.HttpEndpointModel;
 import org.apache.camel.component.platform.http.PlatformHttpComponent;
 import org.apache.camel.component.platform.http.spi.Method;
+import org.apache.camel.component.platform.http.spi.PlatformHttpEngine;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
+import org.apache.camel.spi.EmbeddedHttpService;
 import org.apache.camel.spi.RestConfiguration;
 import org.apache.camel.support.jsse.KeyManagersParameters;
 import org.apache.camel.support.jsse.KeyStoreParameters;
@@ -58,6 +62,7 @@ import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.camel.support.jsse.SSLContextServerParameters;
 import org.apache.camel.support.jsse.TrustManagersParameters;
 import org.apache.camel.test.AvailablePortFinder;
+import org.apache.hc.client5.http.utils.Base64;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -65,6 +70,8 @@ import org.junit.jupiter.api.Test;
 import static io.restassured.RestAssured.get;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -170,6 +177,12 @@ public class VertxPlatformHttpEngineTest {
             assertEquals("/get", it.next().getUri());
             assertEquals("/post", it.next().getUri());
 
+            // should find engine in registry
+            assertNotNull(context.getRegistry().findSingleByType(PlatformHttpEngine.class));
+            EmbeddedHttpService server = context.getRegistry().findSingleByType(EmbeddedHttpService.class);
+            assertNotNull(server);
+            assertEquals("http", server.getScheme());
+            assertEquals(RestAssured.port, server.getServerPort());
         } finally {
             context.stop();
         }
@@ -374,7 +387,74 @@ public class VertxPlatformHttpEngineTest {
     }
 
     @Test
-    public void testFileUpload() throws Exception {
+    public void testMultipleFileUpload() throws Exception {
+        final List<String> attachmentIds = List.of("myFirstTestFile", "mySecondTestFile");
+
+        String tmpDirectory = null;
+        List<File> tempFiles = new ArrayList<>(attachmentIds.size());
+        for (String attachmentId : attachmentIds) {
+            final String fileContent = "Test multipart upload content " + attachmentId;
+            File tempFile;
+            if (tmpDirectory == null) {
+                tempFile = File.createTempFile("platform-http-" + attachmentId, ".txt");
+            } else {
+                tempFile = File.createTempFile("platform-http-" + attachmentId, ".txt", new File(tmpDirectory));
+            }
+
+            tempFiles.add(tempFile);
+            tmpDirectory = tempFile.getParent();
+            Files.write(tempFile.toPath(), fileContent.getBytes(StandardCharsets.UTF_8));
+        }
+
+        final CamelContext context = createCamelContext(configuration -> {
+            VertxPlatformHttpServerConfiguration.BodyHandler bodyHandler
+                    = new VertxPlatformHttpServerConfiguration.BodyHandler();
+            // turn on file uploads
+            bodyHandler.setHandleFileUploads(true);
+            bodyHandler.setUploadsDirectory(tempFiles.get(0).getParent());
+            configuration.setBodyHandler(bodyHandler);
+        });
+
+        try {
+            context.addRoutes(new RouteBuilder() {
+                @Override
+                public void configure() {
+                    from("platform-http:/upload")
+                            .process(exchange -> {
+                                AttachmentMessage message = exchange.getMessage(AttachmentMessage.class);
+
+                                String result = "";
+                                for (String attachmentId : attachmentIds) {
+                                    DataHandler attachment = message.getAttachment(attachmentId);
+                                    result += attachment.getContent();
+                                }
+
+                                exchange.getIn().setHeader("ConcatFileContent", result);
+                            })
+                            .setHeader("UploadedAttachments", simple("${headers.CamelAttachmentsSize}"));
+                }
+            });
+
+            context.start();
+
+            given()
+                    .multiPart(attachmentIds.get(0), tempFiles.get(0))
+                    .multiPart(attachmentIds.get(1), tempFiles.get(1))
+                    .when()
+                    .post("/upload")
+                    .then()
+                    .statusCode(204)
+                    .body(emptyOrNullString())
+                    .header("UploadedAttachments", is(String.valueOf(attachmentIds.size())))
+                    .header("ConcatFileContent",
+                            is("Test multipart upload content myFirstTestFileTest multipart upload content mySecondTestFile"));
+        } finally {
+            context.stop();
+        }
+    }
+
+    @Test
+    public void testSingleFileUpload() throws Exception {
         final String attachmentId = "myTestFile";
         final String fileContent = "Test multipart upload content";
         final File tempFile = File.createTempFile("platform-http", ".txt");
@@ -397,8 +477,10 @@ public class VertxPlatformHttpEngineTest {
                             .process(exchange -> {
                                 AttachmentMessage message = exchange.getMessage(AttachmentMessage.class);
                                 DataHandler attachment = message.getAttachment(attachmentId);
-                                message.setBody(attachment.getContent());
-                            });
+                                exchange.getMessage().setHeader("myDataHandler", attachment);
+                            })
+                            .setHeader("UploadedFileContentType", simple("${header.CamelFileContentType}"))
+                            .setHeader("UploadedFileSize", simple("${header.CamelFileLength}"));
                 }
             });
 
@@ -410,6 +492,9 @@ public class VertxPlatformHttpEngineTest {
                     .post("/upload")
                     .then()
                     .statusCode(200)
+                    .header("myDataHandler", containsString("jakarta.activation.DataHandler"))
+                    .header("UploadedFileContentType", is("text/plain"))
+                    .header("UploadedFileSize", is(String.valueOf(fileContent.getBytes().length)))
                     .body(is(fileContent));
         } finally {
             context.stop();
@@ -575,7 +660,8 @@ public class VertxPlatformHttpEngineTest {
                 from("platform-http:/secure")
                         .process(exchange -> {
                             Message message = exchange.getMessage();
-                            message.setBody("Secure Route");
+                            message.setBody("Received message with the Authorization="
+                                            + exchange.getMessage().getHeader("Authorization"));
 
                             User user = message.getHeader(VertxPlatformHttpConstants.AUTHENTICATED_USER, User.class);
                             assertThat(user).isNotNull();
@@ -605,9 +691,8 @@ public class VertxPlatformHttpEngineTest {
                     .get("/secure")
                     .then()
                     .statusCode(200)
-                    .header("Authorization", notNullValue())
-                    .body(is("Secure Route"));
-
+                    .body(is("Received message with the Authorization=Basic "
+                             + Base64.encodeBase64String("camel:s3cr3t".getBytes())));
         } finally {
             context.stop();
             vertx.close();
@@ -1015,6 +1100,54 @@ public class VertxPlatformHttpEngineTest {
                     .header("set-cookie", "XSRF-TOKEN=88533580000c314; Path=/")
                     .body(equalTo("replace"));
 
+        } finally {
+            context.stop();
+        }
+    }
+
+    @Test
+    public void testResponseTypeConversionErrorHandled() throws Exception {
+        final CamelContext context = createCamelContext();
+
+        try {
+            context.addRoutes(new RouteBuilder() {
+                @Override
+                public void configure() {
+                    from("platform-http:/error/response")
+                            // Set the response to something that can't be type converted
+                            .setBody().constant(Collections.EMPTY_SET);
+                }
+            });
+
+            context.start();
+
+            get("/error/response")
+                    .then()
+                    .statusCode(500);
+        } finally {
+            context.stop();
+        }
+    }
+
+    @Test
+    public void testResponseBadQueryParamErrorHandled() throws Exception {
+        final CamelContext context = createCamelContext();
+
+        try {
+            context.addRoutes(new RouteBuilder() {
+                @Override
+                public void configure() {
+                    from("platform-http:/error/response")
+                            .setBody().constant("Error");
+                }
+            });
+
+            context.start();
+
+            // Add a query param that Vert.x cannot handle
+            get("/error/response?::")
+                    .then()
+                    .statusCode(500);
         } finally {
             context.stop();
         }

@@ -38,10 +38,11 @@ import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.junit5.CamelTestSupport;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MailAttachmentNamesTest extends CamelTestSupport {
 
@@ -56,12 +57,12 @@ public class MailAttachmentNamesTest extends CamelTestSupport {
     Session session;
 
     @Override
-    @BeforeEach
-    public void setUp() throws Exception {
+    public void doPreSetup() {
         session = Mailbox.getSmtpSession();
+    }
 
-        super.setUp();
-
+    @Override
+    protected void doPostSetup() {
         Mailbox.clearAll();
         resultEndpoint = getMockEndpoint("mock:result");
         resultEndpoint.expectedMinimumMessageCount(1);
@@ -168,7 +169,7 @@ public class MailAttachmentNamesTest extends CamelTestSupport {
         resultDefaultEndpoint.assertIsSatisfied();
         Exchange exchange = resultDefaultEndpoint.getReceivedExchanges().get(0);
         assertNotNull(exchange.getIn(AttachmentMessage.class));
-        assertNull(exchange.getIn(AttachmentMessage.class).getAttachmentObjects());
+        assertEquals(0, exchange.getIn(AttachmentMessage.class).getAttachmentObjects().size());
     }
 
     /**
@@ -183,7 +184,7 @@ public class MailAttachmentNamesTest extends CamelTestSupport {
         resultDefaultEndpoint.assertIsSatisfied();
         Exchange exchange = resultDefaultEndpoint.getReceivedExchanges().get(0);
         assertNotNull(exchange.getIn(AttachmentMessage.class));
-        assertNull(exchange.getIn(AttachmentMessage.class).getAttachmentObjects());
+        assertEquals(0, exchange.getIn(AttachmentMessage.class).getAttachmentObjects().size());
     }
 
     @Test

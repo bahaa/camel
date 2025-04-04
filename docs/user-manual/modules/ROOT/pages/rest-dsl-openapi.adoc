@@ -1,6 +1,6 @@
-= REST DSL with contract first OpenAPI
+= REST DSL with contract-first OpenAPI
 
-From *Camel 4.6* onwards the xref:rest-dsl.adoc[Rest DSL] has been improved with a _contract first_
+From *Camel 4.6* onwards, the xref:rest-dsl.adoc[Rest DSL] has been improved with a _contract-first_
 approach using vanilla OpenAPI specification.
 
 == How it works
@@ -16,15 +16,16 @@ Neither is (at this time of writing) any security aspects from the OpenAPI speci
 
 == Contract first
 
-The _contract first_ approach requires you to have an existing OpenAPI v3 specification file.
+The _contract-first_ approach requires you to have an existing OpenAPI v3 specification file.
 This contract is a standard OpenAPI contract, and you can use any existing API design tool to build such contracts.
 
 TIP: Camel support OpenAPI v3.0 and v3.1.
 
-In Camel, you then use the Rest DSL in _contract first_ mode. For example having a contracted in a file named `my-contract.json`,
+In Camel, you then use the Rest DSL in _contract-first_ mode.
+For example, having a contract in a file named `my-contract.json`,
 you can then copy this file to `src/main/resources` so it's loaded from classpath.
 
-In Camel Rest DSL you can then very easily define _contract first_ as shown below:
+In Camel Rest DSL you can then very easily define _contract-first_ as shown below:
 
 
 [tabs]
@@ -56,7 +57,7 @@ YAML::
 ----
 ====
 
-When Camel startup the OpenAPI specification file is loaded and parsed. For every APIs
+When Camel startup the OpenAPI specification file is loaded and parsed. For every API
 Camel builds HTTP REST endpoint, which are routed 1:1 to Camel routes using the `direct:operationId` naming convention.
 
 The _pestore_ has 18 APIs here we look at the 5 user APIs:
@@ -128,8 +129,8 @@ YAML::
 
 === Ignoring missing API operations
 
-When using OpenAPI with _contract first_ then Camel will on startup check if there is a corresponding `direct:operationId` route
-for every API service. If some operations are missing then Camel will fail on startup with an error.
+When using OpenAPI with _contract-first_, then Camel will on startup check if there is a corresponding `direct:operationId` route
+for every API service. If some operations are missing, then Camel will fail on startup with an error.
 
 During development, you can use `missingOperation` to ignore this as shown:
 
@@ -149,12 +150,18 @@ This is similar to ignoring missing API operations, as you can tell Camel to moc
     rest().openApi("petstore-v3.json").missingOperation("mock");
 ----
 
-When using _mock_ then Camel will (for missing operations) simulate a successful response, by attempting to load
-canned responses from file system. This allows you to have a set of files that you can use for development and testing purposes.
+When using _mock_, then Camel will (for missing operations) simulate a successful response:
+
+1. attempting to load canned responses from the file system.
+2. for GET verbs then attempt to use example inlined in the OpenAPI `response` section.
+3. for other verbs (DELETE, PUT, POST, PATCH) then return the input body as response.
+4. if none of the above, then return empty body.
+
+This allows you to have a set of files that you can use for development and testing purposes.
 
 The files should be stored in `camel-mock` when using Camel JBang, and `src/main/resources/camel-mock` for Maven/Gradle based projects.
 
-For example the following https://github.com/apache/camel-kamelets-examples/tree/main/jbang/open-api-contract-first[Camel JBang example] is structured as:
+For example, the following https://github.com/apache/camel-kamelets-examples/tree/main/jbang/open-api-contract-first[Camel JBang example] is structured as:
 
 [source,text]
 ----
@@ -187,9 +194,47 @@ $ curl http://0.0.0.0:8080/api/v3/pet/123
 }
 ----
 
+If no file is found, then Camel will attempt to find an example from the _response_ section in the OpenAPI specification.
+
+In the response section below, then for success GET response (200) then for the `application/json` content-type, we have
+an inlined example. Note if there are multiple examples for the same content-type, then Camel will pick the first example,
+so make sure it's the best example you want to let Camel use as mocked response body.
+
+[source,json]
+----
+"responses": {
+    "200": {
+        "description": "successful operation",
+        "content": {
+            "application/xml": {
+                "schema": {
+                    "$ref": "#/components/schemas/Pet"
+                }
+            },
+            "application/json": {
+                "schema": {
+                    "$ref": "#/components/schemas/Pet"
+                },
+                "examples": {
+                    "success": {
+                        "summary": "A cat",
+                        "value": "{\"pet\": \"Jack the cat\"}"
+                    }
+                }
+            }
+        }
+    },
+    "400": {
+        "description": "Invalid ID supplied"
+    },
+    "404": {
+        "description": "Pet not found"
+    }
+----
+
 === Binding to POJO classes
 
-_contract first_ Rest DSL with OpenAPI also support binding mode to JSon and XML.
+_contract-first_ Rest DSL with OpenAPI also supports binding mode to JSON and XML.
 This works the same as _code first_ xref:rest-dsl.adoc[Rest DSL].
 
 However, we have added the `bindingPackageScan` configuration to make it possible for Camel to automatically discover POJO classes from classpath.
@@ -211,10 +256,10 @@ camel.rest.bindingMode = json
 camel.rest.bindingPackageScan = sample.petstore.model
 ----
 
-Then Camel will automatic for every OpenAPI operation detect the specified schemas for incoming and outgoing responses,
+Then Camel will automatically for every OpenAPI operation detect the specified schemas for incoming and outgoing responses,
 and map that to Java POJO classes by class name.
 
-For example the `getPetById` operation in the OpenAPI contract:
+For example, the `getPetById` operation in the OpenAPI contract:
 
 [source,json]
 ----
@@ -245,10 +290,60 @@ Here Camel will detect the `schema` part:
 }
 ----
 
-And compute the class name as `Pet` and attempt to disover this class from classpath scanning specified via the `bindingPackageScan` option.
+And compute the class name as `Pet` and attempt to discover this class from classpath scanning specified via the `bindingPackageScan` option.
+
+You can also use `title` attribute of the Schema to provide the name of the POJO class. This is helpful when you need to use one name for the Schema in the OpenAPI contract and use another name for the actual POJO class in the implementation.
+
+[source,json]
+----
+"components": {
+        "schemas": {
+            "Pet": {
+                "type": "object",
+                "title": "PetResponseDto",
+                "properties": {
+                    ...
+                }
+            }
+        }
+    },
+----
+
+Here Camel will detect the class name as `PetResponseDto` and try to discover it from the classpath. This can be used for both Responses and RequestBodies.
 
 You can source code generate Java POJO classes from an OpenAPI specification via tooling such as the `swagger-codegen-maven-plugin` Maven plugin.
-For more details see this https://github.com/apache/camel-spring-boot-examples/tree/main/openapi-contract-first[Spring Boot example].
+For more details, see this https://github.com/apache/camel-spring-boot-examples/tree/main/openapi-contract-first[Spring Boot example].
+
+=== Expose API specification
+
+The OpenAPI specification is by default not exposed on the HTTP endpoint. You can make this happen by setting the rest-configuration as follows:
+
+[source,yaml]
+----
+- restConfiguration:
+    apiContextPath: /api-doc
+----
+
+Then the specification is accessible on `/api-doc` on the embedded HTTP server, so typically that would be `http://localhost:8080/api-doc`.
+
+In the returned API specification the `server` section has been modified to return the IP of the current server. This can be controlled via:
+
+
+[source,yaml]
+----
+- restConfiguration:
+    apiContextPath: /api-doc
+    hostNameResolver: localIp
+----
+
+And you can turn this off by setting the value to `none` so the server part is taken verbatim from the specification file.
+
+[source,yaml]
+----
+- restConfiguration:
+    apiContextPath: /api-doc
+    hostNameResolver: none
+----
 
 == Examples
 

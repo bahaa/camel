@@ -16,6 +16,8 @@
  */
 package org.apache.camel.component.file;
 
+import java.util.UUID;
+
 import org.apache.camel.ContextTestSupport;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
@@ -26,6 +28,7 @@ import org.junit.jupiter.api.Test;
  * Unit test for max messages per poll
  */
 public class FileConsumeMaxMessagesPerPollTest extends ContextTestSupport {
+    private static final String TEST_FILE_NAME_PREFIX = UUID.randomUUID().toString();
 
     public static final String FILE_QUERY = "?initialDelay=0&delay=10&maxMessagesPerPoll=2";
 
@@ -37,9 +40,9 @@ public class FileConsumeMaxMessagesPerPollTest extends ContextTestSupport {
         mock.message(0).exchangeProperty(Exchange.BATCH_SIZE).isEqualTo(2);
         mock.message(1).exchangeProperty(Exchange.BATCH_SIZE).isEqualTo(2);
         String fileUri = fileUri(FILE_QUERY);
-        template.sendBodyAndHeader(fileUri, "Bye World", Exchange.FILE_NAME, "bye.txt");
-        template.sendBodyAndHeader(fileUri, "Hello World", Exchange.FILE_NAME, "hello.txt");
-        template.sendBodyAndHeader(fileUri, "Godday World", Exchange.FILE_NAME, "godday.txt");
+        template.sendBodyAndHeader(fileUri, "Bye World", Exchange.FILE_NAME, TEST_FILE_NAME_PREFIX + "bye.txt");
+        template.sendBodyAndHeader(fileUri, "Hello World", Exchange.FILE_NAME, TEST_FILE_NAME_PREFIX + "hello.txt");
+        template.sendBodyAndHeader(fileUri, "Godday World", Exchange.FILE_NAME, TEST_FILE_NAME_PREFIX + "godday.txt");
 
         // start route
         context.getRouteController().startRoute("foo");
@@ -48,10 +51,10 @@ public class FileConsumeMaxMessagesPerPollTest extends ContextTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
-            public void configure() throws Exception {
-                from(fileUri(FILE_QUERY)).routeId("foo").noAutoStartup().convertBodyTo(String.class).to("mock:result");
+            public void configure() {
+                from(fileUri(FILE_QUERY)).routeId("foo").autoStartup(false).convertBodyTo(String.class).to("mock:result");
             }
         };
     }

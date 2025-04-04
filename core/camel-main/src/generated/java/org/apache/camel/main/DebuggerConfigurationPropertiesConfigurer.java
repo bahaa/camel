@@ -17,7 +17,28 @@ import org.apache.camel.main.DebuggerConfigurationProperties;
  */
 @Generated("org.apache.camel.maven.packaging.GenerateConfigurerMojo")
 @SuppressWarnings("unchecked")
-public class DebuggerConfigurationPropertiesConfigurer extends org.apache.camel.support.component.PropertyConfigurerSupport implements GeneratedPropertyConfigurer, PropertyConfigurerGetter {
+public class DebuggerConfigurationPropertiesConfigurer extends org.apache.camel.support.component.PropertyConfigurerSupport implements GeneratedPropertyConfigurer, ExtendedPropertyConfigurerGetter {
+
+    private static final Map<String, Object> ALL_OPTIONS;
+    static {
+        Map<String, Object> map = new CaseInsensitiveMap();
+        map.put("BodyIncludeFiles", boolean.class);
+        map.put("BodyIncludeStreams", boolean.class);
+        map.put("BodyMaxChars", int.class);
+        map.put("Breakpoints", java.lang.String.class);
+        map.put("Enabled", boolean.class);
+        map.put("FallbackTimeout", long.class);
+        map.put("IncludeException", boolean.class);
+        map.put("IncludeExchangeProperties", boolean.class);
+        map.put("IncludeExchangeVariables", boolean.class);
+        map.put("JmxConnectorEnabled", boolean.class);
+        map.put("JmxConnectorPort", int.class);
+        map.put("LoggingLevel", org.apache.camel.LoggingLevel.class);
+        map.put("SingleStepIncludeStartEnd", boolean.class);
+        map.put("Standby", boolean.class);
+        map.put("WaitForAttach", boolean.class);
+        ALL_OPTIONS = map;
+    }
 
     @Override
     public boolean configure(CamelContext camelContext, Object obj, String name, Object value, boolean ignoreCase) {
@@ -39,6 +60,10 @@ public class DebuggerConfigurationPropertiesConfigurer extends org.apache.camel.
         case "includeExchangeProperties": target.setIncludeExchangeProperties(property(camelContext, boolean.class, value)); return true;
         case "includeexchangevariables":
         case "includeExchangeVariables": target.setIncludeExchangeVariables(property(camelContext, boolean.class, value)); return true;
+        case "jmxconnectorenabled":
+        case "jmxConnectorEnabled": target.setJmxConnectorEnabled(property(camelContext, boolean.class, value)); return true;
+        case "jmxconnectorport":
+        case "jmxConnectorPort": target.setJmxConnectorPort(property(camelContext, int.class, value)); return true;
         case "logginglevel":
         case "loggingLevel": target.setLoggingLevel(property(camelContext, org.apache.camel.LoggingLevel.class, value)); return true;
         case "singlestepincludestartend":
@@ -48,6 +73,11 @@ public class DebuggerConfigurationPropertiesConfigurer extends org.apache.camel.
         case "waitForAttach": target.setWaitForAttach(property(camelContext, boolean.class, value)); return true;
         default: return false;
         }
+    }
+
+    @Override
+    public Map<String, Object> getAllOptions(Object target) {
+        return ALL_OPTIONS;
     }
 
     @Override
@@ -69,6 +99,10 @@ public class DebuggerConfigurationPropertiesConfigurer extends org.apache.camel.
         case "includeExchangeProperties": return boolean.class;
         case "includeexchangevariables":
         case "includeExchangeVariables": return boolean.class;
+        case "jmxconnectorenabled":
+        case "jmxConnectorEnabled": return boolean.class;
+        case "jmxconnectorport":
+        case "jmxConnectorPort": return int.class;
         case "logginglevel":
         case "loggingLevel": return org.apache.camel.LoggingLevel.class;
         case "singlestepincludestartend":
@@ -100,6 +134,10 @@ public class DebuggerConfigurationPropertiesConfigurer extends org.apache.camel.
         case "includeExchangeProperties": return target.isIncludeExchangeProperties();
         case "includeexchangevariables":
         case "includeExchangeVariables": return target.isIncludeExchangeVariables();
+        case "jmxconnectorenabled":
+        case "jmxConnectorEnabled": return target.isJmxConnectorEnabled();
+        case "jmxconnectorport":
+        case "jmxConnectorPort": return target.getJmxConnectorPort();
         case "logginglevel":
         case "loggingLevel": return target.getLoggingLevel();
         case "singlestepincludestartend":

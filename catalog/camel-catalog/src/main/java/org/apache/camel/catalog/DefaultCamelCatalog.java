@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -41,9 +40,7 @@ import org.apache.camel.tooling.model.ComponentModel;
 import org.apache.camel.tooling.model.DataFormatModel;
 import org.apache.camel.tooling.model.DevConsoleModel;
 import org.apache.camel.tooling.model.EipModel;
-import org.apache.camel.tooling.model.EntityRef;
 import org.apache.camel.tooling.model.JsonMapper;
-import org.apache.camel.tooling.model.Kind;
 import org.apache.camel.tooling.model.LanguageModel;
 import org.apache.camel.tooling.model.MainModel;
 import org.apache.camel.tooling.model.OtherModel;
@@ -312,11 +309,6 @@ public class DefaultCamelCatalog extends AbstractCachingCamelCatalog implements 
         return findNames(filter, this::findOtherNames, this::otherModel);
     }
 
-    @Override
-    public List<String> findCapabilityNames() {
-        return List.copyOf(runtimeProvider.findCapabilities().keySet());
-    }
-
     private List<String> findNames(
             String filter, Supplier<List<String>> findNames, Function<String, ? extends BaseModel<?>> modelLoader) {
         List<String> answer = new ArrayList<>();
@@ -542,53 +534,90 @@ public class DefaultCamelCatalog extends AbstractCachingCamelCatalog implements 
     public String summaryAsJson() {
         return cache(SUMMARY_AS_JSON, () -> {
             Map<String, Object> obj = new JsonObject();
-            obj.put("version", getCatalogVersion());
+            obj.put("version", getLoadedVersion());
             obj.put("models", findModelNames().size());
             obj.put("components", findComponentNames().size());
             obj.put("dataformats", findDataFormatNames().size());
             obj.put("languages", findLanguageNames().size());
             obj.put("others", findOtherNames().size());
+            obj.put("beans", findBeansNames().size());
+            obj.put("dev-consoles", findDevConsoleNames().size());
+            obj.put("transformers", findTransformerNames().size());
             return JsonMapper.serialize(obj);
         });
     }
 
     @Override
     public ArtifactModel<?> modelFromMavenGAV(String groupId, String artifactId, String version) {
-        for (String name : findComponentNames()) {
-            ArtifactModel<?> am = componentModel(name);
-            if (matchArtifact(am, groupId, artifactId, version)) {
-                return am;
+        try {
+            for (String name : findComponentNames()) {
+                ArtifactModel<?> am = componentModel(name);
+                if (matchArtifact(am, groupId, artifactId, version)) {
+                    return am;
+                }
             }
+        } catch (Throwable e) {
+            // ignore as catalog can be dynamic changed and older releases may not have newer apis
         }
-        for (String name : findDataFormatNames()) {
-            ArtifactModel<?> am = dataFormatModel(name);
-            if (matchArtifact(am, groupId, artifactId, version)) {
-                return am;
+        try {
+            for (String name : findDataFormatNames()) {
+                ArtifactModel<?> am = dataFormatModel(name);
+                if (matchArtifact(am, groupId, artifactId, version)) {
+                    return am;
+                }
             }
+        } catch (Throwable e) {
+            // ignore as catalog can be dynamic changed and older releases may not have newer apis
         }
-        for (String name : findLanguageNames()) {
-            ArtifactModel<?> am = languageModel(name);
-            if (matchArtifact(am, groupId, artifactId, version)) {
-                return am;
+        try {
+            for (String name : findLanguageNames()) {
+                ArtifactModel<?> am = languageModel(name);
+                if (matchArtifact(am, groupId, artifactId, version)) {
+                    return am;
+                }
             }
+        } catch (Throwable e) {
+            // ignore as catalog can be dynamic changed and older releases may not have newer apis
         }
-        for (String name : findOtherNames()) {
-            ArtifactModel<?> am = otherModel(name);
-            if (matchArtifact(am, groupId, artifactId, version)) {
-                return am;
+        try {
+            for (String name : findOtherNames()) {
+                ArtifactModel<?> am = otherModel(name);
+                if (matchArtifact(am, groupId, artifactId, version)) {
+                    return am;
+                }
             }
+        } catch (Throwable e) {
+            // ignore as catalog can be dynamic changed and older releases may not have newer apis
         }
-        for (String name : findTransformerNames()) {
-            ArtifactModel<?> am = transformerModel(name);
-            if (matchArtifact(am, groupId, artifactId, version)) {
-                return am;
+        try {
+            for (String name : findTransformerNames()) {
+                ArtifactModel<?> am = transformerModel(name);
+                if (matchArtifact(am, groupId, artifactId, version)) {
+                    return am;
+                }
             }
+        } catch (Throwable e) {
+            // ignore as catalog can be dynamic changed and older releases may not have newer apis
         }
-        for (String name : findDevConsoleNames()) {
-            ArtifactModel<?> am = devConsoleModel(name);
-            if (matchArtifact(am, groupId, artifactId, version)) {
-                return am;
+        try {
+            for (String name : findDevConsoleNames()) {
+                ArtifactModel<?> am = devConsoleModel(name);
+                if (matchArtifact(am, groupId, artifactId, version)) {
+                    return am;
+                }
             }
+        } catch (Throwable e) {
+            // ignore as catalog can be dynamic changed and older releases may not have newer apis
+        }
+        try {
+            for (String name : findBeansNames()) {
+                ArtifactModel<?> am = pojoBeanModel(name);
+                if (matchArtifact(am, groupId, artifactId, version)) {
+                    return am;
+                }
+            }
+        } catch (Throwable e) {
+            // ignore as catalog can be dynamic changed and older releases may not have newer apis
         }
         return null;
     }
@@ -606,23 +635,6 @@ public class DefaultCamelCatalog extends AbstractCachingCamelCatalog implements 
     @Override
     public List<ReleaseModel> camelQuarkusReleases() {
         return camelReleases("camel-quarkus-releases.json");
-    }
-
-    @Override
-    public Optional<EntityRef> findCapabilityRef(String capability) {
-        Map<String, String> capabilities = cache("capabilities", runtimeProvider::findCapabilities);
-
-        String ref = capabilities.get(capability);
-        if (ref == null) {
-            return Optional.empty();
-        }
-
-        String[] items = ref.split("/");
-        if (items.length != 2) {
-            return Optional.empty();
-        }
-
-        return Optional.of(new EntityRef(Kind.valueOf(items[0]), items[1]));
     }
 
     private List<ReleaseModel> camelReleases(String file) {

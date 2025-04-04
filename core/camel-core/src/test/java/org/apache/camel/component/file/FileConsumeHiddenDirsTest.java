@@ -17,6 +17,7 @@
 package org.apache.camel.component.file;
 
 import java.nio.file.Files;
+import java.util.UUID;
 
 import org.apache.camel.ContextTestSupport;
 import org.apache.camel.Exchange;
@@ -31,28 +32,30 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * Unit test for consuming hidden dirs.
  */
 public class FileConsumeHiddenDirsTest extends ContextTestSupport {
+    private static final String TEST_FILE_NAME_1 = "report1" + UUID.randomUUID() + ".txt";
+    private static final String TEST_FILE_NAME_2 = "report2" + UUID.randomUUID() + ".txt";
 
     @Test
     public void testConsumeHiddenDirs() throws Exception {
         MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedBodiesReceivedInAnyOrder("Report 123", "Report 456");
 
-        template.sendBodyAndHeader(fileUri(".hidden"), "Report 123", Exchange.FILE_NAME, "report1.txt");
-        template.sendBodyAndHeader(fileUri("obvious"), "Report 456", Exchange.FILE_NAME, "report2.txt");
+        template.sendBodyAndHeader(fileUri(".hidden"), "Report 123", Exchange.FILE_NAME, TEST_FILE_NAME_1);
+        template.sendBodyAndHeader(fileUri("obvious"), "Report 456", Exchange.FILE_NAME, TEST_FILE_NAME_2);
 
         assertMockEndpointsSatisfied();
 
         Awaitility.await().untilAsserted(() -> {
             // file should be deleted
-            assertFalse(Files.exists(testFile(".hidden/report1.txt")), "File should been deleted");
-            assertFalse(Files.exists(testFile("obvious/report2.txt")), "File should been deleted");
+            assertFalse(Files.exists(testFile(".hidden/" + TEST_FILE_NAME_1)), "File should been deleted");
+            assertFalse(Files.exists(testFile("obvious/" + TEST_FILE_NAME_2)), "File should been deleted");
         });
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
-            public void configure() throws Exception {
+            public void configure() {
                 from(fileUri("?initialDelay=0&delay=10&delete=true&includeHiddenDirs=true&recursive=true"))
                         .convertBodyTo(String.class).to("mock:result");
             }

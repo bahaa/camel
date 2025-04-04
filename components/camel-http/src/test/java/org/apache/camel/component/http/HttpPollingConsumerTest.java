@@ -22,8 +22,6 @@ import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.component.http.handler.DelayValidationHandler;
 import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
 import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.camel.component.http.HttpMethods.GET;
@@ -38,12 +36,10 @@ public class HttpPollingConsumerTest extends BaseHttpTest {
     private final String password = "password";
     private String endpointUrl;
 
-    @BeforeEach
     @Override
-    public void setUp() throws Exception {
-        super.setUp();
-
-        localServer = ServerBootstrap.bootstrap().setHttpProcessor(getBasicHttpProcessor())
+    public void setupResources() throws Exception {
+        localServer = ServerBootstrap.bootstrap()
+                .setCanonicalHostName("localhost").setHttpProcessor(getBasicHttpProcessor())
                 .setConnectionReuseStrategy(getConnectionReuseStrategy()).setResponseFactory(getHttpResponseFactory())
                 .setSslContext(getSSLContext())
                 .register("/", new DelayValidationHandler(GET.name(), null, null, getExpectedContent(), 1000)).create();
@@ -52,10 +48,8 @@ public class HttpPollingConsumerTest extends BaseHttpTest {
         endpointUrl = "http://localhost:" + localServer.getLocalPort();
     }
 
-    @AfterEach
     @Override
-    public void tearDown() throws Exception {
-        super.tearDown();
+    public void cleanupResources() throws Exception {
 
         if (localServer != null) {
             localServer.stop();

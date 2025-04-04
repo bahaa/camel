@@ -31,7 +31,7 @@ import org.apache.camel.spi.NamespaceAware;
 public class XPathExpressionReifier extends SingleInputTypedExpressionReifier<XPathExpression> {
 
     public XPathExpressionReifier(CamelContext camelContext, ExpressionDefinition definition) {
-        super(camelContext, (XPathExpression) definition);
+        super(camelContext, definition);
     }
 
     @Override
@@ -45,8 +45,7 @@ public class XPathExpressionReifier extends SingleInputTypedExpressionReifier<XP
     }
 
     protected void configureNamespaceAware(Object builder) {
-        if (definition.getNamespaces() != null && builder instanceof NamespaceAware) {
-            NamespaceAware namespaceAware = (NamespaceAware) builder;
+        if (definition.getNamespaces() != null && builder instanceof NamespaceAware namespaceAware) {
             namespaceAware.setNamespaces(definition.getNamespaces());
         }
     }

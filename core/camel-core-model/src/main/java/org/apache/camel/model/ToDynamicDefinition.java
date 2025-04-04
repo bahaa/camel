@@ -34,7 +34,7 @@ import org.apache.camel.spi.Metadata;
 @Metadata(label = "eip,routing")
 @XmlRootElement(name = "toD")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ToDynamicDefinition extends NoOutputDefinition<ToDynamicDefinition> implements CopyableProcessorDefinition {
+public class ToDynamicDefinition extends NoOutputDefinition<ToDynamicDefinition> {
 
     @XmlTransient
     protected EndpointProducerBuilder endpointProducerBuilder;
@@ -133,11 +133,12 @@ public class ToDynamicDefinition extends NoOutputDefinition<ToDynamicDefinition>
     }
 
     /**
-     * To use a variable to store the received message body (only body, not headers). This is handy for easy access to
-     * the received message body via variables.
+     * To use a variable as the source for the message body to send. This makes it handy to use variables for user data
+     * and to easily control what data to use for sending and receiving.
      *
-     * Important: When using receive variable then the received body is stored only in this variable and <b>not</b> on
-     * the current {@link org.apache.camel.Message}.
+     * Important: When using send variable then the message body is taken from this variable instead of the current
+     * message, however the headers from the message will still be used as well. In other words, the variable is used
+     * instead of the message body, but everything else is as usual.
      */
     public ToDynamicDefinition variableSend(String variableSend) {
         setVariableSend(variableSend);
@@ -329,7 +330,7 @@ public class ToDynamicDefinition extends NoOutputDefinition<ToDynamicDefinition>
         this.autoStartComponents = autoStartComponents;
     }
 
-    public ToDynamicDefinition copy() {
+    public ToDynamicDefinition copyDefinition() {
         return new ToDynamicDefinition(this);
     }
 }

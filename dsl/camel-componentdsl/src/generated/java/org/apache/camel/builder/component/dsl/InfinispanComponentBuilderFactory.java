@@ -68,7 +68,8 @@ public interface InfinispanComponentBuilderFactory {
         }
     
         /**
-         * Specifies the host of the cache on Infinispan instance.
+         * Specifies the host of the cache on Infinispan instance. Multiple
+         * hosts can be separated by semicolon.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -95,23 +96,6 @@ public interface InfinispanComponentBuilderFactory {
          */
         default InfinispanComponentBuilder queryBuilder(org.apache.camel.component.infinispan.InfinispanQueryBuilder queryBuilder) {
             doSetProperty("queryBuilder", queryBuilder);
-            return this;
-        }
-    
-        
-        /**
-         * Define if we are connecting to a secured Infinispan instance.
-         * 
-         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
-         * 
-         * Default: false
-         * Group: common
-         * 
-         * @param secure the value to set
-         * @return the dsl builder
-         */
-        default InfinispanComponentBuilder secure(boolean secure) {
-            doSetProperty("secure", secure);
             return this;
         }
     
@@ -278,6 +262,116 @@ public interface InfinispanComponentBuilderFactory {
          */
         default InfinispanComponentBuilder value(java.lang.Object value) {
             doSetProperty("value", value);
+            return this;
+        }
+    
+        /**
+         * The dimension size used to store vector embeddings. This should be
+         * equal to the dimension size of the model used to create the vector
+         * embeddings. This option is mandatory if the embedding store is
+         * enabled.
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Group: producer (advanced)
+         * 
+         * @param embeddingStoreDimension the value to set
+         * @return the dsl builder
+         */
+        default InfinispanComponentBuilder embeddingStoreDimension(int embeddingStoreDimension) {
+            doSetProperty("embeddingStoreDimension", embeddingStoreDimension);
+            return this;
+        }
+    
+        
+        /**
+         * The distance to use for kNN search queries in relation to the
+         * configured vector similarity.
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Default: 3
+         * Group: producer (advanced)
+         * 
+         * @param embeddingStoreDistance the value to set
+         * @return the dsl builder
+         */
+        default InfinispanComponentBuilder embeddingStoreDistance(int embeddingStoreDistance) {
+            doSetProperty("embeddingStoreDistance", embeddingStoreDistance);
+            return this;
+        }
+    
+        
+        /**
+         * Whether to enable the embedding store. When enabled, the embedding
+         * store will be configured automatically when Camel starts. Note that
+         * this feature requires camel-langchain4j-embeddings to be on the
+         * classpath.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: producer (advanced)
+         * 
+         * @param embeddingStoreEnabled the value to set
+         * @return the dsl builder
+         */
+        default InfinispanComponentBuilder embeddingStoreEnabled(boolean embeddingStoreEnabled) {
+            doSetProperty("embeddingStoreEnabled", embeddingStoreEnabled);
+            return this;
+        }
+    
+        
+        /**
+         * Whether to automatically register the proto schema for the types
+         * required by embedding store cache put and query operations.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: producer (advanced)
+         * 
+         * @param embeddingStoreRegisterSchema the value to set
+         * @return the dsl builder
+         */
+        default InfinispanComponentBuilder embeddingStoreRegisterSchema(boolean embeddingStoreRegisterSchema) {
+            doSetProperty("embeddingStoreRegisterSchema", embeddingStoreRegisterSchema);
+            return this;
+        }
+    
+        /**
+         * The name of the type used to store embeddings. The default is
+         * 'InfinispanRemoteEmbedding' suffixed with the value of the
+         * embeddingStoreDimension option. E.g.
+         * CamelInfinispanRemoteEmbedding384.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer (advanced)
+         * 
+         * @param embeddingStoreTypeName the value to set
+         * @return the dsl builder
+         */
+        default InfinispanComponentBuilder embeddingStoreTypeName(java.lang.String embeddingStoreTypeName) {
+            doSetProperty("embeddingStoreTypeName", embeddingStoreTypeName);
+            return this;
+        }
+    
+        
+        /**
+         * The vector similarity algorithm used to store embeddings.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.infinispan.api.annotations.indexing.option.VectorSimilarity&lt;/code&gt; type.
+         * 
+         * Default: COSINE
+         * Group: producer (advanced)
+         * 
+         * @param embeddingStoreVectorSimilarity the value to set
+         * @return the dsl builder
+         */
+        default InfinispanComponentBuilder embeddingStoreVectorSimilarity(org.infinispan.api.annotations.indexing.option.VectorSimilarity embeddingStoreVectorSimilarity) {
+            doSetProperty("embeddingStoreVectorSimilarity", embeddingStoreVectorSimilarity);
             return this;
         }
     
@@ -453,6 +547,23 @@ public interface InfinispanComponentBuilderFactory {
             return this;
         }
     
+        
+        /**
+         * Define if we are connecting to a secured Infinispan instance.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param secure the value to set
+         * @return the dsl builder
+         */
+        default InfinispanComponentBuilder secure(boolean secure) {
+            doSetProperty("secure", secure);
+            return this;
+        }
+    
         /**
          * Define the security realm to access the infinispan instance.
          * 
@@ -521,7 +632,6 @@ public interface InfinispanComponentBuilderFactory {
             case "configuration": ((InfinispanRemoteComponent) component).setConfiguration((org.apache.camel.component.infinispan.remote.InfinispanRemoteConfiguration) value); return true;
             case "hosts": getOrCreateConfiguration((InfinispanRemoteComponent) component).setHosts((java.lang.String) value); return true;
             case "queryBuilder": getOrCreateConfiguration((InfinispanRemoteComponent) component).setQueryBuilder((org.apache.camel.component.infinispan.InfinispanQueryBuilder) value); return true;
-            case "secure": getOrCreateConfiguration((InfinispanRemoteComponent) component).setSecure((boolean) value); return true;
             case "bridgeErrorHandler": ((InfinispanRemoteComponent) component).setBridgeErrorHandler((boolean) value); return true;
             case "customListener": getOrCreateConfiguration((InfinispanRemoteComponent) component).setCustomListener((org.apache.camel.component.infinispan.remote.InfinispanRemoteCustomListener) value); return true;
             case "eventTypes": getOrCreateConfiguration((InfinispanRemoteComponent) component).setEventTypes((java.lang.String) value); return true;
@@ -531,6 +641,12 @@ public interface InfinispanComponentBuilderFactory {
             case "oldValue": getOrCreateConfiguration((InfinispanRemoteComponent) component).setOldValue((java.lang.Object) value); return true;
             case "operation": getOrCreateConfiguration((InfinispanRemoteComponent) component).setOperation((org.apache.camel.component.infinispan.InfinispanOperation) value); return true;
             case "value": getOrCreateConfiguration((InfinispanRemoteComponent) component).setValue((java.lang.Object) value); return true;
+            case "embeddingStoreDimension": getOrCreateConfiguration((InfinispanRemoteComponent) component).setEmbeddingStoreDimension((int) value); return true;
+            case "embeddingStoreDistance": getOrCreateConfiguration((InfinispanRemoteComponent) component).setEmbeddingStoreDistance((int) value); return true;
+            case "embeddingStoreEnabled": getOrCreateConfiguration((InfinispanRemoteComponent) component).setEmbeddingStoreEnabled((boolean) value); return true;
+            case "embeddingStoreRegisterSchema": getOrCreateConfiguration((InfinispanRemoteComponent) component).setEmbeddingStoreRegisterSchema((boolean) value); return true;
+            case "embeddingStoreTypeName": getOrCreateConfiguration((InfinispanRemoteComponent) component).setEmbeddingStoreTypeName((java.lang.String) value); return true;
+            case "embeddingStoreVectorSimilarity": getOrCreateConfiguration((InfinispanRemoteComponent) component).setEmbeddingStoreVectorSimilarity((org.infinispan.api.annotations.indexing.option.VectorSimilarity) value); return true;
             case "autowiredEnabled": ((InfinispanRemoteComponent) component).setAutowiredEnabled((boolean) value); return true;
             case "cacheContainer": getOrCreateConfiguration((InfinispanRemoteComponent) component).setCacheContainer((org.infinispan.client.hotrod.RemoteCacheManager) value); return true;
             case "cacheContainerConfiguration": getOrCreateConfiguration((InfinispanRemoteComponent) component).setCacheContainerConfiguration((org.infinispan.client.hotrod.configuration.Configuration) value); return true;
@@ -541,6 +657,7 @@ public interface InfinispanComponentBuilderFactory {
             case "resultHeader": getOrCreateConfiguration((InfinispanRemoteComponent) component).setResultHeader((java.lang.String) value); return true;
             case "password": getOrCreateConfiguration((InfinispanRemoteComponent) component).setPassword((java.lang.String) value); return true;
             case "saslMechanism": getOrCreateConfiguration((InfinispanRemoteComponent) component).setSaslMechanism((java.lang.String) value); return true;
+            case "secure": getOrCreateConfiguration((InfinispanRemoteComponent) component).setSecure((boolean) value); return true;
             case "securityRealm": getOrCreateConfiguration((InfinispanRemoteComponent) component).setSecurityRealm((java.lang.String) value); return true;
             case "securityServerName": getOrCreateConfiguration((InfinispanRemoteComponent) component).setSecurityServerName((java.lang.String) value); return true;
             case "username": getOrCreateConfiguration((InfinispanRemoteComponent) component).setUsername((java.lang.String) value); return true;

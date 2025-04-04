@@ -29,7 +29,6 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.engine.DefaultEndpointRegistry;
 import org.apache.camel.impl.engine.SimpleCamelContext;
 import org.apache.camel.spi.EndpointRegistry;
-import org.apache.camel.support.NormalizedUri;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -40,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DefaultEndpointRegistryTest {
 
     @Test
-    public void testRemoveEndpoint() throws Exception {
+    public void testRemoveEndpoint() {
         DefaultCamelContext ctx = new DefaultCamelContext();
         ctx.start();
 
@@ -54,7 +53,7 @@ public class DefaultEndpointRegistryTest {
     }
 
     @Test
-    public void testRemoveEndpointWithHash() throws Exception {
+    public void testRemoveEndpointWithHash() {
         DefaultCamelContext ctx = new DefaultCamelContext();
         ctx.start();
 
@@ -72,7 +71,7 @@ public class DefaultEndpointRegistryTest {
         DefaultCamelContext ctx = new DefaultCamelContext();
         ctx.addRoutes(new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:start")
                         .toD().cacheSize(10).uri("mock:${header.foo}");
             }
@@ -91,7 +90,7 @@ public class DefaultEndpointRegistryTest {
 
         FluentProducerTemplate template = ctx.createFluentProducerTemplate();
         for (int i = 0; i < 100; i++) {
-            template.withBody("Hello").withHeader("foo", "" + i).to("direct:start").send();
+            template.withBody("Hello").withHeader("foo", Integer.toString(i)).to("direct:start").send();
         }
 
         Awaitility.await().untilAsserted(() -> {
@@ -104,7 +103,7 @@ public class DefaultEndpointRegistryTest {
     }
 
     @Test
-    public void testMigration() throws Exception {
+    public void testMigration() {
         DefaultCamelContext ctx = new DefaultCamelContext();
         ctx.start();
         DefaultEndpointRegistry reg = (DefaultEndpointRegistry) ctx.getEndpointRegistry();
@@ -126,7 +125,7 @@ public class DefaultEndpointRegistryTest {
         DefaultCamelContext ctx = new DefaultCamelContext();
         ctx.addRoutes(new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 errorHandler(deadLetterChannel("direct:error")
                         .maximumRedeliveries(2)
                         .redeliveryDelay(0));
@@ -154,7 +153,7 @@ public class DefaultEndpointRegistryTest {
         context.start();
 
         ProducerTemplate producerTemplate = context.createProducerTemplate();
-        EndpointRegistry<NormalizedUri> endpointRegistry = context.getEndpointRegistry();
+        EndpointRegistry endpointRegistry = context.getEndpointRegistry();
 
         int nThreads = 4;
         ExecutorService executorService = Executors.newFixedThreadPool(nThreads);

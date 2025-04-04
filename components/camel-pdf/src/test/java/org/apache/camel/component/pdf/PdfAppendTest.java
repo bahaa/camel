@@ -32,16 +32,10 @@ import org.apache.camel.test.junit5.CamelTestSupport;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.encryption.AccessPermission;
 import org.apache.pdfbox.pdmodel.encryption.StandardDecryptionMaterial;
 import org.apache.pdfbox.pdmodel.encryption.StandardProtectionPolicy;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -54,26 +48,12 @@ public class PdfAppendTest extends CamelTestSupport {
     @EndpointInject("mock:result")
     protected MockEndpoint resultEndpoint;
 
-    @Override
-    @BeforeEach
-    public void setUp() throws Exception {
-        super.setUp();
-    }
-
     @Test
     public void testAppend() throws Exception {
-        final String originalText = "Test";
         final String textToAppend = "Append";
-        PDDocument document = new PDDocument();
-        PDPage page = new PDPage(PDRectangle.A4);
-        document.addPage(page);
-        PDPageContentStream contentStream = new PDPageContentStream(document, page);
-        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
-        contentStream.beginText();
-        contentStream.newLineAtOffset(20, 400);
-        contentStream.showText(originalText);
-        contentStream.endText();
-        contentStream.close();
+        final String originalText = "Test";
+
+        PDDocument document = PDFUtil.textToPDF(originalText);
 
         template.sendBodyAndHeader("direct:start", textToAppend, PdfHeaderConstants.PDF_DOCUMENT_HEADER_NAME, document);
 
@@ -105,16 +85,7 @@ public class PdfAppendTest extends CamelTestSupport {
     public void testAppendEncrypted() throws Exception {
         final String originalText = "Test";
         final String textToAppend = "Append";
-        PDDocument document = new PDDocument();
-        PDPage page = new PDPage(PDRectangle.A4);
-        document.addPage(page);
-        PDPageContentStream contentStream = new PDPageContentStream(document, page);
-        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
-        contentStream.beginText();
-        contentStream.newLineAtOffset(20, 400);
-        contentStream.showText(originalText);
-        contentStream.endText();
-        contentStream.close();
+        PDDocument document = PDFUtil.textToPDF(originalText);
 
         final String ownerPass = "ownerPass";
         final String userPass = "userPass";

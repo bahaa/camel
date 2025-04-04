@@ -16,10 +16,8 @@
  */
 package org.apache.camel.component.xmlsecurity;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.security.Key;
@@ -99,10 +97,9 @@ import org.apache.camel.component.xmlsecurity.util.ValidationFailedHandlerIgnore
 import org.apache.camel.component.xmlsecurity.util.XmlSignature2Message2MessageWithTimestampProperty;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.spi.Registry;
-import org.apache.camel.support.SimpleRegistry;
+import org.apache.camel.support.ExceptionHelper;
 import org.apache.camel.support.processor.validation.SchemaValidationException;
 import org.apache.camel.test.junit5.CamelTestSupport;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -125,9 +122,7 @@ public class XmlSignatureTest extends CamelTestSupport {
     }
 
     @Override
-    protected Registry createCamelRegistry() throws Exception {
-        Registry registry = new SimpleRegistry();
-
+    protected void bindToRegistry(Registry registry) throws Exception {
         registry.bind("accessor", getKeyAccessor(keyPair.getPrivate()));
         registry.bind("canonicalizationMethod1", getCanonicalizationMethod());
         registry.bind("selector", KeySelector.singletonKeySelector(keyPair.getPublic()));
@@ -150,8 +145,6 @@ public class XmlSignatureTest extends CamelTestSupport {
         registry.bind("xpathsToIdAttributes", xpaths);
 
         registry.bind("parentXpathBean", getParentXPathBean());
-
-        return registry;
     }
 
     @Override
@@ -1347,7 +1340,7 @@ public class XmlSignatureTest extends CamelTestSupport {
         Exception e = (Exception) mock.getExchanges().get(0).getProperty(Exchange.EXCEPTION_CAUGHT);
         assertNotNull(e, "Expected excpetion " + cl.getName() + " missing");
         if (e.getClass() != cl) {
-            String stackTrace = getStrackTrace(e);
+            String stackTrace = ExceptionHelper.stackTraceToString(e);
             fail("Exception  " + cl.getName() + " excpected, but was " + e.getClass().getName() + ": " + stackTrace);
         }
         if (expectedMessage != null) {
@@ -1359,18 +1352,9 @@ public class XmlSignatureTest extends CamelTestSupport {
             if (expectedCauseClass != cause.getClass()) {
                 fail("Cause exception " + expectedCauseClass.getName() + " expected, but was " + cause.getClass().getName()
                      + ": "
-                     + getStrackTrace(e));
+                     + ExceptionHelper.stackTraceToString(e));
             }
         }
-    }
-
-    private static String getStrackTrace(Exception e) throws UnsupportedEncodingException {
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        PrintWriter w = new PrintWriter(os);
-        e.printStackTrace(w);
-        w.close();
-        String stackTrace = new String(os.toByteArray(), "UTF-8");
-        return stackTrace;
     }
 
     private MockEndpoint setupExceptionMock() {
@@ -1426,11 +1410,8 @@ public class XmlSignatureTest extends CamelTestSupport {
     }
 
     @Override
-    @BeforeEach
-    public void setUp() throws Exception {
+    public void doPreSetup() {
         setUpKeys("RSA", 1024);
-        disableJMX();
-        super.setUp();
     }
 
     public void setUpKeys(String algorithm, int keylength) {

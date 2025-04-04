@@ -23,49 +23,14 @@ messages from this endpoint, then the `interceptFrom` is not triggered.
 
 === Interceptor scopes
 
-All the interceptors can be configured on global, route scope, or with
+All the interceptors can be configured on global, or with
 xref:manual::route-configuration.adoc[Route Configuration].
-
-This means multiple interceptors can be _triggered_.
-
-Most of the examples in this page are on global scope.
-To use route scope, then it is similar, but it is done on the route as shown in the following example:
-
-[tabs]
-====
-
-Java::
-+
-
-[source,java]
--------------------------------------------------------------------------
-from("jms:queue:order")
-   .intercept().to("log:hello").end() // intercepts only in this route
-  .to("bean:validateOrder")
-  .to("bean:processOrder");
--------------------------------------------------------------------------
-
-XML::
-+
-[source,xml]
-----
-  <route>
-    <from uri="jms:queue:order"/>
-    <intercept>
-      <to uri="log:hello"/>
-    </intercept>
-    <to uri="bean:validateOrder"/>
-    <to uri="bean:processOrder"/>
-  </route>
-----
-
-====
 
 === Common features of the interceptors
 
 All these interceptors support the following features:
 
-* xref:manual::predicate.adoc[Predicate] using `when` to only trigger the interceptor in certain conditions
+* xref:manual::predicate.adoc[Predicate] using `onWhen` to only trigger the interceptor in certain conditions
 * `stop` forces stopping continue routing the Exchange and mark it as completed successful (it's actually the xref:stop-eip.adoc[Stop] EIP).
 * `skip` when used with `interceptSendToEndpoint` will *skip* sending the message to the original intended endpoint.
 * `afterUri` when used with `interceptSendToEndpoint` allows to send
@@ -144,7 +109,7 @@ Java::
 
 [source,java]
 ----
-intercept().when(body().contains("Hello")).to("mock:intercepted");
+intercept().onWhen(body().contains("Hello")).to("mock:intercepted");
 
 from("jms:queue:order")
   .to("bean:validateOrder")
@@ -159,9 +124,9 @@ XML::
 <camelContext>
 
   <intercept>
-      <when>
+      <onWhen>
           <simple>${in.body} contains 'Hello'</simple>
-      </when>
+      </onWhen>
       <to uri="mock:intercepted"/>
   </intercept>
 
@@ -189,7 +154,7 @@ Java::
 
 [source,java]
 ----
-intercept().when(body().contains("Hello"))
+intercept().onWhen(body().contains("Hello"))
   .to("log:test")
   .stop(); // stop continue routing
 
@@ -206,11 +171,11 @@ XML::
 <camelContext>
 
   <intercept>
-      <when>
+      <onWhen>
         <simple>${body} contains 'Hello'</simple>
         <to uri="log:test"/>
         <stop/> <!-- stop continue routing -->
-      </when>
+      </onWhen>
   </intercept>
 
   <route>
@@ -496,7 +461,7 @@ Java::
 [source,java]
 ----
 interceptSendToEndpoint("kafka*").skipSendToOriginalEndpoint()
-  .when(simple("${header.biztype} == 'TEST'")
+  .onWhen(simple("${header.biztype} == 'TEST'")
   .log("TEST message detected - is NOT send to kafka");
 
 from("jms:queue:order")
@@ -513,7 +478,7 @@ XML::
 <camelContext>
 
   <interceptSendToEndpoint uri="kafka*" skipSendToOriginalEndpoint="true">
-    <when><simple>${header.biztype} == 'TEST'</simple></when>
+    <onWhen><simple>${header.biztype} == 'TEST'</simple></onWhen>
     <log message="TEST message detected - is NOT send to kafka"/>
   </interceptSendToEndpoint>
 

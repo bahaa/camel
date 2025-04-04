@@ -29,8 +29,8 @@ import org.apache.camel.support.DefaultEndpoint;
 import static org.apache.camel.component.langchain4j.chat.LangChain4jChat.SCHEME;
 
 @UriEndpoint(firstVersion = "4.5.0", scheme = SCHEME,
-             title = "langChain4j Chat",
-             syntax = "langchain4j-chat:chatId", producerOnly = true,
+             title = "LangChain4j Chat",
+             syntax = "langchain4j-chat:chatId",
              category = { Category.AI }, headersClass = LangChain4jChat.Headers.class)
 public class LangChain4jChatEndpoint extends DefaultEndpoint {
 
@@ -55,7 +55,7 @@ public class LangChain4jChatEndpoint extends DefaultEndpoint {
 
     @Override
     public Consumer createConsumer(Processor processor) throws Exception {
-        throw new UnsupportedOperationException("Cannot consume from an LangChain4j chat Endpoint: " + getEndpointUri());
+        throw new UnsupportedOperationException("Consumer not supported");
     }
 
     /**
@@ -71,4 +71,8 @@ public class LangChain4jChatEndpoint extends DefaultEndpoint {
         return configuration;
     }
 
+    @Override
+    protected void doStop() throws Exception {
+        super.doStop();
+    }
 }

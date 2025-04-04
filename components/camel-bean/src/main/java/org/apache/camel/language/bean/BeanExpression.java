@@ -30,6 +30,7 @@ import org.apache.camel.Predicate;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.TypeConverter;
 import org.apache.camel.component.bean.BeanComponent;
+import org.apache.camel.component.bean.BeanConstants;
 import org.apache.camel.component.bean.BeanExpressionProcessor;
 import org.apache.camel.component.bean.BeanHolder;
 import org.apache.camel.component.bean.BeanInfo;
@@ -59,10 +60,10 @@ public class BeanExpression implements Expression, Predicate {
     private BeanComponent beanComponent;
     private Language simple;
     private Class<?> resultType;
-    private Object bean;
+    private final Object bean;
     private String beanName;
     private Class<?> type;
-    private String method;
+    private final String method;
     private BeanHolder beanHolder;
     private boolean ognlMethod;
     private BeanScope scope = BeanScope.Singleton;
@@ -191,9 +192,11 @@ public class BeanExpression implements Expression, Predicate {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("BeanExpression[");
+        StringBuilder sb = new StringBuilder(256);
+
+        sb.append("BeanExpression[");
         if (bean != null) {
-            sb.append(bean.toString());
+            sb.append(bean);
         } else if (beanName != null) {
             sb.append(beanName);
         } else if (type != null) {
@@ -347,13 +350,15 @@ public class BeanExpression implements Expression, Predicate {
     private static Object invokeBean(BeanHolder beanHolder, String beanName, String methodName, Exchange exchange) {
         Object result;
 
-        BeanExpressionProcessor processor = new BeanExpressionProcessor(beanHolder);
-        if (methodName != null) {
-            processor.setMethod(methodName);
-            // enable OGNL like invocation
-            processor.setShorthandMethod(true);
-        }
         try {
+            // do not close BeanExpressionProcessor as beanHolder should not be closed
+            BeanExpressionProcessor processor = new BeanExpressionProcessor(beanHolder);
+
+            if (methodName != null) {
+                processor.setMethod(methodName);
+                // enable OGNL like invocation
+                processor.setShorthandMethod(true);
+            }
             // copy the original exchange to avoid side effects on it
             Exchange resultExchange = ExchangeHelper.createCopy(exchange, true);
             // remove any existing exception in case we do OGNL on the exception
@@ -403,7 +408,7 @@ public class BeanExpression implements Expression, Predicate {
         resultExchange.setPattern(ExchangePattern.InOut);
         // do not propagate any method name when using OGNL, as with OGNL we
         // compute and provide the method name to explicit to invoke
-        resultExchange.getIn().removeHeader(Exchange.BEAN_METHOD_NAME);
+        resultExchange.removeProperty(BeanConstants.BEAN_METHOD_NAME);
 
         // current ognl path as we go along
         String ognlPath = "";

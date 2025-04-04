@@ -17,7 +17,6 @@
 package org.apache.camel.component.http;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,8 +31,8 @@ import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
 import org.apache.hc.core5.http.io.HttpRequestHandler;
 import org.apache.hc.core5.http.protocol.DefaultHttpProcessor;
 import org.apache.hc.core5.http.protocol.HttpProcessor;
+import org.apache.hc.core5.http.protocol.RequestValidateHost;
 import org.apache.hc.core5.http.protocol.ResponseContent;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,13 +47,10 @@ public class CamelComponentVerifierTest extends BaseHttpTest {
     private HttpServer localServer;
     private ComponentVerifierExtension verifier;
 
-    @BeforeEach
     @Override
-    public void setUp() throws Exception {
-        super.setUp();
-
+    public void setupResources() throws Exception {
         localServer = ServerBootstrap.bootstrap()
-                .setHttpProcessor(getHttpProcessor())
+                .setHttpProcessor(getHttpProcessor()).setCanonicalHostName("localhost")
                 .register("/basic", new BasicValidationHandler(GET.name(), null, null, getExpectedContent()))
                 .register("/auth",
                         new AuthenticationValidationHandler(
@@ -64,15 +60,16 @@ public class CamelComponentVerifierTest extends BaseHttpTest {
                 .create();
 
         localServer.start();
+    }
 
+    @BeforeEach
+    void setupVerifier() {
         HttpComponent component = context().getComponent("http", HttpComponent.class);
         verifier = component.getVerifier();
     }
 
-    @AfterEach
     @Override
-    public void tearDown() throws Exception {
-        super.tearDown();
+    public void cleanupResources() throws Exception {
 
         if (localServer != null) {
             localServer.stop();
@@ -86,7 +83,8 @@ public class CamelComponentVerifierTest extends BaseHttpTest {
 
     private HttpProcessor getHttpProcessor() {
         return new DefaultHttpProcessor(
-                Collections.singletonList(
+                Arrays.asList(
+                        new RequestValidateHost(),
                         new RequestBasicAuth()),
                 Arrays.asList(
                         new ResponseContent(),

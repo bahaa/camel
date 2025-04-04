@@ -26,9 +26,11 @@ import org.apache.camel.model.dataformat.CBORDataFormat;
 import org.apache.camel.model.dataformat.CryptoDataFormat;
 import org.apache.camel.model.dataformat.CsvDataFormat;
 import org.apache.camel.model.dataformat.CustomDataFormat;
+import org.apache.camel.model.dataformat.DfdlDataFormat;
 import org.apache.camel.model.dataformat.FhirJsonDataFormat;
 import org.apache.camel.model.dataformat.FhirXmlDataFormat;
 import org.apache.camel.model.dataformat.FlatpackDataFormat;
+import org.apache.camel.model.dataformat.FuryDataFormat;
 import org.apache.camel.model.dataformat.GrokDataFormat;
 import org.apache.camel.model.dataformat.GzipDeflaterDataFormat;
 import org.apache.camel.model.dataformat.HL7DataFormat;
@@ -43,6 +45,7 @@ import org.apache.camel.model.dataformat.PGPDataFormat;
 import org.apache.camel.model.dataformat.ParquetAvroDataFormat;
 import org.apache.camel.model.dataformat.ProtobufDataFormat;
 import org.apache.camel.model.dataformat.RssDataFormat;
+import org.apache.camel.model.dataformat.SmooksDataFormat;
 import org.apache.camel.model.dataformat.SoapDataFormat;
 import org.apache.camel.model.dataformat.SwiftMtDataFormat;
 import org.apache.camel.model.dataformat.SwiftMxDataFormat;
@@ -134,6 +137,13 @@ public final class DataFormatBuilderFactory {
     }
 
     /**
+     * Uses the DFDL data format
+     */
+    public DfdlDataFormat.Builder dfdl() {
+        return new DfdlDataFormat.Builder();
+    }
+
+    /**
      * Uses the FHIR JSON data format
      */
     public FhirJsonDataFormat.Builder fhirJson() {
@@ -152,6 +162,13 @@ public final class DataFormatBuilderFactory {
      */
     public FlatpackDataFormat.Builder flatpack() {
         return new FlatpackDataFormat.Builder();
+    }
+
+    /**
+     * Uses the Fury data format
+     */
+    public FuryDataFormat.Builder fury() {
+        return new FuryDataFormat.Builder();
     }
 
     /**
@@ -250,6 +267,13 @@ public final class DataFormatBuilderFactory {
      */
     public RssDataFormat.Builder rss() {
         return new RssDataFormat.Builder();
+    }
+
+    /**
+     * Uses the Smooks data format
+     */
+    public SmooksDataFormat.Builder smooks() {
+        return new SmooksDataFormat.Builder();
     }
 
     /**

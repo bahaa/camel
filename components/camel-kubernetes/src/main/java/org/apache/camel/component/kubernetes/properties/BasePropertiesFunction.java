@@ -69,6 +69,7 @@ abstract class BasePropertiesFunction extends ServiceSupport implements Properti
     private Boolean clientEnabled;
     private String mountPathConfigMaps;
     private String mountPathSecrets;
+    private boolean isAutowiredClient;
 
     @Override
     protected void doInit() {
@@ -98,6 +99,9 @@ abstract class BasePropertiesFunction extends ServiceSupport implements Properti
         }
         if (clientEnabled && client == null) {
             client = CamelContextHelper.findSingleByType(camelContext, KubernetesClient.class);
+            if (client != null) {
+                isAutowiredClient = true;
+            }
         }
         if (clientEnabled && client == null) {
             // try to auto-configure via properties
@@ -224,6 +228,10 @@ abstract class BasePropertiesFunction extends ServiceSupport implements Properti
         this.mountPathSecrets = mountPathSecrets;
     }
 
+    public boolean isAutowiredClient() {
+        return isAutowiredClient;
+    }
+
     @Override
     public String apply(String remainder) {
         String defaultValue = StringHelper.after(remainder, ":");
@@ -231,6 +239,10 @@ abstract class BasePropertiesFunction extends ServiceSupport implements Properti
         String key = StringHelper.after(remainder, "/");
         if (name == null || key == null) {
             return defaultValue;
+        }
+
+        if (key.contains(":")) {
+            key = StringHelper.before(key, ":");
         }
 
         // local-mode will not lookup in kubernetes but as local properties
@@ -245,7 +257,11 @@ abstract class BasePropertiesFunction extends ServiceSupport implements Properti
             Path file = root.resolve(name.toLowerCase(Locale.US)).resolve(key);
             if (Files.exists(file) && !Files.isDirectory(file)) {
                 try {
-                    answer = Files.readString(file, StandardCharsets.UTF_8);
+                    if (isBinaryProperty()) {
+                        answer = writeDataToTempFile(file.getFileName().toString(), Files.readAllBytes(file));
+                    } else {
+                        answer = Files.readString(file, StandardCharsets.UTF_8);
+                    }
                 } catch (IOException e) {
                     // ignore
                 }
@@ -265,4 +281,22 @@ abstract class BasePropertiesFunction extends ServiceSupport implements Properti
     abstract Path getMountPath();
 
     abstract String lookup(String name, String key, String defaultValue);
+
+    protected String handleData(String key, byte[] raw) {
+        return isBinaryProperty() ? writeDataToTempFile(key, raw) : new String(raw);
+    }
+
+    private boolean isBinaryProperty() {
+        return getName().endsWith("-binary");
+    }
+
+    protected String writeDataToTempFile(String fileName, byte[] data) {
+        try {
+            final Path filePath = Files.createTempDirectory("camel").resolve(fileName);
+            Files.write(filePath, data);
+            return filePath.toAbsolutePath().toString();
+        } catch (IOException e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
 }

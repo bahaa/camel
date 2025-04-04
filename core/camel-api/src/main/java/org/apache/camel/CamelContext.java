@@ -155,7 +155,7 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
     void setManagementName(String name);
 
     /**
-     * Gets the version of the this CamelContext.
+     * Gets the version of this CamelContext.
      *
      * @return the version
      */
@@ -395,7 +395,7 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
     /**
      * Gets the {@link org.apache.camel.spi.EndpointRegistry}
      */
-    EndpointRegistry<? extends ValueHolder<String>> getEndpointRegistry();
+    EndpointRegistry getEndpointRegistry();
 
     /**
      * Resolves the given name to an {@link Endpoint} of the specified type. If the name has a singleton endpoint
@@ -647,6 +647,24 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
             throws Exception;
 
     /**
+     * Adds a new route from a given kamelet
+     *
+     * @param  routeId           the id of the new route to add (optional)
+     * @param  routeTemplateId   the id of the kamelet route template (mandatory)
+     * @param  prefixId          prefix to use for all node ids (not route id). Use null for no prefix. (optional)
+     * @param  parentRouteId     the id of the route which is using the kamelet (such as from / to)
+     * @param  parentProcessorId the id of the processor which is using the kamelet (such as to)
+     * @param  parameters        parameters to use for the route template when creating the new route
+     * @return                   the id of the route added (for example when an id was auto assigned)
+     * @throws Exception         is thrown if error creating and adding the new route
+     */
+    String addRouteFromKamelet(
+            String routeId, String routeTemplateId, String prefixId,
+            String parentRouteId, String parentProcessorId,
+            Map<String, Object> parameters)
+            throws Exception;
+
+    /**
      * Removes the route templates matching the pattern
      *
      * @param  pattern   pattern, such as * for all, or foo* to remove all foo templates
@@ -821,8 +839,8 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
     /**
      * Sets a variable
      *
-     * @param name  the variable name. Can be prefixed with repo-id:name to lookup the variable from a specific
-     *              repository. If no repo-id is provided, then global repository will be used.
+     * @param name  the variable name. Can be prefixed with repo-id:name to store the variable in a specific repository.
+     *              If no repo-id is provided, then global repository will be used.
      * @param value the value of the variable
      */
     void setVariable(String name, Object value);
@@ -1278,9 +1296,29 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
     void setLoadHealthChecks(Boolean loadHealthChecks);
 
     /**
+     * Used for exclusive filtering of routes to not automatically start with Camel starts.
+     *
+     * The pattern support matching by route id or endpoint urls.
+     *
+     * Multiple patterns can be specified separated by comma, as example, to exclude all the routes starting from kafka
+     * or jms use: kafka,jms.
+     */
+    void setAutoStartupExcludePattern(String autoStartupExcludePattern);
+
+    /**
+     * Used for exclusive filtering of routes to not automatically start with Camel starts.
+     *
+     * The pattern support matching by route id or endpoint urls.
+     *
+     * Multiple patterns can be specified separated by comma, as example, to exclude all the routes starting from kafka
+     * or jms use: kafka,jms.
+     */
+    String getAutoStartupExcludePattern();
+
+    /**
      * Whether to capture precise source location:line-number for all EIPs in Camel routes.
      *
-     * Enabling this will impact parsing Java based routes (also Groovy, Kotlin, etc.) on startup as this uses
+     * Enabling this will impact parsing Java based routes (also Groovy, etc.) on startup as this uses
      * {@link StackTraceElement} to calculate the location from the Camel route, which comes with a performance cost.
      * This only impact startup, not the performance of the routes at runtime.
      */
@@ -1289,7 +1327,7 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
     /**
      * Whether to capture precise source location:line-number for all EIPs in Camel routes.
      *
-     * Enabling this will impact parsing Java based routes (also Groovy, Kotlin, etc.) on startup as this uses
+     * Enabling this will impact parsing Java based routes (also Groovy, etc.) on startup as this uses
      * {@link StackTraceElement} to calculate the location from the Camel route, which comes with a performance cost.
      * This only impact startup, not the performance of the routes at runtime.
      */
@@ -1299,12 +1337,14 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
      * Whether camel-k style modeline is also enabled when not using camel-k. Enabling this allows to use a camel-k like
      * experience by being able to configure various settings using modeline directly in your route source code.
      */
+    @Deprecated(since = "4.10")
     Boolean isModeline();
 
     /**
      * Whether camel-k style modeline is also enabled when not using camel-k. Enabling this allows to use a camel-k like
      * experience by being able to configure various settings using modeline directly in your route source code.
      */
+    @Deprecated(since = "4.10")
     void setModeline(Boolean modeline);
 
     /**

@@ -19,13 +19,19 @@ package org.apache.camel.component.platform.http.main;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.Service;
+import org.apache.camel.component.platform.http.main.authentication.BasicAuthenticationConfigurer;
+import org.apache.camel.component.platform.http.main.authentication.JWTAuthenticationConfigurer;
 import org.apache.camel.main.HttpServerConfigurationProperties;
 import org.apache.camel.main.MainConstants;
 import org.apache.camel.main.MainHttpServerFactory;
 import org.apache.camel.spi.annotations.JdkService;
+import org.apache.camel.support.TempDirHelper;
+import org.apache.camel.util.ObjectHelper;
 
 @JdkService(MainConstants.PLATFORM_HTTP_SERVER)
 public class DefaultMainHttpServerFactory implements CamelContextAware, MainHttpServerFactory {
+
+    private static final String DEFAULT_UPLOAD_DIR = "${java.io.tmpdir}/camel/camel-tmp-#uuid#/";
 
     private CamelContext camelContext;
 
@@ -40,7 +46,7 @@ public class DefaultMainHttpServerFactory implements CamelContextAware, MainHttp
     }
 
     @Override
-    public Service newHttpServer(HttpServerConfigurationProperties configuration) {
+    public Service newHttpServer(CamelContext camelContext, HttpServerConfigurationProperties configuration) {
         MainHttpServer server = new MainHttpServer();
 
         server.setCamelContext(camelContext);
@@ -51,14 +57,46 @@ public class DefaultMainHttpServerFactory implements CamelContextAware, MainHttp
             server.setMaxBodySize(configuration.getMaxBodySize());
         }
         server.setUseGlobalSslContextParameters(configuration.isUseGlobalSslContextParameters());
+        server.setFileUploadEnabled(configuration.isFileUploadEnabled());
+        if (configuration.isFileUploadEnabled()) {
+            String dir = configuration.getFileUploadDirectory();
+            if (dir == null) {
+                dir = DEFAULT_UPLOAD_DIR;
+            }
+            dir = TempDirHelper.resolveTempDir(camelContext, null, dir);
+            server.setFileUploadDirectory(dir);
+        }
         server.setInfoEnabled(configuration.isInfoEnabled());
+        server.setStaticEnabled(configuration.isStaticEnabled());
+        server.setStaticContextPath(configuration.getStaticContextPath());
         server.setDevConsoleEnabled(configuration.isDevConsoleEnabled());
         server.setHealthCheckEnabled(configuration.isHealthCheckEnabled());
+        server.setHealthPath(configuration.getHealthPath());
         server.setJolokiaEnabled(configuration.isJolokiaEnabled());
+        server.setJolokiaPath(configuration.getJolokiaPath());
         server.setMetricsEnabled(configuration.isMetricsEnabled());
         server.setUploadEnabled(configuration.isUploadEnabled());
         server.setUploadSourceDir(configuration.getUploadSourceDir());
+        server.setDownloadEnabled(configuration.isDownloadEnabled());
+        server.setSendEnabled(configuration.isSendEnabled());
+
+        if (configuration.isAuthenticationEnabled()) {
+            configureAuthentication(server, configuration);
+        }
 
         return server;
     }
+
+    private void configureAuthentication(MainHttpServer server, HttpServerConfigurationProperties configuration) {
+        if (configuration.getBasicPropertiesFile() != null) {
+            BasicAuthenticationConfigurer auth = new BasicAuthenticationConfigurer();
+            auth.configureAuthentication(server.getConfiguration().getAuthenticationConfig(), configuration);
+        } else if (configuration.getJwtKeystoreType() != null) {
+            ObjectHelper.notNull(configuration.getJwtKeystorePath(), "jwtKeyStorePath");
+            ObjectHelper.notNull(configuration.getJwtKeystorePassword(), "jwtKeyStorePassword");
+            JWTAuthenticationConfigurer auth = new JWTAuthenticationConfigurer();
+            auth.configureAuthentication(server.getConfiguration().getAuthenticationConfig(), configuration);
+        }
+    }
+
 }

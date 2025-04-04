@@ -55,11 +55,12 @@ public class FileRecursiveNoopTest extends ContextTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
-                from(fileUri("?initialDelay=0&delay=10&recursive=true&noop=true")).convertBodyTo(String.class).noAutoStartup()
+            public void configure() {
+                from(fileUri("?initialDelay=0&delay=10&recursive=true&noop=true")).convertBodyTo(String.class)
+                        .autoStartup(false)
                         .to("mock:result");
             }
         };

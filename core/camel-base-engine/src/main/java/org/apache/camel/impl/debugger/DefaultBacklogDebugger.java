@@ -16,6 +16,8 @@
  */
 package org.apache.camel.impl.debugger;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -52,7 +54,9 @@ import org.apache.camel.support.LoggerHelper;
 import org.apache.camel.support.MessageHelper;
 import org.apache.camel.support.service.ServiceHelper;
 import org.apache.camel.support.service.ServiceSupport;
+import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.StopWatch;
+import org.apache.camel.util.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,12 +77,13 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
     private final ConcurrentMap<String, BacklogTracerEventMessage> suspendedBreakpointMessages = new ConcurrentHashMap<>();
 
     private final AtomicReference<CountDownLatch> suspend = new AtomicReference<>();
-    private volatile String singleStepExchangeId;
+    private final Deque<String> singleStepExchangeId = new ArrayDeque<>();
+    private final AtomicBoolean stepOverMode = new AtomicBoolean();
 
     private boolean suspendMode;
     private String initialBreakpoints;
     private boolean singleStepIncludeStartEnd;
-    private int bodyMaxChars = 128 * 1024;
+    private int bodyMaxChars = 32 * 1024;
     private boolean bodyIncludeStreams;
     private boolean bodyIncludeFiles = true;
     private boolean includeExchangeProperties = true;
@@ -230,7 +235,11 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
 
     @Override
     public boolean isSingleStepMode() {
-        return singleStepExchangeId != null;
+        return !singleStepExchangeId.isEmpty();
+    }
+
+    private boolean isSingleStepMode(String exchangeId) {
+        return singleStepExchangeId.contains(exchangeId);
     }
 
     @Override
@@ -257,7 +266,7 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
      *         the value of the system property {@link #SUSPEND_MODE_SYSTEM_PROP_NAME}, {@code false} by default.
      */
     private static boolean resolveSuspendMode() {
-        final String value = System.getenv(SUSPEND_MODE_ENV_VAR_NAME);
+        final String value = IOHelper.lookupEnvironmentVariable(SUSPEND_MODE_ENV_VAR_NAME);
         return value == null ? Boolean.getBoolean(SUSPEND_MODE_SYSTEM_PROP_NAME) : Boolean.parseBoolean(value);
     }
 
@@ -348,7 +357,7 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
     @Override
     public void removeAllBreakpoints() {
         // stop single stepping
-        singleStepExchangeId = null;
+        singleStepExchangeId.clear();
 
         for (String nodeId : getSuspendedBreakpointNodeIds()) {
             removeBreakpoint(nodeId);
@@ -369,9 +378,9 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
     public void resumeBreakpoint(String nodeId, boolean stepMode) {
         logger.log("Resume breakpoint " + nodeId);
 
-        if (!stepMode && singleStepExchangeId != null) {
-            debugger.stopSingleStepExchange(singleStepExchangeId);
-            singleStepExchangeId = null;
+        if (!stepMode && !singleStepExchangeId.isEmpty()) {
+            singleStepExchangeId.forEach(debugger::stopSingleStepExchange);
+            singleStepExchangeId.clear();
         }
 
         // remember to remove the dumped message as its no longer in need
@@ -563,7 +572,7 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
     public void resumeAll() {
         logger.log("Resume all");
         // stop single stepping
-        singleStepExchangeId = null;
+        singleStepExchangeId.clear();
 
         for (String node : getSuspendedBreakpointNodeIds()) {
             // remember to remove the dumped message as its no longer in need
@@ -592,8 +601,11 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             String nodeId = msg.getToNode();
             NodeBreakpoint breakpoint = breakpoints.get(nodeId);
             if (breakpoint != null) {
-                singleStepExchangeId = msg.getExchangeId();
-                if (debugger.startSingleStepExchange(singleStepExchangeId, new StepBreakpoint())) {
+                String tid = !singleStepExchangeId.isEmpty() ? singleStepExchangeId.peek() : null;
+                if (tid == null || !tid.equals(msg.getExchangeId())) {
+                    singleStepExchangeId.push(msg.getExchangeId());
+                }
+                if (debugger.startSingleStepExchange(msg.getExchangeId(), new StepBreakpoint())) {
                     // now resume
                     resumeBreakpoint(nodeId, true);
                 }
@@ -614,8 +626,11 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
         BacklogTracerEventMessage msg = suspendedBreakpointMessages.get(nodeId);
         NodeBreakpoint breakpoint = breakpoints.get(nodeId);
         if (msg != null && breakpoint != null) {
-            singleStepExchangeId = msg.getExchangeId();
-            if (debugger.startSingleStepExchange(singleStepExchangeId, new StepBreakpoint())) {
+            String tid = !singleStepExchangeId.isEmpty() ? singleStepExchangeId.peek() : null;
+            if (tid == null || !tid.equals(msg.getExchangeId())) {
+                singleStepExchangeId.push(msg.getExchangeId());
+            }
+            if (debugger.startSingleStepExchange(msg.getExchangeId(), new StepBreakpoint())) {
                 // now resume
                 resumeBreakpoint(nodeId, true);
             }
@@ -632,6 +647,12 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
                 se.getLatch().countDown();
             }
         }
+    }
+
+    @Override
+    public void stepOver() {
+        stepOverMode.set(true);
+        step();
     }
 
     @Override
@@ -771,7 +792,7 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
 
     public StopWatch beforeProcess(Exchange exchange, Processor processor, NamedNode definition) {
         suspendIfNeeded();
-        if (isEnabled() && (hasBreakpoint(definition.getId()) || isSingleStepMode())) {
+        if (isEnabled() && !stepOverMode.get() && (hasBreakpoint(definition.getId()) || isSingleStepMode())) {
             StopWatch watch = new StopWatch();
             debugger.beforeProcess(exchange, processor, definition);
             return watch;
@@ -828,36 +849,17 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
         suspendedBreakpointMessages.computeIfPresent(
                 nodeId,
                 (nId, message) -> new DefaultBacklogTracerEventMessage(
+                        camelContext,
                         false, false, message.getUid(), message.getTimestamp(), message.getLocation(), message.getRouteId(),
                         message.getToNode(),
                         message.getExchangeId(),
                         false, false,
-                        dumpAsXml(suspendedExchange.getExchange()),
-                        dumpAsJSon(suspendedExchange.getExchange())));
+                        dumpAsJSonObject(suspendedExchange.getExchange())));
     }
 
-    /**
-     * Dumps the message as a generic XML structure.
-     *
-     * @param  exchange the exchange to dump as XML
-     * @return          the XML
-     */
-    private String dumpAsXml(Exchange exchange) {
-        return MessageHelper.dumpAsXml(exchange.getIn(), includeExchangeProperties, includeExchangeVariables, true, 2, true,
-                isBodyIncludeStreams(), isBodyIncludeFiles(),
-                getBodyMaxChars());
-    }
-
-    /**
-     * Dumps the message as a generic JSon structure.
-     *
-     * @param  exchange the exchange to dump as JSon
-     * @return          the JSon
-     */
-    private String dumpAsJSon(Exchange exchange) {
-        return MessageHelper.dumpAsJSon(exchange.getIn(), includeExchangeProperties, includeExchangeVariables, true, 2, true,
-                isBodyIncludeStreams(), isBodyIncludeFiles(),
-                getBodyMaxChars(), true);
+    private JsonObject dumpAsJSonObject(Exchange exchange) {
+        return MessageHelper.dumpAsJSonObject(exchange.getIn(), includeExchangeProperties, includeExchangeVariables, true, true,
+                isBodyIncludeStreams(), isBodyIncludeFiles(), getBodyMaxChars());
     }
 
     /**
@@ -888,16 +890,14 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             String toNode = definition.getId();
             String routeId = CamelContextHelper.getRouteId(definition);
             String exchangeId = exchange.getExchangeId();
-            String messageAsXml = dumpAsXml(exchange);
-            String messageAsJSon = dumpAsJSon(exchange);
             long uid = debugCounter.incrementAndGet();
             String source = LoggerHelper.getLineNumberLoggerName(definition);
             boolean first = "from".equals(definition.getShortName());
-
+            JsonObject data = dumpAsJSonObject(exchange);
             BacklogTracerEventMessage msg
                     = new DefaultBacklogTracerEventMessage(
-                            first, false, uid, timestamp, source, routeId, toNode, exchangeId, false, false, messageAsXml,
-                            messageAsJSon);
+                            camelContext,
+                            first, false, uid, timestamp, source, routeId, toNode, exchangeId, false, false, data);
             suspendedBreakpointMessages.put(nodeId, msg);
 
             // suspend at this breakpoint
@@ -909,6 +909,9 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
                 try {
                     boolean hit = se.getLatch().await(fallbackTimeout, TimeUnit.SECONDS);
                     if (!hit) {
+                        // remove breakpoint as it timed out
+                        suspendedBreakpointMessages.remove(nodeId);
+                        suspendedBreakpoints.remove(nodeId);
                         logger.log(
                                 String.format("NodeBreakpoint at node %s timed out and is continued exchangeId: %s", toNode,
                                         exchangeId),
@@ -959,20 +962,23 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
 
         @Override
         public void beforeProcess(Exchange exchange, Processor processor, NamedNode definition) {
+            if (stepOverMode.get()) {
+                // we are stepping over this
+                return;
+            }
+
             // store a copy of the message so we can see that from the debugger
             long timestamp = System.currentTimeMillis();
             String toNode = definition.getId();
             String routeId = CamelContextHelper.getRouteId(definition);
             String exchangeId = exchange.getExchangeId();
-            String messageAsXml = dumpAsXml(exchange);
-            String messageAsJSon = dumpAsJSon(exchange);
             long uid = debugCounter.incrementAndGet();
             String source = LoggerHelper.getLineNumberLoggerName(definition);
-
+            JsonObject data = dumpAsJSonObject(exchange);
             BacklogTracerEventMessage msg
                     = new DefaultBacklogTracerEventMessage(
-                            false, false, uid, timestamp, source, routeId, toNode, exchangeId, false, false, messageAsXml,
-                            messageAsJSon);
+                            camelContext,
+                            false, false, uid, timestamp, source, routeId, toNode, exchangeId, false, false, data);
             suspendedBreakpointMessages.put(toNode, msg);
 
             // suspend at this breakpoint
@@ -986,6 +992,9 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             try {
                 boolean hit = se.getLatch().await(fallbackTimeout, TimeUnit.SECONDS);
                 if (!hit) {
+                    // remove breakpoint as it timed out
+                    suspendedBreakpointMessages.remove(toNode);
+                    suspendedBreakpoints.remove(toNode);
                     logger.log(
                             String.format("StepBreakpoint at node %s timed out and is continued exchangeId: %s", toNode,
                                     exchange.getExchangeId()),
@@ -998,6 +1007,11 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
                 // ignore
                 Thread.currentThread().interrupt();
             }
+        }
+
+        @Override
+        public void afterProcess(Exchange exchange, Processor processor, NamedNode definition, long timeTaken) {
+            stepOverMode.set(false);
         }
 
         @Override
@@ -1020,14 +1034,18 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
                 }
                 NamedRoute route = getOriginalRoute(exchange);
                 String completedId = event.getExchange().getExchangeId();
+                boolean completed = false;
                 try {
-                    if (isSingleStepIncludeStartEnd() && singleStepExchangeId != null
-                            && singleStepExchangeId.equals(completedId)) {
+                    String tid = !singleStepExchangeId.isEmpty() ? singleStepExchangeId.peek() : null;
+                    if (!stepOverMode.get() && isSingleStepIncludeStartEnd() && completedId.equals(tid)) {
+                        completed = true;
                         doCompleted(exchange, definition, route, cause);
                     }
                 } finally {
-                    logger.log("ExchangeId: " + completedId + " is completed, so exiting single step mode.");
-                    singleStepExchangeId = null;
+                    singleStepExchangeId.remove(completedId);
+                    if (completed) {
+                        logger.log("ExchangeId: " + completedId + " is completed, so exiting single step mode.");
+                    }
                 }
             }
         }
@@ -1056,23 +1074,16 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             String toNode = CamelContextHelper.getRouteId(definition);
             String routeId = route != null ? route.getRouteId() : toNode;
             String exchangeId = exchange.getExchangeId();
-            String messageAsXml = dumpAsXml(exchange);
-            String messageAsJSon = dumpAsJSon(exchange);
             long uid = debugCounter.incrementAndGet();
             String source = LoggerHelper.getLineNumberLoggerName(route != null ? route : definition);
-
+            JsonObject data = dumpAsJSonObject(exchange);
             BacklogTracerEventMessage msg
                     = new DefaultBacklogTracerEventMessage(
-                            false, true, uid, timestamp, source, routeId, toNode, exchangeId, false, false,
-                            messageAsXml,
-                            messageAsJSon);
-
+                            camelContext,
+                            false, true, uid, timestamp, source, routeId, toNode, exchangeId, false, false, data);
             // we want to capture if there was an exception
             if (cause != null) {
-                String xml = MessageHelper.dumpExceptionAsXML(cause, 4);
-                msg.setExceptionAsXml(xml);
-                String json = MessageHelper.dumpExceptionAsJSon(cause, 4, true);
-                msg.setExceptionAsJSon(json);
+                msg.setException(cause);
             }
 
             suspendedBreakpointMessages.put(toNode, msg);
@@ -1088,6 +1099,9 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             try {
                 boolean hit = se.getLatch().await(fallbackTimeout, TimeUnit.SECONDS);
                 if (!hit) {
+                    // remove breakpoint as it timed out
+                    suspendedBreakpointMessages.remove(toNode);
+                    suspendedBreakpoints.remove(toNode);
                     logger.log(
                             String.format("StepBreakpoint at node %s timed out and is continued exchangeId: %s", toNode,
                                     exchange.getExchangeId()),

@@ -16,18 +16,24 @@
  */
 package org.apache.camel.component.splunkhec;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.net.ssl.SSLContext;
 
 import org.apache.camel.Category;
 import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
+import org.apache.camel.spi.EndpointServiceLocation;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
+import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.apache.commons.validator.routines.InetAddressValidator;
 
@@ -37,7 +43,7 @@ import org.apache.commons.validator.routines.InetAddressValidator;
 @UriEndpoint(firstVersion = "3.3.0", scheme = "splunk-hec", title = "Splunk HEC", producerOnly = true,
              syntax = "splunk-hec:splunkURL", category = { Category.MONITORING },
              headersClass = SplunkHECConstants.class)
-public class SplunkHECEndpoint extends DefaultEndpoint {
+public class SplunkHECEndpoint extends DefaultEndpoint implements EndpointServiceLocation {
 
     private static final Pattern SPLUNK_URL_PATTERN = Pattern.compile("^(.*?):(\\d+)$");
     private static final Pattern SPLUNK_TOKEN_PATTERN = Pattern.compile("^\\w{8}-\\w{4}-\\w{4}-\\w{4}-\\w{12}$");
@@ -45,6 +51,8 @@ public class SplunkHECEndpoint extends DefaultEndpoint {
     @UriPath
     @Metadata(required = true)
     private String splunkURL;
+    @UriParam(description = "SSL configuration")
+    private SSLContextParameters sslContextParameters;
 
     @UriParam
     private SplunkHECConfiguration configuration;
@@ -89,6 +97,11 @@ public class SplunkHECEndpoint extends DefaultEndpoint {
     }
 
     @Override
+    public SplunkHECComponent getComponent() {
+        return (SplunkHECComponent) super.getComponent();
+    }
+
+    @Override
     public Producer createProducer() {
         return new SplunkHECProducer(this);
     }
@@ -96,6 +109,16 @@ public class SplunkHECEndpoint extends DefaultEndpoint {
     @Override
     public Consumer createConsumer(Processor processor) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String getServiceUrl() {
+        return splunkURL;
+    }
+
+    @Override
+    public String getServiceProtocol() {
+        return "splunk";
     }
 
     public SplunkHECConfiguration getConfiguration() {
@@ -113,4 +136,21 @@ public class SplunkHECEndpoint extends DefaultEndpoint {
         this.splunkURL = splunkURL;
     }
 
+    public SSLContextParameters getSslContextParameters() {
+        return sslContextParameters;
+    }
+
+    public void setSslContextParameters(SSLContextParameters sslContextParameters) {
+        this.sslContextParameters = sslContextParameters;
+    }
+
+    SSLContext provideSSLContext() throws GeneralSecurityException, IOException {
+        if (sslContextParameters != null) {
+            return sslContextParameters.createSSLContext(getCamelContext());
+        } else if (getComponent().getSslContextParameters() != null) {
+            return getComponent().getSslContextParameters().createSSLContext(getCamelContext());
+        } else {
+            return null;
+        }
+    }
 }

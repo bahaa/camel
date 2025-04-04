@@ -77,6 +77,25 @@ public interface HttpsComponentBuilderFactory {
     
         
         /**
+         * To enable logging HTTP request and response. You can use a custom
+         * LoggingHttpActivityListener as httpActivityListener to control
+         * logging options.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param logHttpActivity the value to set
+         * @return the dsl builder
+         */
+        default HttpsComponentBuilder logHttpActivity(boolean logHttpActivity) {
+            doSetProperty("logHttpActivity", logHttpActivity);
+            return this;
+        }
+    
+        
+        /**
          * Whether to skip mapping all the Camel headers as HTTP request
          * headers. If there are no data from Camel headers needed to be
          * included in the HTTP request then this can avoid parsing overhead
@@ -174,6 +193,22 @@ public interface HttpsComponentBuilderFactory {
             return this;
         }
     
+        /**
+         * To use a custom activity listener.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.apache.camel.component.http.HttpActivityListener&lt;/code&gt; type.
+         * 
+         * Group: producer (advanced)
+         * 
+         * @param httpActivityListener the value to set
+         * @return the dsl builder
+         */
+        default HttpsComponentBuilder httpActivityListener(org.apache.camel.component.http.HttpActivityListener httpActivityListener) {
+            doSetProperty("httpActivityListener", httpActivityListener);
+            return this;
+        }
+    
         
         /**
          * This threshold in bytes controls whether the response payload should
@@ -190,6 +225,21 @@ public interface HttpsComponentBuilderFactory {
          */
         default HttpsComponentBuilder responsePayloadStreamingThreshold(int responsePayloadStreamingThreshold) {
             doSetProperty("responsePayloadStreamingThreshold", responsePayloadStreamingThreshold);
+            return this;
+        }
+    
+        /**
+         * To set a custom HTTP User-Agent request header.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer (advanced)
+         * 
+         * @param userAgent the value to set
+         * @return the dsl builder
+         */
+        default HttpsComponentBuilder userAgent(java.lang.String userAgent) {
+            doSetProperty("userAgent", userAgent);
             return this;
         }
     
@@ -324,7 +374,7 @@ public interface HttpsComponentBuilderFactory {
     
         /**
          * The time for connection to live, the time unit is millisecond, the
-         * default value is always keep alive.
+         * default value is always keepAlive.
          * 
          * The option is a: &lt;code&gt;long&lt;/code&gt; type.
          * 
@@ -489,6 +539,24 @@ public interface HttpsComponentBuilderFactory {
          */
         default HttpsComponentBuilder redirectHandlingDisabled(boolean redirectHandlingDisabled) {
             doSetProperty("redirectHandlingDisabled", redirectHandlingDisabled);
+            return this;
+        }
+    
+        
+        /**
+         * To use System Properties as fallback for configuration for
+         * configuring HTTP Client.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param useSystemProperties the value to set
+         * @return the dsl builder
+         */
+        default HttpsComponentBuilder useSystemProperties(boolean useSystemProperties) {
+            doSetProperty("useSystemProperties", useSystemProperties);
             return this;
         }
     
@@ -778,12 +846,15 @@ public interface HttpsComponentBuilderFactory {
                 Object value) {
             switch (name) {
             case "lazyStartProducer": ((HttpComponent) component).setLazyStartProducer((boolean) value); return true;
+            case "logHttpActivity": ((HttpComponent) component).setLogHttpActivity((boolean) value); return true;
             case "skipRequestHeaders": ((HttpComponent) component).setSkipRequestHeaders((boolean) value); return true;
             case "skipResponseHeaders": ((HttpComponent) component).setSkipResponseHeaders((boolean) value); return true;
             case "cookieStore": ((HttpComponent) component).setCookieStore((org.apache.hc.client5.http.cookie.CookieStore) value); return true;
             case "copyHeaders": ((HttpComponent) component).setCopyHeaders((boolean) value); return true;
             case "followRedirects": ((HttpComponent) component).setFollowRedirects((boolean) value); return true;
+            case "httpActivityListener": ((HttpComponent) component).setHttpActivityListener((org.apache.camel.component.http.HttpActivityListener) value); return true;
             case "responsePayloadStreamingThreshold": ((HttpComponent) component).setResponsePayloadStreamingThreshold((int) value); return true;
+            case "userAgent": ((HttpComponent) component).setUserAgent((java.lang.String) value); return true;
             case "allowJavaSerializedObject": ((HttpComponent) component).setAllowJavaSerializedObject((boolean) value); return true;
             case "authCachingDisabled": ((HttpComponent) component).setAuthCachingDisabled((boolean) value); return true;
             case "automaticRetriesDisabled": ((HttpComponent) component).setAutomaticRetriesDisabled((boolean) value); return true;
@@ -801,6 +872,7 @@ public interface HttpsComponentBuilderFactory {
             case "httpContext": ((HttpComponent) component).setHttpContext((org.apache.hc.core5.http.protocol.HttpContext) value); return true;
             case "maxTotalConnections": ((HttpComponent) component).setMaxTotalConnections((int) value); return true;
             case "redirectHandlingDisabled": ((HttpComponent) component).setRedirectHandlingDisabled((boolean) value); return true;
+            case "useSystemProperties": ((HttpComponent) component).setUseSystemProperties((boolean) value); return true;
             case "headerFilterStrategy": ((HttpComponent) component).setHeaderFilterStrategy((org.apache.camel.spi.HeaderFilterStrategy) value); return true;
             case "proxyAuthDomain": ((HttpComponent) component).setProxyAuthDomain((java.lang.String) value); return true;
             case "proxyAuthHost": ((HttpComponent) component).setProxyAuthHost((java.lang.String) value); return true;

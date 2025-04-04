@@ -26,7 +26,7 @@ import org.apache.camel.spi.NamespaceAware;
 public class XMLTokenizerExpressionReifier extends SingleInputTypedExpressionReifier<XMLTokenizerExpression> {
 
     public XMLTokenizerExpressionReifier(CamelContext camelContext, ExpressionDefinition definition) {
-        super(camelContext, (XMLTokenizerExpression) definition);
+        super(camelContext, definition);
     }
 
     @Override
@@ -40,8 +40,7 @@ public class XMLTokenizerExpressionReifier extends SingleInputTypedExpressionRei
     }
 
     protected void configureNamespaceAware(Object builder) {
-        if (definition.getNamespaces() != null && builder instanceof NamespaceAware) {
-            NamespaceAware namespaceAware = (NamespaceAware) builder;
+        if (definition.getNamespaces() != null && builder instanceof NamespaceAware namespaceAware) {
             namespaceAware.setNamespaces(definition.getNamespaces());
         }
     }

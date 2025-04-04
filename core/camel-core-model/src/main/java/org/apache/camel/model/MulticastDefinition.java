@@ -57,6 +57,7 @@ public class MulticastDefinition extends OutputDefinition<MulticastDefinition>
     @XmlAttribute
     @Metadata(label = "advanced", javaType = "java.lang.Boolean")
     private String aggregationStrategyMethodAllowNull;
+    @Deprecated(since = "4.7.0")
     @XmlAttribute
     @Metadata(label = "advanced", javaType = "java.lang.Boolean")
     private String parallelAggregate;
@@ -86,6 +87,30 @@ public class MulticastDefinition extends OutputDefinition<MulticastDefinition>
     private String shareUnitOfWork;
 
     public MulticastDefinition() {
+    }
+
+    protected MulticastDefinition(MulticastDefinition source) {
+        super(source);
+        this.executorServiceBean = source.executorServiceBean;
+        this.aggregationStrategyBean = source.aggregationStrategyBean;
+        this.onPrepareProcessor = source.onPrepareProcessor;
+        this.aggregationStrategy = source.aggregationStrategy;
+        this.aggregationStrategyMethodName = source.aggregationStrategyMethodName;
+        this.aggregationStrategyMethodAllowNull = source.aggregationStrategyMethodAllowNull;
+        this.parallelAggregate = source.parallelAggregate;
+        this.parallelProcessing = source.parallelProcessing;
+        this.synchronous = source.synchronous;
+        this.streaming = source.streaming;
+        this.stopOnException = source.stopOnException;
+        this.timeout = source.timeout;
+        this.executorService = source.executorService;
+        this.onPrepare = source.onPrepare;
+        this.shareUnitOfWork = source.shareUnitOfWork;
+    }
+
+    @Override
+    public MulticastDefinition copyDefinition() {
+        return new MulticastDefinition(this);
     }
 
     @Override
@@ -183,6 +208,11 @@ public class MulticastDefinition extends OutputDefinition<MulticastDefinition>
      * from the parallel thread pool. However, if you want to use the original thread that called the multicast, then
      * make sure to enable the synchronous option as well.
      *
+     * In parallel processing mode, you may want to also synchronous = true to force this EIP to process the sub-tasks
+     * using the upper bounds of the thread-pool. If using synchronous = false then Camel will allow its reactive
+     * routing engine to use as many threads as possible, which may be available due to sub-tasks using other
+     * thread-pools such as CompletableFuture.runAsync or others.
+     *
      * @return the builder
      */
     public MulticastDefinition parallelProcessing() {
@@ -199,6 +229,11 @@ public class MulticastDefinition extends OutputDefinition<MulticastDefinition>
      * from the parallel thread pool. However, if you want to use the original thread that called the multicast, then
      * make sure to enable the synchronous option as well.
      *
+     * In parallel processing mode, you may want to also synchronous = true to force this EIP to process the sub-tasks
+     * using the upper bounds of the thread-pool. If using synchronous = false then Camel will allow its reactive
+     * routing engine to use as many threads as possible, which may be available due to sub-tasks using other
+     * thread-pools such as CompletableFuture.runAsync or others.
+     *
      * @return the builder
      */
     public MulticastDefinition parallelProcessing(String parallelProcessing) {
@@ -214,6 +249,11 @@ public class MulticastDefinition extends OutputDefinition<MulticastDefinition>
      * When parallel processing is enabled, then the Camel routing engin will continue processing using last used thread
      * from the parallel thread pool. However, if you want to use the original thread that called the multicast, then
      * make sure to enable the synchronous option as well.
+     *
+     * In parallel processing mode, you may want to also synchronous = true to force this EIP to process the sub-tasks
+     * using the upper bounds of the thread-pool. If using synchronous = false then Camel will allow its reactive
+     * routing engine to use as many threads as possible, which may be available due to sub-tasks using other
+     * thread-pools such as CompletableFuture.runAsync or others.
      *
      * @return the builder
      */
@@ -261,6 +301,7 @@ public class MulticastDefinition extends OutputDefinition<MulticastDefinition>
      *
      * @return the builder
      */
+    @Deprecated(since = "4.7.0")
     public MulticastDefinition parallelAggregate() {
         setParallelAggregate(Boolean.toString(true));
         return this;
@@ -274,6 +315,7 @@ public class MulticastDefinition extends OutputDefinition<MulticastDefinition>
      *
      * @return the builder
      */
+    @Deprecated(since = "4.7.0")
     public MulticastDefinition parallelAggregate(boolean parallelAggregate) {
         setParallelAggregate(Boolean.toString(parallelAggregate));
         return this;
@@ -287,6 +329,7 @@ public class MulticastDefinition extends OutputDefinition<MulticastDefinition>
      *
      * @return the builder
      */
+    @Deprecated(since = "4.7.0")
     public MulticastDefinition parallelAggregate(String parallelAggregate) {
         setParallelAggregate(parallelAggregate);
         return this;
@@ -555,10 +598,12 @@ public class MulticastDefinition extends OutputDefinition<MulticastDefinition>
         this.shareUnitOfWork = shareUnitOfWork;
     }
 
+    @Deprecated(since = "4.7.0")
     public String getParallelAggregate() {
         return parallelAggregate;
     }
 
+    @Deprecated(since = "4.7.0")
     public void setParallelAggregate(String parallelAggregate) {
         this.parallelAggregate = parallelAggregate;
     }

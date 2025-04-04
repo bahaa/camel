@@ -55,6 +55,7 @@ import org.apache.camel.component.platform.http.spi.PlatformHttpConsumer;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.support.DefaultConsumer;
 import org.apache.camel.util.FileUtil;
+import org.apache.camel.util.MimeTypeHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,6 +77,7 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
     private final List<Handler<RoutingContext>> handlers;
     private final String fileNameExtWhitelist;
     private final boolean muteExceptions;
+    private final boolean handleWriteResponseError;
     private Set<Method> methods;
     private String path;
     private Route route;
@@ -92,6 +94,7 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
         this.fileNameExtWhitelist
                 = endpoint.getFileNameExtWhitelist() == null ? null : endpoint.getFileNameExtWhitelist().toLowerCase(Locale.US);
         this.muteExceptions = endpoint.isMuteException();
+        this.handleWriteResponseError = endpoint.isHandleWriteResponseError();
     }
 
     @Override
@@ -107,6 +110,8 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
         router = VertxPlatformHttpRouter.lookup(getEndpoint().getCamelContext());
         if (!getEndpoint().isHttpProxy() && getEndpoint().isUseStreaming()) {
             httpRequestBodyHandler = new StreamingHttpRequestBodyHandler(router.bodyHandler());
+        } else if (!getEndpoint().isHttpProxy() && !getEndpoint().isUseBodyHandler()) {
+            httpRequestBodyHandler = new NoOpHttpRequestBodyHandler(router.bodyHandler());
         } else {
             httpRequestBodyHandler = new DefaultHttpRequestBodyHandler(router.bodyHandler());
         }
@@ -209,7 +214,9 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
                 handleProxy(ctx, exchange);
             }
 
-            populateMultiFormData(ctx, exchange.getIn(), getEndpoint().getHeaderFilterStrategy());
+            if (getEndpoint().isUseBodyHandler()) {
+                populateMultiFormData(ctx, exchange.getIn(), getEndpoint().getHeaderFilterStrategy());
+            }
 
             vertx.executeBlocking(() -> processExchange(exchange), false).onComplete(processExchangeResult -> {
                 if (processExchangeResult.succeeded()) {
@@ -238,6 +245,14 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
                 "Failed handling platform-http endpoint " + getEndpoint().getPath(),
                 failure);
         ctx.fail(failure);
+        if (handleWriteResponseError && failure != null) {
+            Exception existing = exchange.getException();
+            if (existing != null) {
+                failure.addSuppressed(existing);
+            }
+            exchange.setProperty(Exchange.EXCEPTION_CAUGHT, failure);
+            exchange.setException(failure);
+        }
         handleExchangeComplete(exchange);
     }
 
@@ -303,7 +318,9 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
                     if (headerFilterStrategy != null
                             && !headerFilterStrategy.applyFilterToExternalHeaders(key, value, message.getExchange())) {
                         appendEntry(message.getHeaders(), key, value);
-                        appendEntry(body, key, value);
+                        if (getEndpoint().isPopulateBodyWithForm()) {
+                            appendEntry(body, key, value);
+                        }
                     }
                 }
             }
@@ -319,6 +336,7 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
     }
 
     protected void populateAttachments(List<FileUpload> uploads, Message message) {
+        message.setHeader(Exchange.ATTACHMENTS_SIZE, uploads.size());
         for (FileUpload upload : uploads) {
             final String name = upload.name();
             final String fileName = upload.fileName();
@@ -341,6 +359,21 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
                 final File localFile = new File(upload.uploadedFileName());
                 final AttachmentMessage attachmentMessage = message.getExchange().getMessage(AttachmentMessage.class);
                 attachmentMessage.addAttachment(name, new DataHandler(new CamelFileDataSource(localFile, fileName)));
+
+                // populate body in case there is only one attachment
+                if (uploads.size() == 1) {
+                    message.setHeader(Exchange.FILE_PATH, localFile.getAbsolutePath());
+                    message.setHeader(Exchange.FILE_LENGTH, upload.size());
+                    message.setHeader(Exchange.FILE_NAME, upload.fileName());
+                    String ct = MimeTypeHelper.probeMimeType(upload.fileName());
+                    if (ct == null) {
+                        ct = upload.contentType();
+                    }
+                    if (ct != null) {
+                        message.setHeader(Exchange.FILE_CONTENT_TYPE, ct);
+                    }
+                    message.setBody(localFile);
+                }
             } else {
                 LOGGER.debug(
                         "Cannot add file as attachment: {} because the file is not accepted according to fileNameExtWhitelist: {}",
@@ -351,7 +384,7 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
 
     class VertxCookieHandler implements CookieHandler {
 
-        private RoutingContext routingContext;
+        private final RoutingContext routingContext;
 
         VertxCookieHandler(RoutingContext routingContext) {
             this.routingContext = routingContext;

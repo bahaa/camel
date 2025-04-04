@@ -16,93 +16,12 @@
  */
 package org.apache.camel.test.infra.ollama.services;
 
-import java.util.List;
-
-import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.model.Image;
-import org.apache.camel.test.infra.common.LocalPropertyResolver;
-import org.apache.camel.test.infra.common.services.ContainerService;
-import org.apache.camel.test.infra.ollama.commons.OllamaProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.DockerClientFactory;
-import org.testcontainers.utility.DockerImageName;
-
-public class OllamaLocalContainerService implements OllamaService, ContainerService<OllamaContainer> {
-    private static final Logger LOG = LoggerFactory.getLogger(OllamaLocalContainerService.class);
-
-    public static final String CONTAINER_PORT = LocalPropertyResolver.getProperty(
-            OllamaLocalContainerService.class, OllamaProperties.PORT);
-
-    public static final String CONTAINER_NAME = LocalPropertyResolver.getProperty(
-            OllamaLocalContainerService.class, OllamaProperties.CONTAINER);
-
-    public static String OLLAMA_MODEL = LocalPropertyResolver.getProperty(
-            OllamaLocalContainerService.class, OllamaProperties.MODEL);
-
-    public static final String LOCAL_OLLAMA_IMAGE = String.format("tc-%s-%s", CONTAINER_NAME, OLLAMA_MODEL);
-
-    private final DockerImageName dockerImageName;
-
-    private final OllamaContainer container;
-
-    private final Integer port;
-
+public class OllamaLocalContainerService extends OllamaLocalContainerInfraService implements OllamaService {
     public OllamaLocalContainerService() {
-        port = Integer.valueOf(CONTAINER_PORT);
-
-        dockerImageName = resolveImageName();
-
-        container = initContainer();
+        super();
     }
 
-    protected OllamaContainer initContainer() {
-        return new OllamaContainer(dockerImageName, port, OLLAMA_MODEL, LOCAL_OLLAMA_IMAGE);
-    }
-
-    protected DockerImageName resolveImageName() {
-        DockerImageName dockerImageName = DockerImageName.parse(CONTAINER_NAME);
-        DockerClient dockerClient = DockerClientFactory.instance().client();
-        List<Image> images = dockerClient.listImagesCmd().withReferenceFilter(LOCAL_OLLAMA_IMAGE).exec();
-        if (images.isEmpty()) {
-            return dockerImageName;
-        }
-        return DockerImageName.parse(LOCAL_OLLAMA_IMAGE);
-    }
-
-    @Override
-    public String getBaseUrl() {
-        return "http://" + container.getHost() + ":" + container.getMappedPort(port);
-    }
-
-    @Override
-    public String getModel() {
-        return OLLAMA_MODEL;
-    }
-
-    @Override
-    public void registerProperties() {
-        System.setProperty(OllamaProperties.PORT, String.valueOf(port));
-        System.setProperty(OllamaProperties.BASE_URL, String.valueOf(getBaseUrl()));
-    }
-
-    @Override
-    public void initialize() {
-        LOG.info("Trying to start the Ollama container");
-        container.start();
-
-        registerProperties();
-        LOG.info("Ollama instance running at {}", port);
-    }
-
-    @Override
-    public void shutdown() {
-        LOG.info("Stopping the Ollama container");
-        container.stop();
-    }
-
-    @Override
-    public OllamaContainer getContainer() {
-        return container;
+    public OllamaLocalContainerService(OllamaServiceConfiguration serviceConfiguration) {
+        super(serviceConfiguration);
     }
 }

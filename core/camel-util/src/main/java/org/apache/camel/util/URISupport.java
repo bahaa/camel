@@ -30,12 +30,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import static org.apache.camel.util.CamelURIParser.URI_ALREADY_NORMALIZED;
 
 /**
  * URI utilities.
+ *
+ * IMPORTANT: This class is only intended for Camel internal, Camel components, and other Camel features. If you need a
+ * general purpose URI/URL utility class then do not use this class. This class is implemented in a certain way to work
+ * and support how Camel internally parses endpoint URIs.
  */
 public final class URISupport {
 
@@ -50,6 +55,7 @@ public final class URISupport {
     // Match any key-value pair in the URI query string whose key contains
     // "passphrase" or "password" or secret key (case-insensitive).
     // First capture group is the key, second is the value.
+    @SuppressWarnings("RegExpUnnecessaryNonCapturingGroup")
     private static final Pattern ALL_SECRETS = Pattern.compile(
             "([?&][^=]*(?:" + SensitiveUtils.getSensitivePattern() + ")[^=]*)=(RAW(([{][^}]*[}])|([(][^)]*[)]))|[^&]*)",
             Pattern.CASE_INSENSITIVE);
@@ -315,14 +321,29 @@ public final class URISupport {
      * @see              #RAW_TOKEN_END
      */
     public static void resolveRawParameterValues(Map<String, Object> parameters) {
+        resolveRawParameterValues(parameters, null);
+    }
+
+    /**
+     * Traverses the given parameters, and resolve any parameter values which uses the RAW token syntax:
+     * <tt>key=RAW(value)</tt>. This method will then remove the RAW tokens, and replace the content of the value, with
+     * just the value.
+     *
+     * @param parameters the uri parameters
+     * @param onReplace  optional function executed when replace the raw value
+     * @see              #parseQuery(String)
+     * @see              #RAW_TOKEN_PREFIX
+     * @see              #RAW_TOKEN_START
+     * @see              #RAW_TOKEN_END
+     */
+    public static void resolveRawParameterValues(Map<String, Object> parameters, Function<String, String> onReplace) {
         for (Map.Entry<String, Object> entry : parameters.entrySet()) {
             if (entry.getValue() == null) {
                 continue;
             }
             // if the value is a list then we need to iterate
             Object value = entry.getValue();
-            if (value instanceof List) {
-                List list = (List) value;
+            if (value instanceof List list) {
                 for (int i = 0; i < list.size(); i++) {
                     Object obj = list.get(i);
                     if (obj == null) {
@@ -335,6 +356,9 @@ public final class URISupport {
                         // do not encode RAW parameters unless it has %
                         // need to reverse: replace % with %25 to avoid losing "%" when decoding
                         String s = raw.replace("%25", "%");
+                        if (onReplace != null) {
+                            s = onReplace.apply(s);
+                        }
                         list.set(i, s);
                     }
                 }
@@ -345,6 +369,9 @@ public final class URISupport {
                     // do not encode RAW parameters unless it has %
                     // need to reverse: replace % with %25 to avoid losing "%" when decoding
                     String s = raw.replace("%25", "%");
+                    if (onReplace != null) {
+                        s = onReplace.apply(s);
+                    }
                     entry.setValue(s);
                 }
             }
@@ -495,7 +522,7 @@ public final class URISupport {
      *                            is no options.
      * @throws URISyntaxException is thrown if uri has invalid syntax.
      */
-    @Deprecated
+    @Deprecated(since = "4.1.0")
     public static String createQueryString(Map<String, String> options, String ampersand, boolean encode) {
         if (!options.isEmpty()) {
             StringBuilder rc = new StringBuilder();
@@ -519,7 +546,7 @@ public final class URISupport {
         }
     }
 
-    @Deprecated
+    @Deprecated(since = "4.0.0")
     public static String createQueryString(Collection<String> sortedKeys, Map<String, Object> options, boolean encode) {
         return createQueryString(sortedKeys.toArray(new String[0]), options, encode);
     }
@@ -694,7 +721,6 @@ public final class URISupport {
             if (parameters.size() == 1) {
                 // only 1 parameter need to create new query string
                 query = URISupport.createQueryString(parameters);
-                return buildUri(scheme, path, query);
             } else {
                 // reorder parameters a..z
                 final Set<String> keySet = parameters.keySet();
@@ -703,8 +729,8 @@ public final class URISupport {
 
                 // build uri object with sorted parameters
                 query = URISupport.createQueryString(parametersArray, parameters, true);
-                return buildUri(scheme, path, query);
             }
+            return buildUri(scheme, path, query);
         }
     }
 
@@ -733,9 +759,7 @@ public final class URISupport {
             parameters = URISupport.parseQuery(query, false, false);
         }
 
-        if (parameters == null || parameters.size() == 1) {
-            return buildUri(scheme, path, query);
-        } else {
+        if (parameters != null && parameters.size() != 1) {
             final Set<String> entries = parameters.keySet();
 
             // reorder parameters a..z
@@ -743,26 +767,24 @@ public final class URISupport {
             boolean sort = false;
             String prev = null;
             for (String key : entries) {
-                if (prev == null) {
-                    prev = key;
-                } else {
+                if (prev != null) {
                     int comp = key.compareTo(prev);
                     if (comp < 0) {
                         sort = true;
                         break;
                     }
-                    prev = key;
                 }
+                prev = key;
             }
             if (sort) {
-                final String[] array = entries.toArray(new String[entries.size()]);
+                final String[] array = entries.toArray(new String[0]);
                 Arrays.sort(array);
 
                 query = URISupport.createQueryString(array, parameters, true);
             }
 
-            return buildUri(scheme, path, query);
         }
+        return buildUri(scheme, path, query);
     }
 
     private static String buildUri(String scheme, String path, String query) {
@@ -823,7 +845,6 @@ public final class URISupport {
                 if (parameters.size() == 1) {
                     // only 1 parameter need to create new query string
                     query = URISupport.createQueryString(parameters);
-                    return makeUri(uriWithoutQuery, query);
                 } else {
                     // reorder parameters a..z
                     final Set<String> keySet = parameters.keySet();
@@ -832,8 +853,8 @@ public final class URISupport {
 
                     // build uri object with sorted parameters
                     query = URISupport.createQueryString(parametersArray, parameters, true);
-                    return makeUri(uriWithoutQuery, query);
                 }
+                return makeUri(uriWithoutQuery, query);
             }
         } catch (URISyntaxException ex) {
             return null;
@@ -861,7 +882,7 @@ public final class URISupport {
             return "";
         }
 
-        final StringBuilder joined = new StringBuilder();
+        final StringBuilder joined = new StringBuilder(paths.length * 64);
 
         boolean addedLast = false;
         for (int i = paths.length - 1; i >= 0; i--) {
@@ -889,7 +910,7 @@ public final class URISupport {
     }
 
     public static String buildMultiValueQuery(String key, Iterable<Object> values) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(256);
         for (Object v : values) {
             if (!sb.isEmpty()) {
                 sb.append("&");

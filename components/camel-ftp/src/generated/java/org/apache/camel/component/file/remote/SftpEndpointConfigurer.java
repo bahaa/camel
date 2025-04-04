@@ -46,6 +46,8 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "bindAddress": target.getConfiguration().setBindAddress(property(camelContext, java.lang.String.class, value)); return true;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
+        case "browselimit":
+        case "browseLimit": target.setBrowseLimit(property(camelContext, int.class, value)); return true;
         case "bulkrequests":
         case "bulkRequests": target.getConfiguration().setBulkRequests(property(camelContext, java.lang.Integer.class, value)); return true;
         case "charset": target.setCharset(property(camelContext, java.lang.String.class, value)); return true;
@@ -97,6 +99,8 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "flatten": target.setFlatten(property(camelContext, boolean.class, value)); return true;
         case "greedy": target.setGreedy(property(camelContext, boolean.class, value)); return true;
         case "idempotent": target.setIdempotent(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "idempotenteager":
+        case "idempotentEager": target.setIdempotentEager(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "idempotentkey":
         case "idempotentKey": target.setIdempotentKey(property(camelContext, java.lang.String.class, value)); return true;
         case "idempotentrepository":
@@ -284,6 +288,8 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "bindAddress": return java.lang.String.class;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
+        case "browselimit":
+        case "browseLimit": return int.class;
         case "bulkrequests":
         case "bulkRequests": return java.lang.Integer.class;
         case "charset": return java.lang.String.class;
@@ -335,6 +341,8 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "flatten": return boolean.class;
         case "greedy": return boolean.class;
         case "idempotent": return java.lang.Boolean.class;
+        case "idempotenteager":
+        case "idempotentEager": return java.lang.Boolean.class;
         case "idempotentkey":
         case "idempotentKey": return java.lang.String.class;
         case "idempotentrepository":
@@ -523,6 +531,8 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "bindAddress": return target.getConfiguration().getBindAddress();
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
+        case "browselimit":
+        case "browseLimit": return target.getBrowseLimit();
         case "bulkrequests":
         case "bulkRequests": return target.getConfiguration().getBulkRequests();
         case "charset": return target.getCharset();
@@ -574,6 +584,8 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "flatten": return target.isFlatten();
         case "greedy": return target.isGreedy();
         case "idempotent": return target.getIdempotent();
+        case "idempotenteager":
+        case "idempotentEager": return target.getIdempotentEager();
         case "idempotentkey":
         case "idempotentKey": return target.getIdempotentKey();
         case "idempotentrepository":

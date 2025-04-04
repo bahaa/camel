@@ -199,6 +199,22 @@ public interface Aws2KinesisComponentBuilderFactory {
         }
     
         /**
+         * The message timestamp to start polling from. Required if iteratorType
+         * is set to AT_TIMESTAMP.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: consumer
+         * 
+         * @param messageTimestamp the value to set
+         * @return the dsl builder
+         */
+        default Aws2KinesisComponentBuilder messageTimestamp(java.lang.String messageTimestamp) {
+            doSetProperty("messageTimestamp", messageTimestamp);
+            return this;
+        }
+    
+        /**
          * The sequence number to start polling from. Required if iteratorType
          * is set to AFTER_SEQUENCE_NUMBER or AT_SEQUENCE_NUMBER.
          * 
@@ -217,11 +233,11 @@ public interface Aws2KinesisComponentBuilderFactory {
         
         /**
          * Define what will be the behavior in case of shard closed. Possible
-         * value are ignore, silent and fail. In case of ignore a message will
-         * be logged and the consumer will restart from the beginning,in case of
-         * silent there will be no logging and the consumer will start from the
-         * beginning,in case of fail a ReachedClosedStateException will be
-         * raised.
+         * value are ignore, silent and fail. In case of ignore a WARN message
+         * will be logged once and the consumer will not process new messages
+         * until restarted,in case of silent there will be no logging and the
+         * consumer will not process new messages until restarted,in case of
+         * fail a ReachedClosedStateException will be thrown.
          * 
          * The option is a:
          * &lt;code&gt;org.apache.camel.component.aws2.kinesis.Kinesis2ShardClosedStrategyEnum&lt;/code&gt; type.
@@ -254,6 +270,23 @@ public interface Aws2KinesisComponentBuilderFactory {
     
         
         /**
+         * The interval in milliseconds to wait between shard polling.
+         * 
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
+         * 
+         * Default: 10000
+         * Group: consumer (advanced)
+         * 
+         * @param shardMonitorInterval the value to set
+         * @return the dsl builder
+         */
+        default Aws2KinesisComponentBuilder shardMonitorInterval(long shardMonitorInterval) {
+            doSetProperty("shardMonitorInterval", shardMonitorInterval);
+            return this;
+        }
+    
+        
+        /**
          * Whether the producer should be started lazy (on the first message).
          * By starting lazy you can use this to allow CamelContext and routes to
          * startup in situations where a producer may otherwise fail during
@@ -278,6 +311,23 @@ public interface Aws2KinesisComponentBuilderFactory {
         }
     
         /**
+         * Supply a pre-constructed Amazon Kinesis async client to use for the
+         * KCL Consumer.
+         * 
+         * The option is a:
+         * &lt;code&gt;software.amazon.awssdk.services.kinesis.KinesisAsyncClient&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param amazonKinesisAsyncClient the value to set
+         * @return the dsl builder
+         */
+        default Aws2KinesisComponentBuilder amazonKinesisAsyncClient(software.amazon.awssdk.services.kinesis.KinesisAsyncClient amazonKinesisAsyncClient) {
+            doSetProperty("amazonKinesisAsyncClient", amazonKinesisAsyncClient);
+            return this;
+        }
+    
+        /**
          * Amazon Kinesis client to use for all requests for this endpoint.
          * 
          * The option is a:
@@ -290,6 +340,21 @@ public interface Aws2KinesisComponentBuilderFactory {
          */
         default Aws2KinesisComponentBuilder amazonKinesisClient(software.amazon.awssdk.services.kinesis.KinesisClient amazonKinesisClient) {
             doSetProperty("amazonKinesisClient", amazonKinesisClient);
+            return this;
+        }
+    
+        /**
+         * Name of the KCL application. This defaults to the stream name.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param applicationName the value to set
+         * @return the dsl builder
+         */
+        default Aws2KinesisComponentBuilder applicationName(java.lang.String applicationName) {
+            doSetProperty("applicationName", applicationName);
             return this;
         }
     
@@ -329,6 +394,75 @@ public interface Aws2KinesisComponentBuilderFactory {
          */
         default Aws2KinesisComponentBuilder autowiredEnabled(boolean autowiredEnabled) {
             doSetProperty("autowiredEnabled", autowiredEnabled);
+            return this;
+        }
+    
+        /**
+         * If we want to a KCL Consumer, we can pass an instance of
+         * CloudWatchAsyncClient.
+         * 
+         * The option is a:
+         * &lt;code&gt;software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param cloudWatchAsyncClient the value to set
+         * @return the dsl builder
+         */
+        default Aws2KinesisComponentBuilder cloudWatchAsyncClient(software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient cloudWatchAsyncClient) {
+            doSetProperty("cloudWatchAsyncClient", cloudWatchAsyncClient);
+            return this;
+        }
+    
+        /**
+         * If we want to a KCL Consumer, we can pass an instance of
+         * DynamoDbAsyncClient.
+         * 
+         * The option is a:
+         * &lt;code&gt;software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param dynamoDbAsyncClient the value to set
+         * @return the dsl builder
+         */
+        default Aws2KinesisComponentBuilder dynamoDbAsyncClient(software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient dynamoDbAsyncClient) {
+            doSetProperty("dynamoDbAsyncClient", dynamoDbAsyncClient);
+            return this;
+        }
+    
+        
+        /**
+         * If we want to use a KCL Consumer and disable the CloudWatch Metrics
+         * Export.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param kclDisableCloudwatchMetricsExport the value to set
+         * @return the dsl builder
+         */
+        default Aws2KinesisComponentBuilder kclDisableCloudwatchMetricsExport(boolean kclDisableCloudwatchMetricsExport) {
+            doSetProperty("kclDisableCloudwatchMetricsExport", kclDisableCloudwatchMetricsExport);
+            return this;
+        }
+    
+        
+        /**
+         * If we want to a KCL Consumer set it to true.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param useKclConsumers the value to set
+         * @return the dsl builder
+         */
+        default Aws2KinesisComponentBuilder useKclConsumers(boolean useKclConsumers) {
+            doSetProperty("useKclConsumers", useKclConsumers);
             return this;
         }
     
@@ -582,13 +716,21 @@ public interface Aws2KinesisComponentBuilderFactory {
             case "bridgeErrorHandler": ((Kinesis2Component) component).setBridgeErrorHandler((boolean) value); return true;
             case "iteratorType": getOrCreateConfiguration((Kinesis2Component) component).setIteratorType((software.amazon.awssdk.services.kinesis.model.ShardIteratorType) value); return true;
             case "maxResultsPerRequest": getOrCreateConfiguration((Kinesis2Component) component).setMaxResultsPerRequest((int) value); return true;
+            case "messageTimestamp": getOrCreateConfiguration((Kinesis2Component) component).setMessageTimestamp((java.lang.String) value); return true;
             case "sequenceNumber": getOrCreateConfiguration((Kinesis2Component) component).setSequenceNumber((java.lang.String) value); return true;
             case "shardClosed": getOrCreateConfiguration((Kinesis2Component) component).setShardClosed((org.apache.camel.component.aws2.kinesis.Kinesis2ShardClosedStrategyEnum) value); return true;
             case "shardId": getOrCreateConfiguration((Kinesis2Component) component).setShardId((java.lang.String) value); return true;
+            case "shardMonitorInterval": getOrCreateConfiguration((Kinesis2Component) component).setShardMonitorInterval((long) value); return true;
             case "lazyStartProducer": ((Kinesis2Component) component).setLazyStartProducer((boolean) value); return true;
+            case "amazonKinesisAsyncClient": getOrCreateConfiguration((Kinesis2Component) component).setAmazonKinesisAsyncClient((software.amazon.awssdk.services.kinesis.KinesisAsyncClient) value); return true;
             case "amazonKinesisClient": getOrCreateConfiguration((Kinesis2Component) component).setAmazonKinesisClient((software.amazon.awssdk.services.kinesis.KinesisClient) value); return true;
+            case "applicationName": getOrCreateConfiguration((Kinesis2Component) component).setApplicationName((java.lang.String) value); return true;
             case "asyncClient": getOrCreateConfiguration((Kinesis2Component) component).setAsyncClient((boolean) value); return true;
             case "autowiredEnabled": ((Kinesis2Component) component).setAutowiredEnabled((boolean) value); return true;
+            case "cloudWatchAsyncClient": getOrCreateConfiguration((Kinesis2Component) component).setCloudWatchAsyncClient((software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient) value); return true;
+            case "dynamoDbAsyncClient": getOrCreateConfiguration((Kinesis2Component) component).setDynamoDbAsyncClient((software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient) value); return true;
+            case "kclDisableCloudwatchMetricsExport": getOrCreateConfiguration((Kinesis2Component) component).setKclDisableCloudwatchMetricsExport((boolean) value); return true;
+            case "useKclConsumers": getOrCreateConfiguration((Kinesis2Component) component).setUseKclConsumers((boolean) value); return true;
             case "healthCheckConsumerEnabled": ((Kinesis2Component) component).setHealthCheckConsumerEnabled((boolean) value); return true;
             case "healthCheckProducerEnabled": ((Kinesis2Component) component).setHealthCheckProducerEnabled((boolean) value); return true;
             case "proxyHost": getOrCreateConfiguration((Kinesis2Component) component).setProxyHost((java.lang.String) value); return true;

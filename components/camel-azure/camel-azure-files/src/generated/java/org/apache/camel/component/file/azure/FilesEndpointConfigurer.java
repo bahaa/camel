@@ -41,6 +41,8 @@ public class FilesEndpointConfigurer extends PropertyConfigurerSupport implement
         case "backoffMultiplier": target.setBackoffMultiplier(property(camelContext, int.class, value)); return true;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
+        case "browselimit":
+        case "browseLimit": target.setBrowseLimit(property(camelContext, int.class, value)); return true;
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": target.setChecksumFileAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
         case "connecttimeout":
@@ -80,6 +82,8 @@ public class FilesEndpointConfigurer extends PropertyConfigurerSupport implement
         case "flatten": target.setFlatten(property(camelContext, boolean.class, value)); return true;
         case "greedy": target.setGreedy(property(camelContext, boolean.class, value)); return true;
         case "idempotent": target.setIdempotent(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "idempotenteager":
+        case "idempotentEager": target.setIdempotentEager(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "idempotentkey":
         case "idempotentKey": target.setIdempotentKey(property(camelContext, java.lang.String.class, value)); return true;
         case "idempotentrepository":
@@ -217,6 +221,8 @@ public class FilesEndpointConfigurer extends PropertyConfigurerSupport implement
         case "backoffMultiplier": return int.class;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
+        case "browselimit":
+        case "browseLimit": return int.class;
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": return java.lang.String.class;
         case "connecttimeout":
@@ -256,6 +262,8 @@ public class FilesEndpointConfigurer extends PropertyConfigurerSupport implement
         case "flatten": return boolean.class;
         case "greedy": return boolean.class;
         case "idempotent": return java.lang.Boolean.class;
+        case "idempotenteager":
+        case "idempotentEager": return java.lang.Boolean.class;
         case "idempotentkey":
         case "idempotentKey": return java.lang.String.class;
         case "idempotentrepository":
@@ -394,6 +402,8 @@ public class FilesEndpointConfigurer extends PropertyConfigurerSupport implement
         case "backoffMultiplier": return target.getBackoffMultiplier();
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
+        case "browselimit":
+        case "browseLimit": return target.getBrowseLimit();
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": return target.getChecksumFileAlgorithm();
         case "connecttimeout":
@@ -433,6 +443,8 @@ public class FilesEndpointConfigurer extends PropertyConfigurerSupport implement
         case "flatten": return target.isFlatten();
         case "greedy": return target.isGreedy();
         case "idempotent": return target.getIdempotent();
+        case "idempotenteager":
+        case "idempotentEager": return target.getIdempotentEager();
         case "idempotentkey":
         case "idempotentKey": return target.getIdempotentKey();
         case "idempotentrepository":

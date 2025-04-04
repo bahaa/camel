@@ -29,7 +29,6 @@ import org.apache.camel.processor.errorhandler.DeadLetterChannel;
 import org.apache.camel.processor.errorhandler.DefaultErrorHandler;
 import org.apache.camel.spring.spi.TransactionErrorHandler;
 import org.apache.xbean.spring.context.ClassPathXmlApplicationContext;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
@@ -46,9 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public abstract class AbstractTransactionIT extends AbstractSpringJMSITSupport {
 
     @Override
-    @AfterEach
-    public void tearDown() throws Exception {
-        super.tearDown();
+    public void doPostTearDown() {
         setCamelContextService(null);
         context = null;
         template = null;
@@ -97,13 +94,13 @@ public abstract class AbstractTransactionIT extends AbstractSpringJMSITSupport {
         while (true) {
             processor = unwrapDeadLetter(processor);
 
-            if (processor instanceof Channel) {
-                processor = ((Channel) processor).getNextProcessor();
-            } else if (processor instanceof DelegateProcessor) {
+            if (processor instanceof Channel channel) {
+                processor = channel.getNextProcessor();
+            } else if (processor instanceof DelegateProcessor delegateProcessor) {
                 // TransactionInterceptor is a DelegateProcessor
-                processor = ((DelegateProcessor) processor).getProcessor();
-            } else if (processor instanceof Pipeline) {
-                for (Processor p : ((Pipeline) processor).next()) {
+                processor = delegateProcessor.getProcessor();
+            } else if (processor instanceof Pipeline pipeline) {
+                for (Processor p : pipeline.next()) {
                     p = findProcessorByClass(p, findClass);
                     if (p != null && p.getClass().isAssignableFrom(findClass)) {
                         processor = p;
@@ -118,14 +115,14 @@ public abstract class AbstractTransactionIT extends AbstractSpringJMSITSupport {
 
     private Processor unwrapDeadLetter(Processor processor) {
         while (true) {
-            if (processor instanceof Channel) {
-                processor = ((Channel) processor).getNextProcessor();
-            } else if (processor instanceof DeadLetterChannel) {
-                processor = ((DeadLetterChannel) processor).getOutput();
-            } else if (processor instanceof DefaultErrorHandler) {
-                processor = ((DefaultErrorHandler) processor).getOutput();
-            } else if (processor instanceof TransactionErrorHandler) {
-                processor = ((TransactionErrorHandler) processor).getOutput();
+            if (processor instanceof Channel channel) {
+                processor = channel.getNextProcessor();
+            } else if (processor instanceof DeadLetterChannel deadLetterChannel) {
+                processor = deadLetterChannel.getOutput();
+            } else if (processor instanceof DefaultErrorHandler defaultErrorHandler) {
+                processor = defaultErrorHandler.getOutput();
+            } else if (processor instanceof TransactionErrorHandler transactionErrorHandler) {
+                processor = transactionErrorHandler.getOutput();
             } else {
                 return processor;
             }

@@ -78,7 +78,7 @@ public class MulticastReifier extends ProcessorReifier<MulticastDefinition> {
 
         MulticastProcessor answer = new MulticastProcessor(
                 camelContext, route, list, strategy, isParallelProcessing, threadPool, shutdownThreadPool, isStreaming,
-                isStopOnException, timeout, prepare, isShareUnitOfWork, isParallelAggregate);
+                isStopOnException, timeout, prepare, isShareUnitOfWork, isParallelAggregate, 0);
         answer.setSynchronous(isSynchronous);
         return answer;
     }
@@ -88,11 +88,11 @@ public class MulticastReifier extends ProcessorReifier<MulticastDefinition> {
         String ref = parseString(definition.getAggregationStrategy());
         if (strategy == null && ref != null) {
             Object aggStrategy = lookupByName(ref);
-            if (aggStrategy instanceof AggregationStrategy) {
-                strategy = (AggregationStrategy) aggStrategy;
-            } else if (aggStrategy instanceof BiFunction) {
+            if (aggStrategy instanceof AggregationStrategy aggregationStrategy) {
+                strategy = aggregationStrategy;
+            } else if (aggStrategy instanceof BiFunction biFunction) {
                 AggregationStrategyBiFunctionAdapter adapter
-                        = new AggregationStrategyBiFunctionAdapter((BiFunction) aggStrategy);
+                        = new AggregationStrategyBiFunctionAdapter(biFunction);
                 if (definition.getAggregationStrategyMethodAllowNull() != null) {
                     adapter.setAllowNullNewExchange(parseBoolean(definition.getAggregationStrategyMethodAllowNull(), false));
                     adapter.setAllowNullOldExchange(parseBoolean(definition.getAggregationStrategyMethodAllowNull(), false));

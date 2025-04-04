@@ -35,6 +35,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "appendChars": target.setAppendChars(property(camelContext, java.lang.String.class, value)); return true;
         case "autocreate":
         case "autoCreate": target.setAutoCreate(property(camelContext, boolean.class, value)); return true;
+        case "autocreatestepwise":
+        case "autoCreateStepwise": target.setAutoCreateStepwise(property(camelContext, boolean.class, value)); return true;
         case "backofferrorthreshold":
         case "backoffErrorThreshold": target.setBackoffErrorThreshold(property(camelContext, int.class, value)); return true;
         case "backoffidlethreshold":
@@ -43,6 +45,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "backoffMultiplier": target.setBackoffMultiplier(property(camelContext, int.class, value)); return true;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
+        case "browselimit":
+        case "browseLimit": target.setBrowseLimit(property(camelContext, int.class, value)); return true;
         case "buffersize":
         case "bufferSize": target.setBufferSize(property(camelContext, int.class, value)); return true;
         case "charset": target.setCharset(property(camelContext, java.lang.String.class, value)); return true;
@@ -88,6 +92,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "forceWrites": target.setForceWrites(property(camelContext, boolean.class, value)); return true;
         case "greedy": target.setGreedy(property(camelContext, boolean.class, value)); return true;
         case "idempotent": target.setIdempotent(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "idempotenteager":
+        case "idempotentEager": target.setIdempotentEager(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "idempotentkey":
         case "idempotentKey": target.setIdempotentKey(property(camelContext, java.lang.String.class, value)); return true;
         case "idempotentrepository":
@@ -217,6 +223,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "appendChars": return java.lang.String.class;
         case "autocreate":
         case "autoCreate": return boolean.class;
+        case "autocreatestepwise":
+        case "autoCreateStepwise": return boolean.class;
         case "backofferrorthreshold":
         case "backoffErrorThreshold": return int.class;
         case "backoffidlethreshold":
@@ -225,6 +233,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "backoffMultiplier": return int.class;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
+        case "browselimit":
+        case "browseLimit": return int.class;
         case "buffersize":
         case "bufferSize": return int.class;
         case "charset": return java.lang.String.class;
@@ -270,6 +280,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "forceWrites": return boolean.class;
         case "greedy": return boolean.class;
         case "idempotent": return java.lang.Boolean.class;
+        case "idempotenteager":
+        case "idempotentEager": return java.lang.Boolean.class;
         case "idempotentkey":
         case "idempotentKey": return java.lang.String.class;
         case "idempotentrepository":
@@ -400,6 +412,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "appendChars": return target.getAppendChars();
         case "autocreate":
         case "autoCreate": return target.isAutoCreate();
+        case "autocreatestepwise":
+        case "autoCreateStepwise": return target.isAutoCreateStepwise();
         case "backofferrorthreshold":
         case "backoffErrorThreshold": return target.getBackoffErrorThreshold();
         case "backoffidlethreshold":
@@ -408,6 +422,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "backoffMultiplier": return target.getBackoffMultiplier();
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
+        case "browselimit":
+        case "browseLimit": return target.getBrowseLimit();
         case "buffersize":
         case "bufferSize": return target.getBufferSize();
         case "charset": return target.getCharset();
@@ -453,6 +469,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "forceWrites": return target.isForceWrites();
         case "greedy": return target.isGreedy();
         case "idempotent": return target.getIdempotent();
+        case "idempotenteager":
+        case "idempotentEager": return target.getIdempotentEager();
         case "idempotentkey":
         case "idempotentKey": return target.getIdempotentKey();
         case "idempotentrepository":

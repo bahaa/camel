@@ -57,6 +57,7 @@ public class SplitDefinition extends OutputExpressionNode implements ExecutorSer
     @XmlAttribute
     @Metadata(label = "advanced", javaType = "java.lang.Boolean")
     private String aggregationStrategyMethodAllowNull;
+    @Deprecated(since = "4.7.0")
     @XmlAttribute
     @Metadata(label = "advanced", javaType = "java.lang.Boolean")
     private String parallelAggregate;
@@ -88,12 +89,37 @@ public class SplitDefinition extends OutputExpressionNode implements ExecutorSer
     public SplitDefinition() {
     }
 
+    public SplitDefinition(SplitDefinition source) {
+        super(source);
+        this.executorServiceBean = source.executorServiceBean;
+        this.aggregationStrategyBean = source.aggregationStrategyBean;
+        this.onPrepareProcessor = source.onPrepareProcessor;
+        this.delimiter = source.delimiter;
+        this.aggregationStrategy = source.aggregationStrategy;
+        this.aggregationStrategyMethodName = source.aggregationStrategyMethodName;
+        this.aggregationStrategyMethodAllowNull = source.aggregationStrategyMethodAllowNull;
+        this.parallelAggregate = source.parallelAggregate;
+        this.parallelProcessing = source.parallelProcessing;
+        this.synchronous = source.synchronous;
+        this.streaming = source.streaming;
+        this.stopOnException = source.stopOnException;
+        this.timeout = source.timeout;
+        this.executorService = source.executorService;
+        this.onPrepare = source.onPrepare;
+        this.shareUnitOfWork = source.shareUnitOfWork;
+    }
+
     public SplitDefinition(Expression expression) {
         super(expression);
     }
 
     public SplitDefinition(ExpressionDefinition expression) {
         super(expression);
+    }
+
+    @Override
+    public SplitDefinition copyDefinition() {
+        return new SplitDefinition(this);
     }
 
     @Override
@@ -203,6 +229,11 @@ public class SplitDefinition extends OutputExpressionNode implements ExecutorSer
      * from the parallel thread pool. However, if you want to use the original thread that called the splitter, then
      * make sure to enable the synchronous option as well.
      *
+     * In parallel processing mode, you may want to also synchronous = true to force this EIP to process the sub-tasks
+     * using the upper bounds of the thread-pool. If using synchronous = false then Camel will allow its reactive
+     * routing engine to use as many threads as possible, which may be available due to sub-tasks using other
+     * thread-pools such as CompletableFuture.runAsync or others.
+     *
      * @return the builder
      */
     public SplitDefinition parallelProcessing() {
@@ -217,6 +248,11 @@ public class SplitDefinition extends OutputExpressionNode implements ExecutorSer
      * When parallel processing is enabled, then the Camel routing engin will continue processing using last used thread
      * from the parallel thread pool. However, if you want to use the original thread that called the splitter, then
      * make sure to enable the synchronous option as well.
+     *
+     * In parallel processing mode, you may want to also synchronous = true to force this EIP to process the sub-tasks
+     * using the upper bounds of the thread-pool. If using synchronous = false then Camel will allow its reactive
+     * routing engine to use as many threads as possible, which may be available due to sub-tasks using other
+     * thread-pools such as CompletableFuture.runAsync or others.
      *
      * @return the builder
      */
@@ -233,6 +269,11 @@ public class SplitDefinition extends OutputExpressionNode implements ExecutorSer
      * from the parallel thread pool. However, if you want to use the original thread that called the splitter, then
      * make sure to enable the synchronous option as well.
      *
+     * In parallel processing mode, you may want to also synchronous = true to force this EIP to process the sub-tasks
+     * using the upper bounds of the thread-pool. If using synchronous = false then Camel will allow its reactive
+     * routing engine to use as many threads as possible, which may be available due to sub-tasks using other
+     * thread-pools such as CompletableFuture.runAsync or others.
+     *
      * @return the builder
      */
     public SplitDefinition parallelProcessing(String parallelProcessing) {
@@ -248,6 +289,7 @@ public class SplitDefinition extends OutputExpressionNode implements ExecutorSer
      *
      * @return the builder
      */
+    @Deprecated(since = "4.7.0")
     public SplitDefinition parallelAggregate() {
         return parallelAggregate(true);
     }
@@ -260,6 +302,7 @@ public class SplitDefinition extends OutputExpressionNode implements ExecutorSer
      *
      * @return the builder
      */
+    @Deprecated(since = "4.7.0")
     public SplitDefinition parallelAggregate(boolean parallelAggregate) {
         return parallelAggregate(Boolean.toString(parallelAggregate));
     }
@@ -272,6 +315,7 @@ public class SplitDefinition extends OutputExpressionNode implements ExecutorSer
      *
      * @return the builder
      */
+    @Deprecated(since = "4.7.0")
     public SplitDefinition parallelAggregate(String parallelAggregate) {
         setParallelAggregate(parallelAggregate);
         return this;
@@ -586,10 +630,12 @@ public class SplitDefinition extends OutputExpressionNode implements ExecutorSer
         this.streaming = streaming;
     }
 
+    @Deprecated(since = "4.7.0")
     public String getParallelAggregate() {
         return parallelAggregate;
     }
 
+    @Deprecated(since = "4.7.0")
     public void setParallelAggregate(String parallelAggregate) {
         this.parallelAggregate = parallelAggregate;
     }

@@ -50,6 +50,8 @@ public class OpenTelemetryTracer extends org.apache.camel.tracing.Tracer {
     private Tracer tracer;
     private String instrumentationName = "camel";
     private ContextPropagators contextPropagators;
+    private boolean traceProcessors;
+    private SpanCustomizer spanCustomizer;
 
     public Tracer getTracer() {
         return tracer;
@@ -59,7 +61,7 @@ public class OpenTelemetryTracer extends org.apache.camel.tracing.Tracer {
         this.tracer = tracer;
     }
 
-    @ManagedAttribute
+    @ManagedAttribute(description = "A name uniquely identifying the instrumentation scope, such as the instrumentation library, package, or fully qualified class name")
     public String getInstrumentationName() {
         return instrumentationName;
     }
@@ -72,12 +74,36 @@ public class OpenTelemetryTracer extends org.apache.camel.tracing.Tracer {
         this.instrumentationName = instrumentationName;
     }
 
+    @ManagedAttribute(description = "Setting this to true will create new OpenTelemetry Spans for each Camel Processors")
+    public boolean isTraceProcessors() {
+        return traceProcessors;
+    }
+
+    /**
+     * Setting this to true will create new OpenTelemetry Spans for each Camel Processors. Use the excludePattern
+     * property to filter out Processors.
+     */
+    public void setTraceProcessors(boolean traceProcessors) {
+        this.traceProcessors = traceProcessors;
+    }
+
     public ContextPropagators getContextPropagators() {
         return contextPropagators;
     }
 
     public void setContextPropagators(ContextPropagators contextPropagators) {
         this.contextPropagators = contextPropagators;
+    }
+
+    public SpanCustomizer getSpanCustomizer() {
+        return spanCustomizer;
+    }
+
+    /**
+     * Enables the capability to apply customizations to Spans before they are started.
+     */
+    public void setSpanCustomizer(SpanCustomizer spanCustomizer) {
+        this.spanCustomizer = spanCustomizer;
     }
 
     private SpanKind mapToSpanKind(org.apache.camel.tracing.SpanKind kind) {
@@ -104,6 +130,15 @@ public class OpenTelemetryTracer extends org.apache.camel.tracing.Tracer {
             // GlobalOpenTelemetry.get() is always NotNull, falls back to OpenTelemetry.noop()
             tracer = GlobalOpenTelemetry.get().getTracer(instrumentationName);
         }
+        if (traceProcessors && (getTracingStrategy() == null
+                || getTracingStrategy().getClass().isAssignableFrom(NoopTracingStrategy.class))) {
+            OpenTelemetryTracingStrategy tracingStrategy = new OpenTelemetryTracingStrategy(this);
+            tracingStrategy.setPropagateContext(true);
+            setTracingStrategy(tracingStrategy);
+        }
+        if (spanCustomizer == null) {
+            spanCustomizer = CamelContextHelper.findSingleByType(getCamelContext(), SpanCustomizer.class);
+        }
     }
 
     @Override
@@ -129,6 +164,9 @@ public class OpenTelemetryTracer extends org.apache.camel.tracing.Tracer {
             baggage = oTelSpanWrapper.getBaggage();
             builder = builder.setParent(Context.current().with(parentSpan));
         }
+        if (spanCustomizer != null && spanCustomizer.isEnabled(operationName, exchange)) {
+            spanCustomizer.customize(builder, operationName, exchange);
+        }
         return new OpenTelemetrySpanAdapter(builder.startSpan(), baggage);
     }
 
@@ -144,7 +182,7 @@ public class OpenTelemetryTracer extends org.apache.camel.tracing.Tracer {
             baggage = spanFromExchange.getBaggage();
         } else {
             ExtractAdapter adapter = sd.getExtractAdapter(exchange.getIn().getHeaders(), encoding);
-            Context ctx = GlobalOpenTelemetry.get().getPropagators().getTextMapPropagator().extract(Context.current(), adapter,
+            Context ctx = getContextPropagators().getTextMapPropagator().extract(Context.current(), adapter,
                     new OpenTelemetryGetter(adapter));
             Span span = Span.fromContext(ctx);
             baggage = Baggage.fromContext(ctx);
@@ -154,7 +192,9 @@ public class OpenTelemetryTracer extends org.apache.camel.tracing.Tracer {
                 builder.setSpanKind(mapToSpanKind(sd.getReceiverSpanKind()));
             }
         }
-
+        if (spanCustomizer != null && spanCustomizer.isEnabled(operationName, exchange)) {
+            spanCustomizer.customize(builder, operationName, exchange);
+        }
         return new OpenTelemetrySpanAdapter(builder.startSpan(), baggage);
     }
 
@@ -168,13 +208,11 @@ public class OpenTelemetryTracer extends org.apache.camel.tracing.Tracer {
     protected void inject(SpanAdapter span, InjectAdapter adapter) {
         OpenTelemetrySpanAdapter spanFromExchange = (OpenTelemetrySpanAdapter) span;
         Span otelSpan = spanFromExchange.getOpenTelemetrySpan();
-        Context ctx;
+        Context ctx = Context.current().with(otelSpan);
         if (spanFromExchange.getBaggage() != null) {
-            ctx = Context.current().with(otelSpan).with(spanFromExchange.getBaggage());
-        } else {
-            ctx = Context.current().with(otelSpan);
+            ctx = ctx.with(spanFromExchange.getBaggage());
         }
-        GlobalOpenTelemetry.get().getPropagators().getTextMapPropagator().inject(ctx, adapter, new OpenTelemetrySetter());
+        getContextPropagators().getTextMapPropagator().inject(ctx, adapter, new OpenTelemetrySetter());
     }
 
     @Override

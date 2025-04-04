@@ -98,6 +98,7 @@ public class ObjectHelperTest {
         assertEquals("cheese", name, "Property name");
     }
 
+    @SuppressWarnings("Unused")
     public void setCheese(String cheese) {
         // used in the above unit test
     }
@@ -1146,5 +1147,19 @@ public class ObjectHelperTest {
         Assertions.assertNull(list.get(50));
         Assertions.assertNull(list.get(98));
         Assertions.assertEquals("zzz", list.get(99));
+    }
+
+    @Test
+    public void testIsNumeric() {
+        Assertions.assertTrue(org.apache.camel.util.ObjectHelper.isNumericType(int.class));
+        Assertions.assertTrue(org.apache.camel.util.ObjectHelper.isNumericType(Integer.class));
+        Assertions.assertTrue(org.apache.camel.util.ObjectHelper.isNumericType(long.class));
+        Assertions.assertTrue(org.apache.camel.util.ObjectHelper.isNumericType(Long.class));
+        Assertions.assertTrue(org.apache.camel.util.ObjectHelper.isNumericType(Double.class));
+        Assertions.assertTrue(org.apache.camel.util.ObjectHelper.isNumericType(float.class));
+        Assertions.assertTrue(org.apache.camel.util.ObjectHelper.isNumericType(byte.class));
+
+        Assertions.assertFalse(org.apache.camel.util.ObjectHelper.isNumericType(String.class));
+        Assertions.assertFalse(org.apache.camel.util.ObjectHelper.isNumericType(Node.class));
     }
 }

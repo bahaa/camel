@@ -454,8 +454,9 @@ public interface SpringRabbitMQEndpointBuilderFactory {
             return this;
         }
         /**
-         * How many times a Rabbitmq consumer will retry the same message if
-         * Camel failed to process the message.
+         * How many times a Rabbitmq consumer will try the same message if Camel
+         * failed to process the message (The number of attempts includes the
+         * initial try).
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -470,8 +471,9 @@ public interface SpringRabbitMQEndpointBuilderFactory {
             return this;
         }
         /**
-         * How many times a Rabbitmq consumer will retry the same message if
-         * Camel failed to process the message.
+         * How many times a Rabbitmq consumer will try the same message if Camel
+         * failed to process the message (The number of attempts includes the
+         * initial try).
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -1355,6 +1357,102 @@ public interface SpringRabbitMQEndpointBuilderFactory {
          */
         default SpringRabbitMQEndpointProducerBuilder replyTimeout(String replyTimeout) {
             doSetProperty("replyTimeout", replyTimeout);
+            return this;
+        }
+        /**
+         * If true the queue will not be bound to the exchange after declaring
+         * it.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param skipBindQueue the value to set
+         * @return the dsl builder
+         */
+        default SpringRabbitMQEndpointProducerBuilder skipBindQueue(boolean skipBindQueue) {
+            doSetProperty("skipBindQueue", skipBindQueue);
+            return this;
+        }
+        /**
+         * If true the queue will not be bound to the exchange after declaring
+         * it.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param skipBindQueue the value to set
+         * @return the dsl builder
+         */
+        default SpringRabbitMQEndpointProducerBuilder skipBindQueue(String skipBindQueue) {
+            doSetProperty("skipBindQueue", skipBindQueue);
+            return this;
+        }
+        /**
+         * This can be used if we need to declare the queue but not the
+         * exchange.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param skipDeclareExchange the value to set
+         * @return the dsl builder
+         */
+        default SpringRabbitMQEndpointProducerBuilder skipDeclareExchange(boolean skipDeclareExchange) {
+            doSetProperty("skipDeclareExchange", skipDeclareExchange);
+            return this;
+        }
+        /**
+         * This can be used if we need to declare the queue but not the
+         * exchange.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param skipDeclareExchange the value to set
+         * @return the dsl builder
+         */
+        default SpringRabbitMQEndpointProducerBuilder skipDeclareExchange(String skipDeclareExchange) {
+            doSetProperty("skipDeclareExchange", skipDeclareExchange);
+            return this;
+        }
+        /**
+         * If true the producer will not declare and bind a queue. This can be
+         * used for directing messages via an existing routing key.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param skipDeclareQueue the value to set
+         * @return the dsl builder
+         */
+        default SpringRabbitMQEndpointProducerBuilder skipDeclareQueue(boolean skipDeclareQueue) {
+            doSetProperty("skipDeclareQueue", skipDeclareQueue);
+            return this;
+        }
+        /**
+         * If true the producer will not declare and bind a queue. This can be
+         * used for directing messages via an existing routing key.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param skipDeclareQueue the value to set
+         * @return the dsl builder
+         */
+        default SpringRabbitMQEndpointProducerBuilder skipDeclareQueue(String skipDeclareQueue) {
+            doSetProperty("skipDeclareQueue", skipDeclareQueue);
             return this;
         }
         /**

@@ -47,9 +47,9 @@ public class STS2ComponentVerifierExtension extends DefaultComponentVerifierExte
     protected Result verifyParameters(Map<String, Object> parameters) {
 
         ResultBuilder builder = ResultBuilder.withStatusAndScope(Result.Status.OK, Scope.PARAMETERS)
-                .error(ResultErrorHelper.requiresOption("accessKey", parameters))
-                .error(ResultErrorHelper.requiresOption("secretKey", parameters))
-                .error(ResultErrorHelper.requiresOption("region", parameters));
+                .error(ResultErrorHelper.requiresOption(parameters, "accessKey"))
+                .error(ResultErrorHelper.requiresOption(parameters, "secretKey"))
+                .error(ResultErrorHelper.requiresOption(parameters, "region"));
 
         // Validate using the catalog
 
@@ -76,9 +76,10 @@ public class STS2ComponentVerifierExtension extends DefaultComponentVerifierExte
             }
             AwsBasicCredentials cred = AwsBasicCredentials.create(configuration.getAccessKey(), configuration.getSecretKey());
             StsClientBuilder clientBuilder = StsClient.builder();
-            StsClient client = clientBuilder.credentialsProvider(StaticCredentialsProvider.create(cred))
-                    .region(Region.of(configuration.getRegion())).build();
-            client.serviceName();
+            try (StsClient client = clientBuilder.credentialsProvider(StaticCredentialsProvider.create(cred))
+                    .region(Region.of(configuration.getRegion())).build()) {
+                client.serviceName();
+            }
         } catch (SdkClientException e) {
             ResultErrorBuilder errorBuilder
                     = ResultErrorBuilder.withCodeAndDescription(VerificationError.StandardCode.AUTHENTICATION, e.getMessage())

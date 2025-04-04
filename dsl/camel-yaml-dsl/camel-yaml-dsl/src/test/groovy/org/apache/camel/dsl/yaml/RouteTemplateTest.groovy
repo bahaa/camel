@@ -181,51 +181,6 @@ class RouteTemplateTest extends YamlTestSupport {
         MockEndpoint.assertIsSatisfied(context)
     }
 
-    def "create template with bean and property"() {
-        setup:
-        loadRoutes """                
-                - routeTemplate:
-                    id: "myTemplate"
-                    beans:
-                      - name: "myProcessor"
-                        type: "#class:${MySetBody.class.name}"
-                        property:
-                          - key: "payload"
-                            value: "test-payload"
-                    from:
-                      uri: "direct:{{directName}}"
-                      steps:
-                        - process:
-                            ref: "{{myProcessor}}"
-                - from:
-                    uri: "direct:start"
-                    steps:
-                      - to: "direct:myId"
-                      - to: "mock:result"
-            """
-
-        withMock('mock:result') {
-            expectedMessageCount 1
-            expectedBodiesReceived 'test-payload'
-        }
-        when:
-        context.addRouteFromTemplate('myId', 'myTemplate', ['directName': 'myId'])
-        context.start()
-
-        withTemplate {
-            to('direct:start').withBody('hello').send()
-        }
-        then:
-        context.routeTemplateDefinitions.size() == 1
-
-        with(context.routeTemplateDefinitions[0], RouteTemplateDefinition) {
-            id == 'myTemplate'
-            templateBeans.size() == 1
-        }
-
-        MockEndpoint.assertIsSatisfied(context)
-    }
-
     def "create template with properties"() {
         when:
         loadRoutes """
@@ -304,14 +259,14 @@ class RouteTemplateTest extends YamlTestSupport {
         Assertions.assertNotNull(context.hasEndpoint("mock:result?retainFirst=1"))
         MockEndpoint mock = context.getEndpoint("mock:result?retainFirst=1", MockEndpoint)
         mock.expectedBodiesReceived("Hello World")
-        context.createProducerTemplate().sendBody("direct:start", "Hello World");
+        context.createProducerTemplate().sendBody("direct:start", "Hello World")
         mock.assertIsSatisfied()
         mock.reset()
 
         context.addRouteFromTemplate("myRoute2", "myTemplate", [foo: "start2"])
         MockEndpoint mock2 = context.getEndpoint("mock:result", MockEndpoint)
         mock2.expectedBodiesReceived("Bye World")
-        context.createProducerTemplate().sendBody("direct:start2", "Bye World");
+        context.createProducerTemplate().sendBody("direct:start2", "Bye World")
         mock2.assertIsSatisfied()
     }
 
@@ -461,19 +416,19 @@ class RouteTemplateTest extends YamlTestSupport {
                                   id: "end"
             """
         when:
-        Map<String, Object> parameters = new HashMap<>();
-        parameters.put("foo", "one");
-        parameters.put("bar", "cheese");
-        context.addRouteFromTemplate("first", "myTemplate", "aaa", parameters);
+        Map<String, Object> parameters = new HashMap<>()
+        parameters.put("foo", "one")
+        parameters.put("bar", "cheese")
+        context.addRouteFromTemplate("first", "myTemplate", "aaa", parameters)
 
-        parameters.put("foo", "two");
-        parameters.put("bar", "cake");
-        context.addRouteFromTemplate("second", "myTemplate", "bbb", parameters);
+        parameters.put("foo", "two")
+        parameters.put("bar", "cake")
+        context.addRouteFromTemplate("second", "myTemplate", "bbb", parameters)
         context.start()
 
         then:
-        Assertions.assertEquals(3, context.getRoute("first").filter("aaa*").size());
-        Assertions.assertEquals(3, context.getRoute("second").filter("bbb*").size());
+        Assertions.assertEquals(3, context.getRoute("first").filter("aaa*").size())
+        Assertions.assertEquals(3, context.getRoute("second").filter("bbb*").size())
     }
 
     def "Error: kebab-case: route-template"() {

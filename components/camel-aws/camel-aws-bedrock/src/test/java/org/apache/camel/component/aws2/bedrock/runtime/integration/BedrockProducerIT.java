@@ -443,23 +443,87 @@ class BedrockProducerIT extends CamelTestSupport {
         MockEndpoint.assertIsSatisfied(context);
     }
 
+    @Test
+    public void testInvokeTitanMultimodalEmbeddingsModel() throws InterruptedException {
+
+        result.expectedMessageCount(1);
+        final Exchange result = template.send("direct:send_titan_multimodal_embeddings", exchange -> {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode rootNode = mapper.createObjectNode();
+            rootNode.putIfAbsent("inputText",
+                    new TextNode("A Sci-fi camel running in the desert"));
+
+            exchange.getMessage().setBody(mapper.writer().writeValueAsString(rootNode));
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_CONTENT_TYPE, "application/json");
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_ACCEPT_CONTENT_TYPE, "*/*");
+        });
+
+        MockEndpoint.assertIsSatisfied(context);
+    }
+
+    @Test
+    public void testInvokeTitanTextEmbeddingsV2Model() throws InterruptedException {
+
+        result.expectedMessageCount(1);
+        final Exchange result = template.send("direct:send_titan_text_embeddings_v2", exchange -> {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode rootNode = mapper.createObjectNode();
+            rootNode.putIfAbsent("inputText",
+                    new TextNode("A Sci-fi camel running in the desert"));
+
+            exchange.getMessage().setBody(mapper.writer().writeValueAsString(rootNode));
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_CONTENT_TYPE, "application/json");
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_ACCEPT_CONTENT_TYPE, "*/*");
+        });
+
+        MockEndpoint.assertIsSatisfied(context);
+    }
+
+    @Test
+    public void testInvokeTitanPremierModel() throws InterruptedException {
+
+        result.expectedMessageCount(1);
+        final Exchange result = template.send("direct:send_titan_premier", exchange -> {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode rootNode = mapper.createObjectNode();
+            rootNode.putIfAbsent("inputText",
+                    new TextNode(
+                            "User: Generate synthetic data for daily product sales in various categories - include row number, product name, category, date of sale and price. Produce output in JSON format. Count records and ensure there are no more than 5."));
+
+            ArrayNode stopSequences = mapper.createArrayNode();
+            stopSequences.add("User:");
+            ObjectNode childNode = mapper.createObjectNode();
+            childNode.putIfAbsent("maxTokenCount", new IntNode(1024));
+            childNode.putIfAbsent("stopSequences", stopSequences);
+            childNode.putIfAbsent("temperature", new DoubleNode(0.7));
+            childNode.putIfAbsent("topP", new DoubleNode(0.9));
+
+            rootNode.putIfAbsent("textGenerationConfig", childNode);
+            exchange.getMessage().setBody(mapper.writer().writeValueAsString(rootNode));
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_CONTENT_TYPE, "application/json");
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_ACCEPT_CONTENT_TYPE, "application/json");
+        });
+
+        MockEndpoint.assertIsSatisfied(context);
+    }
+
     @Override
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
             public void configure() {
                 from("direct:send_titan_express")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=eu-central-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=eu-central-1&operation=invokeTextModel&modelId="
                             + BedrockModels.TITAN_TEXT_EXPRESS_V1.model)
                         .to(result);
 
                 from("direct:send_titan_lite")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.TITAN_TEXT_LITE_V1.model)
                         .to(result);
 
                 from("direct:send_titan_image")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeImageModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeImageModel&modelId="
                             + BedrockModels.TITAN_IMAGE_GENERATOR_V1.model)
                         .split(body())
                         .unmarshal().base64()
@@ -467,12 +531,27 @@ class BedrockProducerIT extends CamelTestSupport {
                         .to(result);
 
                 from("direct:send_titan_embeddings")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeEmbeddingsModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeEmbeddingsModel&modelId="
                             + BedrockModels.TITAN_EMBEDDINGS_G1.model)
                         .to(result);
 
+                from("direct:send_titan_multimodal_embeddings")
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeEmbeddingsModel&modelId="
+                            + BedrockModels.TITAN_MULTIMODAL_EMBEDDINGS_G1.model)
+                        .to(result);
+
+                from("direct:send_titan_text_embeddings_v2")
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeEmbeddingsModel&modelId="
+                            + BedrockModels.TITAN_TEXT_EMBEDDINGS_V2.model)
+                        .to(result);
+
+                from("direct:send_titan_premier")
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
+                            + BedrockModels.TITAN_TEXT_PREMIER_V1.model)
+                        .to(result);
+
                 from("direct:send_jurassic2_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.JURASSIC2_ULTRA.model)
                         .split(body())
                         .transform().jq(".data.text")
@@ -480,7 +559,7 @@ class BedrockProducerIT extends CamelTestSupport {
                         .to(result);
 
                 from("direct:send_jurassic2_mid_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.JURASSIC2_MID.model)
                         .split(body())
                         .transform().jq(".data.text")
@@ -488,49 +567,49 @@ class BedrockProducerIT extends CamelTestSupport {
                         .to(result);
 
                 from("direct:send_anthropic_v1_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.ANTROPHIC_CLAUDE_INSTANT_V1.model)
                         .log("${body}")
                         .to(result);
 
                 from("direct:send_anthropic_v2_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.ANTROPHIC_CLAUDE_V2.model)
                         .log("${body}")
                         .to(result);
 
                 from("direct:send_anthropic_v21_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.ANTROPHIC_CLAUDE_V2_1.model)
                         .log("${body}")
                         .to(result);
 
                 from("direct:send_anthropic_v3_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.ANTROPHIC_CLAUDE_V3.model)
                         .log("Completions: ${body}")
                         .to(result);
 
                 from("direct:send_anthropic_v3_haiku_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.ANTROPHIC_CLAUDE_HAIKU_V3.model)
                         .log("Completions: ${body}")
                         .to(result);
 
                 from("direct:send_mistral_7b_instruct_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.MISTRAL_7B_INSTRUCT.model)
                         .log("Completions: ${body}")
                         .to(result);
 
                 from("direct:send_mistral_8x7b_instruct_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.MISTRAL_8x7B_INSTRUCT.model)
                         .log("Completions: ${body}")
                         .to(result);
 
                 from("direct:send_mistral_large_model")
-                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}}&region=us-east-1&operation=invokeTextModel&modelId="
+                        .to("aws-bedrock:label?accessKey=RAW({{aws.manual.access.key}})&secretKey=RAW({{aws.manual.secret.key}})&region=us-east-1&operation=invokeTextModel&modelId="
                             + BedrockModels.MISTRAL_LARGE.model)
                         .log("Completions: ${body}")
                         .to(result);

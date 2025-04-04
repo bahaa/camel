@@ -116,26 +116,9 @@ public final class CamelJavaParserHelper {
         if (block != null) {
             List<?> statements = block.statements();
             for (Object statement : statements) {
-                Statement stmt = (Statement) statement;
-                Expression exp = null;
-                if (stmt instanceof ReturnStatement rs) {
-                    exp = rs.getExpression();
-                } else if (stmt instanceof ExpressionStatement es) {
-                    exp = es.getExpression();
-                    if (exp instanceof MethodInvocation mi) {
-                        for (Object arg : mi.arguments()) {
-                            if (arg instanceof ClassInstanceCreation) {
-                                exp = (Expression) arg;
-                                break;
-                            }
-                        }
-                    }
-                }
+                final Expression exp = getExpression((Statement) statement);
                 if (exp instanceof ClassInstanceCreation cic) {
-                    boolean isRouteBuilder = false;
-                    if (cic.getType() instanceof SimpleType st) {
-                        isRouteBuilder = "RouteBuilder".equals(st.getName().toString());
-                    }
+                    final boolean isRouteBuilder = isRouteBuilderCheck(cic);
                     if (isRouteBuilder && cic.getAnonymousClassDeclaration() != null) {
                         List<?> body = cic.getAnonymousClassDeclaration().bodyDeclarations();
                         for (Object line : body) {
@@ -151,6 +134,33 @@ public final class CamelJavaParserHelper {
         }
 
         return null;
+    }
+
+    private static boolean isRouteBuilderCheck(ClassInstanceCreation cic) {
+        boolean isRouteBuilder = false;
+        if (cic.getType() instanceof SimpleType st) {
+            isRouteBuilder = "RouteBuilder".equals(st.getName().toString());
+        }
+        return isRouteBuilder;
+    }
+
+    private static Expression getExpression(Statement statement) {
+        Statement stmt = statement;
+        Expression exp = null;
+        if (stmt instanceof ReturnStatement rs) {
+            exp = rs.getExpression();
+        } else if (stmt instanceof ExpressionStatement es) {
+            exp = es.getExpression();
+            if (exp instanceof MethodInvocation mi) {
+                for (Object arg : mi.arguments()) {
+                    if (arg instanceof ClassInstanceCreation) {
+                        exp = (Expression) arg;
+                        break;
+                    }
+                }
+            }
+        }
+        return exp;
     }
 
     public static List<ParserResult> parseCamelRouteIds(MethodSource<JavaClassSource> method) {
@@ -220,19 +230,7 @@ public final class CamelJavaParserHelper {
         if (routeIdsOnly) {
             // include route id for consumers
             if ("routeId".equals(name)) {
-                List<?> args = mi.arguments();
-                if (args != null) {
-                    for (Object arg : args) {
-                        if (isValidArgument(arg)) {
-                            String routeId = getLiteralValue(clazz, block, (Expression) arg);
-                            if (!Strings.isNullOrEmpty(routeId)) {
-                                int position = ((Expression) arg).getStartPosition();
-                                int len = ((Expression) arg).getLength();
-                                uris.add(new ParserResult(name, position, len, routeId));
-                            }
-                        }
-                    }
-                }
+                addRouteId(clazz, block, mi, uris, name);
             }
             // we only want route ids so return here
             return;
@@ -245,13 +243,7 @@ public final class CamelJavaParserHelper {
                     iterateOverArguments(clazz, block, uris, strings, fields, args, name);
                 }
             }
-            if ("fromF".equals(name)) {
-                parseFirstArgument(clazz, block, mi, uris, strings, fields, name);
-            }
-            if ("interceptFrom".equals(name)) {
-                parseFirstArgument(clazz, block, mi, uris, strings, fields, name);
-            }
-            if ("pollEnrich".equals(name)) {
+            if ("fromF".equals(name) || "interceptFrom".equals(name) || "pollEnrich".equals(name) || "poll".equals(name)) {
                 parseFirstArgument(clazz, block, mi, uris, strings, fields, name);
             }
         }
@@ -263,11 +255,25 @@ public final class CamelJavaParserHelper {
                     iterateOverArguments(clazz, block, uris, strings, fields, args, name);
                 }
             }
-            if ("toF".equals(name)) {
+            if ("toF".equals(name) || "enrich".equals(name) || "wireTap".equals(name)) {
                 parseFirstArgument(clazz, block, mi, uris, strings, fields, name);
             }
-            if ("enrich".equals(name) || "wireTap".equals(name)) {
-                parseFirstArgument(clazz, block, mi, uris, strings, fields, name);
+        }
+    }
+
+    private static void addRouteId(
+            JavaClassSource clazz, Block block, MethodInvocation mi, List<ParserResult> uris, String name) {
+        List<?> args = mi.arguments();
+        if (args != null) {
+            for (Object arg : args) {
+                if (isValidArgument(arg)) {
+                    String routeId = getLiteralValue(clazz, block, (Expression) arg);
+                    if (!Strings.isNullOrEmpty(routeId)) {
+                        int position = ((Expression) arg).getStartPosition();
+                        int len = ((Expression) arg).getLength();
+                        uris.add(new ParserResult(name, position, len, routeId));
+                    }
+                }
             }
         }
     }

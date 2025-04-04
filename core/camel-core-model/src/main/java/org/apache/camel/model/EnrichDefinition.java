@@ -34,7 +34,8 @@ import org.apache.camel.spi.Metadata;
 @Metadata(label = "eip,transformation")
 @XmlRootElement(name = "enrich")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class EnrichDefinition extends ExpressionNode implements AggregationStrategyAwareDefinition<EnrichDefinition> {
+public class EnrichDefinition extends ExpressionNode
+        implements AggregationStrategyAwareDefinition<EnrichDefinition> {
 
     @XmlTransient
     private AggregationStrategy aggregationStrategyBean;
@@ -72,11 +73,27 @@ public class EnrichDefinition extends ExpressionNode implements AggregationStrat
     private String autoStartComponents;
 
     public EnrichDefinition() {
-        this(null);
+        this((AggregationStrategy) null);
     }
 
     public EnrichDefinition(AggregationStrategy aggregationStrategy) {
         this.aggregationStrategyBean = aggregationStrategy;
+    }
+
+    protected EnrichDefinition(EnrichDefinition source) {
+        super(source);
+        this.aggregationStrategyBean = source.aggregationStrategyBean;
+        this.variableSend = source.variableSend;
+        this.variableReceive = source.variableReceive;
+        this.aggregationStrategy = source.aggregationStrategy;
+        this.aggregationStrategyMethodName = source.aggregationStrategyMethodName;
+        this.aggregationStrategyMethodAllowNull = source.aggregationStrategyMethodAllowNull;
+        this.aggregateOnException = source.aggregateOnException;
+        this.shareUnitOfWork = source.shareUnitOfWork;
+        this.cacheSize = source.cacheSize;
+        this.ignoreInvalidEndpoint = source.ignoreInvalidEndpoint;
+        this.allowOptimisedComponents = source.allowOptimisedComponents;
+        this.autoStartComponents = source.autoStartComponents;
     }
 
     @Override
@@ -98,11 +115,12 @@ public class EnrichDefinition extends ExpressionNode implements AggregationStrat
     // -------------------------------------------------------------------------
 
     /**
-     * To use a variable to store the received message body (only body, not headers). This is handy for easy access to
-     * the received message body via variables.
+     * To use a variable as the source for the message body to send. This makes it handy to use variables for user data
+     * and to easily control what data to use for sending and receiving.
      *
-     * Important: When using receive variable then the received body is stored only in this variable and <b>not</b> on
-     * the current {@link org.apache.camel.Message}.
+     * Important: When using send variable then the message body is taken from this variable instead of the current
+     * message, however the headers from the message will still be used as well. In other words, the variable is used
+     * instead of the message body, but everything else is as usual.
      */
     public EnrichDefinition variableReceive(String variableReceive) {
         setVariableReceive(variableReceive);
@@ -110,11 +128,11 @@ public class EnrichDefinition extends ExpressionNode implements AggregationStrat
     }
 
     /**
-     * To use a variable to store the received message body (only body, not headers). This is handy for easy access to
-     * the received message body via variables.
+     * To use a variable to store the received message body (only body, not headers). This makes it handy to use
+     * variables for user data and to easily control what data to use for sending and receiving.
      *
-     * Important: When using receive variable then the received body is stored only in this variable and <b>not</b> on
-     * the current {@link org.apache.camel.Message}.
+     * Important: When using receive variable then the received body is stored only in this variable and not on the
+     * current message.
      */
     public EnrichDefinition variableSend(String variableSend) {
         setVariableSend(variableSend);
@@ -378,5 +396,10 @@ public class EnrichDefinition extends ExpressionNode implements AggregationStrat
 
     public void setAutoStartComponents(String autoStartComponents) {
         this.autoStartComponents = autoStartComponents;
+    }
+
+    @Override
+    public EnrichDefinition copyDefinition() {
+        return new EnrichDefinition(this);
     }
 }

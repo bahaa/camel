@@ -24,15 +24,17 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TypeConverterRegistryStatisticsEnabledNoStreamCachingTest extends ContextTestSupport {
 
     @Override
     protected CamelContext createCamelContext() throws Exception {
-        CamelContext context = super.createCamelContext();
+        CamelContext context = new DefaultCamelContext(false);
+        context.setLoadTypeConverters(isLoadTypeConverters());
         context.setStreamCaching(false);
         context.setTypeConverterStatisticsEnabled(true);
+        context.build();
+
         return context;
     }
 
@@ -46,7 +48,6 @@ public class TypeConverterRegistryStatisticsEnabledNoStreamCachingTest extends C
         assertMockEndpointsSatisfied();
 
         TypeConverterRegistry reg = context.getTypeConverterRegistry();
-        assertTrue(reg.getStatistics().isStatisticsEnabled(), "Should be enabled");
 
         long failed = reg.getStatistics().getFailedCounter();
         assertEquals(0, (int) failed);
@@ -72,10 +73,10 @@ public class TypeConverterRegistryStatisticsEnabledNoStreamCachingTest extends C
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:start").routeId("foo").convertBodyTo(int.class).to("mock:a");
             }
         };

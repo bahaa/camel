@@ -24,6 +24,9 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
@@ -31,8 +34,8 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.StreamCache;
 import org.apache.camel.spi.StreamCachingStrategy;
+import org.apache.camel.support.TempDirHelper;
 import org.apache.camel.support.service.ServiceSupport;
-import org.apache.camel.util.FilePathResolver;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.IOHelper;
 import org.slf4j.Logger;
@@ -330,43 +333,6 @@ public class DefaultStreamCachingStrategy extends ServiceSupport implements Came
         return false;
     }
 
-    protected String resolveSpoolDirectory(String path) {
-        if (camelContext.getManagementNameStrategy() != null) {
-            String name = camelContext.getManagementNameStrategy().resolveManagementName(path, camelContext.getName(), false);
-            if (name != null) {
-                name = customResolveManagementName(name);
-            }
-            // and then check again with invalid check to ensure all ## is resolved
-            if (name != null) {
-                name = camelContext.getManagementNameStrategy().resolveManagementName(name, camelContext.getName(), true);
-            }
-            return name;
-        } else {
-            return defaultManagementName(path);
-        }
-    }
-
-    protected String defaultManagementName(String path) {
-        // must quote the names to have it work as literal replacement
-        String name = camelContext.getName();
-
-        // replace tokens
-        String answer = path;
-        answer = answer.replace("#camelId#", name);
-        answer = answer.replace("#name#", name);
-        // replace custom
-        answer = customResolveManagementName(answer);
-        return answer;
-    }
-
-    protected String customResolveManagementName(String pattern) {
-        if (pattern.contains("#uuid#")) {
-            String uuid = camelContext.getUuidGenerator().generateUuid();
-            pattern = pattern.replace("#uuid#", uuid);
-        }
-        return FilePathResolver.resolvePath(pattern);
-    }
-
     @Override
     protected void doStart() throws Exception {
         if (!enabled) {
@@ -406,7 +372,7 @@ public class DefaultStreamCachingStrategy extends ServiceSupport implements Came
                 throw new IllegalArgumentException("SpoolDirectory must be configured when using SpoolThreshold > 0");
             }
             if (spoolDirectory == null) {
-                String name = resolveSpoolDirectory(spoolDirectoryName);
+                String name = TempDirHelper.resolveTempDir(camelContext, null, spoolDirectoryName);
                 if (name != null) {
                     spoolDirectory = new File(name);
                     spoolDirectoryName = null;
@@ -554,64 +520,76 @@ public class DefaultStreamCachingStrategy extends ServiceSupport implements Came
      */
     private static final class UtilizationStatistics implements Statistics {
 
+        private final Lock lock = new ReentrantLock();
         private boolean statisticsEnabled;
-        private volatile long memoryCounter;
-        private volatile long memorySize;
-        private volatile long memoryAverageSize;
-        private volatile long spoolCounter;
-        private volatile long spoolSize;
-        private volatile long spoolAverageSize;
+        private final AtomicLong memoryCounter = new AtomicLong();
+        private final AtomicLong memorySize = new AtomicLong();
+        private final AtomicLong memoryAverageSize = new AtomicLong();
+        private final AtomicLong spoolCounter = new AtomicLong();
+        private final AtomicLong spoolSize = new AtomicLong();
+        private final AtomicLong spoolAverageSize = new AtomicLong();
 
-        synchronized void updateMemory(long size) {
-            memoryCounter++;
-            memorySize += size;
-            memoryAverageSize = memorySize / memoryCounter;
+        void updateMemory(long size) {
+            lock.lock();
+            try {
+                memoryAverageSize.set(memorySize.addAndGet(size) / memoryCounter.incrementAndGet());
+            } finally {
+                lock.unlock();
+            }
         }
 
-        synchronized void updateSpool(long size) {
-            spoolCounter++;
-            spoolSize += size;
-            spoolAverageSize = spoolSize / spoolCounter;
+        void updateSpool(long size) {
+            lock.lock();
+            try {
+                spoolAverageSize.set(spoolSize.addAndGet(size) / spoolCounter.incrementAndGet());
+            } finally {
+                lock.lock();
+            }
         }
 
         @Override
         public long getCacheMemoryCounter() {
-            return memoryCounter;
+            return memoryCounter.get();
         }
 
         @Override
         public long getCacheMemorySize() {
-            return memorySize;
+            return memorySize.get();
         }
 
         @Override
         public long getCacheMemoryAverageSize() {
-            return memoryAverageSize;
+            return memoryAverageSize.get();
         }
 
         @Override
         public long getCacheSpoolCounter() {
-            return spoolCounter;
+            return spoolCounter.get();
         }
 
         @Override
         public long getCacheSpoolSize() {
-            return spoolSize;
+            return spoolSize.get();
         }
 
         @Override
         public long getCacheSpoolAverageSize() {
-            return spoolAverageSize;
+            return spoolAverageSize.get();
         }
 
         @Override
-        public synchronized void reset() {
-            memoryCounter = 0;
-            memorySize = 0;
-            memoryAverageSize = 0;
-            spoolCounter = 0;
-            spoolSize = 0;
-            spoolAverageSize = 0;
+        public void reset() {
+            lock.lock();
+            try {
+                memoryCounter.set(0);
+                memorySize.set(0);
+                memoryAverageSize.set(0);
+                spoolCounter.set(0);
+                spoolSize.set(0);
+                spoolAverageSize.set(0);
+            } finally {
+                lock.unlock();
+            }
         }
 
         @Override

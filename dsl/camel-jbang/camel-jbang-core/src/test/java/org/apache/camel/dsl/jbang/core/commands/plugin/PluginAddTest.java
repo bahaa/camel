@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.camel.dsl.jbang.core.commands.plugin;
 
 import org.apache.camel.dsl.jbang.core.commands.CamelCommandBaseTest;
@@ -39,13 +38,15 @@ class PluginAddTest extends CamelCommandBaseTest {
     @Test
     public void shouldAddDefaultPlugin() throws Exception {
         PluginAdd command = new PluginAdd(new CamelJBangMain().withPrinter(printer));
-        command.name = "camel-k";
+        command.name = "kubernetes";
         command.doCall();
 
         Assertions.assertEquals("", printer.getOutput());
 
-        Assertions.assertEquals("{\"plugins\":{\"camel-k\":{\"name\":\"camel-k\",\"command\":\"k\",\"description\":\"%s\"}}}"
-                .formatted(PluginType.CAMEL_K.getDescription()), PluginHelper.getOrCreatePluginConfig().toJson());
+        Assertions.assertEquals(
+                "{\"plugins\":{\"kubernetes\":{\"name\":\"kubernetes\",\"command\":\"kubernetes\",\"firstVersion\":\"4.8.0\",\"description\":\"%s\"}}}"
+                        .formatted(PluginType.KUBERNETES.getDescription()),
+                PluginHelper.getOrCreatePluginConfig().toJson());
     }
 
     @Test
@@ -54,12 +55,13 @@ class PluginAddTest extends CamelCommandBaseTest {
         command.name = "foo-plugin";
         command.command = "foo";
         command.description = "Some plugin";
+        command.firstVersion = "1.2.3";
         command.doCall();
 
         Assertions.assertEquals("", printer.getOutput());
 
         Assertions.assertEquals("{\"plugins\":{\"foo-plugin\":{\"name\":\"foo-plugin\",\"command\":\"foo\"," +
-                                "\"description\":\"Some plugin\"}}}",
+                                "\"firstVersion\":\"1.2.3\",\"description\":\"Some plugin\"}}}",
                 PluginHelper.getOrCreatePluginConfig().toJson());
     }
 
@@ -104,7 +106,8 @@ class PluginAddTest extends CamelCommandBaseTest {
         Assertions.assertEquals("", printer.getOutput());
 
         Assertions.assertEquals("{\"plugins\":{\"foo-plugin\":{\"name\":\"foo-plugin\",\"command\":\"foo\"," +
-                                "\"description\":\"Plugin foo-plugin called with command foo\",\"dependency\":\"org.foo:foo-bar:1.0.0\"}}}",
+                                "\"firstVersion\":\"1.0.0\",\"description\":\"Plugin foo-plugin called with command foo\"" +
+                                ",\"dependency\":\"org.foo:foo-bar:1.0.0\"}}}",
                 PluginHelper.getOrCreatePluginConfig().toJson());
     }
 

@@ -21,7 +21,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.api.management.ManagedAttribute;
@@ -48,6 +51,7 @@ public class FileStateRepository extends ServiceSupport implements StateReposito
     private static final String KEY_VALUE_DELIMITER = "=";
     private final AtomicBoolean init = new AtomicBoolean();
     private Map<String, String> cache;
+    private final Lock cacheAndStoreLock = new ReentrantLock();
     private File fileStore;
     private long maxFileStoreSize = 1024 * 1000L; // 1mb store file
 
@@ -106,7 +110,8 @@ public class FileStateRepository extends ServiceSupport implements StateReposito
         if (value.contains(STORE_DELIMITER)) {
             throw new IllegalArgumentException("Value " + value + " contains illegal character: <newline>");
         }
-        synchronized (cache) {
+        cacheAndStoreLock.lock();
+        try {
             cache.put(key, value);
             if (fileStore.length() < maxFileStoreSize) {
                 // just append to store
@@ -115,14 +120,19 @@ public class FileStateRepository extends ServiceSupport implements StateReposito
                 // trunk store and flush the cache
                 trunkStore();
             }
+        } finally {
+            cacheAndStoreLock.unlock();
         }
     }
 
     @Override
     @ManagedOperation(description = "Gets the value of the given key from store")
     public String getState(String key) {
-        synchronized (cache) {
+        cacheAndStoreLock.lock();
+        try {
             return cache.get(key);
+        } finally {
+            cacheAndStoreLock.unlock();
         }
     }
 
@@ -130,12 +140,20 @@ public class FileStateRepository extends ServiceSupport implements StateReposito
      * Resets and clears the store to force it to reload from file
      */
     @ManagedOperation(description = "Reset and reloads the file store")
-    public synchronized void reset() throws IOException {
-        synchronized (cache) {
-            // trunk and clear, before we reload the store
-            trunkStore();
-            cache.clear();
-            loadStore();
+    public void reset() throws IOException {
+        lock.lock();
+        try {
+            cacheAndStoreLock.lock();
+            try {
+                // trunk and clear, before we reload the store
+                trunkStore();
+                cache.clear();
+                loadStore();
+            } finally {
+                cacheAndStoreLock.unlock();
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -272,7 +290,7 @@ public class FileStateRepository extends ServiceSupport implements StateReposito
     }
 
     public void setCache(Map<String, String> cache) {
-        this.cache = cache;
+        this.cache = Objects.requireNonNull(cache, "cache");
     }
 
     @ManagedAttribute(description = "The maximum file size for the file store in bytes")

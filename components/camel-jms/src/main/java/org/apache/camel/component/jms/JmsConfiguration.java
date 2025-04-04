@@ -161,6 +161,12 @@ public class JmsConfiguration implements Cloneable {
                             + " If you use a range for concurrent consumers (eg min < max), then this option can be used to set"
                             + " a value to eg 100 to control how fast the consumers will shrink when less work is required.")
     private int maxMessagesPerTask = -1;
+    @UriParam(label = "advanced",
+              description = "Marks the consumer as idle after the specified number of idle receives have been reached. An idle receive is counted from the moment a null message is returned by the receiver after the potential setReceiveTimeout elapsed. This gives the opportunity to check if the idle task count exceeds setIdleTaskExecutionLimit and based on that decide if the task needs to be re-scheduled or not, saving resources that would otherwise be held."
+                            + " This setting differs from setMaxMessagesPerTask where the task is released and re-scheduled after this limit is reached, no matter if the received messages were null or non-null messages. This setting alone can be inflexible if one desires to have a large enough batch for each task but requires a quick(er) release from the moment there are no more messages to process."
+                            + " This setting differs from setIdleTaskExecutionLimit where this limit decides after how many iterations of being marked as idle, a task is released."
+                            + " For example: If setMaxMessagesPerTask is set to '500' and #setIdleReceivesPerTaskLimit is set to '60' and setReceiveTimeout is set to '1000' and setIdleTaskExecutionLimit is set to '1', then 500 messages per task would be processed unless there is a subsequent number of 60 idle messages received, the task would be marked as idle and released. This also means that after the last message was processed, the task would be released after 60 seconds as long as no new messages appear.")
+    private int idleReceivesPerTaskLimit;
     @UriParam(label = "consumer",
               description = "Sets the cache level by ID for the underlying JMS resources. See cacheLevelName option for more details.")
     private int cacheLevel = -1;
@@ -204,6 +210,12 @@ public class JmsConfiguration implements Cloneable {
               description = "Number of times to wait for provisional correlation id to be updated to the actual correlation id when doing request/reply over JMS"
                             + " and when the option useMessageIDAsCorrelationID is enabled.")
     private int waitForProvisionCorrelationToBeUpdatedCounter = 50;
+    @UriParam(defaultValue = "100", label = "advanced", javaType = "java.time.Duration",
+              description = "Interval in millis to sleep each time while waiting for temporary replyTo queue to be ready.")
+    private long waitForTemporaryReplyToToBeUpdatedThreadSleepingTime = 100L;
+    @UriParam(defaultValue = "200", label = "advanced",
+              description = "Number of times to wait for temporary replyTo queue to be created and ready when doing request/reply over JMS.")
+    private int waitForTemporaryReplyToToBeUpdatedCounter = 200;
     @UriParam(label = "consumer",
               description = "Specifies the maximum number of concurrent consumers when consuming from JMS (not for request/reply over JMS)."
                             + " See also the maxMessagesPerTask option to control dynamic scaling up/down of threads."
@@ -431,8 +443,7 @@ public class JmsConfiguration implements Cloneable {
                             + " while the previous message is being processed asynchronously (by the Asynchronous Routing Engine)."
                             + " This means that messages may be processed not 100% strictly in order. If disabled (as default)"
                             + " then the Exchange is fully processed before the JmsConsumer will pickup the next message from the JMS queue."
-                            + " Note if transacted has been enabled, then asyncConsumer=true does not run asynchronously, as transaction"
-                            + "  must be executed synchronously (Camel 3.0 may support async transactions).")
+                            + " Note if transacted has been enabled, then asyncConsumer=true does not run asynchronously, as transaction must be executed synchronously.")
     private boolean asyncConsumer;
     // the cacheLevelName of reply manager
     @UriParam(label = "producer,advanced", enums = "CACHE_AUTO,CACHE_CONNECTION,CACHE_CONSUMER,CACHE_NONE,CACHE_SESSION",
@@ -537,6 +548,9 @@ public class JmsConfiguration implements Cloneable {
     @UriParam(defaultValue = "-1", label = "producer", description = "Sets delivery delay to use for send calls for JMS. "
                                                                      + "This option requires JMS 2.0 compliant broker.")
     private long deliveryDelay = -1;
+    @UriParam(label = "advanced", defaultValue = "100",
+              description = "Maximum number of messages to keep in memory available for browsing. Use 0 for unlimited.")
+    private int browseLimit = 100;
     @UriParam(defaultValue = "false", label = "advanced",
               description = "Sets whether synchronous processing should be strictly used")
     private boolean synchronous;
@@ -661,7 +675,7 @@ public class JmsConfiguration implements Cloneable {
 
                 // If a delivery mode was set as a JMS header, then we have used a temporary
                 // property to store it - CamelJMSDeliveryMode. Otherwise, we could not keep
-                //  track of whether it was set or not as getJMSDeliveryMode() will default return 1 regardless
+                // track of whether it was set or not as getJMSDeliveryMode() will default return 1 regardless
                 // if it was set or not, so we can never tell if end user provided it in a header
                 int deliveryMode;
                 if (JmsMessageHelper.hasProperty(message, JmsConstants.JMS_DELIVERY_MODE)) {
@@ -743,8 +757,7 @@ public class JmsConfiguration implements Cloneable {
                 LOG.debug(
                         "You are overloading the destinationResolver property on a DestinationEndpoint; are you sure you want to do that?");
             }
-        } else if (endpoint instanceof DestinationEndpoint) {
-            DestinationEndpoint destinationEndpoint = (DestinationEndpoint) endpoint;
+        } else if (endpoint instanceof DestinationEndpoint destinationEndpoint) {
             template.setDestinationResolver(createDestinationResolver(destinationEndpoint));
         }
         template.setDefaultDestinationName(destination);
@@ -1140,6 +1153,31 @@ public class JmsConfiguration implements Cloneable {
         this.maxMessagesPerTask = maxMessagesPerTask;
     }
 
+    public int getIdleReceivesPerTaskLimit() {
+        return idleReceivesPerTaskLimit;
+    }
+
+    /**
+     * Marks the consumer as idle after the specified number of idle receives have been reached. An idle receive is
+     * counted from the moment a null message is returned by the receiver after the potential setReceiveTimeout elapsed.
+     * This gives the opportunity to check if the idle task count exceeds setIdleTaskExecutionLimit and based on that
+     * decide if the task needs to be re-scheduled or not, saving resources that would otherwise be held. This setting
+     * differs from setMaxMessagesPerTask where the task is released and re-scheduled after this limit is reached, no
+     * matter if the received messages were null or non-null messages. This setting alone can be inflexible if one
+     * desires to have a large enough batch for each task but requires a quick(er) release from the moment there are no
+     * more messages to process.
+     *
+     * This setting differs from setIdleTaskExecutionLimit where this limit decides after how many iterations of being
+     * marked as idle, a task is released. For example: If setMaxMessagesPerTask is set to '500' and
+     * #setIdleReceivesPerTaskLimit is set to '60' and setReceiveTimeout is set to '1000' and setIdleTaskExecutionLimit
+     * is set to '1', then 500 messages per task would be processed unless there is a subsequent number of 60 idle
+     * messages received, the task would be marked as idle and released. This also means that after the last message was
+     * processed, the task would be released after 60 seconds as long as no new messages appear.
+     */
+    public void setIdleReceivesPerTaskLimit(int idleReceivesPerTaskLimit) {
+        this.idleReceivesPerTaskLimit = idleReceivesPerTaskLimit;
+    }
+
     public int getCacheLevel() {
         return cacheLevel;
     }
@@ -1273,6 +1311,29 @@ public class JmsConfiguration implements Cloneable {
      */
     public void setWaitForProvisionCorrelationToBeUpdatedThreadSleepingTime(long sleepingTime) {
         this.waitForProvisionCorrelationToBeUpdatedThreadSleepingTime = sleepingTime;
+    }
+
+    public long getWaitForTemporaryReplyToToBeUpdatedThreadSleepingTime() {
+        return waitForTemporaryReplyToToBeUpdatedThreadSleepingTime;
+    }
+
+    /**
+     * Interval in millis to sleep each time while waiting for temporary replyTo queue to be ready.
+     */
+    public void setWaitForTemporaryReplyToToBeUpdatedThreadSleepingTime(
+            long waitForTemporaryReplyToToBeUpdatedThreadSleepingTime) {
+        this.waitForTemporaryReplyToToBeUpdatedThreadSleepingTime = waitForTemporaryReplyToToBeUpdatedThreadSleepingTime;
+    }
+
+    public int getWaitForTemporaryReplyToToBeUpdatedCounter() {
+        return waitForTemporaryReplyToToBeUpdatedCounter;
+    }
+
+    /**
+     * Number of times to wait for temporary replyTo queue to be created and ready when doing request/reply over JMS.
+     */
+    public void setWaitForTemporaryReplyToToBeUpdatedCounter(int waitForTemporaryReplyToToBeUpdatedCounter) {
+        this.waitForTemporaryReplyToToBeUpdatedCounter = waitForTemporaryReplyToToBeUpdatedCounter;
     }
 
     public int getMaxConcurrentConsumers() {
@@ -1604,8 +1665,8 @@ public class JmsConfiguration implements Cloneable {
             AbstractMessageListenerContainer container,
             JmsEndpoint endpoint) {
         container.setConnectionFactory(getOrCreateListenerConnectionFactory());
-        if (endpoint instanceof DestinationEndpoint) {
-            container.setDestinationResolver(createDestinationResolver((DestinationEndpoint) endpoint));
+        if (endpoint instanceof DestinationEndpoint destinationEndpoint) {
+            container.setDestinationResolver(createDestinationResolver(destinationEndpoint));
         } else if (destinationResolver != null) {
             container.setDestinationResolver(destinationResolver);
         }
@@ -1649,11 +1710,9 @@ public class JmsConfiguration implements Cloneable {
             container.setMessageSelector(endpoint.getSelector());
         }
 
-        if (container instanceof DefaultMessageListenerContainer) {
-            DefaultMessageListenerContainer listenerContainer = (DefaultMessageListenerContainer) container;
+        if (container instanceof DefaultMessageListenerContainer listenerContainer) {
             configureDefaultMessageListenerContainer(endpoint, listenerContainer);
-        } else if (container instanceof SimpleMessageListenerContainer) {
-            SimpleMessageListenerContainer listenerContainer = (SimpleMessageListenerContainer) container;
+        } else if (container instanceof SimpleMessageListenerContainer listenerContainer) {
             configureSimpleMessageListenerContainer(listenerContainer);
         }
     }
@@ -1744,8 +1803,7 @@ public class JmsConfiguration implements Cloneable {
         }
 
         JmsOperations operations = listener.getTemplate();
-        if (operations instanceof JmsTemplate) {
-            JmsTemplate template = (JmsTemplate) operations;
+        if (operations instanceof JmsTemplate template) {
             template.setDeliveryPersistent(isReplyToDeliveryPersistent());
         }
     }
@@ -2098,7 +2156,7 @@ public class JmsConfiguration implements Cloneable {
      * Asynchronous Routing Engine). This means that messages may be processed not 100% strictly in order. If disabled
      * (as default), then the Exchange is fully processed before the JmsConsumer will pick up the next message from the
      * JMS queue. Note if transacted has been enabled, then asyncConsumer=true does not run asynchronously, as
-     * transaction must be executed synchronously (Camel 3.0 may support async transactions).
+     * transaction must be executed synchronously.
      */
     public void setAsyncConsumer(boolean asyncConsumer) {
         this.asyncConsumer = asyncConsumer;
@@ -2353,6 +2411,14 @@ public class JmsConfiguration implements Cloneable {
 
     public int getArtemisConsumerPriority() {
         return artemisConsumerPriority;
+    }
+
+    public int getBrowseLimit() {
+        return browseLimit;
+    }
+
+    public void setBrowseLimit(int browseLimit) {
+        this.browseLimit = browseLimit;
     }
 
     public boolean isSynchronous() {

@@ -47,9 +47,9 @@ public class KMS2ComponentVerifierExtension extends DefaultComponentVerifierExte
     protected Result verifyParameters(Map<String, Object> parameters) {
 
         ResultBuilder builder = ResultBuilder.withStatusAndScope(Result.Status.OK, Scope.PARAMETERS)
-                .error(ResultErrorHelper.requiresOption("accessKey", parameters))
-                .error(ResultErrorHelper.requiresOption("secretKey", parameters))
-                .error(ResultErrorHelper.requiresOption("region", parameters));
+                .error(ResultErrorHelper.requiresOption(parameters, "accessKey"))
+                .error(ResultErrorHelper.requiresOption(parameters, "secretKey"))
+                .error(ResultErrorHelper.requiresOption(parameters, "region"));
 
         // Validate using the catalog
 
@@ -75,9 +75,10 @@ public class KMS2ComponentVerifierExtension extends DefaultComponentVerifierExte
             }
             AwsBasicCredentials cred = AwsBasicCredentials.create(configuration.getAccessKey(), configuration.getSecretKey());
             KmsClientBuilder clientBuilder = KmsClient.builder();
-            KmsClient client = clientBuilder.credentialsProvider(StaticCredentialsProvider.create(cred))
-                    .region(Region.of(configuration.getRegion())).build();
-            client.listKeys();
+            try (KmsClient client = clientBuilder.credentialsProvider(StaticCredentialsProvider.create(cred))
+                    .region(Region.of(configuration.getRegion())).build()) {
+                client.listKeys();
+            }
         } catch (SdkClientException e) {
             ResultErrorBuilder errorBuilder
                     = ResultErrorBuilder.withCodeAndDescription(VerificationError.StandardCode.AUTHENTICATION, e.getMessage())

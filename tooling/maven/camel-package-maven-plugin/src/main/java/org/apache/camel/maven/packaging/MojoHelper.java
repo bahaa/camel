@@ -38,7 +38,12 @@ public final class MojoHelper {
         switch (dir.getFileName().toString()) {
             case "camel-ai":
                 return Arrays.asList(dir.resolve("camel-chatscript"), dir.resolve("camel-djl"),
-                        dir.resolve("camel-langchain4j-chat"), dir.resolve("camel-langchain4j-embeddings"));
+                        dir.resolve("camel-langchain4j-core"), dir.resolve("camel-langchain4j-chat"),
+                        dir.resolve("camel-langchain4j-embeddings"), dir.resolve("camel-langchain4j-tokenizer"),
+                        dir.resolve("camel-langchain4j-tools"), dir.resolve("camel-langchain4j-web-search"),
+                        dir.resolve("camel-qdrant"), dir.resolve("camel-milvus"), dir.resolve("camel-neo4j"),
+                        dir.resolve("camel-pinecone"), dir.resolve("camel-kserve"),
+                        dir.resolve("camel-torchserve"), dir.resolve("camel-tensorflow-serving"));
             case "camel-as2":
                 return Collections.singletonList(dir.resolve("camel-as2-component"));
             case "camel-avro-rpc":
@@ -81,6 +86,13 @@ public final class MojoHelper {
                 return Arrays.asList(dir.resolve("camel-microprofile-config"),
                         dir.resolve("camel-microprofile-fault-tolerance"),
                         dir.resolve("camel-microprofile-health"));
+            case "camel-spring-parent":
+                return Arrays.asList(dir.resolve("camel-spring"),
+                        dir.resolve("camel-spring-batch"), dir.resolve("camel-spring-jdbc"),
+                        dir.resolve("camel-spring-ldap"), dir.resolve("camel-spring-main"),
+                        dir.resolve("camel-spring-rabbitmq"), dir.resolve("camel-spring-redis"),
+                        dir.resolve("camel-spring-security"), dir.resolve("camel-spring-ws"),
+                        dir.resolve("camel-spring-xml"), dir.resolve("camel-undertow-spring-security"));
             case "camel-test":
                 return Arrays.asList(dir.resolve("camel-test-junit5"),
                         dir.resolve("camel-test-spring-junit5"),
@@ -114,8 +126,6 @@ public final class MojoHelper {
                         dir.resolve("camel-huaweicloud-smn"));
             case "camel-knative":
                 return Collections.singletonList(dir.resolve("camel-knative-component"));
-            case "camel-groovy-dsl":
-                return Collections.singletonList(dir.resolve("camel-groovy-dsl"));
             case "camel-yaml-dsl":
                 return Collections.singletonList(dir.resolve("camel-yaml-dsl"));
             default:

@@ -29,6 +29,8 @@ import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
 import org.apache.camel.RuntimeCamelException;
+import org.apache.camel.component.as2.api.AS2AsyncMDNServerConnection;
+import org.apache.camel.component.as2.api.AS2AsyncMDNServerManager;
 import org.apache.camel.component.as2.api.AS2ClientConnection;
 import org.apache.camel.component.as2.api.AS2ClientManager;
 import org.apache.camel.component.as2.api.AS2CompressionAlgorithm;
@@ -48,7 +50,7 @@ import org.apache.camel.spi.UriParam;
 import org.apache.camel.support.component.AbstractApiEndpoint;
 import org.apache.camel.support.component.ApiMethod;
 import org.apache.camel.support.component.ApiMethodPropertiesHelper;
-import org.apache.hc.core5.http.ContentType;
+import org.apache.camel.support.jsse.SSLContextParameters;
 
 /**
  * Transfer data securely and reliably using the AS2 protocol (RFC4130).
@@ -66,6 +68,9 @@ public class AS2Endpoint extends AbstractApiEndpoint<AS2ApiName, AS2Configuratio
     private Object apiProxy;
 
     private AS2ClientConnection as2ClientConnection;
+
+    private AS2AsyncMDNServerConnection as2AsyncMDNServerConnection;
+
     private AS2ServerConnection as2ServerConnection;
 
     public AS2Endpoint(String uri, AS2Component component,
@@ -76,6 +81,10 @@ public class AS2Endpoint extends AbstractApiEndpoint<AS2ApiName, AS2Configuratio
 
     public AS2ClientConnection getAS2ClientConnection() {
         return as2ClientConnection;
+    }
+
+    public AS2AsyncMDNServerConnection getAS2AsyncMDNServerConnection() {
+        return as2AsyncMDNServerConnection;
     }
 
     public AS2ServerConnection getAS2ServerConnection() {
@@ -93,8 +102,19 @@ public class AS2Endpoint extends AbstractApiEndpoint<AS2ApiName, AS2Configuratio
         if (inBody != null) {
             throw new IllegalArgumentException("Option inBody is not supported for consumer endpoint");
         }
-        final AS2Consumer consumer = new AS2Consumer(this, processor);
-        configureConsumer(consumer);
+        Consumer consumer;
+        switch (configuration.getApiName()) {
+            case SERVER:
+                consumer = new AS2Consumer(this, processor);
+                configureConsumer(consumer);
+                break;
+            case RECEIPT:
+                consumer = new AS2AsyncMDNConsumer(this, processor);
+                configureConsumer(consumer);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid API name " + configuration.getApiName());
+        }
         return consumer;
     }
 
@@ -146,11 +166,11 @@ public class AS2Endpoint extends AbstractApiEndpoint<AS2ApiName, AS2Configuratio
         configuration.setAs2MessageStructure(as2MessageStructure);
     }
 
-    public ContentType getEdiMessageType() {
+    public String getEdiMessageType() {
         return configuration.getEdiMessageType();
     }
 
-    public void setEdiMessageContentType(ContentType ediMessageType) {
+    public void setEdiMessageContentType(String ediMessageType) {
         configuration.setEdiMessageType(ediMessageType);
     }
 
@@ -202,11 +222,11 @@ public class AS2Endpoint extends AbstractApiEndpoint<AS2ApiName, AS2Configuratio
         configuration.setDispositionNotificationTo(dispositionNotificationTo);
     }
 
-    public String[] getSignedReceiptMicAlgorithms() {
+    public String getSignedReceiptMicAlgorithms() {
         return configuration.getSignedReceiptMicAlgorithms();
     }
 
-    public void setSignedReceiptMicAlgorithms(String[] signedReceiptMicAlgorithms) {
+    public void setSignedReceiptMicAlgorithms(String signedReceiptMicAlgorithms) {
         configuration.setSignedReceiptMicAlgorithms(signedReceiptMicAlgorithms);
     }
 
@@ -254,6 +274,9 @@ public class AS2Endpoint extends AbstractApiEndpoint<AS2ApiName, AS2Configuratio
             case SERVER:
                 createAS2ServerConnection();
                 break;
+            case RECEIPT:
+                createAS2AsyncMDNServerConnection();
+                break;
             default:
                 break;
         }
@@ -275,6 +298,8 @@ public class AS2Endpoint extends AbstractApiEndpoint<AS2ApiName, AS2Configuratio
             case SERVER:
                 apiProxy = new AS2ServerManager(getAS2ServerConnection());
                 break;
+            case RECEIPT:
+                apiProxy = new AS2AsyncMDNServerManager(getAS2AsyncMDNServerConnection());
             default:
                 throw new IllegalArgumentException("Invalid API name " + apiName);
         }
@@ -300,4 +325,26 @@ public class AS2Endpoint extends AbstractApiEndpoint<AS2ApiName, AS2Configuratio
         }
     }
 
+    private void createAS2AsyncMDNServerConnection() {
+        try {
+            as2AsyncMDNServerConnection = AS2ConnectionHelper.createAS2AsyncMDNServerConnection(configuration);
+        } catch (IOException e) {
+            throw new RuntimeCamelException("Async MDN Server HTTP connection failed", e);
+        }
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+
+        if (getSslContext() == null) {
+            SSLContextParameters params = getComponent(AS2Component.class).getSslContextParameters();
+            if (params == null && getComponent(AS2Component.class).isUseGlobalSslContextParameters()) {
+                params = getComponent(AS2Component.class).retrieveGlobalSslContextParameters();
+            }
+            if (params != null) {
+                setSslContext(params.createSSLContext(getCamelContext()));
+            }
+        }
+    }
 }

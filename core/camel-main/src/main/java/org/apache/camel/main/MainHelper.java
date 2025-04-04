@@ -21,14 +21,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Component;
@@ -42,11 +45,14 @@ import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.OrderedLocationProperties;
 import org.apache.camel.util.OrderedProperties;
+import org.apache.camel.util.SensitiveUtils;
 import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.camel.util.LocationHelper.locationSummary;
 
 public final class MainHelper {
     private static final Logger LOG = LoggerFactory.getLogger(MainHelper.class);
@@ -105,7 +111,7 @@ public final class MainHelper {
     public static Optional<String> lookupPropertyFromSysOrEnv(String name) {
         String answer = System.getProperty(name);
         if (answer == null) {
-            answer = System.getenv(toEnvVar(name));
+            answer = IOHelper.lookupEnvironmentVariable(name);
         }
 
         return Optional.ofNullable(answer);
@@ -253,10 +259,10 @@ public final class MainHelper {
         boolean rc = false;
 
         PropertyConfigurer targetConfigurer = null;
-        if (target instanceof Component) {
+        if (target instanceof Component component) {
             // the component needs to be initialized to have the configurer ready
             ServiceHelper.initService(target);
-            targetConfigurer = ((Component) target).getComponentPropertyConfigurer();
+            targetConfigurer = component.getComponentPropertyConfigurer();
         }
         if (targetConfigurer == null) {
             String name = target.getClass().getName();
@@ -265,10 +271,10 @@ public final class MainHelper {
         }
 
         PropertyConfigurer sourceConfigurer = null;
-        if (source instanceof Component) {
+        if (source instanceof Component component) {
             // the component needs to be initialized to have the configurer ready
             ServiceHelper.initService(source);
-            sourceConfigurer = ((Component) source).getComponentPropertyConfigurer();
+            sourceConfigurer = component.getComponentPropertyConfigurer();
         }
         if (sourceConfigurer == null) {
             String name = source.getClass().getName();
@@ -276,8 +282,7 @@ public final class MainHelper {
             sourceConfigurer = PluginHelper.getConfigurerResolver(context).resolvePropertyConfigurer(name, context);
         }
 
-        if (targetConfigurer != null && sourceConfigurer instanceof ExtendedPropertyConfigurerGetter) {
-            ExtendedPropertyConfigurerGetter getter = (ExtendedPropertyConfigurerGetter) sourceConfigurer;
+        if (targetConfigurer != null && sourceConfigurer instanceof ExtendedPropertyConfigurerGetter getter) {
             for (String key : getter.getAllOptions(source).keySet()) {
                 Object value = getter.getOptionValue(source, key, true);
                 if (value != null) {
@@ -299,16 +304,36 @@ public final class MainHelper {
 
         boolean rc = false;
         PropertyConfigurer configurer = null;
-        if (target instanceof Component) {
+        if (target instanceof Component component) {
             // the component needs to be initialized to have the configurer ready
             ServiceHelper.initService(target);
-            configurer = ((Component) target).getComponentPropertyConfigurer();
+            configurer = component.getComponentPropertyConfigurer();
         }
 
         if (configurer == null) {
             String name = target.getClass().getName();
             // see if there is a configurer for it (use bootstrap)
             configurer = PluginHelper.getBootstrapConfigurerResolver(context).resolvePropertyConfigurer(name, context);
+        }
+
+        // we should be flexible in terms of property names as the user may type in names using different cases and
+        // with or without dots (especially from ENV variables)
+        if (configurer instanceof ExtendedPropertyConfigurerGetter ec) {
+            Map<String, Object> options = ec.getAllOptions(target);
+            for (String key : options.keySet()) {
+                // first char is upper case
+                key = Character.toLowerCase(key.charAt(0)) + key.substring(1);
+                String actualKey = key;
+                // convert camelCase to dot notation (via toDash)
+                key = StringHelper.camelCaseToDot(key);
+                if (properties.get(key) != null) {
+                    Object value = properties.get(key);
+                    String loc = properties.getLocation(key);
+                    properties.remove(key);
+                    properties.put(loc, actualKey, value);
+                    LOG.debug("Adjusting property key: {} -> {}", key, actualKey);
+                }
+            }
         }
 
         try {
@@ -357,6 +382,13 @@ public final class MainHelper {
                 LOG.debug(
                         "Error configuring property ({}) with name: {}) on bean: {} with value: {}. This exception is ignored as failIfNotSet=false.",
                         key, e.getPropertyName(), target, e.getValue(), e);
+            }
+        } catch (Exception e) {
+            if (failIfNotSet) {
+                throw e;
+            } else {
+                LOG.debug("Error configuring properties on bean: {}. This exception is ignored as failIfNotSet=false.", target,
+                        e);
             }
         }
 
@@ -551,6 +583,57 @@ public final class MainHelper {
         toRemove.forEach(properties::remove);
 
         return rc;
+    }
+
+    public static void logConfigurationSummary(
+            Logger log, OrderedLocationProperties autoConfiguredProperties,
+            String title, Predicate<String> filter) {
+        if (log == null) {
+            log = LOG;
+        }
+        boolean header = false;
+        List<String> toRemove = new ArrayList<>();
+        for (var entry : autoConfiguredProperties.entrySet()) {
+            String k = entry.getKey().toString();
+            if (filter == null || filter.test(k)) {
+                Object v = entry.getValue();
+                String loc = locationSummary(autoConfiguredProperties, k);
+
+                // tone down logging noise for our own internal configurations
+                boolean debug = loc.contains("[camel-main]");
+                if (debug && !LOG.isDebugEnabled()) {
+                    continue;
+                }
+
+                if (!header) {
+                    log.info(title);
+                    header = true;
+                }
+
+                sensitiveAwareLogging(log, k, v, loc, debug);
+                toRemove.add(k);
+            }
+        }
+        toRemove.forEach(autoConfiguredProperties::remove);
+    }
+
+    public static void sensitiveAwareLogging(Logger log, String k, Object v, String loc, boolean debug) {
+        if (log == null) {
+            log = LOG;
+        }
+        if (SensitiveUtils.containsSensitive(k)) {
+            if (debug) {
+                log.debug("    {} {} = xxxxxx", loc, k);
+            } else {
+                log.info("    {} {} = xxxxxx", loc, k);
+            }
+        } else {
+            if (debug) {
+                log.debug("    {} {} = {}", loc, k, v);
+            } else {
+                log.info("    {} {} = {}", loc, k, v);
+            }
+        }
     }
 
 }

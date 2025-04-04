@@ -16,36 +16,12 @@
  */
 package org.apache.camel.test.infra.ollama.services;
 
-import org.apache.camel.test.infra.ollama.commons.OllamaProperties;
-
-public class OllamaRemoteService implements OllamaService {
-
+public class OllamaRemoteService extends OllamaRemoteInfraService implements OllamaService {
     public OllamaRemoteService() {
+        super();
     }
 
-    @Override
-    public void registerProperties() {
-        // NO-OP
+    public OllamaRemoteService(OllamaServiceConfiguration serviceConfiguration) {
+        super(serviceConfiguration);
     }
-
-    @Override
-    public void initialize() {
-        registerProperties();
-    }
-
-    @Override
-    public void shutdown() {
-        // NO-OP
-    }
-
-    @Override
-    public String getBaseUrl() {
-        return System.getProperty(OllamaProperties.BASE_URL);
-    }
-
-    @Override
-    public String getModel() {
-        return System.getProperty(OllamaProperties.MODEL);
-    }
-
 }

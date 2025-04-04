@@ -108,7 +108,7 @@ const sources = {
       source: [
         '../core/camel-base/src/main/docs/*.adoc',
         '../core/camel-main/src/main/docs/*.adoc',
-        '../components/{*,*/*}/src/main/docs/*.adoc',
+        '../components/{*,*/*,*/*/*}/src/main/docs/*.adoc',
       ],
       destination: 'components/modules/ROOT/examples',
     },
@@ -127,8 +127,8 @@ const sources = {
     },
     json: {
       source: [
-        '../components/{*,*/*,*/*/*}/src/generated/resources/org/apache/camel/**/*.json',
-        '../core/camel-core-model/src/generated/resources/org/apache/camel/model/dataformat/*.json',
+        '../components/{*,*/*,*/*/*}/src/generated/resources/META-INF/org/apache/camel/**/*.json',
+        '../core/camel-core-model/src/generated/resources/META-INF/org/apache/camel/model/dataformat/*.json',
       ],
       destination: 'components/modules/dataformats/examples/json',
       filter: (content) => JSON.parse(content).dataformat, // check if there is a "dataformat" key at the root
@@ -147,9 +147,9 @@ const sources = {
     },
     json: {
       source: [
-        '../components/{*,*/*,*/*/*}/src/generated/resources/org/apache/camel/*/**/*.json',
-        '../core/camel-core-languages/src/generated/resources/org/apache/camel/language/**/*.json',
-        '../core/camel-core-model/src/generated/resources/org/apache/camel/model/language/*.json',
+        '../components/{*,*/*,*/*/*}/src/generated/resources/META-INF/org/apache/camel/*/**/*.json',
+        '../core/camel-core-languages/src/generated/resources/META-INF/org/apache/camel/language/**/*.json',
+        '../core/camel-core-model/src/generated/resources/META-INF/org/apache/camel/model/language/*.json',
       ],
       destination: 'components/modules/languages/examples/json',
       filter: (content) => JSON.parse(content).language, // check if there is a "language" key at the root
@@ -160,7 +160,6 @@ const sources = {
   // +** xref:groovy-dsl.adoc[Groovy Dsl]
   // +** xref:js-dsl.adoc[JavaScript Dsl]
   // +** xref:java-xml-jaxb-dsl.adoc[Jaxb XML Dsl]
-  // +** xref:kotlin-dsl.adoc[Kotlin Dsl]
   // +** xref:java-xml-io-dsl.adoc[XML Dsl]
   //These seem to have no content, just a non-xref link to the user manual,
   // where the dsls are not actually explained.  Should the sources be removed?

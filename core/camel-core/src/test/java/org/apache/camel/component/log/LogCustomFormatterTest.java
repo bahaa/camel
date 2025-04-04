@@ -33,7 +33,7 @@ public class LogCustomFormatterTest extends ContextTestSupport {
     private TestExchangeFormatter exchangeFormatter;
 
     @Test
-    public void testCustomFormatterInComponent() throws Exception {
+    public void testCustomFormatterInComponent() {
         context.stop();
 
         LogComponent log = new LogComponent();
@@ -53,7 +53,7 @@ public class LogCustomFormatterTest extends ContextTestSupport {
     }
 
     @Test
-    public void testCustomFormatterInRegistry() throws Exception {
+    public void testCustomFormatterInRegistry() {
         context.stop();
 
         exchangeFormatter = new TestExchangeFormatter();
@@ -71,7 +71,7 @@ public class LogCustomFormatterTest extends ContextTestSupport {
     }
 
     @Test
-    public void testCustomFormatterInRegistryOptions() throws Exception {
+    public void testCustomFormatterInRegistryOptions() {
         context.stop();
 
         exchangeFormatter = new TestExchangeFormatter();
@@ -89,7 +89,7 @@ public class LogCustomFormatterTest extends ContextTestSupport {
     }
 
     @Test
-    public void testCustomFormatterInRegistryUnknownOption() throws Exception {
+    public void testCustomFormatterInRegistryUnknownOption() {
         context.stop();
 
         exchangeFormatter = new TestExchangeFormatter();
@@ -99,18 +99,17 @@ public class LogCustomFormatterTest extends ContextTestSupport {
         context.start();
 
         // unknown parameter
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             String endpointUri2 = "log:" + LogCustomFormatterTest.class.getCanonicalName() + "?prefix=foo&bar=no";
             template.requestBody(endpointUri2, "Hello World");
-            fail("Should have thrown exception");
-        } catch (Exception e) {
-            ResolveEndpointFailedException cause = assertIsInstanceOf(ResolveEndpointFailedException.class, e.getCause());
-            assertTrue(cause.getMessage().endsWith("Unknown parameters=[{bar=no}]"));
-        }
+        }, "Should have thrown exception");
+
+        ResolveEndpointFailedException cause = assertIsInstanceOf(ResolveEndpointFailedException.class, e.getCause());
+        assertTrue(cause.getMessage().endsWith("Unknown parameters=[{bar=no}]"));
     }
 
     @Test
-    public void testFormatterNotPickedUpWithDifferentKey() throws Exception {
+    public void testFormatterNotPickedUpWithDifferentKey() {
         context.stop();
 
         exchangeFormatter = new TestExchangeFormatter();

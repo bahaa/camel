@@ -23,7 +23,7 @@ import org.apache.camel.dsl.jbang.core.common.LoggingLevelCompletionCandidates;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "script", description = "Run Camel integration as shell script for terminal scripting",
-                     sortOptions = false)
+                     sortOptions = false, showDefaultValues = true)
 public class Script extends CamelCommand {
 
     @CommandLine.Parameters(description = "Name of file", arity = "1",
@@ -47,7 +47,7 @@ public class Script extends CamelCommand {
     boolean logging;
 
     @CommandLine.Option(names = { "--logging-level" }, completionCandidates = LoggingLevelCompletionCandidates.class,
-                        defaultValue = "info", description = "Logging level")
+                        defaultValue = "info", description = "Logging level (${COMPLETION-CANDIDATES})")
     String loggingLevel;
 
     @CommandLine.Option(names = { "--properties" },

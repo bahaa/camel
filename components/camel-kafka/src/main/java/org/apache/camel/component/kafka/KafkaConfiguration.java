@@ -38,6 +38,7 @@ import org.apache.camel.spi.StateRepository;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriParams;
 import org.apache.camel.spi.UriPath;
+import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.support.jsse.CipherSuitesParameters;
 import org.apache.camel.support.jsse.KeyManagersParameters;
 import org.apache.camel.support.jsse.KeyStoreParameters;
@@ -45,6 +46,7 @@ import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.camel.support.jsse.SecureSocketProtocolsParameters;
 import org.apache.camel.support.jsse.TrustManagersParameters;
 import org.apache.camel.util.ObjectHelper;
+import org.apache.camel.util.StringHelper;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -181,6 +183,8 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
     private String key;
     @UriParam(label = "producer")
     private Integer partitionKey;
+    @UriParam(label = "producer", defaultValue = "true")
+    private boolean useIterator = true;
     @UriParam(label = "producer", enums = "all,-1,0,1", defaultValue = "all")
     private String requestRequiredAcks = "all";
     // buffer.memory
@@ -222,8 +226,8 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
     // send.buffer.bytes
     @UriParam(label = "producer", defaultValue = "131072")
     private Integer sendBufferBytes = 131072;
-    @UriParam(label = "producer", defaultValue = "true")
-    private boolean recordMetadata = true;
+    @UriParam(label = "producer,advanced")
+    private boolean recordMetadata;
     // max.in.flight.requests.per.connection
     @UriParam(label = "producer", defaultValue = "5")
     private Integer maxInFlightRequest = 5;
@@ -351,8 +355,10 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
     @UriParam(label = "common,security")
     private String kerberosConfigLocation;
 
-    @UriParam(label = "consumer", defaultValue = "false")
+    @UriParam(label = "consumer")
     private boolean batching;
+    @UriParam(label = "consumer")
+    private Integer batchingIntervalMs;
 
     public KafkaConfiguration() {
     }
@@ -568,8 +574,13 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
             addPropertyIfNotNull(props, SslConfigs.SSL_KEY_PASSWORD_CONFIG, keyManagers.getKeyPassword());
             KeyStoreParameters keyStore = keyManagers.getKeyStore();
             if (keyStore != null) {
+                // kakfa loads the resource itself and you cannot have a prefix
+                String location = keyStore.getResource();
+                if (ResourceHelper.hasScheme(location)) {
+                    location = StringHelper.after(location, ":");
+                }
                 addUpperCasePropertyIfNotEmpty(props, SslConfigs.SSL_KEYSTORE_TYPE_CONFIG, keyStore.getType());
-                addPropertyIfNotNull(props, SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG, keyStore.getResource());
+                addPropertyIfNotNull(props, SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG, location);
                 addPropertyIfNotNull(props, SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, keyStore.getPassword());
             }
         }
@@ -579,8 +590,13 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
             addPropertyIfNotNull(props, SslConfigs.SSL_TRUSTMANAGER_ALGORITHM_CONFIG, trustManagers.getAlgorithm());
             KeyStoreParameters keyStore = trustManagers.getKeyStore();
             if (keyStore != null) {
+                // kakfa loads the resource itself and you cannot have a prefix
+                String location = keyStore.getResource();
+                if (ResourceHelper.hasScheme(location)) {
+                    location = StringHelper.after(location, ":");
+                }
                 addPropertyIfNotNull(props, SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, keyStore.getType());
-                addPropertyIfNotNull(props, SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, keyStore.getResource());
+                addPropertyIfNotNull(props, SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, location);
                 addPropertyIfNotEmpty(props, SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, keyStore.getPassword());
             }
         }
@@ -827,7 +843,7 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
     }
 
     /**
-     * The maximum amount of data the server should return for a fetch request This is not an absolute maximum, if the
+     * The maximum amount of data the server should return for a fetch request. This is not an absolute maximum, if the
      * first message in the first non-empty partition of the fetch is larger than this value, the message will still be
      * returned to ensure that the consumer can make progress. The maximum message size accepted by the broker is
      * defined via message.max.bytes (broker config) or max.message.bytes (topic config). Note that the consumer
@@ -846,8 +862,8 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
     }
 
     /**
-     * The maximum amount of time the server will block before answering the fetch request if there isn't sufficient
-     * data to immediately satisfy fetch.min.bytes
+     * The maximum amount of time the server will block before answering the fetch request if there isn't enough data to
+     * immediately satisfy fetch.min.bytes
      */
     public void setFetchWaitMaxMs(Integer fetchWaitMaxMs) {
         this.fetchWaitMaxMs = fetchWaitMaxMs;
@@ -1373,6 +1389,18 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
         this.partitionKey = partitionKey;
     }
 
+    public boolean isUseIterator() {
+        return useIterator;
+    }
+
+    /**
+     * Sets whether sending to kafka should send the message body as a single record, or use a java.util.Iterator to
+     * send multiple records to kafka (if the message body can be iterated).
+     */
+    public void setUseIterator(boolean useIterator) {
+        this.useIterator = useIterator;
+    }
+
     public String getRequestRequiredAcks() {
         return requestRequiredAcks;
     }
@@ -1412,8 +1440,8 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
      * idempotence is not explicitly enabled, idempotence is disabled.
      *
      * Allowing retries while setting enable.idempotence to false and max.in.flight.requests.per.connection to 1 will
-     * potentially change the ordering of records because if two batches are sent to a single partition, and the first
-     * fails and is retried but the second succeeds, then the records in the second batch may appear first.
+     * potentially change the ordering of records, because if two batches are sent to a single partition, and the first
+     * fails and is retried but the second succeeds; then the records in the second batch may appear first.
      */
     public void setRetries(Integer retries) {
         this.retries = retries;
@@ -1469,7 +1497,7 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
      * The producer groups together any records that arrive in between request transmissions into a single, batched,
      * request. Normally, this occurs only under load when records arrive faster than they can be sent out. However, in
      * some circumstances, the client may want to reduce the number of requests even under a moderate load. This setting
-     * accomplishes this by adding a small amount of artificial delay. That is, rather than immediately sending out a
+     * achieves this by adding a small amount of artificial delay. That is, rather than immediately sending out a
      * record, the producer will wait for up to the given delay to allow other records to be sent so that they can be
      * batched together. This can be thought of as analogous to Nagle's algorithm in TCP. This setting gives the upper
      * bound on the delay for batching: once we get batch.size worth of records for a partition, it will be sent
@@ -1787,7 +1815,7 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
     /**
      * Whether the producer should store the {@link RecordMetadata} results from sending to Kafka. The results are
      * stored in a {@link List} containing the {@link RecordMetadata} metadata's. The list is stored on a header with
-     * the key {@link KafkaConstants#KAFKA_RECORDMETA}
+     * the key {@link KafkaConstants#KAFKA_RECORD_META}
      */
     public void setRecordMetadata(boolean recordMetadata) {
         this.recordMetadata = recordMetadata;
@@ -1883,7 +1911,10 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
      * Sets additional properties for either kafka consumer or kafka producer in case they can't be set directly on the
      * camel configurations (e.g.: new Kafka properties that are not reflected yet in Camel configurations), the
      * properties have to be prefixed with `additionalProperties.`., e.g.:
-     * `additionalProperties.transactional.id=12345&additionalProperties.schema.registry.url=http://localhost:8811/avro`
+     * `additionalProperties.transactional.id=12345&additionalProperties.schema.registry.url=http://localhost:8811/avro`.
+     * If the properties are set in the `application.properties` file, they must be prefixed with
+     * `camel.component.kafka.additional-properties` and the property enclosed in square brackets, like this example:
+     * `camel.component.kafka.additional-properties[delivery.timeout.ms]=15000`.
      */
     public void setAdditionalProperties(Map<String, Object> additionalProperties) {
         this.additionalProperties = additionalProperties;
@@ -1967,9 +1998,31 @@ public class KafkaConfiguration implements Cloneable, HeaderFilterStrategyAware 
     }
 
     /**
-     * Whether to use batching for processing or streaming. The default is false, which uses streaming
+     * Whether to use batching for processing or streaming. The default is false, which uses streaming.
+     *
+     * In streaming mode, then a single kafka record is processed per Camel exchange in the message body.
+     *
+     * In batching mode, then Camel groups many kafka records together as a List<Exchange> objects in the message body.
+     * The option maxPollRecords is used to define the number of records to group together in batching mode.
      */
     public void setBatching(boolean batching) {
         this.batching = batching;
+    }
+
+    public Integer getBatchingIntervalMs() {
+        return batchingIntervalMs;
+    }
+
+    /**
+     * In consumer batching mode, then this option is specifying a time in millis, to trigger batch completion eager
+     * when the current batch size has not reached the maximum size defined by maxPollRecords.
+     *
+     * Notice the trigger is not exact at the given interval, as this can only happen between kafka polls (see
+     * pollTimeoutMs option). So for example setting this to 10000, then the trigger happens in the interval 10000 +
+     * pollTimeoutMs. The default value for pollTimeoutMs is 5000, so this would mean a trigger interval at about every
+     * 15 seconds.
+     */
+    public void setBatchingIntervalMs(Integer batchingIntervalMs) {
+        this.batchingIntervalMs = batchingIntervalMs;
     }
 }

@@ -76,7 +76,7 @@ public class ParserTest {
                         assertEquals("value-1", xpp.getAttributeValue(null, "a"));
                         assertEquals("value-2", xpp.getAttributeValue("uri:b", "a"));
                         // check with non-interned String
-                        assertEquals("value-2", xpp.getAttributeValue(new String("uri:b"), "a"));
+                        assertEquals("value-2", xpp.getAttributeValue("uri:b", "a"));
                     }
                 }
                 case MXParser.END_TAG -> {
@@ -134,7 +134,7 @@ public class ParserTest {
 
     @Test
     public void parseTheEdge() throws XmlPullParserException, IOException {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(256);
         sb.append("<?xml version='1.0'?>\n");
         sb.append("<!--\n");
         for (int i = sb.toString().length() + 4 - 2; i < 8 * 1024; i += 4) {

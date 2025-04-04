@@ -46,11 +46,11 @@ public class ManagedMulticastTest extends ManagementTestSupport {
         MBeanServer mbeanServer = getMBeanServer();
 
         ObjectName name = getCamelObjectName(TYPE_ENDPOINT, "mock://a");
-        Long queueSize = (Long) mbeanServer.invoke(name, "queueSize", null, null);
+        Integer queueSize = (Integer) mbeanServer.invoke(name, "queueSize", null, null);
         assertEquals(3, queueSize.intValue());
 
         name = getCamelObjectName(TYPE_ENDPOINT, "mock://b");
-        queueSize = (Long) mbeanServer.invoke(name, "queueSize", null, null);
+        queueSize = (Integer) mbeanServer.invoke(name, "queueSize", null, null);
         assertEquals(3, queueSize.intValue());
 
         name = getCamelObjectName(TYPE_PROCESSOR, "myMulticast");
@@ -64,10 +64,10 @@ public class ManagedMulticastTest extends ManagementTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:start").routeId("foo")
                         .multicast().id("myMulticast")
                         .to("mock:a").to("mock:b");

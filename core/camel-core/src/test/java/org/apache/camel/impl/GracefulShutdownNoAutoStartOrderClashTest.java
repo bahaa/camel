@@ -34,9 +34,9 @@ public class GracefulShutdownNoAutoStartOrderClashTest extends ContextTestSuppor
     public void testStartupOrderClash() throws Exception {
         context.addRoutes(new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:foo").routeId("foo").startupOrder(5).to("mock:foo");
-                from("direct:bar").routeId("bar").startupOrder(5).noAutoStartup().to("mock:bar");
+                from("direct:bar").routeId("bar").startupOrder(5).autoStartup(false).to("mock:bar");
             }
         });
 

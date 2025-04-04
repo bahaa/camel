@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-infinispan-parent</artifactId>
-        <version>4.6.0-SNAPSHOT</version>
+        <version>4.11.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-infinispan</artifactId>
@@ -70,6 +70,12 @@
             <version>${protostream-version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-core</artifactId>
+            <version>${langchain4j-version}</version>
+            <optional>true</optional>
+        </dependency>
 
         <!-- testing - camel -->
         <dependency>
@@ -90,7 +96,7 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
+       <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-test-infra-infinispan</artifactId>
             <version>${project.version}</version>
@@ -145,6 +151,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-stub</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
             <version>${awaitility-version}</version>
@@ -153,10 +164,24 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>${assertj-version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.infinispan.protostream</groupId>
+                <artifactId>protostream</artifactId>
+                <version>${protostream-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.infinispan.protostream</groupId>
+                <artifactId>protostream-types</artifactId>
+                <version>${protostream-version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <profiles>
         <profile>

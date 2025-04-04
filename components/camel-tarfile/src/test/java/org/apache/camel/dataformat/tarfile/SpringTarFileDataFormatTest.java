@@ -25,7 +25,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.builder.NotifyBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
@@ -41,11 +41,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
+class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
     private static final File TEST_DIR = new File("target/springtar");
 
     @Test
-    public void testTarWithoutFileName() throws Exception {
+    void testTarWithoutFileName() throws Exception {
         MockEndpoint mock = getMockEndpoint("mock:tar");
         mock.expectedMessageCount(1);
 
@@ -66,7 +66,7 @@ public class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
     }
 
     @Test
-    public void testTarWithFileName() throws Exception {
+    void testTarWithFileName() throws Exception {
         MockEndpoint mock = getMockEndpoint("mock:tar");
         mock.expectedMessageCount(1);
         mock.expectedHeaderReceived(FILE_NAME, "poem.txt.tar");
@@ -88,7 +88,7 @@ public class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
     }
 
     @Test
-    public void testUntar() throws Exception {
+    void testUntar() throws Exception {
         getMockEndpoint("mock:untar").expectedBodiesReceived(TEXT);
         getMockEndpoint("mock:untar").expectedHeaderReceived(FILE_NAME, "file");
 
@@ -98,7 +98,7 @@ public class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
     }
 
     @Test
-    public void testTarAndUntar() throws Exception {
+    void testTarAndUntar() throws Exception {
         MockEndpoint mock = getMockEndpoint("mock:tarAndUntar");
         mock.expectedMessageCount(1);
 
@@ -112,7 +112,7 @@ public class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
     }
 
     @Test
-    public void testTarToFileWithoutFileName() throws Exception {
+    void testTarToFileWithoutFileName() throws Exception {
         NotifyBuilder notify = new NotifyBuilder(context).whenDone(1).create();
 
         String[] files = TEST_DIR.list();
@@ -143,7 +143,7 @@ public class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
     }
 
     @Test
-    public void testTarToFileWithFileName() throws Exception {
+    void testTarToFileWithFileName() throws Exception {
         NotifyBuilder notify = new NotifyBuilder(context).whenDone(1).create();
 
         MockEndpoint mock = getMockEndpoint("mock:tarToFile");
@@ -173,7 +173,7 @@ public class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
     }
 
     @Test
-    public void testDslTar() throws Exception {
+    void testDslTar() throws Exception {
         getMockEndpoint("mock:dslTar").expectedHeaderReceived(FILE_NAME, "poem.txt.tar");
 
         template.sendBodyAndHeader("direct:dslTar", TEXT, FILE_NAME, "poem.txt");
@@ -182,7 +182,7 @@ public class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
     }
 
     @Test
-    public void testDslUntar() throws Exception {
+    void testDslUntar() throws Exception {
         getMockEndpoint("mock:dslUntar").expectedBodiesReceived(TEXT);
         getMockEndpoint("mock:dslUntar").expectedHeaderReceived(FILE_NAME, "test.txt");
 
@@ -191,11 +191,9 @@ public class SpringTarFileDataFormatTest extends CamelSpringTestSupport {
         MockEndpoint.assertIsSatisfied(context);
     }
 
-    @Override
-    @BeforeEach
-    public void setUp() throws Exception {
+    @AfterEach
+    public void cleanOutputDirectory() {
         deleteDirectory(TEST_DIR);
-        super.setUp();
     }
 
     @Override

@@ -39,11 +39,11 @@ public class TimerNameTest extends ContextTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
-                from(uri).noAutoStartup().to("mock:result");
+            public void configure() {
+                from(uri).autoStartup(false).to("mock:result");
             }
         };
     }

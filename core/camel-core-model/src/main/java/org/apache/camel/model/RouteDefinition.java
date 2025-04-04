@@ -62,6 +62,7 @@ import org.apache.camel.spi.RoutePolicy;
 public class RouteDefinition extends OutputDefinition<RouteDefinition>
         implements NamedRoute, PreconditionContainer, ResourceAware {
     private final AtomicBoolean prepared = new AtomicBoolean();
+    private final AtomicBoolean inlined = new AtomicBoolean();
     private FromDefinition input;
     private String routeConfigurationId;
     private transient Set<String> appliedRouteConfigurationIds;
@@ -133,8 +134,8 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     /**
      * Marks the route definition as prepared.
      * <p/>
-     * This is needed if routes have been created by components such as camel-spring-xml or camel-blueprint. Usually
-     * they share logic in the camel-core-xml module which prepares the routes.
+     * This is necessary if routes have been created by components such as camel-spring-xml. Usually they share logic in
+     * the camel-core-xml module which prepares the routes.
      */
     public void markPrepared() {
         prepared.set(true);
@@ -145,6 +146,22 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
      */
     public void markUnprepared() {
         prepared.set(false);
+    }
+
+    /**
+     * Check if the route has been inlined by rest-dsl
+     *
+     * @return whether the route has been inlined by rest-dsl or not
+     */
+    public boolean isInlined() {
+        return inlined.get();
+    }
+
+    /**
+     * Marks the route definition as inlined by rest-dsl
+     */
+    public void markInlined() {
+        inlined.set(true);
     }
 
     /**
@@ -262,7 +279,7 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     }
 
     /**
-     * Set the group name for this route
+     * The group name for this route. Multiple routes can belong to the same group.
      *
      * @param  name the group name
      * @return      the builder
@@ -273,7 +290,7 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     }
 
     /**
-     * Set the route group for this route
+     * The group name for this route. Multiple routes can belong to the same group.
      *
      * @param  group the route group
      * @return       the builder
@@ -326,9 +343,10 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     /**
      * Disable stream caching for this route.
      *
-     * @return the builder
+     * @return     the builder
+     * @deprecated use {@link #streamCache(String)}
      */
-    @Deprecated
+    @Deprecated(since = "4.6.0")
     public RouteDefinition noStreamCaching() {
         setStreamCache("false");
         return this;
@@ -337,9 +355,10 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     /**
      * Enable stream caching for this route.
      *
-     * @return the builder
+     * @return     the builder
+     * @deprecated use {@link #streamCache(String)}
      */
-    @Deprecated
+    @Deprecated(since = "4.6.0")
     public RouteDefinition streamCaching() {
         setStreamCache("true");
         return this;
@@ -352,7 +371,7 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
      * @return                 the builder
      * @deprecated             use {@link #streamCache(String)}
      */
-    @Deprecated
+    @Deprecated(since = "4.6.0")
     public RouteDefinition streamCaching(String streamCache) {
         setStreamCache(streamCache);
         return this;
@@ -372,9 +391,10 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     /**
      * Disable tracing for this route.
      *
-     * @return the builder
+     * @return     the builder
+     * @deprecated use {@link #trace(String)}
      */
-    @Deprecated
+    @Deprecated(since = "4.6.0")
     public RouteDefinition noTracing() {
         setTrace("false");
         return this;
@@ -383,9 +403,10 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     /**
      * Enable tracing for this route.
      *
-     * @return the builder
+     * @return     the builder
+     * @deprecated use {@link #trace(String)}
      */
-    @Deprecated
+    @Deprecated(since = "4.6.0")
     public RouteDefinition tracing() {
         setTrace("true");
         return this;
@@ -394,10 +415,11 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     /**
      * Enable tracing for this route.
      *
-     * @param  tracing whether to use tracing (true or false), the value can be a property placeholder
-     * @return         the builder
+     * @param      tracing whether to use tracing (true or false), the value can be a property placeholder
+     * @return             the builder
+     * @deprecated         use {@link #trace(String)}
      */
-    @Deprecated
+    @Deprecated(since = "4.6.0")
     public RouteDefinition tracing(String tracing) {
         setTrace(tracing);
         return this;
@@ -482,9 +504,10 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     /**
      * Disable message history for this route.
      *
-     * @return the builder
+     * @return     the builder
+     * @deprecated use {@link #messageHistory(boolean)}
      */
-    @Deprecated
+    @Deprecated(since = "4.6.0")
     public RouteDefinition noMessageHistory() {
         setMessageHistory("false");
         return this;
@@ -493,9 +516,10 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     /**
      * Disable delayer for this route.
      *
-     * @return the builder
+     * @return     the builder
+     * @deprecated use {@link #delayer(long)}
      */
-    @Deprecated
+    @Deprecated(since = "4.6.0")
     public RouteDefinition noDelayer() {
         setDelayer("0");
         return this;
@@ -543,7 +567,7 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
      *
      * @return the builder
      */
-    @Deprecated
+    @Deprecated(since = "4.6.0")
     public RouteDefinition noAutoStartup() {
         setAutoStartup("false");
         return this;
@@ -932,20 +956,14 @@ public class RouteDefinition extends OutputDefinition<RouteDefinition>
     }
 
     /**
-     * The group that this route belongs to; could be the name of the RouteBuilder class or be explicitly configured in
-     * the XML.
-     * <p/>
-     * May be null.
+     * The group name for this route. Multiple routes can belong to the same group.
      */
     public String getGroup() {
         return group;
     }
 
     /**
-     * The group that this route belongs to; could be the name of the RouteBuilder class or be explicitly configured in
-     * the XML.
-     * <p/>
-     * May be null.
+     * The group name for this route. Multiple routes can belong to the same group.
      */
     @XmlAttribute
     @Metadata(label = "advanced")

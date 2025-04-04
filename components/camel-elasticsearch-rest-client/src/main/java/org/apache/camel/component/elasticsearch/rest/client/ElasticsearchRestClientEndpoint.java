@@ -20,12 +20,12 @@ import org.apache.camel.Category;
 import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
+import org.apache.camel.spi.EndpointServiceLocation;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
-import org.apache.camel.util.ObjectHelper;
 import org.elasticsearch.client.RestClient;
 
 /**
@@ -34,14 +34,13 @@ import org.elasticsearch.client.RestClient;
 @UriEndpoint(firstVersion = "4.3.0", scheme = "elasticsearch-rest-client",
              title = "Elasticsearch Low level Rest Client",
              syntax = "elasticsearch-rest-client:clusterName", producerOnly = true,
-             category = { Category.SEARCH })
-public class ElasticsearchRestClientEndpoint extends DefaultEndpoint {
+             category = { Category.SEARCH }, headersClass = ElasticSearchRestClientConstant.class)
+public class ElasticsearchRestClientEndpoint extends DefaultEndpoint implements EndpointServiceLocation {
 
     @UriPath
     @Metadata(required = true)
     private String clusterName;
     @UriParam
-    @Metadata(required = true)
     ElasticsearchRestClientOperation operation;
 
     @UriParam(label = "advanced")
@@ -80,7 +79,6 @@ public class ElasticsearchRestClientEndpoint extends DefaultEndpoint {
     @Override
     public void doInit() throws Exception {
         super.doInit();
-        ObjectHelper.notNull(operation, "operation");
     }
 
     public Producer createProducer() throws Exception {
@@ -89,6 +87,16 @@ public class ElasticsearchRestClientEndpoint extends DefaultEndpoint {
 
     public Consumer createConsumer(Processor processor) throws Exception {
         throw new UnsupportedOperationException("Cannot consume from an ElasticsearchEndpoint: " + getEndpointUri());
+    }
+
+    @Override
+    public String getServiceUrl() {
+        return getHostAddressesList();
+    }
+
+    @Override
+    public String getServiceProtocol() {
+        return "elasticsearch";
     }
 
     /**

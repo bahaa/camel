@@ -17,10 +17,7 @@
 package org.apache.camel.main;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.vault.AwsVaultConfiguration;
-import org.apache.camel.vault.AzureVaultConfiguration;
-import org.apache.camel.vault.GcpVaultConfiguration;
-import org.apache.camel.vault.HashicorpVaultConfiguration;
+import org.apache.camel.vault.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class MainVaultTest {
 
     @Test
-    public void testMainAws() throws Exception {
+    public void testMainAws() {
         Main main = new Main();
 
         main.addInitialProperty("camel.vault.aws.accessKey", "myKey");
@@ -54,7 +51,35 @@ public class MainVaultTest {
     }
 
     @Test
-    public void testMainProfileAws() throws Exception {
+    public void testMainOverrideEndpointAws() {
+        Main main = new Main();
+
+        main.addInitialProperty("camel.vault.aws.accessKey", "myKey");
+        main.addInitialProperty("camel.vault.aws.secretKey", "mySecret");
+        main.addInitialProperty("camel.vault.aws.region", "myRegion");
+        main.addInitialProperty("camel.vault.aws.defaultCredentialsProvider", "false");
+        main.addInitialProperty("camel.vault.aws.overrideEndpoint", "true");
+        main.addInitialProperty("camel.vault.aws.uriEndpointOverride", "http://localhost:8080");
+
+        main.start();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        AwsVaultConfiguration cfg = context.getVaultConfiguration().aws();
+        assertNotNull(cfg);
+
+        Assertions.assertEquals("myKey", cfg.getAccessKey());
+        Assertions.assertEquals("mySecret", cfg.getSecretKey());
+        Assertions.assertEquals("myRegion", cfg.getRegion());
+        Assertions.assertFalse(cfg.isDefaultCredentialsProvider());
+        Assertions.assertTrue(cfg.isOverrideEndpoint());
+        Assertions.assertEquals("http://localhost:8080", cfg.getUriEndpointOverride());
+        main.stop();
+    }
+
+    @Test
+    public void testMainProfileAws() {
         final Main main = getMain();
 
         CamelContext context = main.getCamelContext();
@@ -82,13 +107,67 @@ public class MainVaultTest {
         main.addInitialProperty("camel.vault.aws.defaultCredentialsProvider", "false");
         main.addInitialProperty("camel.vault.aws.profileCredentialsProvider", "true");
         main.addInitialProperty("camel.vault.aws.profileName", "jack");
+        main.addInitialProperty("camel.vault.aws.sqsQueueUrl", "http://sqs-2");
+        main.addInitialProperty("camel.vault.aws.useSqsNotification", "true");
 
         main.start();
         return main;
     }
 
     @Test
-    public void testMainAwsFluent() throws Exception {
+    public void testUseSqsNotification() {
+        final Main main = getMain();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        AwsVaultConfiguration cfg = context.getVaultConfiguration().aws();
+        assertNotNull(cfg);
+
+        Assertions.assertEquals("myKey", cfg.getAccessKey());
+        Assertions.assertEquals("mySecret", cfg.getSecretKey());
+        Assertions.assertEquals("myRegion", cfg.getRegion());
+        Assertions.assertFalse(cfg.isDefaultCredentialsProvider());
+        Assertions.assertTrue(cfg.isProfileCredentialsProvider());
+        Assertions.assertEquals("jack", cfg.getProfileName());
+        Assertions.assertEquals("http://sqs-2", cfg.getSqsQueueUrl());
+        Assertions.assertTrue(cfg.isUseSqsNotification());
+
+        main.stop();
+    }
+
+    @Test
+    public void testMainOverrideEndpointAwsFluent() {
+        Main main = new Main();
+        main.configure().vault().aws()
+                .withAccessKey("myKey")
+                .withSecretKey("mySecret")
+                .withRegion("myRegion")
+                .isOverrideEndpoint(true)
+                .withUriEndpointOverride("http://localhost:8080")
+                .withDefaultCredentialsProvider(false)
+                .end();
+
+        main.start();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        AwsVaultConfiguration cfg = context.getVaultConfiguration().aws();
+        assertNotNull(cfg);
+
+        Assertions.assertEquals("myKey", cfg.getAccessKey());
+        Assertions.assertEquals("mySecret", cfg.getSecretKey());
+        Assertions.assertEquals("myRegion", cfg.getRegion());
+        Assertions.assertFalse(cfg.isDefaultCredentialsProvider());
+        Assertions.assertTrue(cfg.isOverrideEndpoint());
+        Assertions.assertEquals("http://localhost:8080", cfg.getUriEndpointOverride());
+
+        main.stop();
+    }
+
+    @Test
+    public void testMainAwsFluent() {
         Main main = new Main();
         main.configure().vault().aws()
                 .withAccessKey("myKey")
@@ -114,7 +193,7 @@ public class MainVaultTest {
     }
 
     @Test
-    public void testMainAwsProfileFluent() throws Exception {
+    public void testMainAwsProfileFluent() {
         Main main = new Main();
         main.configure().vault().aws()
                 .withAccessKey("myKey")
@@ -144,7 +223,7 @@ public class MainVaultTest {
     }
 
     @Test
-    public void testMainGcp() throws Exception {
+    public void testMainGcp() {
         Main main = new Main();
 
         main.addInitialProperty("camel.vault.gcp.serviceAccountKey", "file:////myKey");
@@ -165,7 +244,7 @@ public class MainVaultTest {
     }
 
     @Test
-    public void testMainGcpFluent() throws Exception {
+    public void testMainGcpFluent() {
         Main main = new Main();
         main.configure().vault().gcp()
                 .withServiceAccountKey("file:////myKey")
@@ -187,7 +266,7 @@ public class MainVaultTest {
     }
 
     @Test
-    public void testMainAzure() throws Exception {
+    public void testMainAzure() {
         Main main = new Main();
 
         main.addInitialProperty("camel.vault.azure.vaultName", "vault");
@@ -211,7 +290,7 @@ public class MainVaultTest {
     }
 
     @Test
-    public void testMainAzureFluent() throws Exception {
+    public void testMainAzureFluent() {
         Main main = new Main();
         main.configure().vault().azure()
                 .withVaultName("vault")
@@ -237,11 +316,10 @@ public class MainVaultTest {
     }
 
     @Test
-    public void testMainHashicorp() throws Exception {
+    public void testMainHashicorp() {
         Main main = new Main();
 
         main.addInitialProperty("camel.vault.hashicorp.token", "1111");
-        main.addInitialProperty("camel.vault.hashicorp.engine", "sec");
         main.addInitialProperty("camel.vault.hashicorp.host", "localhost");
         main.addInitialProperty("camel.vault.hashicorp.port", "8200");
         main.addInitialProperty("camel.vault.hashicorp.scheme", "https");
@@ -254,10 +332,160 @@ public class MainVaultTest {
         assertNotNull(cfg);
 
         Assertions.assertEquals("1111", cfg.getToken());
-        Assertions.assertEquals("sec", cfg.getEngine());
         Assertions.assertEquals("localhost", cfg.getHost());
         Assertions.assertEquals("8200", cfg.getPort());
         Assertions.assertEquals("https", cfg.getScheme());
+        Assertions.assertFalse(cfg.isCloud());
+        Assertions.assertNull(cfg.getNamespace());
+        main.stop();
+    }
+
+    public void testMainHashicorpWithCloud() {
+        Main main = new Main();
+
+        main.addInitialProperty("camel.vault.hashicorp.token", "1111");
+        main.addInitialProperty("camel.vault.hashicorp.host", "localhost");
+        main.addInitialProperty("camel.vault.hashicorp.port", "8200");
+        main.addInitialProperty("camel.vault.hashicorp.scheme", "https");
+        main.addInitialProperty("camel.vault.hashicorp.cloud", "true");
+        main.addInitialProperty("camel.vault.hashicorp.namespace", "admin");
+        main.start();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        HashicorpVaultConfiguration cfg = context.getVaultConfiguration().hashicorp();
+        assertNotNull(cfg);
+
+        Assertions.assertEquals("1111", cfg.getToken());
+        Assertions.assertEquals("localhost", cfg.getHost());
+        Assertions.assertEquals("8200", cfg.getPort());
+        Assertions.assertEquals("https", cfg.getScheme());
+        Assertions.assertTrue(cfg.isCloud());
+        Assertions.assertEquals("admin", cfg.getNamespace());
+        main.stop();
+    }
+
+    @Test
+    public void testMainKubernetes() {
+        Main main = new Main();
+
+        main.addInitialProperty("camel.vault.kubernetes.refreshEnabled", "true");
+        main.addInitialProperty("camel.vault.kubernetes.secrets", "xxxx");
+
+        main.start();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        KubernetesVaultConfiguration cfg = context.getVaultConfiguration().kubernetes();
+        assertNotNull(cfg);
+
+        Assertions.assertTrue(cfg.isRefreshEnabled());
+        Assertions.assertEquals("xxxx", cfg.getSecrets());
+        main.stop();
+    }
+
+    @Test
+    public void testMainKubernetesFluent() {
+        Main main = new Main();
+        main.configure().vault().kubernetes()
+                .withRefreshEnabled(true)
+                .withSecrets("xxxx")
+                .end();
+
+        main.start();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        KubernetesVaultConfiguration cfg = context.getVaultConfiguration().kubernetes();
+        assertNotNull(cfg);
+
+        Assertions.assertTrue(cfg.isRefreshEnabled());
+        Assertions.assertEquals("xxxx", cfg.getSecrets());
+        main.stop();
+    }
+
+    @Test
+    public void testMainKubernetesConfigmaps() {
+        Main main = new Main();
+
+        main.addInitialProperty("camel.vault.kubernetescm.refreshEnabled", "true");
+        main.addInitialProperty("camel.vault.kubernetescm.configmaps", "xxxx");
+
+        main.start();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        KubernetesConfigMapVaultConfiguration cfg = context.getVaultConfiguration().kubernetesConfigmaps();
+        assertNotNull(cfg);
+
+        Assertions.assertTrue(cfg.isRefreshEnabled());
+        Assertions.assertEquals("xxxx", cfg.getConfigmaps());
+        main.stop();
+    }
+
+    @Test
+    public void testMainKubernetesConfigmapsFluent() {
+        Main main = new Main();
+        main.configure().vault().kubernetesConfigmaps()
+                .withRefreshEnabled(true)
+                .withConfigmaps("xxxx")
+                .end();
+
+        main.start();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        KubernetesConfigMapVaultConfiguration cfg = context.getVaultConfiguration().kubernetesConfigmaps();
+        assertNotNull(cfg);
+
+        Assertions.assertTrue(cfg.isRefreshEnabled());
+        Assertions.assertEquals("xxxx", cfg.getConfigmaps());
+        main.stop();
+    }
+
+    @Test
+    public void testMainIBMSecretsManager() {
+        Main main = new Main();
+
+        main.addInitialProperty("camel.vault.ibm.serviceUrl", "http://ibm.cloud.com");
+        main.addInitialProperty("camel.vault.ibm.token", "token");
+
+        main.start();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        IBMSecretsManagerVaultConfiguration cfg = context.getVaultConfiguration().ibmSecretsManager();
+        assertNotNull(cfg);
+
+        Assertions.assertEquals("token", cfg.getToken());
+        Assertions.assertEquals("http://ibm.cloud.com", cfg.getServiceUrl());
+        main.stop();
+    }
+
+    @Test
+    public void testMainIBMFluent() {
+        Main main = new Main();
+        main.configure().vault().ibmSecretsManager()
+                .withToken("token")
+                .withServiceUrl("http://ibm.cloud.com")
+                .end();
+
+        main.start();
+
+        CamelContext context = main.getCamelContext();
+        assertNotNull(context);
+
+        IBMSecretsManagerVaultConfiguration cfg = context.getVaultConfiguration().ibmSecretsManager();
+        assertNotNull(cfg);
+
+        Assertions.assertEquals("token", cfg.getToken());
+        Assertions.assertEquals("http://ibm.cloud.com", cfg.getServiceUrl());
         main.stop();
     }
 }

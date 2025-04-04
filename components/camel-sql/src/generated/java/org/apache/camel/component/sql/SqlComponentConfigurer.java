@@ -25,10 +25,14 @@ public class SqlComponentConfigurer extends PropertyConfigurerSupport implements
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "autowiredenabled":
         case "autowiredEnabled": target.setAutowiredEnabled(property(camelContext, boolean.class, value)); return true;
+        case "batchautocommitdisabled":
+        case "batchAutoCommitDisabled": target.setBatchAutoCommitDisabled(property(camelContext, boolean.class, value)); return true;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
         case "datasource":
         case "dataSource": target.setDataSource(property(camelContext, javax.sql.DataSource.class, value)); return true;
+        case "fetchsize":
+        case "fetchSize": target.setFetchSize(property(camelContext, int.class, value)); return true;
         case "healthcheckconsumerenabled":
         case "healthCheckConsumerEnabled": target.setHealthCheckConsumerEnabled(property(camelContext, boolean.class, value)); return true;
         case "healthcheckproducerenabled":
@@ -37,6 +41,8 @@ public class SqlComponentConfigurer extends PropertyConfigurerSupport implements
         case "lazyStartProducer": target.setLazyStartProducer(property(camelContext, boolean.class, value)); return true;
         case "rowmapperfactory":
         case "rowMapperFactory": target.setRowMapperFactory(property(camelContext, org.apache.camel.component.sql.RowMapperFactory.class, value)); return true;
+        case "servicelocationenabled":
+        case "serviceLocationEnabled": target.setServiceLocationEnabled(property(camelContext, boolean.class, value)); return true;
         case "useplaceholder":
         case "usePlaceholder": target.setUsePlaceholder(property(camelContext, boolean.class, value)); return true;
         default: return false;
@@ -53,10 +59,14 @@ public class SqlComponentConfigurer extends PropertyConfigurerSupport implements
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "autowiredenabled":
         case "autowiredEnabled": return boolean.class;
+        case "batchautocommitdisabled":
+        case "batchAutoCommitDisabled": return boolean.class;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
         case "datasource":
         case "dataSource": return javax.sql.DataSource.class;
+        case "fetchsize":
+        case "fetchSize": return int.class;
         case "healthcheckconsumerenabled":
         case "healthCheckConsumerEnabled": return boolean.class;
         case "healthcheckproducerenabled":
@@ -65,6 +75,8 @@ public class SqlComponentConfigurer extends PropertyConfigurerSupport implements
         case "lazyStartProducer": return boolean.class;
         case "rowmapperfactory":
         case "rowMapperFactory": return org.apache.camel.component.sql.RowMapperFactory.class;
+        case "servicelocationenabled":
+        case "serviceLocationEnabled": return boolean.class;
         case "useplaceholder":
         case "usePlaceholder": return boolean.class;
         default: return null;
@@ -77,10 +89,14 @@ public class SqlComponentConfigurer extends PropertyConfigurerSupport implements
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "autowiredenabled":
         case "autowiredEnabled": return target.isAutowiredEnabled();
+        case "batchautocommitdisabled":
+        case "batchAutoCommitDisabled": return target.isBatchAutoCommitDisabled();
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
         case "datasource":
         case "dataSource": return target.getDataSource();
+        case "fetchsize":
+        case "fetchSize": return target.getFetchSize();
         case "healthcheckconsumerenabled":
         case "healthCheckConsumerEnabled": return target.isHealthCheckConsumerEnabled();
         case "healthcheckproducerenabled":
@@ -89,6 +105,8 @@ public class SqlComponentConfigurer extends PropertyConfigurerSupport implements
         case "lazyStartProducer": return target.isLazyStartProducer();
         case "rowmapperfactory":
         case "rowMapperFactory": return target.getRowMapperFactory();
+        case "servicelocationenabled":
+        case "serviceLocationEnabled": return target.isServiceLocationEnabled();
         case "useplaceholder":
         case "usePlaceholder": return target.isUsePlaceholder();
         default: return null;

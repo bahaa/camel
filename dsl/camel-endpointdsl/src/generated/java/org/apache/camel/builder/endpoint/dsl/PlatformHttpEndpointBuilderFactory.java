@@ -324,6 +324,140 @@ public interface PlatformHttpEndpointBuilderFactory {
         }
 
         /**
+         * When Camel is complete processing the message, and the HTTP server is
+         * writing response. This option controls whether Camel should catch any
+         * failure during writing response and store this on the Exchange, which
+         * allows onCompletion/UnitOfWork to regard the Exchange as failed and
+         * have access to the caused exception from the HTTP server.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param handleWriteResponseError the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPlatformHttpEndpointBuilder handleWriteResponseError(boolean handleWriteResponseError) {
+            doSetProperty("handleWriteResponseError", handleWriteResponseError);
+            return this;
+        }
+        /**
+         * When Camel is complete processing the message, and the HTTP server is
+         * writing response. This option controls whether Camel should catch any
+         * failure during writing response and store this on the Exchange, which
+         * allows onCompletion/UnitOfWork to regard the Exchange as failed and
+         * have access to the caused exception from the HTTP server.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param handleWriteResponseError the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPlatformHttpEndpointBuilder handleWriteResponseError(String handleWriteResponseError) {
+            doSetProperty("handleWriteResponseError", handleWriteResponseError);
+            return this;
+        }
+        /**
+         * Whether to populate the message Body with a Map containing
+         * application/x-www-form-urlencoded form properties.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: consumer
+         * 
+         * @param populateBodyWithForm the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPlatformHttpEndpointBuilder populateBodyWithForm(boolean populateBodyWithForm) {
+            doSetProperty("populateBodyWithForm", populateBodyWithForm);
+            return this;
+        }
+        /**
+         * Whether to populate the message Body with a Map containing
+         * application/x-www-form-urlencoded form properties.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: consumer
+         * 
+         * @param populateBodyWithForm the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPlatformHttpEndpointBuilder populateBodyWithForm(String populateBodyWithForm) {
+            doSetProperty("populateBodyWithForm", populateBodyWithForm);
+            return this;
+        }
+        /**
+         * Whether to include HTTP request headers (Accept, User-Agent, etc.)
+         * into HTTP response produced by this endpoint.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param returnHttpRequestHeaders the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPlatformHttpEndpointBuilder returnHttpRequestHeaders(boolean returnHttpRequestHeaders) {
+            doSetProperty("returnHttpRequestHeaders", returnHttpRequestHeaders);
+            return this;
+        }
+        /**
+         * Whether to include HTTP request headers (Accept, User-Agent, etc.)
+         * into HTTP response produced by this endpoint.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param returnHttpRequestHeaders the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPlatformHttpEndpointBuilder returnHttpRequestHeaders(String returnHttpRequestHeaders) {
+            doSetProperty("returnHttpRequestHeaders", returnHttpRequestHeaders);
+            return this;
+        }
+        /**
+         * Whether to use BodyHandler for the request. If set to false then the
+         * request will no be read and parsed.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: consumer
+         * 
+         * @param useBodyHandler the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPlatformHttpEndpointBuilder useBodyHandler(boolean useBodyHandler) {
+            doSetProperty("useBodyHandler", useBodyHandler);
+            return this;
+        }
+        /**
+         * Whether to use BodyHandler for the request. If set to false then the
+         * request will no be read and parsed.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: consumer
+         * 
+         * @param useBodyHandler the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPlatformHttpEndpointBuilder useBodyHandler(String useBodyHandler) {
+            doSetProperty("useBodyHandler", useBodyHandler);
+            return this;
+        }
+        /**
          * Whether to enable the Cookie Handler that allows Cookie addition,
          * expiry, and retrieval (currently only supported by
          * camel-platform-http-vertx).

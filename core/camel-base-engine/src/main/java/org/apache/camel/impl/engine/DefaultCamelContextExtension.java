@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import org.apache.camel.CamelContextAware;
@@ -39,6 +41,7 @@ import org.apache.camel.TypeConverter;
 import org.apache.camel.spi.BootstrapCloseable;
 import org.apache.camel.spi.CamelContextNameStrategy;
 import org.apache.camel.spi.ClassResolver;
+import org.apache.camel.spi.EndpointServiceRegistry;
 import org.apache.camel.spi.EndpointStrategy;
 import org.apache.camel.spi.EndpointUriFactory;
 import org.apache.camel.spi.EventNotifier;
@@ -86,7 +89,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class DefaultCamelContextExtension implements ExtendedCamelContext {
+
     private final AbstractCamelContext camelContext;
+    private final ThreadLocal<String> isCreateRoute = new ThreadLocal<>();
+    private final ThreadLocal<String> isCreateProcessor = new ThreadLocal<>();
     private final ThreadLocal<Boolean> isSetupRoutes = new ThreadLocal<>();
     private final List<InterceptStrategy> interceptStrategies = new ArrayList<>();
     private final Map<String, FactoryFinder> factories = new ConcurrentHashMap<>();
@@ -121,9 +127,10 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     private volatile InflightRepository inflightRepository;
     private volatile UuidGenerator uuidGenerator;
     private volatile Tracer tracer;
-    private volatile TransformerRegistry<TransformerKey> transformerRegistry;
-    private volatile ValidatorRegistry<ValidatorKey> validatorRegistry;
+    private volatile TransformerRegistry transformerRegistry;
+    private volatile ValidatorRegistry validatorRegistry;
     private volatile TypeConverterRegistry typeConverterRegistry;
+    private volatile EndpointServiceRegistry endpointServiceRegistry;
     private volatile TypeConverter typeConverter;
     private volatile RouteController routeController;
     private volatile ShutdownStrategy shutdownStrategy;
@@ -133,11 +140,11 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     private volatile StartupStepRecorder startupStepRecorder = new DefaultStartupStepRecorder();
 
-    @Deprecated
+    @Deprecated(since = "3.17.0")
     private ErrorHandlerFactory errorHandlerFactory;
     private String basePackageScan;
 
-    private final Object lock = new Object();
+    private final Lock lock = new ReentrantLock();
 
     private volatile FactoryFinder bootstrapFactoryFinder;
 
@@ -158,10 +165,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     CamelContextNameStrategy getNameStrategy() {
         if (nameStrategy == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (nameStrategy == null) {
                     setNameStrategy(camelContext.createCamelContextNameStrategy());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return nameStrategy;
@@ -173,10 +183,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     ManagementNameStrategy getManagementNameStrategy() {
         if (managementNameStrategy == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (managementNameStrategy == null) {
                     setManagementNameStrategy(camelContext.createManagementNameStrategy());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return managementNameStrategy;
@@ -188,10 +201,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     PropertiesComponent getPropertiesComponent() {
         if (propertiesComponent == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (propertiesComponent == null) {
                     setPropertiesComponent(camelContext.createPropertiesComponent());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return propertiesComponent;
@@ -229,9 +245,6 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     @Override
     public Endpoint hasEndpoint(NormalizedEndpointUri uri) {
-        if (camelContext.getEndpointRegistry().isEmpty()) {
-            return null;
-        }
         return camelContext.getEndpointRegistry().get(uri);
     }
 
@@ -294,6 +307,16 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     public boolean isSetupRoutes() {
         Boolean answer = isSetupRoutes.get();
         return answer != null && answer;
+    }
+
+    @Override
+    public String getCreateRoute() {
+        return isCreateRoute.get();
+    }
+
+    @Override
+    public String getCreateProcessor() {
+        return isCreateProcessor.get();
     }
 
     @Override
@@ -364,10 +387,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     @Override
     public Registry getRegistry() {
         if (registry == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (registry == null) {
                     setRegistry(camelContext.createRegistry());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return registry;
@@ -377,6 +403,24 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     public void setRegistry(Registry registry) {
         CamelContextAware.trySetCamelContext(registry, camelContext);
         this.registry = registry;
+    }
+
+    @Override
+    public void createRoute(String routeId) {
+        if (routeId != null) {
+            isCreateRoute.set(routeId);
+        } else {
+            isSetupRoutes.remove();
+        }
+    }
+
+    @Override
+    public void createProcessor(String processorId) {
+        if (processorId != null) {
+            isCreateProcessor.set(processorId);
+        } else {
+            isCreateProcessor.remove();
+        }
     }
 
     @Override
@@ -409,6 +453,7 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     @Override
     public void addLogListener(LogListener listener) {
         // avoid adding double which can happen with spring xml on spring boot
+        CamelContextAware.trySetCamelContext(listener, camelContext);
         logListeners.add(listener);
     }
 
@@ -445,12 +490,15 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     @Override
     public FactoryFinder getBootstrapFactoryFinder() {
         if (bootstrapFactoryFinder == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (bootstrapFactoryFinder == null) {
                     bootstrapFactoryFinder
                             = PluginHelper.getFactoryFinderResolver(this)
                                     .resolveBootstrapFactoryFinder(camelContext.getClassResolver());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return bootstrapFactoryFinder;
@@ -482,8 +530,8 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
                 FactoryFinder finder = camelContext.createFactoryFinder("META-INF/services/org/apache/camel/management/");
                 if (finder != null) {
                     Object object = finder.newInstance("ManagementStrategyFactory").orElse(null);
-                    if (object instanceof ManagementStrategyFactory) {
-                        factory = (ManagementStrategyFactory) object;
+                    if (object instanceof ManagementStrategyFactory managementStrategyFactory) {
+                        factory = managementStrategyFactory;
                     }
                 }
             } catch (Exception e) {
@@ -537,7 +585,8 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     void initEagerMandatoryServices(boolean caseInsensitive, Supplier<HeadersMapFactory> headersMapFactorySupplier) {
         if (this.headersMapFactory == null) {
             // we want headers map to be created as then JVM can optimize using it as we use it per exchange/message
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (this.headersMapFactory == null) {
                     if (caseInsensitive) {
                         // use factory to find the map factory to use
@@ -547,6 +596,8 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
                         setHeadersMapFactory(new HashMapHeadersMapFactory());
                     }
                 }
+            } finally {
+                lock.unlock();
             }
         }
     }
@@ -554,10 +605,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     @Override
     public ExchangeFactory getExchangeFactory() {
         if (exchangeFactory == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (exchangeFactory == null) {
                     setExchangeFactory(camelContext.createExchangeFactory());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return exchangeFactory;
@@ -573,10 +627,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     @Override
     public ExchangeFactoryManager getExchangeFactoryManager() {
         if (exchangeFactoryManager == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (exchangeFactoryManager == null) {
                     setExchangeFactoryManager(camelContext.createExchangeFactoryManager());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return exchangeFactoryManager;
@@ -590,10 +647,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     @Override
     public ProcessorExchangeFactory getProcessorExchangeFactory() {
         if (processorExchangeFactory == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (processorExchangeFactory == null) {
                     setProcessorExchangeFactory(camelContext.createProcessorExchangeFactory());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return processorExchangeFactory;
@@ -609,10 +669,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     @Override
     public ReactiveExecutor getReactiveExecutor() {
         if (reactiveExecutor == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (reactiveExecutor == null) {
                     setReactiveExecutor(camelContext.createReactiveExecutor());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return reactiveExecutor;
@@ -627,10 +690,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     RestRegistryFactory getRestRegistryFactory() {
         if (restRegistryFactory == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (restRegistryFactory == null) {
                     setRestRegistryFactory(camelContext.createRestRegistryFactory());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return restRegistryFactory;
@@ -642,10 +708,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     RestRegistry getRestRegistry() {
         if (restRegistry == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (restRegistry == null) {
                     setRestRegistry(camelContext.createRestRegistry());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return restRegistry;
@@ -657,10 +726,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     RestConfiguration getRestConfiguration() {
         if (restConfiguration == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (restConfiguration == null) {
                     setRestConfiguration(camelContext.createRestConfiguration());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return restConfiguration;
@@ -672,10 +744,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     ClassResolver getClassResolver() {
         if (classResolver == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (classResolver == null) {
                     setClassResolver(camelContext.createClassResolver());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return classResolver;
@@ -687,10 +762,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     MessageHistoryFactory getMessageHistoryFactory() {
         if (messageHistoryFactory == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (messageHistoryFactory == null) {
                     setMessageHistoryFactory(camelContext.createMessageHistoryFactory());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return messageHistoryFactory;
@@ -702,10 +780,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     StreamCachingStrategy getStreamCachingStrategy() {
         if (streamCachingStrategy == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (streamCachingStrategy == null) {
                     setStreamCachingStrategy(camelContext.createStreamCachingStrategy());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return streamCachingStrategy;
@@ -718,10 +799,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     InflightRepository getInflightRepository() {
         if (inflightRepository == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (inflightRepository == null) {
                     setInflightRepository(camelContext.createInflightRepository());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return inflightRepository;
@@ -733,10 +817,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     UuidGenerator getUuidGenerator() {
         if (uuidGenerator == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (uuidGenerator == null) {
                     setUuidGenerator(camelContext.createUuidGenerator());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return uuidGenerator;
@@ -748,10 +835,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     Tracer getTracer() {
         if (tracer == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (tracer == null) {
                     setTracer(camelContext.createTracer());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return tracer;
@@ -763,10 +853,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     TransformerRegistry getTransformerRegistry() {
         if (transformerRegistry == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (transformerRegistry == null) {
                     setTransformerRegistry(camelContext.createTransformerRegistry());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return transformerRegistry;
@@ -776,12 +869,36 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
         this.transformerRegistry = camelContext.getInternalServiceManager().addService(camelContext, transformerRegistry);
     }
 
+    @Override
+    public EndpointServiceRegistry getEndpointServiceRegistry() {
+        if (endpointServiceRegistry == null) {
+            lock.lock();
+            try {
+                if (endpointServiceRegistry == null) {
+                    setEndpointServiceRegistry(camelContext.createEndpointServiceRegistry());
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+        return endpointServiceRegistry;
+    }
+
+    @Override
+    public void setEndpointServiceRegistry(EndpointServiceRegistry endpointServiceRegistry) {
+        this.endpointServiceRegistry
+                = camelContext.getInternalServiceManager().addService(camelContext, endpointServiceRegistry);
+    }
+
     ValidatorRegistry getValidatorRegistry() {
         if (validatorRegistry == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (validatorRegistry == null) {
                     setValidatorRegistry(camelContext.createValidatorRegistry());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return validatorRegistry;
@@ -801,10 +918,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     TypeConverterRegistry getTypeConverterRegistry() {
         if (typeConverterRegistry == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (typeConverterRegistry == null) {
                     setTypeConverterRegistry(camelContext.createTypeConverterRegistry());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return typeConverterRegistry;
@@ -836,10 +956,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     TypeConverter getOrCreateTypeConverter() {
         if (typeConverter == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (typeConverter == null) {
                     setTypeConverter(camelContext.createTypeConverter());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return typeConverter;
@@ -851,10 +974,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     Injector getInjector() {
         if (injector == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (injector == null) {
                     setInjector(camelContext.createInjector());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return injector;
@@ -870,10 +996,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     RouteController getRouteController() {
         if (routeController == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (routeController == null) {
                     setRouteController(camelContext.createRouteController());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return routeController;
@@ -885,10 +1014,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     ShutdownStrategy getShutdownStrategy() {
         if (shutdownStrategy == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (shutdownStrategy == null) {
                     setShutdownStrategy(camelContext.createShutdownStrategy());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return shutdownStrategy;
@@ -900,10 +1032,13 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     ExecutorServiceManager getExecutorServiceManager() {
         if (executorServiceManager == null) {
-            synchronized (lock) {
+            lock.lock();
+            try {
                 if (executorServiceManager == null) {
                     setExecutorServiceManager(camelContext.createExecutorServiceManager());
                 }
+            } finally {
+                lock.unlock();
             }
         }
         return this.executorServiceManager;
@@ -949,11 +1084,6 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     @Override
     public Processor createErrorHandler(Route route, Processor processor) throws Exception {
         return camelContext.createErrorHandler(route, processor);
-    }
-
-    @Override
-    public void disposeModel() {
-        camelContext.disposeModel();
     }
 
     @Override

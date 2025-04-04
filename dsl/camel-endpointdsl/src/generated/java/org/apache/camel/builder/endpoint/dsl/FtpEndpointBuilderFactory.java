@@ -255,7 +255,7 @@ public interface FtpEndpointBuilderFactory {
         /**
          * Configures the interval in seconds to use when logging the progress
          * of upload and download operations that are in-flight. This is used
-         * for logging progress when operations takes longer time.
+         * for logging progress when operations take a longer time.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -272,7 +272,7 @@ public interface FtpEndpointBuilderFactory {
         /**
          * Configures the interval in seconds to use when logging the progress
          * of upload and download operations that are in-flight. This is used
-         * for logging progress when operations takes longer time.
+         * for logging progress when operations take a longer time.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -320,7 +320,7 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Configures whether the perform verbose (fine grained) logging of the
+         * Configures whether perform verbose (fine-grained) logging of the
          * progress of upload and download operations.
          * 
          * The option is a: <code>boolean</code> type.
@@ -336,7 +336,7 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Configures whether the perform verbose (fine grained) logging of the
+         * Configures whether perform verbose (fine-grained) logging of the
          * progress of upload and download operations.
          * 
          * The option will be converted to a <code>boolean</code> type.
@@ -524,7 +524,7 @@ public interface FtpEndpointBuilderFactory {
         }
         /**
          * Configures whether resume download is enabled. This must be supported
-         * by the FTP server (almost all FTP servers support it). In addition
+         * by the FTP server (almost all FTP servers support it). In addition,
          * the options localWorkDirectory must be configured so downloaded files
          * are stored in a local directory, and the option binary must be
          * enabled, which is required to support resuming of downloads.
@@ -543,7 +543,7 @@ public interface FtpEndpointBuilderFactory {
         }
         /**
          * Configures whether resume download is enabled. This must be supported
-         * by the FTP server (almost all FTP servers support it). In addition
+         * by the FTP server (almost all FTP servers support it). In addition,
          * the options localWorkDirectory must be configured so downloaded files
          * are stored in a local directory, and the option binary must be
          * enabled, which is required to support resuming of downloads.
@@ -871,6 +871,39 @@ public interface FtpEndpointBuilderFactory {
          */
         default FtpEndpointConsumerBuilder idempotent(String idempotent) {
             doSetProperty("idempotent", idempotent);
+            return this;
+        }
+        /**
+         * Sets whether to eagerly add the filename to the idempotent repository
+         * or wait until the exchange is complete.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: true
+         * Group: filter
+         * 
+         * @param idempotentEager the value to set
+         * @return the dsl builder
+         */
+        default FtpEndpointConsumerBuilder idempotentEager(Boolean idempotentEager) {
+            doSetProperty("idempotentEager", idempotentEager);
+            return this;
+        }
+        /**
+         * Sets whether to eagerly add the filename to the idempotent repository
+         * or wait until the exchange is complete.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: true
+         * Group: filter
+         * 
+         * @param idempotentEager the value to set
+         * @return the dsl builder
+         */
+        default FtpEndpointConsumerBuilder idempotentEager(String idempotentEager) {
+            doSetProperty("idempotentEager", idempotentEager);
             return this;
         }
         /**
@@ -2340,10 +2373,10 @@ public interface FtpEndpointBuilderFactory {
         }
         /**
          * Allows you to set how the consumer will handle subfolders and files
-         * in the path if the directory parser results in with absolute paths
+         * in the path if the directory parser results in with absolute paths.
          * The reason for this is that some FTP servers may return file names
-         * with absolute paths, and if so then the FTP component needs to handle
-         * this by converting the returned path into a relative path.
+         * with absolute paths, and if so, then the FTP component needs to
+         * handle this by converting the returned path into a relative path.
          * 
          * The option is a: <code>boolean</code> type.
          * 
@@ -2359,10 +2392,10 @@ public interface FtpEndpointBuilderFactory {
         }
         /**
          * Allows you to set how the consumer will handle subfolders and files
-         * in the path if the directory parser results in with absolute paths
+         * in the path if the directory parser results in with absolute paths.
          * The reason for this is that some FTP servers may return file names
-         * with absolute paths, and if so then the FTP component needs to handle
-         * this by converting the returned path into a relative path.
+         * with absolute paths, and if so, then the FTP component needs to
+         * handle this by converting the returned path into a relative path.
          * 
          * The option will be converted to a <code>boolean</code> type.
          * 
@@ -2580,6 +2613,44 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
+         * Should an exception be thrown if connection failed (exhausted)By
+         * default exception is not thrown and a WARN is logged. You can use
+         * this to enable exception being thrown and handle the thrown exception
+         * from the org.apache.camel.spi.PollingConsumerPollStrategy rollback
+         * method.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer (advanced)
+         * 
+         * @param throwExceptionOnConnectFailed the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFtpEndpointConsumerBuilder throwExceptionOnConnectFailed(boolean throwExceptionOnConnectFailed) {
+            doSetProperty("throwExceptionOnConnectFailed", throwExceptionOnConnectFailed);
+            return this;
+        }
+        /**
+         * Should an exception be thrown if connection failed (exhausted)By
+         * default exception is not thrown and a WARN is logged. You can use
+         * this to enable exception being thrown and handle the thrown exception
+         * from the org.apache.camel.spi.PollingConsumerPollStrategy rollback
+         * method.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer (advanced)
+         * 
+         * @param throwExceptionOnConnectFailed the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFtpEndpointConsumerBuilder throwExceptionOnConnectFailed(String throwExceptionOnConnectFailed) {
+            doSetProperty("throwExceptionOnConnectFailed", throwExceptionOnConnectFailed);
+            return this;
+        }
+        /**
          * Whether to allow using LIST command when downloading a file. Default
          * is true. In some use cases you may want to download a specific file
          * and are not allowed to use the LIST command, and therefore you can
@@ -2623,7 +2694,7 @@ public interface FtpEndpointBuilderFactory {
         }
         /**
          * Set the client side port range in active mode. The syntax is:
-         * minPort-maxPort Both port numbers are inclusive, eg 10000-19999 to
+         * minPort-maxPort Both port numbers are inclusive, e.g., 10000-19999 to
          * include all 1xxxx ports.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -2671,6 +2742,38 @@ public interface FtpEndpointBuilderFactory {
          */
         default AdvancedFtpEndpointConsumerBuilder autoCreate(String autoCreate) {
             doSetProperty("autoCreate", autoCreate);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFtpEndpointConsumerBuilder browseLimit(int browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFtpEndpointConsumerBuilder browseLimit(String browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
             return this;
         }
         /**
@@ -3031,44 +3134,6 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Should an exception be thrown if connection failed (exhausted)By
-         * default exception is not thrown and a WARN is logged. You can use
-         * this to enable exception being thrown and handle the thrown exception
-         * from the org.apache.camel.spi.PollingConsumerPollStrategy rollback
-         * method.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param throwExceptionOnConnectFailed the value to set
-         * @return the dsl builder
-         */
-        default AdvancedFtpEndpointConsumerBuilder throwExceptionOnConnectFailed(boolean throwExceptionOnConnectFailed) {
-            doSetProperty("throwExceptionOnConnectFailed", throwExceptionOnConnectFailed);
-            return this;
-        }
-        /**
-         * Should an exception be thrown if connection failed (exhausted)By
-         * default exception is not thrown and a WARN is logged. You can use
-         * this to enable exception being thrown and handle the thrown exception
-         * from the org.apache.camel.spi.PollingConsumerPollStrategy rollback
-         * method.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param throwExceptionOnConnectFailed the value to set
-         * @return the dsl builder
-         */
-        default AdvancedFtpEndpointConsumerBuilder throwExceptionOnConnectFailed(String throwExceptionOnConnectFailed) {
-            doSetProperty("throwExceptionOnConnectFailed", throwExceptionOnConnectFailed);
-            return this;
-        }
-        /**
          * Sets the data timeout for waiting for reply Used only by FTPClient.
          * 
          * The option is a: <code>int</code> type.
@@ -3322,7 +3387,7 @@ public interface FtpEndpointBuilderFactory {
         /**
          * Configures the interval in seconds to use when logging the progress
          * of upload and download operations that are in-flight. This is used
-         * for logging progress when operations takes longer time.
+         * for logging progress when operations take a longer time.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -3339,7 +3404,7 @@ public interface FtpEndpointBuilderFactory {
         /**
          * Configures the interval in seconds to use when logging the progress
          * of upload and download operations that are in-flight. This is used
-         * for logging progress when operations takes longer time.
+         * for logging progress when operations take a longer time.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -3387,7 +3452,7 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Configures whether the perform verbose (fine grained) logging of the
+         * Configures whether perform verbose (fine-grained) logging of the
          * progress of upload and download operations.
          * 
          * The option is a: <code>boolean</code> type.
@@ -3403,7 +3468,7 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Configures whether the perform verbose (fine grained) logging of the
+         * Configures whether perform verbose (fine-grained) logging of the
          * progress of upload and download operations.
          * 
          * The option will be converted to a <code>boolean</code> type.
@@ -3774,7 +3839,7 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Allows you to set chmod on the stored file. For example chmod=640.
+         * Allows you to set chmod on the stored file. For example, chmod=640.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -4037,7 +4102,7 @@ public interface FtpEndpointBuilderFactory {
         }
         /**
          * Set the client side port range in active mode. The syntax is:
-         * minPort-maxPort Both port numbers are inclusive, eg 10000-19999 to
+         * minPort-maxPort Both port numbers are inclusive, e.g., 10000-19999 to
          * include all 1xxxx ports.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -4085,6 +4150,38 @@ public interface FtpEndpointBuilderFactory {
          */
         default AdvancedFtpEndpointProducerBuilder autoCreate(String autoCreate) {
             doSetProperty("autoCreate", autoCreate);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFtpEndpointProducerBuilder browseLimit(int browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFtpEndpointProducerBuilder browseLimit(String browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
             return this;
         }
         /**
@@ -4445,44 +4542,6 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Should an exception be thrown if connection failed (exhausted)By
-         * default exception is not thrown and a WARN is logged. You can use
-         * this to enable exception being thrown and handle the thrown exception
-         * from the org.apache.camel.spi.PollingConsumerPollStrategy rollback
-         * method.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param throwExceptionOnConnectFailed the value to set
-         * @return the dsl builder
-         */
-        default AdvancedFtpEndpointProducerBuilder throwExceptionOnConnectFailed(boolean throwExceptionOnConnectFailed) {
-            doSetProperty("throwExceptionOnConnectFailed", throwExceptionOnConnectFailed);
-            return this;
-        }
-        /**
-         * Should an exception be thrown if connection failed (exhausted)By
-         * default exception is not thrown and a WARN is logged. You can use
-         * this to enable exception being thrown and handle the thrown exception
-         * from the org.apache.camel.spi.PollingConsumerPollStrategy rollback
-         * method.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param throwExceptionOnConnectFailed the value to set
-         * @return the dsl builder
-         */
-        default AdvancedFtpEndpointProducerBuilder throwExceptionOnConnectFailed(String throwExceptionOnConnectFailed) {
-            doSetProperty("throwExceptionOnConnectFailed", throwExceptionOnConnectFailed);
-            return this;
-        }
-        /**
          * Sets the data timeout for waiting for reply Used only by FTPClient.
          * 
          * The option is a: <code>int</code> type.
@@ -4737,7 +4796,7 @@ public interface FtpEndpointBuilderFactory {
         /**
          * Configures the interval in seconds to use when logging the progress
          * of upload and download operations that are in-flight. This is used
-         * for logging progress when operations takes longer time.
+         * for logging progress when operations take a longer time.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -4754,7 +4813,7 @@ public interface FtpEndpointBuilderFactory {
         /**
          * Configures the interval in seconds to use when logging the progress
          * of upload and download operations that are in-flight. This is used
-         * for logging progress when operations takes longer time.
+         * for logging progress when operations take a longer time.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -4802,7 +4861,7 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Configures whether the perform verbose (fine grained) logging of the
+         * Configures whether perform verbose (fine-grained) logging of the
          * progress of upload and download operations.
          * 
          * The option is a: <code>boolean</code> type.
@@ -4818,7 +4877,7 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Configures whether the perform verbose (fine grained) logging of the
+         * Configures whether perform verbose (fine-grained) logging of the
          * progress of upload and download operations.
          * 
          * The option will be converted to a <code>boolean</code> type.
@@ -4934,7 +4993,7 @@ public interface FtpEndpointBuilderFactory {
         }
         /**
          * Set the client side port range in active mode. The syntax is:
-         * minPort-maxPort Both port numbers are inclusive, eg 10000-19999 to
+         * minPort-maxPort Both port numbers are inclusive, e.g., 10000-19999 to
          * include all 1xxxx ports.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -4982,6 +5041,38 @@ public interface FtpEndpointBuilderFactory {
          */
         default AdvancedFtpEndpointBuilder autoCreate(String autoCreate) {
             doSetProperty("autoCreate", autoCreate);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFtpEndpointBuilder browseLimit(int browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFtpEndpointBuilder browseLimit(String browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
             return this;
         }
         /**
@@ -5342,44 +5433,6 @@ public interface FtpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Should an exception be thrown if connection failed (exhausted)By
-         * default exception is not thrown and a WARN is logged. You can use
-         * this to enable exception being thrown and handle the thrown exception
-         * from the org.apache.camel.spi.PollingConsumerPollStrategy rollback
-         * method.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param throwExceptionOnConnectFailed the value to set
-         * @return the dsl builder
-         */
-        default AdvancedFtpEndpointBuilder throwExceptionOnConnectFailed(boolean throwExceptionOnConnectFailed) {
-            doSetProperty("throwExceptionOnConnectFailed", throwExceptionOnConnectFailed);
-            return this;
-        }
-        /**
-         * Should an exception be thrown if connection failed (exhausted)By
-         * default exception is not thrown and a WARN is logged. You can use
-         * this to enable exception being thrown and handle the thrown exception
-         * from the org.apache.camel.spi.PollingConsumerPollStrategy rollback
-         * method.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param throwExceptionOnConnectFailed the value to set
-         * @return the dsl builder
-         */
-        default AdvancedFtpEndpointBuilder throwExceptionOnConnectFailed(String throwExceptionOnConnectFailed) {
-            doSetProperty("throwExceptionOnConnectFailed", throwExceptionOnConnectFailed);
-            return this;
-        }
-        /**
          * Sets the data timeout for waiting for reply Used only by FTPClient.
          * 
          * The option is a: <code>int</code> type.
@@ -5514,10 +5567,24 @@ public interface FtpEndpointBuilderFactory {
             return "CamelFileLastModified";
         }
         /**
-         * Specifies the output file name (relative to the endpoint directory)
-         * to be used for the output message when sending to the endpoint. If
-         * this is not present and no expression either, then a generated
-         * message ID is used as the filename instead.
+         * Only the file name (the name with no leading paths).
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code FileNameOnly}.
+         */
+        public String fileNameOnly() {
+            return "CamelFileNameOnly";
+        }
+        /**
+         * (producer) Specifies the name of the file to write (relative to the
+         * endpoint directory). This name can be a String; a String with a file
+         * or simple Language expression; or an Expression object. If it's null
+         * then Camel will auto-generate a filename based on the message unique
+         * ID. (consumer) Name of the consumed file as a relative file path with
+         * offset from the starting directory configured on the endpoint.
          * 
          * The option is a: {@code String} type.
          * 
@@ -5529,16 +5596,70 @@ public interface FtpEndpointBuilderFactory {
             return "CamelFileName";
         }
         /**
-         * Only the file name (the name with no leading paths).
+         * The name of the file that has been consumed.
          * 
          * The option is a: {@code String} type.
          * 
-         * Group: common
+         * Group: consumer
          * 
-         * @return the name of the header {@code FileNameOnly}.
+         * @return the name of the header {@code FileNameConsumed}.
          */
-        public String fileNameOnly() {
-            return "CamelFileNameOnly";
+        public String fileNameConsumed() {
+            return "CamelFileNameConsumed";
+        }
+        /**
+         * A boolean option specifying whether the consumed file denotes an
+         * absolute path or not. Should normally be false for relative paths.
+         * Absolute paths should normally not be used but we added to the move
+         * option to allow moving files to absolute paths. But can be used
+         * elsewhere as well.
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code FileAbsolute}.
+         */
+        public String fileAbsolute() {
+            return "CamelFileAbsolute";
+        }
+        /**
+         * The absolute path to the file. For relative files this path holds the
+         * relative path instead.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code FileAbsolutePath}.
+         */
+        public String fileAbsolutePath() {
+            return "CamelFileAbsolutePath";
+        }
+        /**
+         * The file path. For relative files this is the starting directory. For
+         * absolute files this is the absolute path.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code FilePath}.
+         */
+        public String filePath() {
+            return "CamelFilePath";
+        }
+        /**
+         * The relative path.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code FileRelativePath}.
+         */
+        public String fileRelativePath() {
+            return "CamelFileRelativePath";
         }
         /**
          * The parent path.
@@ -5553,11 +5674,53 @@ public interface FtpEndpointBuilderFactory {
             return "CamelFileParent";
         }
         /**
+         * The actual absolute filepath (path name) for the output file that was
+         * written. This header is set by Camel and its purpose is providing
+         * end-users with the name of the file that was written.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code FileNameProduced}.
+         */
+        public String fileNameProduced() {
+            return "CamelFileNameProduced";
+        }
+        /**
+         * Is used for overruling CamelFileName header and use the value instead
+         * (but only once, as the producer will remove this header after writing
+         * the file). The value can be only be a String. Notice that if the
+         * option fileName has been configured, then this is still being
+         * evaluated.
+         * 
+         * The option is a: {@code Object} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code OverruleFileName}.
+         */
+        public String overruleFileName() {
+            return "CamelOverruleFileName";
+        }
+        /**
+         * Path to the local work file, if local work directory is used.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code FileLocalWorkPath}.
+         */
+        public String fileLocalWorkPath() {
+            return "CamelFileLocalWorkPath";
+        }
+        /**
          * The remote file input stream.
          * 
          * The option is a: {@code java.io.InputStream} type.
          * 
-         * Group: common
+         * Group: consumer
          * 
          * @return the name of the header {@code RemoteFileInputStream}.
          */
@@ -5565,16 +5728,16 @@ public interface FtpEndpointBuilderFactory {
             return "CamelRemoteFileInputStream";
         }
         /**
-         * Path to the local work file, if local work directory is used.
+         * The remote hostname.
          * 
          * The option is a: {@code String} type.
          * 
-         * Group: common
+         * Group: consumer
          * 
-         * @return the name of the header {@code FileLocalWorkPath}.
+         * @return the name of the header {@code FileHost}.
          */
-        public String fileLocalWorkPath() {
-            return "CamelFileLocalWorkPath";
+        public String fileHost() {
+            return "CamelFileHost";
         }
         /**
          * The FTP client reply code.
@@ -5599,18 +5762,6 @@ public interface FtpEndpointBuilderFactory {
          */
         public String ftpReplyString() {
             return "CamelFtpReplyString";
-        }
-        /**
-         * The remote hostname.
-         * 
-         * The option is a: {@code String} type.
-         * 
-         * Group: common
-         * 
-         * @return the name of the header {@code FileHost}.
-         */
-        public String fileHost() {
-            return "CamelFileHost";
         }
     }
     static FtpEndpointBuilder endpointBuilder(String componentName, String path) {

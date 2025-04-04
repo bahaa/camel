@@ -32,7 +32,7 @@ public class ScheduledPollConsumerBackoffTest extends ContextTestSupport {
     private static int errors;
 
     @Test
-    public void testBackoffIdle() throws Exception {
+    public void testBackoffIdle() {
 
         final Endpoint endpoint = getMockEndpoint("mock:foo");
         final MockScheduledPollConsumer consumer = createMockScheduledPollConsumer(endpoint);
@@ -45,7 +45,7 @@ public class ScheduledPollConsumerBackoffTest extends ContextTestSupport {
         consumer.run();
         consumer.run();
         consumer.run();
-        assertEquals(2, commits);
+        assertEquals(3, commits);
         // and now we poll again
         consumer.run();
         consumer.run();
@@ -55,15 +55,15 @@ public class ScheduledPollConsumerBackoffTest extends ContextTestSupport {
         consumer.run();
         consumer.run();
         consumer.run();
-        assertEquals(4, commits);
+        assertEquals(6, commits);
         consumer.run();
-        assertEquals(5, commits);
+        assertEquals(6, commits);
 
         consumer.stop();
     }
 
     @Test
-    public void testBackoffError() throws Exception {
+    public void testBackoffError() {
 
         final Endpoint endpoint = getMockEndpoint("mock:foo");
         final Exception expectedException = new Exception("Hello, I should be thrown on shutdown only!");
@@ -78,7 +78,7 @@ public class ScheduledPollConsumerBackoffTest extends ContextTestSupport {
         consumer.run();
         consumer.run();
         consumer.run();
-        assertEquals(3, errors);
+        assertEquals(4, errors);
         // and now we poll again
         consumer.run();
         consumer.run();
@@ -89,7 +89,7 @@ public class ScheduledPollConsumerBackoffTest extends ContextTestSupport {
         consumer.run();
         consumer.run();
         consumer.run();
-        assertEquals(6, errors);
+        assertEquals(8, errors);
 
         consumer.stop();
     }
@@ -108,7 +108,7 @@ public class ScheduledPollConsumerBackoffTest extends ContextTestSupport {
                 commits++;
             }
 
-            public boolean rollback(Consumer consumer, Endpoint endpoint, int retryCounter, Exception e) throws Exception {
+            public boolean rollback(Consumer consumer, Endpoint endpoint, int retryCounter, Exception e) {
                 errors++;
                 return false;
             }
@@ -132,7 +132,7 @@ public class ScheduledPollConsumerBackoffTest extends ContextTestSupport {
                 commits++;
             }
 
-            public boolean rollback(Consumer consumer, Endpoint endpoint, int retryCounter, Exception e) throws Exception {
+            public boolean rollback(Consumer consumer, Endpoint endpoint, int retryCounter, Exception e) {
                 return false;
             }
         });

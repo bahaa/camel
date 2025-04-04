@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.camel.BindToRegistry;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.RoutesBuilder;
@@ -41,6 +42,7 @@ import org.apache.camel.language.joor.CompilationUnit;
 import org.apache.camel.language.joor.JavaJoorClassLoader;
 import org.apache.camel.language.joor.MultiCompile;
 import org.apache.camel.spi.CompilePostProcessor;
+import org.apache.camel.spi.CompilePreProcessor;
 import org.apache.camel.spi.CompileStrategy;
 import org.apache.camel.spi.Resource;
 import org.apache.camel.spi.ResourceAware;
@@ -138,8 +140,9 @@ public class JavaRoutesBuilderLoader extends ExtendedRouteBuilderLoaderSupport {
 
             Class<?> clazz = result.getClass(className);
             if (clazz != null) {
+                BindToRegistry bir = clazz.getAnnotation(BindToRegistry.class);
                 boolean skip = clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers())
-                        || Modifier.isPrivate(clazz.getModifiers());
+                        || Modifier.isPrivate(clazz.getModifiers()) || (bir != null && bir.lazy());
                 // must have a default no-arg constructor to be able to create an instance
                 boolean ctr = ObjectHelper.hasDefaultNoArgConstructor(clazz);
                 if (ctr && !skip) {
@@ -187,13 +190,21 @@ public class JavaRoutesBuilderLoader extends ExtendedRouteBuilderLoaderSupport {
                 }
                 String content = IOHelper.loadText(is);
                 String name = determineName(resource, content);
+
+                // allow any pre-processing
+                for (CompilePreProcessor pre : getCompilePreProcessors()) {
+                    pre.preCompile(getCamelContext(), name, content);
+                }
+
                 unit.addClass(name, content);
+                // ensure class gets recompiled
+                classLoader.removeClass(name);
                 nameToResource.put(name, resource);
             }
         }
 
         // include classloader from Camel, so we can load any already compiled and loaded classes
-        ClassLoader parent = MethodHandles.lookup().lookupClass().getClassLoader();
+        ClassLoader parent = resolveParentClassLoader();
         if (parent instanceof URLClassLoader ucl) {
             ClassLoader cl = new CamelJoorClassLoader(ucl, getCamelContext());
             unit.withClassLoader(cl);
@@ -217,6 +228,13 @@ public class JavaRoutesBuilderLoader extends ExtendedRouteBuilderLoaderSupport {
         }
 
         return result;
+    }
+
+    /**
+     * Resolves the parent {@link ClassLoader} to use for compilation.
+     */
+    protected ClassLoader resolveParentClassLoader() {
+        return MethodHandles.lookup().lookupClass().getClassLoader();
     }
 
     @Override

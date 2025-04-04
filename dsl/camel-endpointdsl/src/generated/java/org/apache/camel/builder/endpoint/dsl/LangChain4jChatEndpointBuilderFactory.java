@@ -35,15 +35,14 @@ import org.apache.camel.builder.endpoint.AbstractEndpointBuilder;
 public interface LangChain4jChatEndpointBuilderFactory {
 
     /**
-     * Builder for endpoint for the langChain4j Chat component.
+     * Builder for endpoint consumers for the LangChain4j Chat component.
      */
-    public interface LangChain4jChatEndpointBuilder
+    public interface LangChain4jChatEndpointConsumerBuilder
             extends
-                EndpointProducerBuilder {
-        default AdvancedLangChain4jChatEndpointBuilder advanced() {
-            return (AdvancedLangChain4jChatEndpointBuilder) this;
+                EndpointConsumerBuilder {
+        default AdvancedLangChain4jChatEndpointConsumerBuilder advanced() {
+            return (AdvancedLangChain4jChatEndpointConsumerBuilder) this;
         }
-
         /**
          * Operation in case of Endpoint of type CHAT. The value is one of the
          * values of
@@ -54,12 +53,12 @@ public interface LangChain4jChatEndpointBuilderFactory {
          * 
          * Required: true
          * Default: CHAT_SINGLE_MESSAGE
-         * Group: producer
+         * Group: common
          * 
          * @param chatOperation the value to set
          * @return the dsl builder
          */
-        default LangChain4jChatEndpointBuilder chatOperation(org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations chatOperation) {
+        default LangChain4jChatEndpointConsumerBuilder chatOperation(org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations chatOperation) {
             doSetProperty("chatOperation", chatOperation);
             return this;
         }
@@ -73,25 +72,233 @@ public interface LangChain4jChatEndpointBuilderFactory {
          * 
          * Required: true
          * Default: CHAT_SINGLE_MESSAGE
-         * Group: producer
+         * Group: common
          * 
          * @param chatOperation the value to set
          * @return the dsl builder
          */
-        default LangChain4jChatEndpointBuilder chatOperation(String chatOperation) {
+        default LangChain4jChatEndpointConsumerBuilder chatOperation(String chatOperation) {
             doSetProperty("chatOperation", chatOperation);
             return this;
         }
     }
 
     /**
-     * Advanced builder for endpoint for the langChain4j Chat component.
+     * Advanced builder for endpoint consumers for the LangChain4j Chat component.
      */
-    public interface AdvancedLangChain4jChatEndpointBuilder
+    public interface AdvancedLangChain4jChatEndpointConsumerBuilder
+            extends
+                EndpointConsumerBuilder {
+        default LangChain4jChatEndpointConsumerBuilder basic() {
+            return (LangChain4jChatEndpointConsumerBuilder) this;
+        }
+        /**
+         * Allows for bridging the consumer to the Camel routing Error Handler,
+         * which mean any exceptions (if possible) occurred while the Camel
+         * consumer is trying to pickup incoming messages, or the likes, will
+         * now be processed as a message and handled by the routing Error
+         * Handler. Important: This is only possible if the 3rd party component
+         * allows Camel to be alerted if an exception was thrown. Some
+         * components handle this internally only, and therefore
+         * bridgeErrorHandler is not possible. In other situations we may
+         * improve the Camel component to hook into the 3rd party component and
+         * make this possible for future releases. By default the consumer will
+         * use the org.apache.camel.spi.ExceptionHandler to deal with
+         * exceptions, that will be logged at WARN or ERROR level and ignored.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer (advanced)
+         * 
+         * @param bridgeErrorHandler the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointConsumerBuilder bridgeErrorHandler(boolean bridgeErrorHandler) {
+            doSetProperty("bridgeErrorHandler", bridgeErrorHandler);
+            return this;
+        }
+        /**
+         * Allows for bridging the consumer to the Camel routing Error Handler,
+         * which mean any exceptions (if possible) occurred while the Camel
+         * consumer is trying to pickup incoming messages, or the likes, will
+         * now be processed as a message and handled by the routing Error
+         * Handler. Important: This is only possible if the 3rd party component
+         * allows Camel to be alerted if an exception was thrown. Some
+         * components handle this internally only, and therefore
+         * bridgeErrorHandler is not possible. In other situations we may
+         * improve the Camel component to hook into the 3rd party component and
+         * make this possible for future releases. By default the consumer will
+         * use the org.apache.camel.spi.ExceptionHandler to deal with
+         * exceptions, that will be logged at WARN or ERROR level and ignored.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer (advanced)
+         * 
+         * @param bridgeErrorHandler the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointConsumerBuilder bridgeErrorHandler(String bridgeErrorHandler) {
+            doSetProperty("bridgeErrorHandler", bridgeErrorHandler);
+            return this;
+        }
+        /**
+         * To let the consumer use a custom ExceptionHandler. Notice if the
+         * option bridgeErrorHandler is enabled then this option is not in use.
+         * By default the consumer will deal with exceptions, that will be
+         * logged at WARN or ERROR level and ignored.
+         * 
+         * The option is a: <code>org.apache.camel.spi.ExceptionHandler</code>
+         * type.
+         * 
+         * Group: consumer (advanced)
+         * 
+         * @param exceptionHandler the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointConsumerBuilder exceptionHandler(org.apache.camel.spi.ExceptionHandler exceptionHandler) {
+            doSetProperty("exceptionHandler", exceptionHandler);
+            return this;
+        }
+        /**
+         * To let the consumer use a custom ExceptionHandler. Notice if the
+         * option bridgeErrorHandler is enabled then this option is not in use.
+         * By default the consumer will deal with exceptions, that will be
+         * logged at WARN or ERROR level and ignored.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.spi.ExceptionHandler</code> type.
+         * 
+         * Group: consumer (advanced)
+         * 
+         * @param exceptionHandler the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointConsumerBuilder exceptionHandler(String exceptionHandler) {
+            doSetProperty("exceptionHandler", exceptionHandler);
+            return this;
+        }
+        /**
+         * Sets the exchange pattern when the consumer creates an exchange.
+         * 
+         * The option is a: <code>org.apache.camel.ExchangePattern</code> type.
+         * 
+         * Group: consumer (advanced)
+         * 
+         * @param exchangePattern the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointConsumerBuilder exchangePattern(org.apache.camel.ExchangePattern exchangePattern) {
+            doSetProperty("exchangePattern", exchangePattern);
+            return this;
+        }
+        /**
+         * Sets the exchange pattern when the consumer creates an exchange.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.ExchangePattern</code> type.
+         * 
+         * Group: consumer (advanced)
+         * 
+         * @param exchangePattern the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointConsumerBuilder exchangePattern(String exchangePattern) {
+            doSetProperty("exchangePattern", exchangePattern);
+            return this;
+        }
+        /**
+         * Chat Language Model of type
+         * dev.langchain4j.model.chat.ChatLanguageModel.
+         * 
+         * The option is a:
+         * <code>dev.langchain4j.model.chat.ChatLanguageModel</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param chatModel the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointConsumerBuilder chatModel(dev.langchain4j.model.chat.ChatLanguageModel chatModel) {
+            doSetProperty("chatModel", chatModel);
+            return this;
+        }
+        /**
+         * Chat Language Model of type
+         * dev.langchain4j.model.chat.ChatLanguageModel.
+         * 
+         * The option will be converted to a
+         * <code>dev.langchain4j.model.chat.ChatLanguageModel</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param chatModel the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointConsumerBuilder chatModel(String chatModel) {
+            doSetProperty("chatModel", chatModel);
+            return this;
+        }
+    }
+
+    /**
+     * Builder for endpoint producers for the LangChain4j Chat component.
+     */
+    public interface LangChain4jChatEndpointProducerBuilder
             extends
                 EndpointProducerBuilder {
-        default LangChain4jChatEndpointBuilder basic() {
-            return (LangChain4jChatEndpointBuilder) this;
+        default AdvancedLangChain4jChatEndpointProducerBuilder advanced() {
+            return (AdvancedLangChain4jChatEndpointProducerBuilder) this;
+        }
+
+        /**
+         * Operation in case of Endpoint of type CHAT. The value is one of the
+         * values of
+         * org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations</code> type.
+         * 
+         * Required: true
+         * Default: CHAT_SINGLE_MESSAGE
+         * Group: common
+         * 
+         * @param chatOperation the value to set
+         * @return the dsl builder
+         */
+        default LangChain4jChatEndpointProducerBuilder chatOperation(org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations chatOperation) {
+            doSetProperty("chatOperation", chatOperation);
+            return this;
+        }
+        /**
+         * Operation in case of Endpoint of type CHAT. The value is one of the
+         * values of
+         * org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations</code> type.
+         * 
+         * Required: true
+         * Default: CHAT_SINGLE_MESSAGE
+         * Group: common
+         * 
+         * @param chatOperation the value to set
+         * @return the dsl builder
+         */
+        default LangChain4jChatEndpointProducerBuilder chatOperation(String chatOperation) {
+            doSetProperty("chatOperation", chatOperation);
+            return this;
+        }
+    }
+
+    /**
+     * Advanced builder for endpoint producers for the LangChain4j Chat component.
+     */
+    public interface AdvancedLangChain4jChatEndpointProducerBuilder extends EndpointProducerBuilder {
+        default LangChain4jChatEndpointProducerBuilder basic() {
+            return (LangChain4jChatEndpointProducerBuilder) this;
         }
 
         /**
@@ -113,7 +320,7 @@ public interface LangChain4jChatEndpointBuilderFactory {
          * @param lazyStartProducer the value to set
          * @return the dsl builder
          */
-        default AdvancedLangChain4jChatEndpointBuilder lazyStartProducer(boolean lazyStartProducer) {
+        default AdvancedLangChain4jChatEndpointProducerBuilder lazyStartProducer(boolean lazyStartProducer) {
             doSetProperty("lazyStartProducer", lazyStartProducer);
             return this;
         }
@@ -136,10 +343,106 @@ public interface LangChain4jChatEndpointBuilderFactory {
          * @param lazyStartProducer the value to set
          * @return the dsl builder
          */
-        default AdvancedLangChain4jChatEndpointBuilder lazyStartProducer(String lazyStartProducer) {
+        default AdvancedLangChain4jChatEndpointProducerBuilder lazyStartProducer(String lazyStartProducer) {
             doSetProperty("lazyStartProducer", lazyStartProducer);
             return this;
         }
+        /**
+         * Chat Language Model of type
+         * dev.langchain4j.model.chat.ChatLanguageModel.
+         * 
+         * The option is a:
+         * <code>dev.langchain4j.model.chat.ChatLanguageModel</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param chatModel the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointProducerBuilder chatModel(dev.langchain4j.model.chat.ChatLanguageModel chatModel) {
+            doSetProperty("chatModel", chatModel);
+            return this;
+        }
+        /**
+         * Chat Language Model of type
+         * dev.langchain4j.model.chat.ChatLanguageModel.
+         * 
+         * The option will be converted to a
+         * <code>dev.langchain4j.model.chat.ChatLanguageModel</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param chatModel the value to set
+         * @return the dsl builder
+         */
+        default AdvancedLangChain4jChatEndpointProducerBuilder chatModel(String chatModel) {
+            doSetProperty("chatModel", chatModel);
+            return this;
+        }
+    }
+
+    /**
+     * Builder for endpoint for the LangChain4j Chat component.
+     */
+    public interface LangChain4jChatEndpointBuilder
+            extends
+                LangChain4jChatEndpointConsumerBuilder,
+                LangChain4jChatEndpointProducerBuilder {
+        default AdvancedLangChain4jChatEndpointBuilder advanced() {
+            return (AdvancedLangChain4jChatEndpointBuilder) this;
+        }
+
+        /**
+         * Operation in case of Endpoint of type CHAT. The value is one of the
+         * values of
+         * org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations</code> type.
+         * 
+         * Required: true
+         * Default: CHAT_SINGLE_MESSAGE
+         * Group: common
+         * 
+         * @param chatOperation the value to set
+         * @return the dsl builder
+         */
+        default LangChain4jChatEndpointBuilder chatOperation(org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations chatOperation) {
+            doSetProperty("chatOperation", chatOperation);
+            return this;
+        }
+        /**
+         * Operation in case of Endpoint of type CHAT. The value is one of the
+         * values of
+         * org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.component.langchain4j.chat.LangChain4jChatOperations</code> type.
+         * 
+         * Required: true
+         * Default: CHAT_SINGLE_MESSAGE
+         * Group: common
+         * 
+         * @param chatOperation the value to set
+         * @return the dsl builder
+         */
+        default LangChain4jChatEndpointBuilder chatOperation(String chatOperation) {
+            doSetProperty("chatOperation", chatOperation);
+            return this;
+        }
+    }
+
+    /**
+     * Advanced builder for endpoint for the LangChain4j Chat component.
+     */
+    public interface AdvancedLangChain4jChatEndpointBuilder
+            extends
+                AdvancedLangChain4jChatEndpointConsumerBuilder,
+                AdvancedLangChain4jChatEndpointProducerBuilder {
+        default LangChain4jChatEndpointBuilder basic() {
+            return (LangChain4jChatEndpointBuilder) this;
+        }
+
         /**
          * Chat Language Model of type
          * dev.langchain4j.model.chat.ChatLanguageModel.
@@ -176,7 +479,7 @@ public interface LangChain4jChatEndpointBuilderFactory {
 
     public interface LangChain4jChatBuilders {
         /**
-         * langChain4j Chat (camel-langchain4j-chat)
+         * LangChain4j Chat (camel-langchain4j-chat)
          * LangChain4j Chat component
          * 
          * Category: ai
@@ -189,7 +492,7 @@ public interface LangChain4jChatEndpointBuilderFactory {
             return LangChain4jChatHeaderNameBuilder.INSTANCE;
         }
         /**
-         * langChain4j Chat (camel-langchain4j-chat)
+         * LangChain4j Chat (camel-langchain4j-chat)
          * LangChain4j Chat component
          * 
          * Category: ai
@@ -208,7 +511,7 @@ public interface LangChain4jChatEndpointBuilderFactory {
             return LangChain4jChatEndpointBuilderFactory.endpointBuilder("langchain4j-chat", path);
         }
         /**
-         * langChain4j Chat (camel-langchain4j-chat)
+         * LangChain4j Chat (camel-langchain4j-chat)
          * LangChain4j Chat component
          * 
          * Category: ai
@@ -231,7 +534,7 @@ public interface LangChain4jChatEndpointBuilderFactory {
 
     }
     /**
-     * The builder of headers' name for the langChain4j Chat component.
+     * The builder of headers' name for the LangChain4j Chat component.
      */
     public static class LangChain4jChatHeaderNameBuilder {
         /**
@@ -245,12 +548,24 @@ public interface LangChain4jChatEndpointBuilderFactory {
          * 
          * The option is a: {@code String} type.
          * 
-         * Group: producer
+         * Group: common
          * 
          * @return the name of the header {@code LangChain4jChatPromptTemplate}.
          */
         public String langChain4jChatPromptTemplate() {
             return "CamelLangChain4jChatPromptTemplate";
+        }
+        /**
+         * Augmented Data for RAG.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: common
+         * 
+         * @return the name of the header {@code LangChain4jChatAugmentedData}.
+         */
+        public String langChain4jChatAugmentedData() {
+            return "CamelLangChain4jChatAugmentedData";
         }
     }
     static LangChain4jChatEndpointBuilder endpointBuilder(String componentName, String path) {

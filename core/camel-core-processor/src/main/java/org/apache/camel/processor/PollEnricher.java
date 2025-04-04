@@ -23,20 +23,22 @@ import org.apache.camel.AsyncCallback;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.CamelExchangeException;
+import org.apache.camel.Component;
 import org.apache.camel.Consumer;
+import org.apache.camel.DynamicPollingConsumer;
 import org.apache.camel.Endpoint;
 import org.apache.camel.Exchange;
 import org.apache.camel.ExchangePropertyKey;
 import org.apache.camel.Expression;
-import org.apache.camel.ExtendedCamelContext;
 import org.apache.camel.NoTypeConversionAvailableException;
 import org.apache.camel.PollingConsumer;
+import org.apache.camel.ResolveEndpointFailedException;
 import org.apache.camel.spi.ConsumerCache;
 import org.apache.camel.spi.EndpointUtilizationStatistics;
 import org.apache.camel.spi.ExceptionHandler;
 import org.apache.camel.spi.HeadersMapFactory;
 import org.apache.camel.spi.IdAware;
-import org.apache.camel.spi.NormalizedEndpointUri;
+import org.apache.camel.spi.PollDynamicAware;
 import org.apache.camel.spi.RouteIdAware;
 import org.apache.camel.support.AsyncProcessorSupport;
 import org.apache.camel.support.BridgeExceptionHandlerToErrorHandler;
@@ -46,6 +48,7 @@ import org.apache.camel.support.EventDrivenPollingConsumer;
 import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.support.cache.DefaultConsumerCache;
 import org.apache.camel.support.service.ServiceHelper;
+import org.apache.camel.util.URISupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,16 +62,18 @@ import static org.apache.camel.support.ExchangeHelper.copyResultsPreservePattern
  * Uses a {@link org.apache.camel.PollingConsumer} to obtain the additional data as opposed to {@link Enricher} that
  * uses a {@link org.apache.camel.Producer}.
  *
+ * @see PollProcessor
  * @see Enricher
  */
 public class PollEnricher extends AsyncProcessorSupport implements IdAware, RouteIdAware, CamelContextAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(PollEnricher.class);
 
+    private PollDynamicAware dynamicAware;
+    private volatile String scheme;
     private CamelContext camelContext;
     private ConsumerCache consumerCache;
     private HeadersMapFactory headersMapFactory;
-    private volatile String scheme;
     private String id;
     private String routeId;
     private String variableReceive;
@@ -80,6 +85,7 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
     private int cacheSize;
     private boolean ignoreInvalidEndpoint;
     private boolean autoStartupComponents = true;
+    private boolean allowOptimisedComponents = true;
 
     /**
      * Creates a new {@link PollEnricher}.
@@ -134,6 +140,14 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
     @Override
     public void setRouteId(String routeId) {
         this.routeId = routeId;
+    }
+
+    public PollDynamicAware getDynamicAware() {
+        return dynamicAware;
+    }
+
+    public String getUri() {
+        return uri;
     }
 
     public Expression getExpression() {
@@ -212,6 +226,14 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
         this.autoStartupComponents = autoStartupComponents;
     }
 
+    public boolean isAllowOptimisedComponents() {
+        return allowOptimisedComponents;
+    }
+
+    public void setAllowOptimisedComponents(boolean allowOptimisedComponents) {
+        this.allowOptimisedComponents = allowOptimisedComponents;
+    }
+
     /**
      * Enriches the input data (<code>exchange</code>) by first obtaining additional data from an endpoint represented
      * by an endpoint <code>producer</code> and second by aggregating input data and additional data. Aggregation of
@@ -237,24 +259,54 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
 
         // use dynamic endpoint so calculate the endpoint to use
         Object recipient = null;
+        String staticUri = null;
         boolean prototype = cacheSize < 0;
         try {
-            // favour using expression to compute the recipient endpoint
-            recipient = expression != null ? expression.evaluate(exchange, Object.class) : uri;
-            recipient = prepareRecipient(exchange, recipient);
-            Endpoint existing = getExistingEndpoint(camelContext, recipient);
+            recipient = expression.evaluate(exchange, Object.class);
+            if (dynamicAware != null) {
+                // if its the same scheme as the pre-resolved dynamic aware then we can optimise to use it
+                String originalUri = uri;
+                String uri = resolveUri(exchange, recipient);
+                String scheme = resolveScheme(exchange, uri);
+                if (dynamicAware.getScheme().equals(scheme)) {
+                    PollDynamicAware.DynamicAwareEntry entry = dynamicAware.prepare(exchange, uri, originalUri);
+                    if (entry != null) {
+                        staticUri = dynamicAware.resolveStaticUri(exchange, entry);
+                        if (staticUri != null) {
+                            if (LOG.isDebugEnabled()) {
+                                LOG.debug("Optimising poll via PollDynamicAware component: {} to use static uri: {}", scheme,
+                                        URISupport.sanitizeUri(staticUri));
+                            }
+                        }
+                    }
+                }
+            }
+            Object targetRecipient = staticUri != null ? staticUri : recipient;
+            targetRecipient = prepareRecipient(exchange, targetRecipient);
+            if (targetRecipient == null) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Poll dynamic evaluated as null so cannot poll from any endpoint");
+                }
+                // no endpoint to send to, so ignore
+                callback.done(true);
+                return true;
+            }
+            Endpoint existing = getExistingEndpoint(exchange, targetRecipient);
             if (existing == null) {
-                endpoint = resolveEndpoint(camelContext, recipient, prototype);
+                endpoint = resolveEndpoint(exchange, targetRecipient, prototype);
             } else {
                 endpoint = existing;
                 // we have an existing endpoint then its not a prototype scope
                 prototype = false;
             }
+
             // acquire the consumer from the cache
             consumer = consumerCache.acquirePollingConsumer(endpoint);
         } catch (Exception e) {
             if (isIgnoreInvalidEndpoint()) {
-                LOG.debug("Endpoint uri is invalid: {}. This exception will be ignored.", recipient, e);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Endpoint uri is invalid: {}. This exception will be ignored.", recipient, e);
+                }
             } else {
                 exchange.setException(e);
             }
@@ -265,19 +317,25 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
         // grab the real delegate consumer that performs the actual polling
         final boolean bridgeErrorHandler = isBridgeErrorHandler(consumer);
 
+        DynamicPollingConsumer dynamicConsumer = null;
+        if (consumer instanceof DynamicPollingConsumer dyn) {
+            dynamicConsumer = dyn;
+        }
+
         Exchange resourceExchange;
         try {
             if (timeout < 0) {
                 LOG.debug("Consumer receive: {}", consumer);
-                resourceExchange = consumer.receive();
+                resourceExchange = dynamicConsumer != null ? dynamicConsumer.receive(exchange) : consumer.receive();
             } else if (timeout == 0) {
                 LOG.debug("Consumer receiveNoWait: {}", consumer);
-                resourceExchange = consumer.receiveNoWait();
+                resourceExchange = dynamicConsumer != null ? dynamicConsumer.receiveNoWait(exchange) : consumer.receiveNoWait();
             } else {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Consumer receive with timeout: {} ms. {}", timeout, consumer);
                 }
-                resourceExchange = consumer.receive(timeout);
+                resourceExchange
+                        = dynamicConsumer != null ? dynamicConsumer.receive(exchange, timeout) : consumer.receive(timeout);
             }
 
             if (resourceExchange == null) {
@@ -299,7 +357,7 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
         }
 
         // remember current redelivery stats
-        Object redeliveried = exchange.getIn().getHeader(Exchange.REDELIVERED);
+        Object redelivered = exchange.getIn().getHeader(Exchange.REDELIVERED);
         Object redeliveryCounter = exchange.getIn().getHeader(Exchange.REDELIVERY_COUNTER);
         Object redeliveryMaxCounter = exchange.getIn().getHeader(Exchange.REDELIVERY_MAX_COUNTER);
 
@@ -362,8 +420,8 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
                 exchange.getExchangeExtension().setRedeliveryExhausted(false);
 
                 // preserve the redelivery stats
-                if (redeliveried != null) {
-                    exchange.getMessage().setHeader(Exchange.REDELIVERED, redeliveried);
+                if (redelivered != null) {
+                    exchange.getMessage().setHeader(Exchange.REDELIVERED, redelivered);
                 }
                 if (redeliveryCounter != null) {
                     exchange.getMessage().setHeader(Exchange.REDELIVERY_COUNTER, redeliveryCounter);
@@ -388,14 +446,14 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
 
     private static boolean isBridgeErrorHandler(PollingConsumer consumer) {
         Consumer delegate = consumer;
-        if (consumer instanceof EventDrivenPollingConsumer) {
-            delegate = ((EventDrivenPollingConsumer) consumer).getDelegateConsumer();
+        if (consumer instanceof EventDrivenPollingConsumer eventDrivenPollingConsumer) {
+            delegate = eventDrivenPollingConsumer.getDelegateConsumer();
         }
 
         // is the consumer bridging the error handler?
         boolean bridgeErrorHandler = false;
-        if (delegate instanceof DefaultConsumer) {
-            ExceptionHandler handler = ((DefaultConsumer) delegate).getExceptionHandler();
+        if (delegate instanceof DefaultConsumer defaultConsumer) {
+            ExceptionHandler handler = defaultConsumer.getExceptionHandler();
             if (handler instanceof BridgeExceptionHandlerToErrorHandler) {
                 bridgeErrorHandler = true;
             }
@@ -404,48 +462,17 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
     }
 
     protected static Object prepareRecipient(Exchange exchange, Object recipient) throws NoTypeConversionAvailableException {
-        if (recipient instanceof Endpoint || recipient instanceof NormalizedEndpointUri) {
-            return recipient;
-        } else if (recipient instanceof String) {
-            // trim strings as end users might have added spaces between separators
-            recipient = ((String) recipient).trim();
-        }
-        if (recipient != null) {
-            CamelContext ecc = exchange.getContext();
-            String uri;
-            if (recipient instanceof String) {
-                uri = (String) recipient;
-            } else {
-                // convert to a string type we can work with
-                uri = ecc.getTypeConverter().mandatoryConvertTo(String.class, exchange, recipient);
-            }
-            // optimize and normalize endpoint
-            return ecc.getCamelContextExtension().normalizeUri(uri);
-        }
-        return null;
+        return ProcessorHelper.prepareRecipient(exchange, recipient);
     }
 
-    protected static Endpoint getExistingEndpoint(CamelContext context, Object recipient) {
-        if (recipient instanceof Endpoint) {
-            return (Endpoint) recipient;
-        }
-        if (recipient != null) {
-            if (recipient instanceof NormalizedEndpointUri) {
-                NormalizedEndpointUri nu = (NormalizedEndpointUri) recipient;
-                ExtendedCamelContext ecc = context.getCamelContextExtension();
-                return ecc.hasEndpoint(nu);
-            } else {
-                String uri = recipient.toString();
-                return context.hasEndpoint(uri);
-            }
-        }
-        return null;
+    protected static Endpoint getExistingEndpoint(Exchange exchange, Object recipient) {
+        return ProcessorHelper.getExistingEndpoint(exchange, recipient);
     }
 
-    protected static Endpoint resolveEndpoint(CamelContext camelContext, Object recipient, boolean prototype) {
+    protected static Endpoint resolveEndpoint(Exchange exchange, Object recipient, boolean prototype) {
         return prototype
-                ? ExchangeHelper.resolvePrototypeEndpoint(camelContext, recipient)
-                : ExchangeHelper.resolveEndpoint(camelContext, recipient);
+                ? ExchangeHelper.resolvePrototypeEndpoint(exchange, recipient)
+                : ExchangeHelper.resolveEndpoint(exchange, recipient);
     }
 
     /**
@@ -469,6 +496,36 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
     @Override
     public String toString() {
         return id;
+    }
+
+    protected static String resolveUri(Exchange exchange, Object recipient) throws NoTypeConversionAvailableException {
+        if (recipient == null) {
+            return null;
+        }
+
+        String uri;
+        // trim strings as end users might have added spaces between separators
+        if (recipient instanceof String string) {
+            uri = string.trim();
+        } else if (recipient instanceof Endpoint endpoint) {
+            uri = endpoint.getEndpointKey();
+        } else {
+            // convert to a string type we can work with
+            uri = exchange.getContext().getTypeConverter().mandatoryConvertTo(String.class, exchange, recipient);
+        }
+
+        // in case path has property placeholders then try to let property component resolve those
+        try {
+            uri = EndpointHelper.resolveEndpointUriPropertyPlaceholders(exchange.getContext(), uri);
+        } catch (Exception e) {
+            throw new ResolveEndpointFailedException(uri, e);
+        }
+
+        return uri;
+    }
+
+    protected static String resolveScheme(Exchange exchange, String uri) {
+        return ExchangeHelper.resolveScheme(uri);
     }
 
     @Override
@@ -498,9 +555,43 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
             scheme = ExchangeHelper.resolveScheme(u);
         }
 
+        if (isAllowOptimisedComponents() && uri != null) {
+            try {
+                if (scheme != null) {
+                    // find out if the component can be optimised for send-dynamic
+                    PollDynamicAwareResolver resolver = new PollDynamicAwareResolver();
+                    dynamicAware = resolver.resolve(camelContext, scheme);
+                    if (dynamicAware == null) {
+                        // okay fallback and try with default component name
+                        Component comp = camelContext.getComponent(scheme, false, isAutoStartupComponents());
+                        if (comp != null) {
+                            String defaultScheme = comp.getDefaultName();
+                            if (!scheme.equals(defaultScheme)) {
+                                dynamicAware = resolver.resolve(camelContext, defaultScheme);
+                                dynamicAware.setScheme(scheme);
+                            }
+                        }
+                    }
+                    if (dynamicAware != null) {
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Detected PollDynamicAware component: {} optimising poll: {}", scheme,
+                                    URISupport.sanitizeUri(uri));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // ignore
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(
+                            "Error creating optimised PollDynamicAwareResolver for uri: {} due to {}. This exception is ignored",
+                            URISupport.sanitizeUri(uri), e.getMessage(), e);
+                }
+            }
+        }
+
         headersMapFactory = camelContext.getCamelContextExtension().getHeadersMapFactory();
 
-        ServiceHelper.initService(consumerCache, aggregationStrategy);
+        ServiceHelper.initService(consumerCache, aggregationStrategy, dynamicAware);
     }
 
     @Override
@@ -510,12 +601,12 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
             camelContext.getComponent(scheme);
         }
 
-        ServiceHelper.startService(consumerCache, aggregationStrategy);
+        ServiceHelper.startService(consumerCache, aggregationStrategy, dynamicAware);
     }
 
     @Override
     protected void doStop() throws Exception {
-        ServiceHelper.stopService(aggregationStrategy, consumerCache);
+        ServiceHelper.stopService(aggregationStrategy, consumerCache, dynamicAware);
     }
 
     @Override
@@ -530,7 +621,7 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
             if (newExchange != null) {
                 copyResultsPreservePattern(oldExchange, newExchange);
             } else {
-                // if no newExchange then there was no message from the external resource
+                // if no newExchange then there was no message from the external resource,
                 // and therefore we should set an empty body to indicate this fact
                 // but keep headers/attachments as we want to propagate those
                 oldExchange.getIn().setBody(null);

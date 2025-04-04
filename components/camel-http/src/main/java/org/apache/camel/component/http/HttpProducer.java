@@ -37,12 +37,12 @@ import java.util.Map.Entry;
 import org.apache.camel.CamelExchangeException;
 import org.apache.camel.Exchange;
 import org.apache.camel.ExchangePropertyKey;
+import org.apache.camel.LineNumberAware;
 import org.apache.camel.Message;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.TypeConverter;
 import org.apache.camel.component.file.GenericFile;
 import org.apache.camel.component.http.helper.HttpMethodHelper;
-import org.apache.camel.converter.stream.CachedOutputStream;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.http.base.cookie.CookieHandler;
 import org.apache.camel.http.common.HttpHelper;
@@ -54,6 +54,7 @@ import org.apache.camel.support.GZIPHelper;
 import org.apache.camel.support.MessageHelper;
 import org.apache.camel.support.ObjectHelper;
 import org.apache.camel.support.SynchronizationAdapter;
+import org.apache.camel.support.builder.OutputStreamBuilder;
 import org.apache.camel.support.http.HttpUtil;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.URISupport;
@@ -82,7 +83,7 @@ import org.apache.hc.core5.http.protocol.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HttpProducer extends DefaultProducer {
+public class HttpProducer extends DefaultProducer implements LineNumberAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpProducer.class);
 
@@ -101,7 +102,6 @@ public class HttpProducer extends DefaultProducer {
 
     public HttpProducer(HttpEndpoint endpoint) {
         super(endpoint);
-        this.httpClient = endpoint.getHttpClient();
         this.httpContext = endpoint.getHttpContext();
         this.throwException = endpoint.isThrowExceptionOnFailure();
         this.transferException = endpoint.isTransferException();
@@ -110,6 +110,8 @@ public class HttpProducer extends DefaultProducer {
     @Override
     protected void doInit() throws Exception {
         super.doInit();
+
+        this.httpClient = getEndpoint().getHttpClient();
 
         String range = getEndpoint().getOkStatusCodeRange();
         parseStatusRange(range);
@@ -243,7 +245,7 @@ public class HttpProducer extends DefaultProducer {
 
         // lets store the result in the output message.
         try {
-            executeMethod(
+            executeMethod(exchange,
                     httpHost, httpRequest,
                     httpResponse -> {
                         try {
@@ -348,17 +350,7 @@ public class HttpProducer extends DefaultProducer {
             throws IOException, ClassNotFoundException {
         // We just make the out message is not create when extractResponseBody throws exception
         Object response = extractResponseBody(httpResponse, exchange, getEndpoint().isIgnoreResponseBody());
-        Message answer = exchange.getOut();
-
-        // optimize for 200 response code as the boxing is outside the cached integers
-        if (responseCode == 200) {
-            answer.setHeader(HttpConstants.HTTP_RESPONSE_CODE, OK_RESPONSE_CODE);
-        } else {
-            answer.setHeader(HttpConstants.HTTP_RESPONSE_CODE, responseCode);
-        }
-        if (httpResponse.getReasonPhrase() != null) {
-            answer.setHeader(HttpConstants.HTTP_RESPONSE_TEXT, httpResponse.getReasonPhrase());
-        }
+        final Message answer = createResponseMessage(exchange, httpResponse, responseCode);
         answer.setBody(response);
 
         if (!getEndpoint().isSkipResponseHeaders()) {
@@ -407,6 +399,21 @@ public class HttpProducer extends DefaultProducer {
         if (getEndpoint().isCopyHeaders()) {
             MessageHelper.copyHeaders(exchange.getIn(), answer, httpProtocolHeaderFilterStrategy, false);
         }
+    }
+
+    private static Message createResponseMessage(Exchange exchange, ClassicHttpResponse httpResponse, int responseCode) {
+        Message answer = exchange.getOut();
+
+        // optimize for 200 response code as the boxing is outside the cached integers
+        if (responseCode == 200) {
+            answer.setHeader(HttpConstants.HTTP_RESPONSE_CODE, OK_RESPONSE_CODE);
+        } else {
+            answer.setHeader(HttpConstants.HTTP_RESPONSE_CODE, responseCode);
+        }
+        if (httpResponse.getReasonPhrase() != null) {
+            answer.setHeader(HttpConstants.HTTP_RESPONSE_TEXT, httpResponse.getReasonPhrase());
+        }
+        return answer;
     }
 
     protected Exception populateHttpOperationFailedException(
@@ -467,13 +474,23 @@ public class HttpProducer extends DefaultProducer {
      * @return             the response
      * @throws IOException can be thrown
      */
-    protected <T> T executeMethod(HttpHost httpHost, HttpUriRequest httpRequest, HttpClientResponseHandler<T> handler)
-            throws IOException {
-        HttpContext localContext = HttpClientContext.create();
+    protected <T> T executeMethod(
+            Exchange exchange, HttpHost httpHost, HttpUriRequest httpRequest, HttpClientResponseHandler<T> handler)
+            throws IOException, HttpException {
+        // use a local context per execution
+        HttpContext localContext;
         if (httpContext != null) {
             localContext = new BasicHttpContext(httpContext);
+        } else {
+            localContext = HttpClientContext.create();
         }
-        return httpClient.execute(httpHost, httpRequest, localContext, handler);
+        if (getEndpoint().getHttpActivityListener() != null) {
+            localContext.setAttribute("org.apache.camel.Exchange", exchange);
+            localContext.setAttribute("org.apache.hc.core5.http.HttpHost", httpHost);
+        }
+        // execute open that does not automatic close response input-stream (this is done in exchange on-completion by Camel)
+        ClassicHttpResponse res = httpClient.executeOpen(httpHost, httpRequest, localContext);
+        return handler.handleResponse(res);
     }
 
     /**
@@ -526,6 +543,12 @@ public class HttpProducer extends DefaultProducer {
             // find the charset and set it to the Exchange
             HttpHelper.setCharsetFromContentType(contentType, exchange);
         }
+
+        if (ignoreResponseBody) {
+            // ignore response
+            return null;
+        }
+
         // if content type is a serialized java object then de-serialize it back to a Java object
         if (contentType != null && contentType.equals(HttpConstants.CONTENT_TYPE_JAVA_SERIALIZED_OBJECT)) {
             // only deserialize java if allowed
@@ -536,59 +559,45 @@ public class HttpProducer extends DefaultProducer {
                 return null;
             }
         } else {
-            if (!getEndpoint().isDisableStreamCache()) {
-                if (ignoreResponseBody) {
-                    // ignore response
-                    return null;
-                }
-                int max = getEndpoint().getComponent().getResponsePayloadStreamingThreshold();
-                if (max > 0) {
-                    // optimize when we have content-length for small sizes to avoid creating streaming objects
-                    long len = entity.getContentLength();
-                    if (len > 0 && len <= max) {
-                        int i = (int) len;
-                        byte[] arr = new byte[i];
-                        int read = 0;
-                        int offset = 0;
-                        int remain = i;
-                        while ((read = is.read(arr, offset, remain)) > 0 && remain > 0) {
-                            offset += read;
-                            remain -= read;
+            if (entity.isStreaming()) {
+                if (getEndpoint().isDisableStreamCache()) {
+                    // use the response as-is
+                    return is;
+                } else {
+                    int max = getEndpoint().getComponent().getResponsePayloadStreamingThreshold();
+                    if (max > 0) {
+                        // optimize when we have content-length for small sizes to avoid creating streaming objects
+                        long len = entity.getContentLength();
+                        if (len > 0 && len <= max) {
+                            int i = (int) len;
+                            byte[] arr = new byte[i];
+                            int read;
+                            int offset = 0;
+                            int remain = i;
+                            while ((read = is.read(arr, offset, remain)) > 0 && remain > 0) {
+                                offset += read;
+                                remain -= read;
+                            }
+                            IOHelper.close(is);
+                            return arr;
                         }
-                        IOHelper.close(is);
-                        return arr;
                     }
+                    // else for bigger payloads then wrap the response in a stream cache so its re-readable
+                    return doExtractResponseBodyAsStream(is, exchange);
                 }
-                // else for bigger payloads then wrap the response in a stream cache so its re-readable
-                return doExtractResponseBodyAsStream(is, exchange);
             } else {
-                // use the response stream as-is
+                // use the response as-is
                 return is;
             }
         }
     }
 
-    private InputStream doExtractResponseBodyAsStream(InputStream is, Exchange exchange) throws IOException {
+    private Object doExtractResponseBodyAsStream(InputStream is, Exchange exchange) throws IOException {
         // As httpclient is using a AutoCloseInputStream, it will be closed when the connection is closed
         // we need to cache the stream for it.
-        CachedOutputStream cos = null;
-        try {
-            // This CachedOutputStream will not be closed when the exchange is onCompletion
-            cos = new CachedOutputStream(exchange, false);
-            IOHelper.copy(is, cos);
-            // When the InputStream is closed, the CachedOutputStream will be closed
-            return cos.getWrappedInputStream();
-        } catch (IOException ex) {
-            // try to close the CachedOutputStream when we get the IOException
-            try {
-                cos.close();
-            } catch (IOException ignore) {
-                //do nothing here
-            }
-            throw ex;
-        } finally {
-            IOHelper.close(is, "Extracting response body", LOG);
-        }
+        OutputStreamBuilder osb = OutputStreamBuilder.withExchange(exchange);
+        IOHelper.copy(is, osb);
+        return osb.build();
     }
 
     /**
@@ -624,21 +633,7 @@ public class HttpProducer extends DefaultProducer {
         // the exchange can have some headers that override the default url and forces to create
         // a new url that is dynamic based on header values
         // these checks are checks that is done in HttpHelper.createURL and HttpHelper.createURI methods
-        boolean create = false;
-        Message in = exchange.getIn();
-        if (in.getHeader(HttpConstants.REST_HTTP_URI) != null) {
-            create = true;
-        } else if (in.getHeader(HttpConstants.HTTP_URI) != null && !getEndpoint().isBridgeEndpoint()) {
-            create = true;
-        } else if (in.getHeader(HttpConstants.HTTP_PATH) != null) {
-            create = true;
-        } else if (in.getHeader(HttpConstants.REST_HTTP_QUERY) != null) {
-            create = true;
-        } else if (in.getHeader(HttpConstants.HTTP_RAW_QUERY) != null) {
-            create = true;
-        } else if (in.getHeader(HttpConstants.HTTP_QUERY) != null) {
-            create = true;
-        }
+        final boolean create = isCreateNewURL(exchange);
 
         if (create) {
             // creating the url to use takes 2-steps
@@ -650,7 +645,7 @@ public class HttpProducer extends DefaultProducer {
 
         // create http holder objects for the request
         HttpMethods methodToUse = HttpMethodHelper.createMethod(exchange, getEndpoint());
-        HttpUriRequest method = methodToUse.createMethod(uri);
+        HttpUriRequest method = methodToUse.createMethod(url);
 
         // special for HTTP DELETE/GET if the message body should be included
         if (getEndpoint().isDeleteWithBody() && "DELETE".equals(method.getMethod())
@@ -677,6 +672,25 @@ public class HttpProducer extends DefaultProducer {
         }
 
         return method;
+    }
+
+    private boolean isCreateNewURL(Exchange exchange) {
+        boolean create = false;
+        Message in = exchange.getIn();
+        if (in.getHeader(HttpConstants.REST_HTTP_URI) != null) {
+            create = true;
+        } else if (in.getHeader(HttpConstants.HTTP_URI) != null && !getEndpoint().isBridgeEndpoint()) {
+            create = true;
+        } else if (in.getHeader(HttpConstants.HTTP_PATH) != null) {
+            create = true;
+        } else if (in.getHeader(HttpConstants.REST_HTTP_QUERY) != null) {
+            create = true;
+        } else if (in.getHeader(HttpConstants.HTTP_RAW_QUERY) != null) {
+            create = true;
+        } else if (in.getHeader(HttpConstants.HTTP_QUERY) != null) {
+            create = true;
+        }
+        return create;
     }
 
     /**
@@ -795,4 +809,23 @@ public class HttpProducer extends DefaultProducer {
         this.httpClient = httpClient;
     }
 
+    @Override
+    public int getLineNumber() {
+        return getEndpoint().getLineNumber();
+    }
+
+    @Override
+    public void setLineNumber(int lineNumber) {
+        // noop
+    }
+
+    @Override
+    public String getLocation() {
+        return getEndpoint().getLocation();
+    }
+
+    @Override
+    public void setLocation(String location) {
+        // noop
+    }
 }

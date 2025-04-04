@@ -682,6 +682,18 @@ public enum ZendeskApiMethod implements ApiMethod {
         "getArticles",
         arg("section", org.zendesk.client.v2.model.hc.Section.class)),
 
+    GET_ARTICLES_4(
+        Iterable.class,
+        "getArticles",
+        arg("category", org.zendesk.client.v2.model.hc.Category.class),
+        arg("locale", String.class)),
+
+    GET_ARTICLES_5(
+        Iterable.class,
+        "getArticles",
+        arg("section", org.zendesk.client.v2.model.hc.Section.class),
+        arg("locale", String.class)),
+
     GET_ARTICLES_FROM_ALL_LABELS(
         Iterable.class,
         "getArticlesFromAllLabels",
@@ -1746,6 +1758,12 @@ public enum ZendeskApiMethod implements ApiMethod {
         "trustTicketAudit",
         arg("ticketId", long.class),
         arg("auditId", long.class)),
+
+    UNASSIGN_ORGANIZATION_MEMBERSHIP(
+        void.class,
+        "unassignOrganizationMembership",
+        arg("user_id", long.class),
+        arg("organization_id", long.class)),
 
     UNSUSPEND_USER(
         org.zendesk.client.v2.model.User.class,

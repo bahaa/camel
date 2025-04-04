@@ -33,6 +33,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 
+import org.apache.camel.model.BeanFactoryDefinition;
 import org.apache.camel.model.FromDefinition;
 import org.apache.camel.model.PropertyDefinition;
 import org.apache.camel.model.RouteConfigurationDefinition;
@@ -44,7 +45,6 @@ import org.apache.camel.model.SetBodyDefinition;
 import org.apache.camel.model.TemplatedRoutesDefinition;
 import org.apache.camel.model.ToDefinition;
 import org.apache.camel.model.app.BeansDefinition;
-import org.apache.camel.model.app.RegistryBeanDefinition;
 import org.apache.camel.model.errorhandler.DeadLetterChannelDefinition;
 import org.apache.camel.model.language.XPathExpression;
 import org.apache.camel.model.rest.ParamDefinition;
@@ -246,7 +246,7 @@ public class ModelParserTest {
         BeansDefinition beans = parser.parseBeansDefinition().orElse(null);
         assertNotNull(beans);
         assertTrue(beans.getBeans().isEmpty());
-        assertTrue(beans.getSpringBeans().isEmpty());
+        assertTrue(beans.getSpringOrBlueprintBeans().isEmpty());
     }
 
     @Test
@@ -257,10 +257,10 @@ public class ModelParserTest {
         BeansDefinition beans = parser.parseBeansDefinition().orElse(null);
         assertNotNull(beans);
         assertEquals(2, beans.getBeans().size());
-        assertTrue(beans.getSpringBeans().isEmpty());
+        assertTrue(beans.getSpringOrBlueprintBeans().isEmpty());
 
-        RegistryBeanDefinition b1 = beans.getBeans().get(0);
-        RegistryBeanDefinition b2 = beans.getBeans().get(1);
+        BeanFactoryDefinition b1 = beans.getBeans().get(0);
+        BeanFactoryDefinition b2 = beans.getBeans().get(1);
 
         assertEquals("b1", b1.getName());
         assertEquals("org.apache.camel.xml.in.ModelParserTest.MyBean", b1.getType());
@@ -287,10 +287,10 @@ public class ModelParserTest {
         BeansDefinition beans = parser.parseBeansDefinition().orElse(null);
         assertNotNull(beans);
         assertEquals(2, beans.getBeans().size());
-        assertTrue(beans.getSpringBeans().isEmpty());
+        assertTrue(beans.getSpringOrBlueprintBeans().isEmpty());
 
-        RegistryBeanDefinition b1 = beans.getBeans().get(0);
-        RegistryBeanDefinition b2 = beans.getBeans().get(1);
+        BeanFactoryDefinition b1 = beans.getBeans().get(0);
+        BeanFactoryDefinition b2 = beans.getBeans().get(1);
 
         assertEquals("b1", b1.getName());
         assertEquals("org.apache.camel.xml.in.ModelParserTest.MyBean", b1.getType());
@@ -314,10 +314,10 @@ public class ModelParserTest {
         BeansDefinition beans = parser.parseBeansDefinition().orElse(null);
         assertNotNull(beans);
         assertEquals(2, beans.getBeans().size());
-        assertTrue(beans.getSpringBeans().isEmpty());
+        assertTrue(beans.getSpringOrBlueprintBeans().isEmpty());
 
-        RegistryBeanDefinition b1 = beans.getBeans().get(0);
-        RegistryBeanDefinition b2 = beans.getBeans().get(1);
+        BeanFactoryDefinition b1 = beans.getBeans().get(0);
+        BeanFactoryDefinition b2 = beans.getBeans().get(1);
 
         assertEquals("b1", b1.getName());
         assertEquals("org.apache.camel.xml.in.ModelParserTest.MyBean", b1.getType());
@@ -343,16 +343,17 @@ public class ModelParserTest {
         BeansDefinition beans = parser.parseBeansDefinition().orElse(null);
         assertNotNull(beans);
         assertTrue(beans.getBeans().isEmpty());
-        assertEquals(2, beans.getSpringBeans().size());
-        Document dom = beans.getSpringBeans().get(0).getOwnerDocument();
+        assertEquals(2, beans.getSpringOrBlueprintBeans().size());
+        Document dom = beans.getSpringOrBlueprintBeans().get(0).getOwnerDocument();
         StringWriter sw = new StringWriter();
         TransformerFactory.newInstance().newTransformer().transform(new DOMSource(dom), new StreamResult(sw));
         String document = sw.toString();
         assertTrue(document.contains("class=\"java.lang.String\""));
 
-        assertSame(beans.getSpringBeans().get(0).getOwnerDocument(), beans.getSpringBeans().get(1).getOwnerDocument());
-        assertEquals("s1", beans.getSpringBeans().get(0).getAttribute("id"));
-        assertEquals("s2", beans.getSpringBeans().get(1).getAttribute("id"));
+        assertSame(beans.getSpringOrBlueprintBeans().get(0).getOwnerDocument(),
+                beans.getSpringOrBlueprintBeans().get(1).getOwnerDocument());
+        assertEquals("s1", beans.getSpringOrBlueprintBeans().get(0).getAttribute("id"));
+        assertEquals("s2", beans.getSpringOrBlueprintBeans().get(1).getAttribute("id"));
 
         assertEquals(1, beans.getComponentScanning().size());
         assertEquals("com.example", beans.getComponentScanning().get(0).getBasePackage());

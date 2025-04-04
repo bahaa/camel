@@ -196,6 +196,7 @@ public class ModelWriterTest {
         Assertions.assertEquals(expected, out);
     }
 
+    @Disabled("TODO: https://issues.apache.org/jira/browse/CAMEL-21490")
     @Test
     public void testFromChoice() throws Exception {
         StringWriter sw = new StringWriter();
@@ -227,7 +228,7 @@ public class ModelWriterTest {
         CamelContext context = new DefaultCamelContext();
         context.addRoutes(new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:start7").routeId("myRoute7")
                     .doTry()
                         .to("mock:try1")

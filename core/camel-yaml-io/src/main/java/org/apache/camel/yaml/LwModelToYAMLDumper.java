@@ -25,12 +25,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.Expression;
 import org.apache.camel.NamedNode;
+import org.apache.camel.model.BeanFactoryDefinition;
+import org.apache.camel.model.DataFormatDefinition;
 import org.apache.camel.model.ExpressionNode;
 import org.apache.camel.model.FromDefinition;
 import org.apache.camel.model.OptionalIdentifiedDefinition;
@@ -40,7 +43,7 @@ import org.apache.camel.model.RouteTemplatesDefinition;
 import org.apache.camel.model.RoutesDefinition;
 import org.apache.camel.model.SendDefinition;
 import org.apache.camel.model.ToDynamicDefinition;
-import org.apache.camel.model.app.RegistryBeanDefinition;
+import org.apache.camel.model.dataformat.DataFormatsDefinition;
 import org.apache.camel.model.language.ExpressionDefinition;
 import org.apache.camel.spi.ModelToYAMLDumper;
 import org.apache.camel.spi.NamespaceAware;
@@ -168,9 +171,9 @@ public class LwModelToYAMLDumper implements ModelToYAMLDumper {
         StringWriter buffer = new StringWriter();
         BeanModelWriter writer = new BeanModelWriter(buffer);
 
-        List<RegistryBeanDefinition> list = new ArrayList<>();
+        List<BeanFactoryDefinition<?>> list = new ArrayList<>();
         for (Object bean : beans) {
-            if (bean instanceof RegistryBeanDefinition rb) {
+            if (bean instanceof BeanFactoryDefinition<?> rb) {
                 list.add(rb);
             }
         }
@@ -178,6 +181,36 @@ public class LwModelToYAMLDumper implements ModelToYAMLDumper {
         writer.start();
         try {
             writer.writeBeans(list);
+        } finally {
+            writer.stop();
+        }
+
+        return buffer.toString();
+    }
+
+    /**
+     * Dumps the global data formats as YAML
+     *
+     * @param  context     the CamelContext
+     * @param  dataFormats list of data formats (DataFormatDefinition)
+     * @return             the output in YAML (is formatted)
+     * @throws Exception   is throw if error marshalling to YAML
+     */
+    @Override
+    public String dumpDataFormatsAsYaml(CamelContext context, Map<String, Object> dataFormats) throws Exception {
+        StringWriter buffer = new StringWriter();
+        DataFormatModelWriter writer = new DataFormatModelWriter(buffer);
+
+        Map<String, DataFormatDefinition> map = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : dataFormats.entrySet()) {
+            if (entry.getValue() instanceof DataFormatDefinition def) {
+                map.put(entry.getKey(), def);
+            }
+        }
+        writer.setCamelContext(context);
+        writer.start();
+        try {
+            writer.writeDataFormats(map);
         } finally {
             writer.stop();
         }
@@ -261,10 +294,10 @@ public class LwModelToYAMLDumper implements ModelToYAMLDumper {
 
         NamespaceAware na = null;
         Expression exp = ed.getExpressionValue();
-        if (exp instanceof NamespaceAware) {
-            na = (NamespaceAware) exp;
-        } else if (ed instanceof NamespaceAware) {
-            na = (NamespaceAware) ed;
+        if (exp instanceof NamespaceAware namespaceAware) {
+            na = namespaceAware;
+        } else if (ed instanceof NamespaceAware namespaceAware) {
+            na = namespaceAware;
         }
 
         return na;
@@ -297,17 +330,17 @@ public class LwModelToYAMLDumper implements ModelToYAMLDumper {
             // noop
         }
 
-        public void writeBeans(List<RegistryBeanDefinition> beans) {
+        public void writeBeans(List<BeanFactoryDefinition<?>> beans) {
             if (beans.isEmpty()) {
                 return;
             }
             buffer.write("- beans:\n");
-            for (RegistryBeanDefinition b : beans) {
-                doWriteRegistryBeanDefinition(b);
+            for (BeanFactoryDefinition<?> b : beans) {
+                doWriteBeanFactoryDefinition(b);
             }
         }
 
-        private void doWriteRegistryBeanDefinition(RegistryBeanDefinition b) {
+        private void doWriteBeanFactoryDefinition(BeanFactoryDefinition<?> b) {
             String type = b.getType();
             if (type.startsWith("#class:")) {
                 type = type.substring(7);
@@ -340,27 +373,77 @@ public class LwModelToYAMLDumper implements ModelToYAMLDumper {
             }
             if (b.getConstructors() != null && !b.getConstructors().isEmpty()) {
                 buffer.write(String.format("      constructors:%n"));
-                int counter = 0;
-                for (Map.Entry<Integer, Object> entry : b.getConstructors().entrySet()) {
-                    Integer key = entry.getKey();
-                    Object value = entry.getValue();
+                final AtomicInteger counter = new AtomicInteger();
+                b.getConstructors().forEach((key, value) -> {
                     if (key == null) {
-                        key = counter++;
+                        key = counter.getAndIncrement();
                     }
                     buffer.write(String.format("        %d: \"%s\"%n", key, value));
-                }
+                });
             }
             if (b.getProperties() != null && !b.getProperties().isEmpty()) {
                 buffer.write(String.format("      properties:%n"));
-                for (Map.Entry<String, Object> entry : b.getProperties().entrySet()) {
-                    String key = entry.getKey();
-                    Object value = entry.getValue();
+                b.getProperties().forEach((key, value) -> {
                     if (value instanceof String) {
                         buffer.write(String.format("        %s: \"%s\"%n", key, value));
                     } else {
                         buffer.write(String.format("        %s: %s%n", key, value));
                     }
-                }
+                });
+            }
+        }
+    }
+
+    private static class DataFormatModelWriter implements CamelContextAware {
+
+        private final StringWriter buffer;
+        private CamelContext camelContext;
+
+        public DataFormatModelWriter(StringWriter buffer) {
+            this.buffer = buffer;
+        }
+
+        @Override
+        public CamelContext getCamelContext() {
+            return camelContext;
+        }
+
+        @Override
+        public void setCamelContext(CamelContext camelContext) {
+            this.camelContext = camelContext;
+        }
+
+        public void start() {
+            // noop
+        }
+
+        public void stop() {
+            // noop
+        }
+
+        public void writeDataFormats(Map<String, DataFormatDefinition> dataFormats) throws Exception {
+            if (dataFormats.isEmpty()) {
+                return;
+            }
+
+            buffer.write("- dataFormats:\n");
+
+            DataFormatsDefinition def = new DataFormatsDefinition();
+            def.setDataFormats(new ArrayList<>(dataFormats.values()));
+
+            StringWriter tmp = new StringWriter();
+            ModelWriter writer = new ModelWriter(tmp);
+            writer.setCamelContext(camelContext);
+            writer.start();
+            try {
+                writer.writeDataFormatsDefinition(def);
+            } finally {
+                writer.stop();
+            }
+            for (String line : tmp.toString().split("\n")) {
+                buffer.write("    ");
+                buffer.write(line);
+                buffer.write("\n");
             }
         }
     }

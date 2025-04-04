@@ -46,9 +46,9 @@ public class MinioComponentVerifierExtension extends DefaultComponentVerifierExt
     protected Result verifyParameters(Map<String, Object> parameters) {
 
         ResultBuilder builder = ResultBuilder.withStatusAndScope(Result.Status.OK, Scope.PARAMETERS)
-                .error(ResultErrorHelper.requiresOption("accessKey", parameters))
-                .error(ResultErrorHelper.requiresOption("secretKey", parameters))
-                .error(ResultErrorHelper.requiresOption("region", parameters));
+                .error(ResultErrorHelper.requiresOption(parameters, "accessKey"))
+                .error(ResultErrorHelper.requiresOption(parameters, "secretKey"))
+                .error(ResultErrorHelper.requiresOption(parameters, "region"));
 
         // Validate using the catalog
 
@@ -89,8 +89,9 @@ public class MinioComponentVerifierExtension extends DefaultComponentVerifierExt
                 clientBuilderRequest.credentials(configuration.getAccessKey(), configuration.getSecretKey());
             }
 
-            MinioClient client = clientBuilderRequest.build();
-            client.listBuckets();
+            try (MinioClient client = clientBuilderRequest.build()) {
+                client.listBuckets();
+            }
         } catch (MinioException e) {
             ResultErrorBuilder errorBuilder
                     = ResultErrorBuilder.withCodeAndDescription(VerificationError.StandardCode.AUTHENTICATION, e.getMessage())

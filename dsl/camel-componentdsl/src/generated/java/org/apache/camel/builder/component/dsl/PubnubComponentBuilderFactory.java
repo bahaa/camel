@@ -161,12 +161,10 @@ public interface PubnubComponentBuilderFactory {
          * Event Handlers registered on the channel. HERENOW: Obtain information
          * about the current state of a channel including a list of unique
          * user-ids currently subscribed to the channel and the total occupancy
-         * count. WHERENOW: Obtain information about the current list of
-         * channels to which a uuid is subscribed to. GETSTATE: Used to get
-         * key/value pairs specific to a subscriber uuid. State information is
-         * supplied as a JSON object of key/value pairs SETSTATE: Used to set
-         * key/value pairs specific to a subscriber uuid GETHISTORY: Fetches
-         * historical messages of a channel.
+         * count. GETSTATE: Used to get key/value pairs specific to a subscriber
+         * uuid. State information is supplied as a JSON object of key/value
+         * pairs SETSTATE: Used to set key/value pairs specific to a subscriber
+         * uuid GETHISTORY: Fetches historical messages of a channel.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -204,7 +202,10 @@ public interface PubnubComponentBuilderFactory {
     
         /**
          * If Access Manager is utilized, client will use this authKey in all
-         * restricted requests.
+         * restricted requests. Default value notice: This setting is deprecated
+         * because it relates to deprecated Access Manager (PAM V2) and will be
+         * removed in the future. Please, migrate to new Access Manager (PAM V3)
+         * https://www.pubnub.com/docs/general/resources/migration-guides/pam-v3-migration.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -213,24 +214,9 @@ public interface PubnubComponentBuilderFactory {
          * @param authKey the value to set
          * @return the dsl builder
          */
+        @Deprecated
         default PubnubComponentBuilder authKey(java.lang.String authKey) {
             doSetProperty("authKey", authKey);
-            return this;
-        }
-    
-        /**
-         * If cipher is passed, all communications to/from PubNub will be
-         * encrypted.
-         * 
-         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
-         * 
-         * Group: security
-         * 
-         * @param cipherKey the value to set
-         * @return the dsl builder
-         */
-        default PubnubComponentBuilder cipherKey(java.lang.String cipherKey) {
-            doSetProperty("cipherKey", cipherKey);
             return this;
         }
     
@@ -326,7 +312,6 @@ public interface PubnubComponentBuilderFactory {
             case "operation": getOrCreateConfiguration((PubNubComponent) component).setOperation((java.lang.String) value); return true;
             case "autowiredEnabled": ((PubNubComponent) component).setAutowiredEnabled((boolean) value); return true;
             case "authKey": getOrCreateConfiguration((PubNubComponent) component).setAuthKey((java.lang.String) value); return true;
-            case "cipherKey": getOrCreateConfiguration((PubNubComponent) component).setCipherKey((java.lang.String) value); return true;
             case "publishKey": getOrCreateConfiguration((PubNubComponent) component).setPublishKey((java.lang.String) value); return true;
             case "secretKey": getOrCreateConfiguration((PubNubComponent) component).setSecretKey((java.lang.String) value); return true;
             case "secure": getOrCreateConfiguration((PubNubComponent) component).setSecure((boolean) value); return true;

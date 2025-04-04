@@ -26,6 +26,7 @@ import java.util.Optional;
 import javax.net.ssl.HostnameVerifier;
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.CamelContextAware;
 import org.apache.camel.Endpoint;
 import org.apache.camel.Producer;
 import org.apache.camel.SSLContextParametersAware;
@@ -33,13 +34,13 @@ import org.apache.camel.component.extension.ComponentVerifierExtension;
 import org.apache.camel.http.base.HttpHelper;
 import org.apache.camel.http.common.HttpBinding;
 import org.apache.camel.http.common.HttpCommonComponent;
+import org.apache.camel.http.common.HttpConfiguration;
 import org.apache.camel.http.common.HttpRestHeaderFilterStrategy;
 import org.apache.camel.spi.BeanIntrospection;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.RestConfiguration;
 import org.apache.camel.spi.RestProducerFactory;
-import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.annotations.Component;
 import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.PluginHelper;
@@ -100,6 +101,9 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
     @Metadata(label = "security",
               description = "To use a custom X509HostnameVerifier such as DefaultHostnameVerifier or NoopHostnameVerifier.")
     protected HostnameVerifier x509HostnameVerifier = new DefaultHostnameVerifier();
+    @Metadata(label = "advanced", defaultValue = "false",
+              description = "To use System Properties as fallback for configuration for configuring HTTP Client")
+    private boolean useSystemProperties;
     @Metadata(label = "producer,advanced", description = "To use a custom org.apache.hc.client5.http.cookie.CookieStore."
                                                          + " By default the org.apache.hc.client5.http.cookie.BasicCookieStore is used which is an in-memory only cookie store."
                                                          + " Notice if bridgeEndpoint=true then the cookie store is forced to be a noop cookie store as cookie"
@@ -153,9 +157,9 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
     protected int maxTotalConnections = 200;
     @Metadata(label = "advanced", defaultValue = "20", description = "The maximum number of connections per route.")
     protected int connectionsPerRoute = 20;
-    // It's MILLISECONDS, the default value is always keep alive
+    // It's MILLISECONDS, the default value is always keepAlive
     @Metadata(label = "advanced",
-              description = "The time for connection to live, the time unit is millisecond, the default value is always keep alive.")
+              description = "The time for connection to live, the time unit is millisecond, the default value is always keepAlive.")
     protected long connectionTimeToLive = -1;
     @Metadata(label = "security", defaultValue = "false", description = "Enable usage of global SSL context parameters.")
     protected boolean useGlobalSslContextParameters;
@@ -197,8 +201,13 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
               description = "Whether to the HTTP request should follow redirects."
                             + " By default the HTTP request does not follow redirects ")
     protected boolean followRedirects;
-    @UriParam(label = "producer,advanced", description = "To set a custom HTTP User-Agent request header")
+    @Metadata(label = "producer,advanced", description = "To set a custom HTTP User-Agent request header")
     protected String userAgent;
+    @Metadata(label = "producer,advanced", autowired = true, description = "To use a custom activity listener")
+    protected HttpActivityListener httpActivityListener;
+    @Metadata(label = "producer",
+              description = "To enable logging HTTP request and response. You can use a custom LoggingHttpActivityListener as httpActivityListener to control logging options.")
+    protected boolean logHttpActivity;
 
     public HttpComponent() {
         registerExtension(HttpComponentVerifierExtension::new);
@@ -208,7 +217,7 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
      * Creates the HttpClientConfigurer based on the given parameters
      *
      * @param  parameters the map of parameters
-     * @param  secure     whether the endpoint is secure (eg https)
+     * @param  secure     whether the endpoint is secure (e.g., https)
      * @return            the configurer
      * @throws Exception  is thrown if error creating configurer
      */
@@ -234,10 +243,36 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         String clientId = getParameter(parameters, "oauth2ClientId", String.class);
         String clientSecret = getParameter(parameters, "oauth2ClientSecret", String.class);
         String tokenEndpoint = getParameter(parameters, "oauth2TokenEndpoint", String.class);
+        String scope = getParameter(parameters, "oauth2Scope", String.class);
+        String resourceIndicator = getParameter(parameters, "oauth2ResourceIndicator", String.class);
+        HttpConfiguration configDefaults = new HttpConfiguration();
+        boolean cacheTokens = getParameter(
+                parameters,
+                "oauth2CacheTokens",
+                boolean.class,
+                configDefaults.isOauth2CacheTokens());
+        long cachedTokensDefaultExpirySeconds = getParameter(
+                parameters,
+                "oauth2CachedTokensDefaultExpirySeconds",
+                long.class,
+                configDefaults.getOauth2CachedTokensDefaultExpirySeconds());
+        long cachedTokensExpirationMarginSeconds = getParameter(
+                parameters,
+                "oauth2CachedTokensExpirationMarginSeconds",
+                long.class,
+                configDefaults.getOauth2CachedTokensExpirationMarginSeconds());
 
         if (clientId != null && clientSecret != null && tokenEndpoint != null) {
             return CompositeHttpConfigurer.combineConfigurers(configurer,
-                    new OAuth2ClientConfigurer(clientId, clientSecret, tokenEndpoint));
+                    new OAuth2ClientConfigurer(
+                            clientId,
+                            clientSecret,
+                            tokenEndpoint,
+                            resourceIndicator,
+                            scope,
+                            cacheTokens,
+                            cachedTokensDefaultExpirySeconds,
+                            cachedTokensExpirationMarginSeconds));
         }
         return configurer;
     }
@@ -314,7 +349,7 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         Map<String, Object> httpClientParameters = new HashMap<>(parameters);
         final Map<String, Object> httpClientOptions = new HashMap<>();
 
-        // timeout values can be configured on both component and endpoint level, where endpoint take priority
+        // timeout values can be configured on both component and endpoint level, where endpoint takes priority
         Timeout valConnectionRequestTimeout
                 = getAndRemoveParameter(parameters, "connectionRequestTimeout", Timeout.class, connectionRequestTimeout);
         if (!Timeout.ofMinutes(3).equals(valConnectionRequestTimeout)) {
@@ -363,16 +398,16 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         }
         boolean secure = HttpHelper.isSecureConnection(secureProtocol) || sslContextParameters != null;
 
-        // remaining part should be without protocol as that was how this component was originally created
+        // the remaining part should be without protocol as that was how this component was originally created
         remaining = org.apache.camel.component.http.HttpUtil.removeHttpOrHttpsProtocol(remaining);
 
-        // need to set scheme on address uri depending on if its secure or not
+        // need to set the scheme on address uri depending on if it's secure or not
         String addressUri = (secure ? "https://" : "http://") + remaining;
 
         addressUri = UnsafeUriCharactersEncoder.encodeHttpURI(addressUri);
         URI uriHttpUriAddress = new URI(addressUri);
 
-        // the endpoint uri should use the component name as scheme, so we need to re-create it once more
+        // the endpoint uri should use the component name as the scheme, so we need to re-create it once more
         String scheme = StringHelper.before(uri, "://");
 
         // uri part should be without protocol as that was how this component was originally created
@@ -410,6 +445,8 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         endpoint.setSkipResponseHeaders(skipResponseHeaders);
         endpoint.setUserAgent(userAgent);
         endpoint.setMuteException(muteException);
+        endpoint.setHttpActivityListener(httpActivityListener);
+        endpoint.setLogHttpActivity(logHttpActivity);
 
         // configure the endpoint with the common configuration from the component
         if (getHttpConfiguration() != null) {
@@ -422,7 +459,7 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         // configure the endpoint
         setProperties(endpoint, parameters);
 
-        // we can not change the port of an URI, we must create a new one with an explicit port value
+        // we cannot change the port of an URI, we must create a new one with an explicit port value
         URI httpUri = URISupport.createRemainingURI(
                 new URI(
                         uriHttpUriAddress.getScheme(),
@@ -475,11 +512,11 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         // need to check the parameters of maxTotalConnections and connectionsPerRoute
         final int maxTotalConnections = getAndRemoveParameter(parameters, "maxTotalConnections", int.class, 0);
         final int connectionsPerRoute = getAndRemoveParameter(parameters, "connectionsPerRoute", int.class, 0);
-        final boolean useSystemProperties = CamelContextHelper.mandatoryConvertTo(this.getCamelContext(), boolean.class,
-                parameters.get("useSystemProperties"));
+        // do not remove as we set this later again
+        final boolean sysProp = getParameter(parameters, "useSystemProperties", boolean.class, useSystemProperties);
 
         final Registry<ConnectionSocketFactory> connectionRegistry
-                = createConnectionRegistry(hostnameVerifier, sslContextParameters, useSystemProperties);
+                = createConnectionRegistry(hostnameVerifier, sslContextParameters, sysProp);
 
         // allow the builder pattern
         httpConnectionOptions.putAll(PropertiesHelper.extractProperties(parameters, "httpConnection."));
@@ -558,7 +595,7 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
     protected HttpClientConnectionManager createConnectionManager(
             Registry<ConnectionSocketFactory> registry, int maxTotalConnections, int connectionsPerRoute,
             SocketConfig defaultSocketConfig) {
-        // setup the connection live time
+        // set up the connection live time
         PoolingHttpClientConnectionManager answer = new PoolingHttpClientConnectionManager(
                 registry, PoolConcurrencyPolicy.STRICT, TimeValue.ofMilliseconds(getConnectionTimeToLive()), null);
         int localMaxTotalConnections = maxTotalConnections;
@@ -664,7 +701,7 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
     }
 
     /**
-     * To use a custom and shared HttpClientConnectionManager to manage connections. If this has been configured then
+     * To use a custom and shared HttpClientConnectionManager to manage connections. If this has been configured, then
      * this is always used for all endpoints created by this component.
      */
     public void setClientConnectionManager(HttpClientConnectionManager clientConnectionManager) {
@@ -688,8 +725,8 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
 
     /**
      * To configure security using SSLContextParameters. Important: Only one instance of
-     * org.apache.camel.support.jsse.SSLContextParameters is supported per HttpComponent. If you need to use 2 or more
-     * different instances, you need to define a new HttpComponent per instance you need.
+     * org.apache.camel.support.jsse.SSLContextParameters is supported per HttpComponent. If you need to use two or more
+     * different instances, you need to define a new HttpComponent per instance.
      */
     public void setSslContextParameters(SSLContextParameters sslContextParameters) {
         this.sslContextParameters = sslContextParameters;
@@ -719,6 +756,14 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         this.x509HostnameVerifier = x509HostnameVerifier;
     }
 
+    public boolean isUseSystemProperties() {
+        return useSystemProperties;
+    }
+
+    public void setUseSystemProperties(boolean useSystemProperties) {
+        this.useSystemProperties = useSystemProperties;
+    }
+
     public int getMaxTotalConnections() {
         return maxTotalConnections;
     }
@@ -746,7 +791,7 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
     }
 
     /**
-     * The time for connection to live, the time unit is millisecond, the default value is always keep alive.
+     * The time for connection to live, the time unit is millisecond; the default value is always keepAlive.
      */
     public void setConnectionTimeToLive(long connectionTimeToLive) {
         this.connectionTimeToLive = connectionTimeToLive;
@@ -757,9 +802,9 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
     }
 
     /**
-     * To use a custom org.apache.http.client.CookieStore. By default the org.apache.http.impl.client.BasicCookieStore
+     * To use a custom org.apache.http.client.CookieStore. By default, the org.apache.http.impl.client.BasicCookieStore
      * is used which is an in-memory only cookie store. Notice if bridgeEndpoint=true then the cookie store is forced to
-     * be a noop cookie store as cookie shouldn't be stored as we are just bridging (eg acting as a proxy).
+     * be a noop cookie store as cookie shouldn't be stored as we are just bridging (e.g., acting as a proxy).
      */
     public void setCookieStore(CookieStore cookieStore) {
         this.cookieStore = cookieStore;
@@ -788,7 +833,7 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
 
     /**
      * Determines the timeout until a new connection is fully established. This may also include transport security
-     * negotiation exchanges such as {@code SSL} or {@code TLS} protocol negotiation).
+     * negotiation exchanges such as {@code SSL} or {@code TLS} protocol negotiation.
      * <p>
      * A timeout value of zero is interpreted as an infinite timeout.
      * </p>
@@ -1002,9 +1047,30 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         this.userAgent = userAgent;
     }
 
+    public HttpActivityListener getHttpActivityListener() {
+        return httpActivityListener;
+    }
+
+    public void setHttpActivityListener(HttpActivityListener httpActivityListener) {
+        this.httpActivityListener = httpActivityListener;
+    }
+
+    public boolean isLogHttpActivity() {
+        return logHttpActivity;
+    }
+
+    public void setLogHttpActivity(boolean logHttpActivity) {
+        this.logHttpActivity = logHttpActivity;
+    }
+
     @Override
     public void doStart() throws Exception {
         super.doStart();
+        if (logHttpActivity && httpActivityListener == null) {
+            httpActivityListener = new LoggingHttpActivityListener();
+        }
+        CamelContextAware.trySetCamelContext(httpActivityListener, getCamelContext());
+        ServiceHelper.startService(httpActivityListener);
     }
 
     @Override
@@ -1015,6 +1081,7 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
             clientConnectionManager.close();
             clientConnectionManager = null;
         }
+        ServiceHelper.stopService(httpActivityListener);
 
         super.doStop();
     }

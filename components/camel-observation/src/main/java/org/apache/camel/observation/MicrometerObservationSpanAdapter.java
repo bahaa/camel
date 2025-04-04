@@ -30,7 +30,6 @@ public class MicrometerObservationSpanAdapter implements SpanAdapter {
     private static final String DEFAULT_EVENT_NAME = "log";
 
     private final Observation observation;
-
     private final Tracer tracer;
 
     MicrometerObservationSpanAdapter(Observation observation, Tracer tracer) {
@@ -109,13 +108,9 @@ public class MicrometerObservationSpanAdapter implements SpanAdapter {
     public void log(Map<String, String> fields) {
         String event = fields.get("event");
         if ("error".equalsIgnoreCase(event)) {
-            if (fields.containsKey("message")) {
-                observation.error(new RuntimeException(fields.get("message")));
-            } else {
-                setError(true);
-            }
+            setError(true);
         } else {
-            observation.event(() -> getMessageNameFromFields(fields));
+            observation.event(() -> DEFAULT_EVENT_NAME);
         }
     }
 
@@ -138,15 +133,6 @@ public class MicrometerObservationSpanAdapter implements SpanAdapter {
     @Override
     public AutoCloseable makeCurrent() {
         return observation.openScope();
-    }
-
-    String getMessageNameFromFields(Map<String, ?> fields) {
-        Object eventValue = fields == null ? null : fields.get("message");
-        if (eventValue != null) {
-            return eventValue.toString();
-        }
-
-        return DEFAULT_EVENT_NAME;
     }
 
     public void setCorrelationContextItem(String key, String value) {

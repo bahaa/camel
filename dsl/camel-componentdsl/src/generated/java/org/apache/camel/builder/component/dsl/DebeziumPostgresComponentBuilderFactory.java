@@ -21,7 +21,7 @@ import javax.annotation.processing.Generated;
 import org.apache.camel.Component;
 import org.apache.camel.builder.component.AbstractComponentBuilder;
 import org.apache.camel.builder.component.ComponentBuilder;
-import org.apache.camel.component.debezium.DebeziumPostgresComponent;
+import org.apache.camel.component.debezium.postgres.DebeziumPostgresComponent;
 
 /**
  * Capture changes from a PostgresSQL database.
@@ -103,14 +103,14 @@ public interface DebeziumPostgresComponentBuilderFactory {
          * Allow pre-configured Configurations to be set.
          * 
          * The option is a:
-         * &lt;code&gt;org.apache.camel.component.debezium.configuration.PostgresConnectorEmbeddedDebeziumConfiguration&lt;/code&gt; type.
+         * &lt;code&gt;org.apache.camel.component.debezium.postgres.configuration.PostgresConnectorEmbeddedDebeziumConfiguration&lt;/code&gt; type.
          * 
          * Group: consumer
          * 
          * @param configuration the value to set
          * @return the dsl builder
          */
-        default DebeziumPostgresComponentBuilder configuration(org.apache.camel.component.debezium.configuration.PostgresConnectorEmbeddedDebeziumConfiguration configuration) {
+        default DebeziumPostgresComponentBuilder configuration(org.apache.camel.component.debezium.postgres.configuration.PostgresConnectorEmbeddedDebeziumConfiguration configuration) {
             doSetProperty("configuration", configuration);
             return this;
         }
@@ -498,6 +498,24 @@ public interface DebeziumPostgresComponentBuilderFactory {
          */
         default DebeziumPostgresComponentBuilder databasePort(int databasePort) {
             doSetProperty("databasePort", databasePort);
+            return this;
+        }
+    
+        
+        /**
+         * Time to wait for a query to execute, given in milliseconds. Defaults
+         * to 600 seconds (600,000 ms); zero means there is no limit.
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Default: 10m
+         * Group: postgres
+         * 
+         * @param databaseQueryTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresComponentBuilder databaseQueryTimeoutMs(int databaseQueryTimeoutMs) {
+            doSetProperty("databaseQueryTimeoutMs", databaseQueryTimeoutMs);
             return this;
         }
     
@@ -1427,6 +1445,26 @@ public interface DebeziumPostgresComponentBuilderFactory {
     
         
         /**
+         * Whether or not to create a failover slot. This is only supported when
+         * connecting to a primary server of a Postgres cluster, version 17 or
+         * newer. When not specified, or when not connecting to a Postgres 17
+         * primary, no failover slot will be created.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: postgres
+         * 
+         * @param slotFailover the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresComponentBuilder slotFailover(boolean slotFailover) {
+            doSetProperty("slotFailover", slotFailover);
+            return this;
+        }
+    
+        
+        /**
          * How many times to retry connecting to a replication slot when an
          * attempt fails.
          * 
@@ -1544,6 +1582,29 @@ public interface DebeziumPostgresComponentBuilderFactory {
          */
         default DebeziumPostgresComponentBuilder snapshotIncludeCollectionList(java.lang.String snapshotIncludeCollectionList) {
             doSetProperty("snapshotIncludeCollectionList", snapshotIncludeCollectionList);
+            return this;
+        }
+    
+        
+        /**
+         * Controls which transaction isolation level is used. The default is
+         * 'serializable', which means that serializable isolation level is
+         * used. When 'repeatable_read' is specified, connector runs the initial
+         * snapshot in REPEATABLE READ isolation level. When 'read_committed' is
+         * specified, connector runs the initial snapshot in READ COMMITTED
+         * isolation level. In 'read_uncommitted' is specified, connector runs
+         * the initial snapshot in READ UNCOMMITTED isolation level.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: serializable
+         * Group: postgres
+         * 
+         * @param snapshotIsolationMode the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresComponentBuilder snapshotIsolationMode(java.lang.String snapshotIsolationMode) {
+            doSetProperty("snapshotIsolationMode", snapshotIsolationMode);
             return this;
         }
     
@@ -1897,6 +1958,24 @@ public interface DebeziumPostgresComponentBuilderFactory {
             return this;
         }
     
+        
+        /**
+         * A delay period after the snapshot is completed and the streaming
+         * begins, given in milliseconds. Defaults to 0 ms.
+         * 
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
+         * 
+         * Default: 0ms
+         * Group: postgres
+         * 
+         * @param streamingDelayMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresComponentBuilder streamingDelayMs(long streamingDelayMs) {
+            doSetProperty("streamingDelayMs", streamingDelayMs);
+            return this;
+        }
+    
         /**
          * A comma-separated list of regular expressions that match the
          * fully-qualified names of tables to be excluded from monitoring.
@@ -2031,6 +2110,24 @@ public interface DebeziumPostgresComponentBuilderFactory {
     
         
         /**
+         * Class to make transaction context &amp; transaction struct/schemas.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default:
+         * io.debezium.pipeline.txmetadata.DefaultTransactionMetadataFactory
+         * Group: postgres
+         * 
+         * @param transactionMetadataFactory the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresComponentBuilder transactionMetadataFactory(java.lang.String transactionMetadataFactory) {
+            doSetProperty("transactionMetadataFactory", transactionMetadataFactory);
+            return this;
+        }
+    
+        
+        /**
          * Specify the constant that will be provided by Debezium to indicate
          * that the original value is a toasted value not provided by the
          * database. If starts with 'hex:' prefix it is expected that the rest
@@ -2081,9 +2178,9 @@ public interface DebeziumPostgresComponentBuilderFactory {
         protected DebeziumPostgresComponent buildConcreteComponent() {
             return new DebeziumPostgresComponent();
         }
-        private org.apache.camel.component.debezium.configuration.PostgresConnectorEmbeddedDebeziumConfiguration getOrCreateConfiguration(DebeziumPostgresComponent component) {
+        private org.apache.camel.component.debezium.postgres.configuration.PostgresConnectorEmbeddedDebeziumConfiguration getOrCreateConfiguration(DebeziumPostgresComponent component) {
             if (component.getConfiguration() == null) {
-                component.setConfiguration(new org.apache.camel.component.debezium.configuration.PostgresConnectorEmbeddedDebeziumConfiguration());
+                component.setConfiguration(new org.apache.camel.component.debezium.postgres.configuration.PostgresConnectorEmbeddedDebeziumConfiguration());
             }
             return component.getConfiguration();
         }
@@ -2095,7 +2192,7 @@ public interface DebeziumPostgresComponentBuilderFactory {
             switch (name) {
             case "additionalProperties": getOrCreateConfiguration((DebeziumPostgresComponent) component).setAdditionalProperties((java.util.Map) value); return true;
             case "bridgeErrorHandler": ((DebeziumPostgresComponent) component).setBridgeErrorHandler((boolean) value); return true;
-            case "configuration": ((DebeziumPostgresComponent) component).setConfiguration((org.apache.camel.component.debezium.configuration.PostgresConnectorEmbeddedDebeziumConfiguration) value); return true;
+            case "configuration": ((DebeziumPostgresComponent) component).setConfiguration((org.apache.camel.component.debezium.postgres.configuration.PostgresConnectorEmbeddedDebeziumConfiguration) value); return true;
             case "internalKeyConverter": getOrCreateConfiguration((DebeziumPostgresComponent) component).setInternalKeyConverter((java.lang.String) value); return true;
             case "internalValueConverter": getOrCreateConfiguration((DebeziumPostgresComponent) component).setInternalValueConverter((java.lang.String) value); return true;
             case "offsetCommitPolicy": getOrCreateConfiguration((DebeziumPostgresComponent) component).setOffsetCommitPolicy((java.lang.String) value); return true;
@@ -2118,6 +2215,7 @@ public interface DebeziumPostgresComponentBuilderFactory {
             case "databaseInitialStatements": getOrCreateConfiguration((DebeziumPostgresComponent) component).setDatabaseInitialStatements((java.lang.String) value); return true;
             case "databasePassword": getOrCreateConfiguration((DebeziumPostgresComponent) component).setDatabasePassword((java.lang.String) value); return true;
             case "databasePort": getOrCreateConfiguration((DebeziumPostgresComponent) component).setDatabasePort((int) value); return true;
+            case "databaseQueryTimeoutMs": getOrCreateConfiguration((DebeziumPostgresComponent) component).setDatabaseQueryTimeoutMs((int) value); return true;
             case "databaseSslcert": getOrCreateConfiguration((DebeziumPostgresComponent) component).setDatabaseSslcert((java.lang.String) value); return true;
             case "databaseSslfactory": getOrCreateConfiguration((DebeziumPostgresComponent) component).setDatabaseSslfactory((java.lang.String) value); return true;
             case "databaseSslkey": getOrCreateConfiguration((DebeziumPostgresComponent) component).setDatabaseSslkey((java.lang.String) value); return true;
@@ -2167,6 +2265,7 @@ public interface DebeziumPostgresComponentBuilderFactory {
             case "signalPollIntervalMs": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSignalPollIntervalMs((long) value); return true;
             case "skippedOperations": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSkippedOperations((java.lang.String) value); return true;
             case "slotDropOnStop": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSlotDropOnStop((boolean) value); return true;
+            case "slotFailover": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSlotFailover((boolean) value); return true;
             case "slotMaxRetries": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSlotMaxRetries((int) value); return true;
             case "slotName": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSlotName((java.lang.String) value); return true;
             case "slotRetryDelayMs": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSlotRetryDelayMs((long) value); return true;
@@ -2174,6 +2273,7 @@ public interface DebeziumPostgresComponentBuilderFactory {
             case "snapshotDelayMs": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSnapshotDelayMs((long) value); return true;
             case "snapshotFetchSize": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSnapshotFetchSize((int) value); return true;
             case "snapshotIncludeCollectionList": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSnapshotIncludeCollectionList((java.lang.String) value); return true;
+            case "snapshotIsolationMode": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSnapshotIsolationMode((java.lang.String) value); return true;
             case "snapshotLockingMode": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSnapshotLockingMode((java.lang.String) value); return true;
             case "snapshotLockingModeCustomName": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSnapshotLockingModeCustomName((java.lang.String) value); return true;
             case "snapshotLockTimeoutMs": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSnapshotLockTimeoutMs((long) value); return true;
@@ -2191,6 +2291,7 @@ public interface DebeziumPostgresComponentBuilderFactory {
             case "snapshotTablesOrderByRowCount": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSnapshotTablesOrderByRowCount((java.lang.String) value); return true;
             case "sourceinfoStructMaker": getOrCreateConfiguration((DebeziumPostgresComponent) component).setSourceinfoStructMaker((java.lang.String) value); return true;
             case "statusUpdateIntervalMs": getOrCreateConfiguration((DebeziumPostgresComponent) component).setStatusUpdateIntervalMs((int) value); return true;
+            case "streamingDelayMs": getOrCreateConfiguration((DebeziumPostgresComponent) component).setStreamingDelayMs((long) value); return true;
             case "tableExcludeList": getOrCreateConfiguration((DebeziumPostgresComponent) component).setTableExcludeList((java.lang.String) value); return true;
             case "tableIgnoreBuiltin": getOrCreateConfiguration((DebeziumPostgresComponent) component).setTableIgnoreBuiltin((boolean) value); return true;
             case "tableIncludeList": getOrCreateConfiguration((DebeziumPostgresComponent) component).setTableIncludeList((java.lang.String) value); return true;
@@ -2198,6 +2299,7 @@ public interface DebeziumPostgresComponentBuilderFactory {
             case "tombstonesOnDelete": getOrCreateConfiguration((DebeziumPostgresComponent) component).setTombstonesOnDelete((boolean) value); return true;
             case "topicNamingStrategy": getOrCreateConfiguration((DebeziumPostgresComponent) component).setTopicNamingStrategy((java.lang.String) value); return true;
             case "topicPrefix": getOrCreateConfiguration((DebeziumPostgresComponent) component).setTopicPrefix((java.lang.String) value); return true;
+            case "transactionMetadataFactory": getOrCreateConfiguration((DebeziumPostgresComponent) component).setTransactionMetadataFactory((java.lang.String) value); return true;
             case "unavailableValuePlaceholder": getOrCreateConfiguration((DebeziumPostgresComponent) component).setUnavailableValuePlaceholder((java.lang.String) value); return true;
             case "xminFetchIntervalMs": getOrCreateConfiguration((DebeziumPostgresComponent) component).setXminFetchIntervalMs((long) value); return true;
             default: return false;

@@ -45,11 +45,19 @@ public class CatchDefinition extends OutputDefinition<CatchDefinition> {
 
     @XmlElement(name = "exception")
     private List<String> exceptions = new ArrayList<>();
-    @XmlElement(name = "onWhen")
+    @Metadata(description = "Used for triggering doCatch in specific situations")
+    @XmlElement
     @AsPredicate
-    private WhenDefinition onWhen;
+    private OnWhenDefinition onWhen;
 
     public CatchDefinition() {
+    }
+
+    protected CatchDefinition(CatchDefinition source) {
+        super(source);
+        this.exceptionClasses = source.exceptionClasses;
+        this.exceptions = source.exceptions != null ? new ArrayList<>(source.exceptions) : null;
+        this.onWhen = source.onWhen != null ? source.onWhen.copyDefinition() : null;
     }
 
     public CatchDefinition(List<Class<? extends Throwable>> exceptionClasses) {
@@ -58,6 +66,11 @@ public class CatchDefinition extends OutputDefinition<CatchDefinition> {
 
     public CatchDefinition(Class<? extends Throwable> exceptionType) {
         exception(exceptionType);
+    }
+
+    @Override
+    public CatchDefinition copyDefinition() {
+        return new CatchDefinition(this);
     }
 
     @Override
@@ -178,7 +191,7 @@ public class CatchDefinition extends OutputDefinition<CatchDefinition> {
      * @return           the builder
      */
     public CatchDefinition onWhen(@AsPredicate Predicate predicate) {
-        setOnWhen(new WhenDefinition(predicate));
+        setOnWhen(new OnWhenDefinition(predicate));
         return this;
     }
 
@@ -190,11 +203,11 @@ public class CatchDefinition extends OutputDefinition<CatchDefinition> {
         this.exceptions = exceptions;
     }
 
-    public WhenDefinition getOnWhen() {
+    public OnWhenDefinition getOnWhen() {
         return onWhen;
     }
 
-    public void setOnWhen(WhenDefinition onWhen) {
+    public void setOnWhen(OnWhenDefinition onWhen) {
         this.onWhen = onWhen;
     }
 

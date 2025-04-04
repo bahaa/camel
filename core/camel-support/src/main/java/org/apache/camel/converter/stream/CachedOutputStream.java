@@ -20,6 +20,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.StreamCache;
@@ -76,7 +78,11 @@ public class CachedOutputStream extends OutputStream {
 
     @Override
     public boolean equals(Object obj) {
-        return currentStream.equals(obj);
+        if (obj instanceof CachedOutputStream cos) {
+            return currentStream.equals(cos.currentStream);
+        } else {
+            return currentStream.equals(obj);
+        }
     }
 
     @Override
@@ -136,8 +142,8 @@ public class CachedOutputStream extends OutputStream {
         flush();
 
         if (inMemory) {
-            if (currentStream instanceof CachedByteArrayOutputStream) {
-                return ((CachedByteArrayOutputStream) currentStream).newInputStreamCache();
+            if (currentStream instanceof CachedByteArrayOutputStream cachedByteArrayOutputStream) {
+                return cachedByteArrayOutputStream.newInputStreamCache();
             } else {
                 throw new IllegalStateException(
                         "CurrentStream should be an instance of CachedByteArrayOutputStream but is: "
@@ -167,6 +173,7 @@ public class CachedOutputStream extends OutputStream {
 
     // This class will close the CachedOutputStream when it is closed
     private static class WrappedInputStream extends InputStream implements StreamCache {
+        private final Lock lock = new ReentrantLock();
         private final CachedOutputStream cachedOutputStream;
         private final InputStream inputStream;
         private long pos;
@@ -188,11 +195,14 @@ public class CachedOutputStream extends OutputStream {
         }
 
         @Override
-        public synchronized void reset() {
+        public void reset() {
+            lock.lock();
             try {
                 inputStream.reset();
             } catch (IOException e) {
                 // ignore
+            } finally {
+                lock.unlock();
             }
         }
 

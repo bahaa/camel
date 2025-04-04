@@ -109,7 +109,6 @@ public interface ElasticsearchRestClientEndpointBuilderFactory {
          * The option is a:
          * <code>org.apache.camel.component.elasticsearch.rest.client.ElasticsearchRestClientOperation</code> type.
          * 
-         * Required: true
          * Group: producer
          * 
          * @param operation the value to set
@@ -125,7 +124,6 @@ public interface ElasticsearchRestClientEndpointBuilderFactory {
          * The option will be converted to a
          * <code>org.apache.camel.component.elasticsearch.rest.client.ElasticsearchRestClientOperation</code> type.
          * 
-         * Required: true
          * Group: producer
          * 
          * @param operation the value to set
@@ -402,6 +400,20 @@ public interface ElasticsearchRestClientEndpointBuilderFactory {
          * Since: 4.3
          * Maven coordinates: org.apache.camel:camel-elasticsearch-rest-client
          * 
+         * @return the dsl builder for the headers' name.
+         */
+        default ElasticsearchRestClientHeaderNameBuilder elasticsearchRestClient() {
+            return ElasticsearchRestClientHeaderNameBuilder.INSTANCE;
+        }
+        /**
+         * Elasticsearch Low level Rest Client (camel-elasticsearch-rest-client)
+         * Perform queries and other operations on Elasticsearch or OpenSearch
+         * (uses low-level client).
+         * 
+         * Category: search
+         * Since: 4.3
+         * Maven coordinates: org.apache.camel:camel-elasticsearch-rest-client
+         * 
          * Syntax: <code>elasticsearch-rest-client:clusterName</code>
          * 
          * Path parameter: clusterName (required)
@@ -436,6 +448,79 @@ public interface ElasticsearchRestClientEndpointBuilderFactory {
             return ElasticsearchRestClientEndpointBuilderFactory.endpointBuilder(componentName, path);
         }
 
+    }
+    /**
+     * The builder of headers' name for the Elasticsearch Low level Rest Client component.
+     */
+    public static class ElasticsearchRestClientHeaderNameBuilder {
+        /**
+         * The internal instance of the builder used to access to all the
+         * methods representing the name of headers.
+         */
+        private static final ElasticsearchRestClientHeaderNameBuilder INSTANCE = new ElasticsearchRestClientHeaderNameBuilder();
+
+        /**
+         * ID of the object to index or retrieve or delete.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code ID}.
+         */
+        public String iD() {
+            return "ID";
+        }
+        /**
+         * The JSON Query to perform for search.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code SEARCH_QUERY}.
+         */
+        public String searchQuery() {
+            return "SEARCH_QUERY";
+        }
+        /**
+         * Advanced - The JSON Index Settings and/or Mappings Query to perform
+         * to create an index.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code INDEX_SETTINGS}.
+         */
+        public String indexSettings() {
+            return "INDEX_SETTINGS";
+        }
+        /**
+         * The Index name.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code INDEX_NAME}.
+         */
+        public String indexName() {
+            return "INDEX_NAME";
+        }
+        /**
+         * The operation to perform.
+         * 
+         * The option is a: {@code
+         * org.apache.camel.component.elasticsearch.rest.client.ElasticsearchRestClientOperation} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code OPERATION}.
+         */
+        public String oPERATION() {
+            return "OPERATION";
+        }
     }
     static ElasticsearchRestClientEndpointBuilder endpointBuilder(String componentName, String path) {
         class ElasticsearchRestClientEndpointBuilderImpl extends AbstractEndpointBuilder implements ElasticsearchRestClientEndpointBuilder, AdvancedElasticsearchRestClientEndpointBuilder {

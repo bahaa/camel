@@ -50,30 +50,23 @@ public class FileConsumePollEnrichFileUsingProcessorTest extends ContextTestSupp
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
+        ConsumerTemplate con = context.createConsumerTemplate();
+
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from(fileUri("enrich?initialDelay=0&delay=10&move=.done"))
                         .process(new Processor() {
                             public void process(Exchange exchange) throws Exception {
                                 String name = exchange.getIn().getHeader(Exchange.FILE_NAME_ONLY, String.class);
                                 name = FileUtil.stripExt(name) + ".dat";
 
-                                // use a consumer template to get the data file
-                                Exchange data = null;
-                                ConsumerTemplate con = exchange.getContext().createConsumerTemplate();
-                                try {
-                                    // try to get the data file
-                                    data = con.receive(
-                                            fileUri("enrichdata?initialDelay=0&delay=10&move=.done&fileName="
-                                                    + name),
-                                            5000);
-                                } finally {
-                                    // stop the consumer as it does not need to poll for
-                                    // files anymore
-                                    con.stop();
-                                }
+                                // try to get the data file
+                                Exchange data = con.receive(
+                                        fileUri("enrichdata?initialDelay=0&delay=10&move=.done&fileName="
+                                                + name),
+                                        5000);
 
                                 // if we found the data file then process it by sending
                                 // it to the direct:data endpoint

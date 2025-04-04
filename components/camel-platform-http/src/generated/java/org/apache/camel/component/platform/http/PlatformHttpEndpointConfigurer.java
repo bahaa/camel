@@ -44,6 +44,8 @@ public class PlatformHttpEndpointConfigurer extends PropertyConfigurerSupport im
         case "exchangePattern": target.setExchangePattern(property(camelContext, org.apache.camel.ExchangePattern.class, value)); return true;
         case "filenameextwhitelist":
         case "fileNameExtWhitelist": target.setFileNameExtWhitelist(property(camelContext, java.lang.String.class, value)); return true;
+        case "handlewriteresponseerror":
+        case "handleWriteResponseError": target.setHandleWriteResponseError(property(camelContext, boolean.class, value)); return true;
         case "headerfilterstrategy":
         case "headerFilterStrategy": target.setHeaderFilterStrategy(property(camelContext, org.apache.camel.spi.HeaderFilterStrategy.class, value)); return true;
         case "httpmethodrestrict":
@@ -54,7 +56,13 @@ public class PlatformHttpEndpointConfigurer extends PropertyConfigurerSupport im
         case "muteException": target.setMuteException(property(camelContext, boolean.class, value)); return true;
         case "platformhttpengine":
         case "platformHttpEngine": target.setPlatformHttpEngine(property(camelContext, org.apache.camel.component.platform.http.spi.PlatformHttpEngine.class, value)); return true;
+        case "populatebodywithform":
+        case "populateBodyWithForm": target.setPopulateBodyWithForm(property(camelContext, boolean.class, value)); return true;
         case "produces": target.setProduces(property(camelContext, java.lang.String.class, value)); return true;
+        case "returnhttprequestheaders":
+        case "returnHttpRequestHeaders": target.setReturnHttpRequestHeaders(property(camelContext, boolean.class, value)); return true;
+        case "usebodyhandler":
+        case "useBodyHandler": target.setUseBodyHandler(property(camelContext, boolean.class, value)); return true;
         case "usecookiehandler":
         case "useCookieHandler": target.setUseCookieHandler(property(camelContext, boolean.class, value)); return true;
         case "usestreaming":
@@ -87,6 +95,8 @@ public class PlatformHttpEndpointConfigurer extends PropertyConfigurerSupport im
         case "exchangePattern": return org.apache.camel.ExchangePattern.class;
         case "filenameextwhitelist":
         case "fileNameExtWhitelist": return java.lang.String.class;
+        case "handlewriteresponseerror":
+        case "handleWriteResponseError": return boolean.class;
         case "headerfilterstrategy":
         case "headerFilterStrategy": return org.apache.camel.spi.HeaderFilterStrategy.class;
         case "httpmethodrestrict":
@@ -97,7 +107,13 @@ public class PlatformHttpEndpointConfigurer extends PropertyConfigurerSupport im
         case "muteException": return boolean.class;
         case "platformhttpengine":
         case "platformHttpEngine": return org.apache.camel.component.platform.http.spi.PlatformHttpEngine.class;
+        case "populatebodywithform":
+        case "populateBodyWithForm": return boolean.class;
         case "produces": return java.lang.String.class;
+        case "returnhttprequestheaders":
+        case "returnHttpRequestHeaders": return boolean.class;
+        case "usebodyhandler":
+        case "useBodyHandler": return boolean.class;
         case "usecookiehandler":
         case "useCookieHandler": return boolean.class;
         case "usestreaming":
@@ -131,6 +147,8 @@ public class PlatformHttpEndpointConfigurer extends PropertyConfigurerSupport im
         case "exchangePattern": return target.getExchangePattern();
         case "filenameextwhitelist":
         case "fileNameExtWhitelist": return target.getFileNameExtWhitelist();
+        case "handlewriteresponseerror":
+        case "handleWriteResponseError": return target.isHandleWriteResponseError();
         case "headerfilterstrategy":
         case "headerFilterStrategy": return target.getHeaderFilterStrategy();
         case "httpmethodrestrict":
@@ -141,7 +159,13 @@ public class PlatformHttpEndpointConfigurer extends PropertyConfigurerSupport im
         case "muteException": return target.isMuteException();
         case "platformhttpengine":
         case "platformHttpEngine": return target.getPlatformHttpEngine();
+        case "populatebodywithform":
+        case "populateBodyWithForm": return target.isPopulateBodyWithForm();
         case "produces": return target.getProduces();
+        case "returnhttprequestheaders":
+        case "returnHttpRequestHeaders": return target.isReturnHttpRequestHeaders();
+        case "usebodyhandler":
+        case "useBodyHandler": return target.isUseBodyHandler();
         case "usecookiehandler":
         case "useCookieHandler": return target.isUseCookieHandler();
         case "usestreaming":

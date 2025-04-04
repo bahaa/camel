@@ -17,6 +17,8 @@
 package org.apache.camel.builder;
 
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -37,6 +39,7 @@ import org.apache.camel.support.builder.Namespaces;
  */
 public class ExpressionClause<T> implements Expression, Predicate {
     private final ExpressionClauseSupport<T> delegate;
+    private final Lock lock = new ReentrantLock();
     private volatile Expression expr;
     private volatile Predicate pred;
 
@@ -367,7 +370,7 @@ public class ExpressionClause<T> implements Expression, Predicate {
     /**
      * Returns a JOOR expression value builder
      */
-    @Deprecated
+    @Deprecated(since = "4.3.0")
     public T joor(String value) {
         return delegate.joor(value);
     }
@@ -375,7 +378,7 @@ public class ExpressionClause<T> implements Expression, Predicate {
     /**
      * Returns a JOOR expression value builder
      */
-    @Deprecated
+    @Deprecated(since = "4.3.0")
     public T joor(String value, Class<?> resultType) {
         return delegate.joor(value, resultType);
     }
@@ -1022,7 +1025,8 @@ public class ExpressionClause<T> implements Expression, Predicate {
     @Override
     public void init(CamelContext context) {
         if (expr == null) {
-            synchronized (this) {
+            lock.lock();
+            try {
                 if (expr == null) {
                     Expression newExpression = getExpressionValue();
                     if (newExpression == null) {
@@ -1031,6 +1035,8 @@ public class ExpressionClause<T> implements Expression, Predicate {
                     newExpression.init(context);
                     expr = newExpression;
                 }
+            } finally {
+                lock.unlock();
             }
         }
     }
@@ -1038,7 +1044,8 @@ public class ExpressionClause<T> implements Expression, Predicate {
     @Override
     public void initPredicate(CamelContext context) {
         if (pred == null) {
-            synchronized (this) {
+            lock.lock();
+            try {
                 if (pred == null) {
                     Expression newExpression = getExpressionValue();
                     Predicate newPredicate;
@@ -1050,12 +1057,14 @@ public class ExpressionClause<T> implements Expression, Predicate {
                     newPredicate.initPredicate(context);
                     pred = newPredicate;
                 }
+            } finally {
+                lock.unlock();
             }
         }
     }
 
     @Override
-    public <T> T evaluate(Exchange exchange, Class<T> type) {
+    public <U> U evaluate(Exchange exchange, Class<U> type) {
         init(exchange.getContext());
         return expr.evaluate(exchange, type);
     }

@@ -24,11 +24,13 @@ import org.apache.camel.Consumer;
 import org.apache.camel.PollingConsumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
+import org.apache.camel.spi.EndpointServiceLocation;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
+import org.apache.camel.util.StringHelper;
 import org.apache.plc4x.java.DefaultPlcDriverManager;
 import org.apache.plc4x.java.api.PlcConnection;
 import org.apache.plc4x.java.api.exceptions.PlcConnectionException;
@@ -43,7 +45,7 @@ import org.slf4j.LoggerFactory;
  */
 @UriEndpoint(scheme = "plc4x", firstVersion = "3.20.0", title = "PLC4X",
              syntax = "plc4x:driver", category = Category.IOT)
-public class Plc4XEndpoint extends DefaultEndpoint {
+public class Plc4XEndpoint extends DefaultEndpoint implements EndpointServiceLocation {
     private static final Logger LOGGER = LoggerFactory.getLogger(Plc4XEndpoint.class);
 
     protected DefaultPlcDriverManager plcDriverManager;
@@ -72,6 +74,16 @@ public class Plc4XEndpoint extends DefaultEndpoint {
         super(endpointUri, component);
         this.plcDriverManager = new DefaultPlcDriverManager();
         this.uri = endpointUri.replaceFirst("plc4x:/?/?", "");
+    }
+
+    @Override
+    public String getServiceUrl() {
+        return StringHelper.after(uri, ":", uri);
+    }
+
+    @Override
+    public String getServiceProtocol() {
+        return StringHelper.before(uri, ":", "plc4x");
     }
 
     public int getPeriod() {
@@ -111,7 +123,7 @@ public class Plc4XEndpoint extends DefaultEndpoint {
     public void setupConnection() throws PlcConnectionException {
         try {
             connection = plcDriverManager.getConnection(this.uri);
-            if (!connection.isConnected()) {
+            if (!isConnected()) {
                 reconnectIfNeeded();
             }
         } catch (PlcConnectionException e) {
@@ -135,15 +147,15 @@ public class Plc4XEndpoint extends DefaultEndpoint {
      * @throws PlcConnectionException If reconnect failed and auto-reconnect is turned on
      */
     public void reconnectIfNeeded() throws PlcConnectionException {
-        if (connection != null && connection.isConnected()) {
+        if (isConnected()) {
             LOGGER.trace("No reconnect needed, already connected");
         } else if (autoReconnect && connection == null) {
             connection = plcDriverManager.getConnection(uri);
             LOGGER.debug("Successfully reconnected");
-        } else if (autoReconnect && !connection.isConnected()) {
+        } else if (autoReconnect && !isConnected()) {
             connection.connect();
             // If reconnection fails without Exception, reset connection
-            if (!connection.isConnected()) {
+            if (!isConnected()) {
                 LOGGER.debug("No connection established after connect, resetting connection");
                 connection = plcDriverManager.getConnection(uri);
             }
@@ -159,6 +171,13 @@ public class Plc4XEndpoint extends DefaultEndpoint {
      */
     public boolean canWrite() {
         return connection.getMetadata().isWriteSupported();
+    }
+
+    /**
+     * @return true if connection is established and still connected
+     */
+    public boolean isConnected() {
+        return connection != null && connection.isConnected();
     }
 
     @Override
@@ -239,7 +258,7 @@ public class Plc4XEndpoint extends DefaultEndpoint {
     @Override
     public void doStop() throws Exception {
         //Shutting down the connection when leaving the Context
-        if (connection != null && connection.isConnected()) {
+        if (isConnected()) {
             connection.close();
             connection = null;
         }

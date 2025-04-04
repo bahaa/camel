@@ -23,7 +23,7 @@ import org.apache.camel.spi.Metadata;
 /**
  * Route controller configuration.
  */
-@Configurer(bootstrap = true)
+@Configurer(extended = true)
 public class RouteControllerConfigurationProperties implements BootstrapCloseable {
 
     private MainConfigurationProperties parent;
@@ -34,10 +34,10 @@ public class RouteControllerConfigurationProperties implements BootstrapCloseabl
     private String includeRoutes;
     @Metadata
     private String excludeRoutes;
-    @Metadata
-    private boolean unhealthyOnExhausted;
-    @Metadata
-    private boolean unhealthyOnRestarting;
+    @Metadata(label = "advanced", defaultValue = "true")
+    private boolean unhealthyOnExhausted = true;
+    @Metadata(label = "advanced", defaultValue = "true")
+    private boolean unhealthyOnRestarting = true;
     @Metadata
     private long initialDelay;
     @Metadata(defaultValue = "2000")
@@ -71,11 +71,11 @@ public class RouteControllerConfigurationProperties implements BootstrapCloseabl
     }
 
     /**
-     * To enable using supervising route controller which allows Camel to startup and then the controller takes care of
-     * starting the routes in a safe manner.
+     * To enable using supervising route controller which allows Camel to start up and then, the controller takes care
+     * of starting the routes in a safe manner.
      *
-     * This can be used when you want to startup Camel despite a route may otherwise fail fast during startup and cause
-     * Camel to fail to startup as well. By delegating the route startup to the supervising route controller then its
+     * This can be used when you want to start up Camel despite a route may otherwise fail fast during startup and cause
+     * Camel to fail to start up as well. By delegating the route startup to the supervising route controller, then it
      * manages the startup using a background thread. The controller allows to be configured with various settings to
      * attempt to restart failing routes.
      */
@@ -206,9 +206,8 @@ public class RouteControllerConfigurationProperties implements BootstrapCloseabl
      * Whether to mark the route as unhealthy (down) when all restarting attempts (backoff) have failed and the route is
      * not successfully started and the route manager is giving up.
      *
-     * Setting this to true allows health checks to know about this and can report the Camel application as DOWN.
-     *
-     * The default is false.
+     * If setting this to false will make health checks ignore this problem and allow to report the Camel application as
+     * UP.
      */
     public void setUnhealthyOnExhausted(boolean unhealthyOnExhausted) {
         this.unhealthyOnExhausted = unhealthyOnExhausted;
@@ -222,20 +221,19 @@ public class RouteControllerConfigurationProperties implements BootstrapCloseabl
      * Whether to mark the route as unhealthy (down) when the route failed to initially start, and is being controlled
      * for restarting (backoff).
      *
-     * Setting this to true allows health checks to know about this and can report the Camel application as DOWN.
-     *
-     * The default is false.
+     * If setting this to false will make health checks ignore this problem and allow to report the Camel application as
+     * UP.
      */
     public void setUnhealthyOnRestarting(boolean unhealthyOnRestarting) {
         this.unhealthyOnRestarting = unhealthyOnRestarting;
     }
 
     /**
-     * To enable using supervising route controller which allows Camel to startup and then the controller takes care of
-     * starting the routes in a safe manner.
+     * To enable using supervising route controller which allows Camel to start up and then, the controller takes care
+     * of starting the routes in a safe manner.
      *
-     * This can be used when you want to startup Camel despite a route may otherwise fail fast during startup and cause
-     * Camel to fail to startup as well. By delegating the route startup to the supervising route controller then its
+     * This can be used when you want to start up Camel despite a route may otherwise fail fast during startup and cause
+     * Camel to fail to start up as well. By delegating the route startup to the supervising route controller, then it
      * manages the startup using a background thread. The controller allows to be configured with various settings to
      * attempt to restart failing routes.
      */
@@ -245,7 +243,7 @@ public class RouteControllerConfigurationProperties implements BootstrapCloseabl
     }
 
     /**
-     * Initial delay in milli seconds before the route controller starts, after CamelContext has been started.
+     * Initial delay in milliseconds before the route controller starts, after CamelContext has been started.
      */
     public RouteControllerConfigurationProperties withInitialDelay(long initialDelay) {
         this.initialDelay = initialDelay;
@@ -336,9 +334,8 @@ public class RouteControllerConfigurationProperties implements BootstrapCloseabl
      * Whether to mark the route as unhealthy (down) when all restarting attempts (backoff) have failed and the route is
      * not successfully started and the route manager is giving up.
      *
-     * Setting this to true allows health checks to know about this and can report the Camel application as DOWN.
-     *
-     * The default is false.
+     * If setting this to false will make health checks ignore this problem and allow to report the Camel application as
+     * UP.
      */
     public RouteControllerConfigurationProperties withUnhealthyOnExhausted(boolean unhealthyOnExhausted) {
         this.unhealthyOnExhausted = unhealthyOnExhausted;
@@ -349,9 +346,8 @@ public class RouteControllerConfigurationProperties implements BootstrapCloseabl
      * Whether to mark the route as unhealthy (down) when the route failed to initially start, and is being controlled
      * for restarting (backoff).
      *
-     * Setting this to true allows health checks to know about this and can report the Camel application as DOWN.
-     *
-     * The default is false.
+     * If setting this to false will make health checks ignore this problem and allow to report the Camel application as
+     * UP.
      */
     public RouteControllerConfigurationProperties withUnhealthyOnRestarting(boolean unhealthyOnRestarting) {
         this.unhealthyOnRestarting = unhealthyOnRestarting;

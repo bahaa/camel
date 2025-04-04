@@ -375,7 +375,8 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
 
         builder.addModifiers(Modifier.PUBLIC, Modifier.STATIC);
 
-        if (extendsType(info, SEND_DEFINITION_CLASS) || extendsType(info, TO_DYNAMIC_DEFINITION_CLASS)) {
+        if (extendsType(info, SEND_DEFINITION_CLASS) || extendsType(info, TO_DYNAMIC_DEFINITION_CLASS)
+                || extendsType(info, POLL_DEFINITION_CLASS)) {
             builder.superclass(ParameterizedTypeName.get(CN_ENDPOINT_AWARE_DESERIALIZER_BASE, targetType));
         } else {
             builder.superclass(ParameterizedTypeName.get(CN_DESERIALIZER_BASE, targetType));
@@ -536,7 +537,8 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                             "array:org.apache.camel.model.ProcessorDefinition"));
         }
 
-        if (extendsType(info, SEND_DEFINITION_CLASS) || extendsType(info, TO_DYNAMIC_DEFINITION_CLASS)) {
+        if (extendsType(info, SEND_DEFINITION_CLASS) || extendsType(info, TO_DYNAMIC_DEFINITION_CLASS)
+                || extendsType(info, POLL_DEFINITION_CLASS)) {
             setProperty.beginControlFlow("default:");
             setProperty.addStatement("return false");
             setProperty.endControlFlow();
@@ -930,7 +932,12 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
         //
         // Others
         //
-        cb.beginControlFlow("case $S:", fieldName);
+        if ("enableCORS".equals(fieldName)) {
+            // special hack for this name
+            cb.beginControlFlow("case $S:", "enableCors");
+        } else {
+            cb.beginControlFlow("case $S:", fieldName);
+        }
 
         ClassInfo c = view.getClassByName(field.type().name());
         if (hasAnnotation(field, XML_JAVA_TYPE_ADAPTER_CLASS)) {

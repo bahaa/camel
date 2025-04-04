@@ -31,6 +31,9 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.Expression;
 import org.apache.camel.NamedNode;
+import org.apache.camel.model.BasicExpressionNode;
+import org.apache.camel.model.BeanFactoryDefinition;
+import org.apache.camel.model.DataFormatDefinition;
 import org.apache.camel.model.ExpressionNode;
 import org.apache.camel.model.FromDefinition;
 import org.apache.camel.model.OptionalIdentifiedDefinition;
@@ -40,7 +43,7 @@ import org.apache.camel.model.RouteTemplatesDefinition;
 import org.apache.camel.model.RoutesDefinition;
 import org.apache.camel.model.SendDefinition;
 import org.apache.camel.model.ToDynamicDefinition;
-import org.apache.camel.model.app.RegistryBeanDefinition;
+import org.apache.camel.model.dataformat.DataFormatsDefinition;
 import org.apache.camel.model.language.ExpressionDefinition;
 import org.apache.camel.spi.ModelToXMLDumper;
 import org.apache.camel.spi.NamespaceAware;
@@ -181,9 +184,9 @@ public class LwModelToXMLDumper implements ModelToXMLDumper {
         StringWriter buffer = new StringWriter();
         BeanModelWriter writer = new BeanModelWriter(buffer);
 
-        List<RegistryBeanDefinition> list = new ArrayList<>();
+        List<BeanFactoryDefinition<?>> list = new ArrayList<>();
         for (Object bean : beans) {
-            if (bean instanceof RegistryBeanDefinition rb) {
+            if (bean instanceof BeanFactoryDefinition<?> rb) {
                 list.add(rb);
             }
         }
@@ -198,6 +201,29 @@ public class LwModelToXMLDumper implements ModelToXMLDumper {
         return buffer.toString();
     }
 
+    @Override
+    public String dumpDataFormatsAsXml(CamelContext context, Map<String, Object> dataFormats) throws Exception {
+        StringWriter buffer = new StringWriter();
+        buffer.write("\n");
+
+        DataFormatModelWriter writer = new DataFormatModelWriter(buffer);
+        Map<String, DataFormatDefinition> map = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : dataFormats.entrySet()) {
+            if (entry.getValue() instanceof DataFormatDefinition def) {
+                map.put(entry.getKey(), def);
+            }
+        }
+        writer.setCamelContext(context);
+        writer.start();
+        try {
+            writer.writeDataFormats(map);
+        } finally {
+            writer.stop();
+        }
+
+        return buffer.toString();
+    }
+
     /**
      * Extract all XML namespaces from the expressions in the route
      *
@@ -205,8 +231,16 @@ public class LwModelToXMLDumper implements ModelToXMLDumper {
      * @param namespaces the map of namespaces to add discovered XML namespaces into
      */
     private static void extractNamespaces(RouteDefinition route, Map<String, String> namespaces) {
-        Collection<ExpressionNode> col = filterTypeInOutputs(route.getOutputs(), ExpressionNode.class);
-        for (ExpressionNode en : col) {
+        for (ExpressionNode en : filterTypeInOutputs(route.getOutputs(), ExpressionNode.class)) {
+            NamespaceAware na = getNamespaceAwareFromExpression(en);
+            if (na != null) {
+                Map<String, String> map = na.getNamespaces();
+                if (map != null && !map.isEmpty()) {
+                    namespaces.putAll(map);
+                }
+            }
+        }
+        for (BasicExpressionNode<?> en : filterTypeInOutputs(route.getOutputs(), BasicExpressionNode.class)) {
             NamespaceAware na = getNamespaceAwareFromExpression(en);
             if (na != null) {
                 Map<String, String> map = na.getNamespaces();
@@ -274,10 +308,24 @@ public class LwModelToXMLDumper implements ModelToXMLDumper {
 
         NamespaceAware na = null;
         Expression exp = ed.getExpressionValue();
-        if (exp instanceof NamespaceAware) {
-            na = (NamespaceAware) exp;
-        } else if (ed instanceof NamespaceAware) {
-            na = (NamespaceAware) ed;
+        if (exp instanceof NamespaceAware namespaceAware) {
+            na = namespaceAware;
+        } else if (ed instanceof NamespaceAware namespaceAware) {
+            na = namespaceAware;
+        }
+
+        return na;
+    }
+
+    private static NamespaceAware getNamespaceAwareFromExpression(BasicExpressionNode expressionNode) {
+        ExpressionDefinition ed = expressionNode.getExpression();
+
+        NamespaceAware na = null;
+        Expression exp = ed.getExpressionValue();
+        if (exp instanceof NamespaceAware namespaceAware) {
+            na = namespaceAware;
+        } else if (ed instanceof NamespaceAware namespaceAware) {
+            na = namespaceAware;
         }
 
         return na;
@@ -310,16 +358,16 @@ public class LwModelToXMLDumper implements ModelToXMLDumper {
             // noop
         }
 
-        public void writeBeans(List<RegistryBeanDefinition> beans) {
+        public void writeBeans(List<BeanFactoryDefinition<?>> beans) {
             if (beans.isEmpty()) {
                 return;
             }
-            for (RegistryBeanDefinition b : beans) {
-                doWriteRegistryBeanDefinition(b);
+            for (BeanFactoryDefinition<?> b : beans) {
+                doWriteBeanFactoryDefinition(b);
             }
         }
 
-        private void doWriteRegistryBeanDefinition(RegistryBeanDefinition b) {
+        private void doWriteBeanFactoryDefinition(BeanFactoryDefinition<?> b) {
             String type = b.getType();
             if (type.startsWith("#class:")) {
                 type = type.substring(7);
@@ -355,27 +403,71 @@ public class LwModelToXMLDumper implements ModelToXMLDumper {
             buffer.write(">\n");
             if (b.getConstructors() != null && !b.getConstructors().isEmpty()) {
                 buffer.write(String.format("        <constructors>%n"));
-                for (Map.Entry<Integer, Object> entry : b.getConstructors().entrySet()) {
-                    Integer idx = entry.getKey();
-                    Object value = entry.getValue();
+                b.getConstructors().forEach((idx, value) -> {
                     if (idx != null) {
                         buffer.write(String.format("            <constructor index=\"%d\" value=\"%s\"/>%n", idx, value));
                     } else {
                         buffer.write(String.format("            <constructor value=\"%s\"/>%n", value));
                     }
-                }
+                });
                 buffer.write(String.format("        </constructors>%n"));
             }
             if (b.getProperties() != null && !b.getProperties().isEmpty()) {
                 buffer.write(String.format("        <properties>%n"));
-                for (Map.Entry<String, Object> entry : b.getProperties().entrySet()) {
-                    String key = entry.getKey();
-                    Object value = entry.getValue();
+                b.getProperties().forEach((key, value) -> {
                     buffer.write(String.format("            <property key=\"%s\" value=\"%s\"/>%n", key, value));
-                }
+                });
                 buffer.write(String.format("        </properties>%n"));
             }
             buffer.write(String.format("    </bean>%n"));
+        }
+    }
+
+    private static class DataFormatModelWriter implements CamelContextAware {
+
+        private final StringWriter buffer;
+        private CamelContext camelContext;
+
+        public DataFormatModelWriter(StringWriter buffer) {
+            this.buffer = buffer;
+        }
+
+        @Override
+        public CamelContext getCamelContext() {
+            return camelContext;
+        }
+
+        @Override
+        public void setCamelContext(CamelContext camelContext) {
+            this.camelContext = camelContext;
+        }
+
+        public void start() {
+            // noop
+        }
+
+        public void stop() {
+            // noop
+        }
+
+        public void writeDataFormats(Map<String, DataFormatDefinition> dataFormats) throws Exception {
+            if (dataFormats.isEmpty()) {
+                return;
+            }
+
+            DataFormatsDefinition def = new DataFormatsDefinition();
+            def.setDataFormats(new ArrayList<>(dataFormats.values()));
+
+            StringWriter tmp = new StringWriter();
+            ModelWriter writer = new ModelWriter(tmp, null);
+            writer.writeDataFormatsDefinition(def);
+
+            // output with 4 space indent
+            for (String line : tmp.toString().split("\n")) {
+                buffer.write("    ");
+                buffer.write(line);
+                buffer.write("\n");
+            }
         }
     }
 

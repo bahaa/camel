@@ -48,10 +48,10 @@ public class FileConsumerPollStrategyPolledMessagesTest extends ContextTestSuppo
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
-            public void configure() throws Exception {
-                from(fileUri("?pollStrategy=#myPoll&initialDelay=0&delay=10")).routeId("foo").noAutoStartup()
+            public void configure() {
+                from(fileUri("?pollStrategy=#myPoll&initialDelay=0&delay=10")).routeId("foo").autoStartup(false)
                         .convertBodyTo(String.class).to("mock:result");
             }
         };
@@ -92,7 +92,7 @@ public class FileConsumerPollStrategyPolledMessagesTest extends ContextTestSuppo
         }
 
         @Override
-        public boolean rollback(Consumer consumer, Endpoint endpoint, int retryCounter, Exception cause) throws Exception {
+        public boolean rollback(Consumer consumer, Endpoint endpoint, int retryCounter, Exception cause) {
             return false;
         }
     }

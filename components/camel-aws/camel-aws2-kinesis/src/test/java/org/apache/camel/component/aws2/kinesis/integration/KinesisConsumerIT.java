@@ -17,8 +17,8 @@
 
 package org.apache.camel.component.aws2.kinesis.integration;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.EndpointInject;
@@ -44,11 +44,11 @@ import software.amazon.awssdk.services.kinesis.KinesisClient;
 
 import static org.apache.camel.test.infra.aws2.clients.KinesisUtils.createStream;
 import static org.apache.camel.test.infra.aws2.clients.KinesisUtils.putRecords;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 
 public class KinesisConsumerIT extends CamelTestSupport {
     private static class KinesisData {
@@ -66,7 +66,7 @@ public class KinesisConsumerIT extends CamelTestSupport {
     }
 
     @RegisterExtension
-    public static AWSService awsService = AWSServiceFactory.createKinesisService();
+    public static AWSService awsService = AWSServiceFactory.createSingletonKinesisService();
 
     private static final Logger LOG = LoggerFactory.getLogger(KinesisProducerIT.class);
 
@@ -76,7 +76,7 @@ public class KinesisConsumerIT extends CamelTestSupport {
     private KinesisClient client;
     private String streamName = AWSCommon.KINESIS_STREAM_BASE_NAME + "-cons-" + TestUtils.randomWithRange(0, 100);
     private final int messageCount = 20;
-    private List<KinesisData> receivedMessages = new ArrayList<>();
+    private List<KinesisData> receivedMessages = new CopyOnWriteArrayList<>();
 
     @Override
     protected RouteBuilder createRouteBuilder() {

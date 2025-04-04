@@ -59,7 +59,6 @@ public class LangChain4jChatComponent extends DefaultComponent {
         LangChain4jChatConfiguration langchain4jChatConfiguration = this.configuration.copy();
 
         Endpoint endpoint = new LangChain4jChatEndpoint(uri, this, remaining, langchain4jChatConfiguration);
-
         setProperties(endpoint, parameters);
         return endpoint;
     }

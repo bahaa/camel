@@ -23,10 +23,13 @@ public class LangChain4jChatEndpointUriFactory extends org.apache.camel.support.
     private static final Set<String> SECRET_PROPERTY_NAMES;
     private static final Set<String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(4);
+        Set<String> props = new HashSet<>(7);
+        props.add("bridgeErrorHandler");
         props.add("chatId");
         props.add("chatModel");
         props.add("chatOperation");
+        props.add("exceptionHandler");
+        props.add("exchangePattern");
         props.add("lazyStartProducer");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         SECRET_PROPERTY_NAMES = Collections.emptySet();

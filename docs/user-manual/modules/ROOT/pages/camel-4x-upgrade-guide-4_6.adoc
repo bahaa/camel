@@ -10,14 +10,71 @@ from both 4.0 to 4.1 and 4.1 to 4.2.
 
 When using `variableReceive` then the variable is only set if processing the `Exchange` was completely successfully.
 
-For example calling a route that fails due to an exception being thrown (even if `onException` or `errorHandler` are in use)
-then the variable is no longer set. Also, if the route is marked for rollback, or to stop continue routing with `.stop()`.
+For example, calling a route that fails due to an exception being thrown (even if `onException` or `errorHandler` are in use)
+then the variable is no longer set. Also, if the route is marked for rollback, or to stop continuing routing with `.stop()`.
 
 This is the same logic that the routing engine uses, whether to continue routing the `Exchange` or not.
 
-=== camel-as2
+=== camel-core-model
 
-The `camel-as2` component has upgraded HTTP Client 4.x to 5.x and because of that, there are some options that have changed.
+Harmonized model for defining custom beans to be the same for Kamelets and generic beans in XML/YAML DSLs.
+Before, there used to be three specialized model classes that have been refactored into a single class, offering the same capabilities
+for configuring beans (constructors, properties, builder classes, init/destroy methods etc.)
+
+=== XML DSL
+
+When using XML DSL to define properties on `<bean>` then `<property>` must now be declared inside `<properties>`.
+
+=== YAML DSL
+
+When using YAML DSL to define properties on `bean` then `property` has been removed in favour of using `properties`.
+
+Before:
+[source,yaml]
+----
+    beans:
+      - name: "myProcessor"
+        type: "#class:com.foo.MyClass"
+        property:
+          - key: "payload"
+            value: "test-payload"
+----
+
+After:
+[source,yaml]
+----
+    beans:
+      - name: "myProcessor"
+        type: "#class:com.foo.MyClass"
+        properties:
+          payload: "test-payload"
+----
+
+Renamed `streamCaching` to `streamCache` on the `route`
+
+Before:
+
+[source,yaml]
+----
+route:
+  streamCaching: false
+  from:
+    uri: "direct:foo"
+    steps:
+      - to: "mock:bar"
+----
+
+After:
+
+[source,yaml]
+----
+route:
+  streamCache: false
+  from:
+    uri: "direct:foo"
+    steps:
+      - to: "mock:bar"
+----
 
 === camel-elasticsearch
 
@@ -29,8 +86,8 @@ The `specifciationUri` in the `rest-api` component has changed from being a `jav
 , as it uses Camels `ResourceLoader` to load from pluggable resources and also more tooling friendly.
 
 The validator using Atlassian `swagger-request-validator` JAR has been removed, as this library is not JakartaEE compatible,
-and was causing classloading problems. The validator is now using similar validation as Rest DSL. However, the validator
-no longer check for JSon payloads if any required nodes is missing.
+and was causing classloading problems. The validator is now using a similar validation as Rest DSL. However, the validator
+no longer checks for JSON payloads if any required nodes are missing.
 
 === camel-langchain4j-chat
 
@@ -76,42 +133,37 @@ Multiple scopes can be separated by comma.
 
 The Kafka component now supports custom subscription adapters for applications with very complex subscription logic.
 
-=== camel-yaml-dsl
+=== camel-azure-servicebus
 
-Renamed `streamCaching` to `streamCache` on the `route`
+The Camel Azure ServiceBus consumer has been refactored to internally use the high-level client instead of the low-level client to more easily support automatic reconnection, competing consumers and high availability, amongst other concerns. The corresponding changes to configuration options are:
 
-Before:
-
-[source,yaml]
-----
-route:
-  streamCaching: false
-  from:
-    uri: "direct:foo"
-    steps:
-      - to: "mock:bar"
-----
-
-After:
-
-[source,yaml]
-----
-route:
-  streamCache: false
-  from:
-    uri: "direct:foo"
-    steps:
-      - to: "mock:bar"
-----
+- The consumer now supports the Competing Consumers EIP. This can be enabled by increasing the newly added `maxConcurrentCalls` option to a value greater than 1.
+- The `disableAutoComplete` option has been removed. Auto-complete is always disabled on the underlying client to ensure that Camel is able to correctly complete, abandon or dead-letter consumed messages as appropriate. The presence of the `disableAutoComplete` option made little sense, since it is not propagated to the underlying client and enabling this option caused Camel not to take any steps to acknowledge/reject consumed messages. Enabling this option would result in message locks being held indefinitely, which is almost certainly not the desired behaviour.
+- The high level client always operates in `receiveMessages` mode (peek mode is not supported), so the `consumerOperation` option has been removed, along with the `ServiceBusConsumerOperationDefinition` enum. The associated `peekNumMaxMessages` option has also been removed.
+- The `receiverAsyncClient` option has been replaced with a `processorClient` option to enable use of a custom-configured client. The parameter type accepted by this option is `ServiceBusProcessorClient`.
+- The `reconnectDelay` option has been removed, since reconnection is now handled internally by the client.
 
 === camel-jbang
 
 When running using `camel run --source-dir=mydir` then Camel JBang will now preload existing files on startup, such as `application.properties`,
-and beans and routes (same as if you run with `cd mydir; camel run *`). This allows to configure settings on Camel on startup, which was not possible beforehand.
+and beans and routes (same as if you run with `cd mydir; camel run *`). This allows configuring settings on Camel on startup, which was not possible beforehand.
+
+The `--open-api` option has changed from _code-first_ to use the new _contract-first_ Rest DSL style by using the specification file direct as-is.
+
+=== camel-as2
+
+The `camel-as2` component has upgraded HTTP Client 4.x to 5.x, and because of that, there are some options that have changed.
+
+Changes for AS2-MDN asynchronous delivery:
+
+ - Added an option allowing clients to request an asynchronous receipt by including a 'Receipt-Delivery-Option' header specifying
+the return URL in the request that is sent to the server.
+ - Added a consumer capable of receiving signed or unsigned asynchronous message disposition notifications sent by the
+message receiver confirming receipt of the message.
 
 === camel-spring-boot
 
-The auto configuration of xref:clustering.adoc[Cluster Service] implementations has been moved to dedicated starters:
+The autoconfiguration of xref:clustering.adoc[Cluster Service] implementations has been moved to dedicated starters:
 
 [%header, cols="1,2"]
 |===
@@ -126,9 +178,10 @@ The auto configuration of xref:clustering.adoc[Cluster Service] implementations 
 |===
 
 
-The Cluster Services are turned on by default unless they are explicit disabled, as example:
+The Cluster Services are turned on by default unless they are explicitly disabled, for example:
 
 [source, properties]
 ----
 camel.cluster.consul.enabled = false
 ----
+

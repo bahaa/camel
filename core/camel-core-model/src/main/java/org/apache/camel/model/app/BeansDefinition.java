@@ -23,11 +23,14 @@ import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlAnyElement;
 import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElementWrapper;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlType;
 
 import org.w3c.dom.Element;
 
+import org.apache.camel.model.BeanFactoryDefinition;
+import org.apache.camel.model.DataFormatDefinition;
 import org.apache.camel.model.RouteConfigurationDefinition;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.model.RouteTemplateDefinition;
@@ -35,18 +38,22 @@ import org.apache.camel.model.TemplatedRouteDefinition;
 import org.apache.camel.model.rest.RestConfigurationDefinition;
 import org.apache.camel.model.rest.RestDefinition;
 import org.apache.camel.spi.Metadata;
+import org.apache.camel.spi.annotations.DslProperty;
 import org.apache.camel.spi.annotations.ExternalSchemaElement;
 
 /**
  * Container for beans, routes, and more.
+ *
+ * Important this is only supported when using XML DSL with camel-xml-io-dsl. This is NOT for the classic old Spring XML
+ * DSL used by Camel 1.x/2.x.
  */
 @Metadata(label = "configuration")
 @XmlRootElement(name = "beans")
 @XmlType(propOrder = {
         "componentScanning",
         "beans",
-        "springBeans",
-        "blueprintBeans",
+        "springOrBlueprintBeans",
+        "dataFormats",
         "restConfigurations",
         "rests",
         "routeConfigurations",
@@ -64,22 +71,19 @@ public class BeansDefinition {
 
     // this is a place for <bean> element definition, without conflicting with <bean> elements referring
     // to "bean processors"
-
     @XmlElement(name = "bean")
-    private List<RegistryBeanDefinition> beans = new ArrayList<>();
+    private List<BeanFactoryDefinition> beans = new ArrayList<>();
 
-    // this is the only way I found to generate usable Schema without imports, while allowing elements
-    // from different namespaces
-    @ExternalSchemaElement(names = { "beans", "bean", "alias" },
+    // support for legacy spring <beans> and blueprint <bean> files to be parsed and loaded
+    // for migration and tooling effort (need to be in a single @XmlAnyElement as otherwise
+    // this causes camel-spring-xml to generate an invalid XSD
+    @ExternalSchemaElement(names = { "beans", "bean", "alias" }, names2 = "bean",
                            namespace = "http://www.springframework.org/schema/beans",
-                           documentElement = "beans")
+                           namespace2 = "http://www.osgi.org/xmlns/blueprint/v1.0.0",
+                           documentElement = "beans",
+                           documentElement2 = "blueprint")
     @XmlAnyElement
-    private List<Element> springBeans = new ArrayList<>();
-    @ExternalSchemaElement(names = { "bean" },
-                           namespace = "http://www.osgi.org/xmlns/blueprint/v1.0.0",
-                           documentElement = "blueprint")
-    @XmlAnyElement
-    private List<Element> blueprintBeans = new ArrayList<>();
+    private List<Element> springOrBlueprintBeans = new ArrayList<>();
 
     // the order comes from <camelContext> (org.apache.camel.spring.xml.CamelContextFactoryBean)
     // to make things less confusing, as it's not easy to simply tell JAXB to use <xsd:choice maxOccurs="unbounded">
@@ -88,6 +92,10 @@ public class BeansDefinition {
     // initially we'll be supporting only these elements which are parsed by
     // org.apache.camel.dsl.xml.io.XmlRoutesBuilderLoader in camel-xml-io-dsl
 
+    @XmlElementWrapper(name = "dataFormats")
+    @XmlElement(name = "dataFormat")
+    @DslProperty(name = "dataFormats") // yaml-dsl
+    private List<DataFormatDefinition> dataFormats;
     @XmlElement(name = "restConfiguration")
     private List<RestConfigurationDefinition> restConfigurations = new ArrayList<>();
     @XmlElement(name = "rest")
@@ -112,37 +120,27 @@ public class BeansDefinition {
         this.componentScanning = componentScanning;
     }
 
-    public List<RegistryBeanDefinition> getBeans() {
+    public List<BeanFactoryDefinition> getBeans() {
         return beans;
     }
 
     /**
      * List of bean
      */
-    public void setBeans(List<RegistryBeanDefinition> beans) {
+    public void setBeans(List<BeanFactoryDefinition> beans) {
         this.beans = beans;
     }
 
-    public List<Element> getSpringBeans() {
-        return springBeans;
+    public List<Element> getSpringOrBlueprintBeans() {
+        return springOrBlueprintBeans;
     }
 
     /**
-     * Spring XML beans
+     * Support for legacy Spring beans and Blueprint bean files to be parsed and loaded for migration and tooling
+     * effort.
      */
-    public void setSpringBeans(List<Element> springBeans) {
-        this.springBeans = springBeans;
-    }
-
-    public List<Element> getBlueprintBeans() {
-        return blueprintBeans;
-    }
-
-    /**
-     * Blueprint XML beans
-     */
-    public void setBlueprintBeans(List<Element> blueprintBeans) {
-        this.blueprintBeans = blueprintBeans;
+    public void setSpringOrBlueprintBeans(List<Element> springOrBlueprintBeans) {
+        this.springOrBlueprintBeans = springOrBlueprintBeans;
     }
 
     public List<RestConfigurationDefinition> getRestConfigurations() {
@@ -209,6 +207,17 @@ public class BeansDefinition {
      */
     public void setRoutes(List<RouteDefinition> routes) {
         this.routes = routes;
+    }
+
+    public List<DataFormatDefinition> getDataFormats() {
+        return dataFormats;
+    }
+
+    /**
+     * Camel data formats
+     */
+    public void setDataFormats(List<DataFormatDefinition> dataFormats) {
+        this.dataFormats = dataFormats;
     }
 
 }

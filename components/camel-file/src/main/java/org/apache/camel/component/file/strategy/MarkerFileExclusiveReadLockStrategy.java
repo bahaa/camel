@@ -21,12 +21,14 @@ import java.util.regex.Pattern;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.component.file.AntFilter;
 import org.apache.camel.component.file.FileComponent;
 import org.apache.camel.component.file.GenericFile;
 import org.apache.camel.component.file.GenericFileEndpoint;
 import org.apache.camel.component.file.GenericFileExclusiveReadLockStrategy;
 import org.apache.camel.component.file.GenericFileFilter;
 import org.apache.camel.component.file.GenericFileOperations;
+import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.StringHelper;
@@ -173,7 +175,7 @@ public class MarkerFileExclusiveReadLockStrategy implements GenericFileExclusive
     private static <T> void deleteLockFiles(
             File dir, boolean recursive, int minDepth, int maxDepth, int depth, boolean hiddenFilesEnabled, String endpointPath,
             GenericFileFilter<T> filter,
-            GenericFileFilter<T> antFilter,
+            AntFilter antFilter,
             Pattern excludePattern,
             Pattern includePattern) {
 
@@ -231,7 +233,7 @@ public class MarkerFileExclusiveReadLockStrategy implements GenericFileExclusive
 
     @SuppressWarnings("unchecked")
     private static <T> boolean acceptFile(
-            File file, String endpointPath, GenericFileFilter<T> filter, GenericFileFilter<T> antFilter, Pattern excludePattern,
+            File file, String endpointPath, GenericFileFilter<T> filter, AntFilter antFilter, Pattern excludePattern,
             Pattern includePattern) {
         GenericFile gf = new GenericFile<>();
         gf.setEndpointPath(endpointPath);
@@ -285,7 +287,7 @@ public class MarkerFileExclusiveReadLockStrategy implements GenericFileExclusive
         }
 
         if (antFilter != null) {
-            if (!antFilter.accept(gf)) {
+            if (!antFilter.accept(gf.isDirectory(), gf.getRelativeFilePath())) {
                 return false;
             }
         }
@@ -318,6 +320,18 @@ public class MarkerFileExclusiveReadLockStrategy implements GenericFileExclusive
         String path
                 = file.getCopyFromAbsoluteFilePath() != null ? file.getCopyFromAbsoluteFilePath() : file.getAbsoluteFilePath();
         return path + "-" + key;
+    }
+
+    protected static boolean isTimedOut(StopWatch watch, File target, long timeout, LoggingLevel readLockLoggingLevel) {
+        long delta = watch.taken();
+        if (delta > timeout) {
+            CamelLogger.log(LOG, readLockLoggingLevel,
+                    "Cannot acquire read lock within " + timeout + " millis. Will skip the file: " + target);
+            // we could not get the lock within the timeout period,
+            // so return false
+            return true;
+        }
+        return false;
     }
 
 }

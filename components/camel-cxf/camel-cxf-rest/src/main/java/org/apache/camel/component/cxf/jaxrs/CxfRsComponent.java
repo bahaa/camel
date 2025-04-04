@@ -44,6 +44,9 @@ public class CxfRsComponent extends HeaderFilterStrategyComponent implements SSL
 
     @Metadata(label = "security", defaultValue = "false")
     private boolean useGlobalSslContextParameters;
+    @Metadata(defaultValue = "false", label = "producer,advanced",
+              description = "Sets whether synchronous processing should be strictly used")
+    private boolean synchronous;
 
     public CxfRsComponent() {
     }
@@ -54,8 +57,6 @@ public class CxfRsComponent extends HeaderFilterStrategyComponent implements SSL
 
     @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
-        CxfRsEndpoint answer;
-
         Object value = parameters.remove("setDefaultBus");
         if (value != null) {
             LOG.warn("The option setDefaultBus is @deprecated, use name defaultBus instead");
@@ -64,16 +65,61 @@ public class CxfRsComponent extends HeaderFilterStrategyComponent implements SSL
             }
         }
 
+        final CxfRsEndpoint answer = doCreateEndpoint(remaining);
+        answer.setSynchronous(isSynchronous());
+
+        final String resourceClass = getAndRemoveParameter(parameters, "resourceClass", String.class);
+        if (resourceClass != null) {
+            Class<?> clazz = getCamelContext().getClassResolver().resolveMandatoryClass(resourceClass);
+            answer.addResourceClass(clazz);
+        }
+
+        final String resourceClasses = getAndRemoveParameter(parameters, "resourceClasses", String.class);
+        Iterator<?> it = ObjectHelper.createIterator(resourceClasses);
+        while (it.hasNext()) {
+            String name = (String) it.next();
+            Class<?> clazz = getCamelContext().getClassResolver().resolveMandatoryClass(name);
+            answer.addResourceClass(clazz);
+        }
+
+        setProperties(answer, parameters);
+        Map<String, String> params = CastUtils.cast(parameters);
+        answer.setParameters(params);
+        setEndpointHeaderFilterStrategy(answer);
+
+        // use global ssl config if set
+        if (answer.getSslContextParameters() == null) {
+            answer.setSslContextParameters(retrieveGlobalSslContextParameters());
+        }
+
+        return answer;
+    }
+
+    private CxfRsEndpoint doCreateEndpoint(String remaining) throws Exception {
+        final CxfRsEndpoint answer;
         if (remaining.startsWith(CxfConstants.SPRING_CONTEXT_ENDPOINT)) {
-            // Get the bean from the Spring context
-            String beanId = remaining.substring(CxfConstants.SPRING_CONTEXT_ENDPOINT.length());
-            if (beanId.startsWith("//")) {
-                beanId = beanId.substring(2);
-            }
+            answer = createSpringContextEndpoint(remaining);
 
-            AbstractJAXRSFactoryBean bean = CamelContextHelper.mandatoryLookup(getCamelContext(), beanId,
-                    AbstractJAXRSFactoryBean.class);
+        } else {
+            // endpoint URI does not specify a bean
+            answer = new CxfRsEndpoint(remaining, this);
+        }
+        return answer;
+    }
 
+    private CxfRsEndpoint createSpringContextEndpoint(String remaining) throws Exception {
+
+        // Get the bean from the Spring context
+        String beanId = remaining.substring(CxfConstants.SPRING_CONTEXT_ENDPOINT.length());
+        if (beanId.startsWith("//")) {
+            beanId = beanId.substring(2);
+        }
+
+        CxfRsEndpoint answer;
+        AbstractJAXRSFactoryBean bean = CamelContextHelper.lookup(getCamelContext(), beanId,
+                AbstractJAXRSFactoryBean.class);
+
+        if (bean != null) {
             CxfRsEndpointFactoryBean factory = null;
             if (bean.getClass().getName().contains("blueprint")) {
                 // use blueprint
@@ -103,38 +149,12 @@ public class CxfRsComponent extends HeaderFilterStrategyComponent implements SSL
                 setProperties(answer, copy);
             }
             // setup the skipFaultLogging
-
-            answer.setBeanId(beanId);
-
         } else {
-            // endpoint URI does not specify a bean
-            answer = new CxfRsEndpoint(remaining, this);
+            answer = CamelContextHelper.mandatoryLookup(getCamelContext(), beanId,
+                    CxfRsEndpoint.class);
         }
 
-        String resourceClass = getAndRemoveParameter(parameters, "resourceClass", String.class);
-        if (resourceClass != null) {
-            Class<?> clazz = getCamelContext().getClassResolver().resolveMandatoryClass(resourceClass);
-            answer.addResourceClass(clazz);
-        }
-
-        String resourceClasses = getAndRemoveParameter(parameters, "resourceClasses", String.class);
-        Iterator<?> it = ObjectHelper.createIterator(resourceClasses);
-        while (it.hasNext()) {
-            String name = (String) it.next();
-            Class<?> clazz = getCamelContext().getClassResolver().resolveMandatoryClass(name);
-            answer.addResourceClass(clazz);
-        }
-
-        setProperties(answer, parameters);
-        Map<String, String> params = CastUtils.cast(parameters);
-        answer.setParameters(params);
-        setEndpointHeaderFilterStrategy(answer);
-
-        // use global ssl config if set
-        if (answer.getSslContextParameters() == null) {
-            answer.setSslContextParameters(retrieveGlobalSslContextParameters());
-        }
-
+        answer.setBeanId(beanId);
         return answer;
     }
 
@@ -156,5 +176,13 @@ public class CxfRsComponent extends HeaderFilterStrategyComponent implements SSL
     @Override
     public void setUseGlobalSslContextParameters(boolean useGlobalSslContextParameters) {
         this.useGlobalSslContextParameters = useGlobalSslContextParameters;
+    }
+
+    public boolean isSynchronous() {
+        return synchronous;
+    }
+
+    public void setSynchronous(boolean synchronous) {
+        this.synchronous = synchronous;
     }
 }

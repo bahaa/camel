@@ -13,7 +13,7 @@ public class ExchangeConstantProvider {
 
     private static final Map<String, String> MAP;
     static {
-        Map<String, String> map = new HashMap<>(155);
+        Map<String, String> map = new HashMap<>(161);
         map.put("ACCEPT_CONTENT_TYPE", "CamelAcceptContentType");
         map.put("AGGREGATED_COLLECTION_GUARD", "CamelAggregatedCollectionGuard");
         map.put("AGGREGATED_COMPLETED_BY", "CamelAggregatedCompletedBy");
@@ -25,6 +25,7 @@ public class ExchangeConstantProvider {
         map.put("AGGREGATION_COMPLETE_CURRENT_GROUP", "CamelAggregationCompleteCurrentGroup");
         map.put("AGGREGATION_STRATEGY", "CamelAggregationStrategy");
         map.put("ASYNC_WAIT", "CamelAsyncWait");
+        map.put("ATTACHMENTS_SIZE", "CamelAttachmentsSize");
         map.put("AUTHENTICATION", "CamelAuthentication");
         map.put("AUTHENTICATION_FAILURE_POLICY_ID", "CamelAuthenticationFailurePolicyId");
         map.put("BATCH_COMPLETE", "CamelBatchComplete");
@@ -63,6 +64,7 @@ public class ExchangeConstantProvider {
         map.put("FAILURE_ROUTE_ID", "CamelFailureRouteId");
         map.put("FATAL_FALLBACK_ERROR_HANDLER", "CamelFatalFallbackErrorHandler");
         map.put("FILE_CONTENT_TYPE", "CamelFileContentType");
+        map.put("FILE_EXCHANGE_FILE", "CamelFileExchangeFile");
         map.put("FILE_LAST_MODIFIED", "CamelFileLastModified");
         map.put("FILE_LENGTH", "CamelFileLength");
         map.put("FILE_LOCAL_WORK_PATH", "CamelFileLocalWorkPath");
@@ -103,6 +105,7 @@ public class ExchangeConstantProvider {
         map.put("LANGUAGE_SCRIPT", "CamelLanguageScript");
         map.put("LOG_DEBUG_BODY_MAX_CHARS", "CamelLogDebugBodyMaxChars");
         map.put("LOG_DEBUG_BODY_STREAMS", "CamelLogDebugStreams");
+        map.put("LOG_EIP_LANGUAGE", "CamelLogEipLanguage");
         map.put("LOG_EIP_NAME", "CamelLogEipName");
         map.put("LOOP_INDEX", "CamelLoopIndex");
         map.put("LOOP_SIZE", "CamelLoopSize");
@@ -121,6 +124,8 @@ public class ExchangeConstantProvider {
         map.put("OFFSET", "CamelOffset");
         map.put("ON_COMPLETION", "CamelOnCompletion");
         map.put("ON_COMPLETION_ROUTE_IDS", "CamelOnCompletionRouteIds");
+        map.put("OTEL_ACTIVE_SPAN", "OpenTracing.activeSpan");
+        map.put("OTEL_CLOSE_CLIENT_SCOPE", "OpenTracing.closeClientScope");
         map.put("OVERRULE_FILE_NAME", "CamelOverruleFileName");
         map.put("PARENT_UNIT_OF_WORK", "CamelParentUnitOfWork");
         map.put("RECEIVED_TIMESTAMP", "CamelReceivedTimestamp");
@@ -132,6 +137,7 @@ public class ExchangeConstantProvider {
         map.put("REDELIVERY_MAX_COUNTER", "CamelRedeliveryMaxCounter");
         map.put("REST_HTTP_QUERY", "CamelRestHttpQuery");
         map.put("REST_HTTP_URI", "CamelRestHttpUri");
+        map.put("REST_OPENAPI", "CamelRestOpenAPI");
         map.put("REUSE_SCRIPT_ENGINE", "CamelReuseScripteEngine");
         map.put("ROLLBACK_ONLY", "CamelRollbackOnly");
         map.put("ROLLBACK_ONLY_LAST", "CamelRollbackOnlyLast");

@@ -92,8 +92,11 @@ public interface ManagedBacklogDebuggerMBean {
     @ManagedAttribute(description = "Whether currently in step mode")
     boolean isSingleStepMode();
 
-    @ManagedOperation(description = "Steps to next node in step mode")
+    @ManagedOperation(description = "Steps (into) to next node in step mode")
     void step();
+
+    @ManagedOperation(description = "Steps over the next node in step mode")
+    void stepOver();
 
     @ManagedOperation(description = "Return the node ids which has breakpoints")
     Set<String> breakpoints();
@@ -147,7 +150,7 @@ public interface ManagedBacklogDebuggerMBean {
     String dumpTracedMessagesAsXml(String nodeId);
 
     @ManagedOperation(description = "Dumps the messages in XML format from the suspended breakpoint at the given node.")
-    @Deprecated
+    @Deprecated(since = "4.2.0")
     String dumpTracedMessagesAsXml(String nodeId, boolean includeExchangeProperties);
 
     @ManagedOperation(description = "Dumps the messages in JSon format from the suspended breakpoint at the given node.")

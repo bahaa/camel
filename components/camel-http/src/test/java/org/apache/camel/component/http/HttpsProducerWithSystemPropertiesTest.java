@@ -32,9 +32,7 @@ import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
 import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
 import org.apache.hc.core5.ssl.SSLContexts;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.camel.component.http.HttpMethods.GET;
@@ -80,11 +78,8 @@ public class HttpsProducerWithSystemPropertiesTest extends BaseHttpTest {
         System.clearProperty("javax.net.ssl.keyStore");
     }
 
-    @BeforeEach
     @Override
-    public void setUp() throws Exception {
-        super.setUp();
-
+    public void setupResources() throws Exception {
         URL serverKeystoreUurl = HttpsServerTestSupport.class.getResource("/localhost.p12");
         URL serverTrustStoreUrl = HttpsServerTestSupport.class.getResource("/localhost.p12");
         SSLContext sslcontext = SSLContexts.custom()
@@ -95,7 +90,8 @@ public class HttpsProducerWithSystemPropertiesTest extends BaseHttpTest {
         Map<String, String> expectedHeaders = new HashMap<>();
         expectedHeaders.put("User-Agent", "myCoolCamelCaseAgent");
 
-        localServer = ServerBootstrap.bootstrap().setHttpProcessor(getBasicHttpProcessor())
+        localServer = ServerBootstrap.bootstrap()
+                .setCanonicalHostName("localhost").setHttpProcessor(getBasicHttpProcessor())
                 .setConnectionReuseStrategy(getConnectionReuseStrategy()).setResponseFactory(getHttpResponseFactory())
                 .setSslContext(sslcontext)
                 .setSslSetupHandler(socket -> socket.setNeedClientAuth(true))
@@ -107,10 +103,8 @@ public class HttpsProducerWithSystemPropertiesTest extends BaseHttpTest {
 
     }
 
-    @AfterEach
     @Override
-    public void tearDown() throws Exception {
-        super.tearDown();
+    public void cleanupResources() throws Exception {
 
         if (localServer != null) {
             localServer.stop();

@@ -33,12 +33,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
+import static org.awaitility.Awaitility.await;
 
 public class Sqs2ConsumerHealthCheckIAMProfileCredsIT extends CamelTestSupport {
 
     @RegisterExtension
-    public static AWSService service = AWSServiceFactory.createSQSService();
+    public static AWSService service = AWSServiceFactory.createSingletonSQSService();
 
     CamelContext context;
 

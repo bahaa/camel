@@ -73,8 +73,22 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Create collection during initialisation if it doesn't exist. Default
-         * is true.
+         * Set the whole Connection String/Uri for mongodb endpoint.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common
+         * 
+         * @param connectionUriString the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder connectionUriString(String connectionUriString) {
+            doSetProperty("connectionUriString", connectionUriString);
+            return this;
+        }
+        /**
+         * Create the collection during initialisation if it doesn't exist.
+         * Default is true.
          * 
          * The option is a: <code>boolean</code> type.
          * 
@@ -89,8 +103,8 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Create collection during initialisation if it doesn't exist. Default
-         * is true.
+         * Create the collection during initialisation if it doesn't exist.
+         * Default is true.
          * 
          * The option will be converted to a <code>boolean</code> type.
          * 
@@ -119,10 +133,10 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Host address of mongodb server in host:port format. It's possible
-         * also use more than one address, as comma separated list of hosts:
-         * host1:port1,host2:port2. If the hosts parameter is specified, the
-         * provided connectionBean is ignored.
+         * Host address of mongodb server in host:port format. It's possible to
+         * also use more than one address, as a comma separated list of hosts:
+         * host1:port1,host2:port2. If this parameter is specified, the provided
+         * connectionBean is ignored.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -199,10 +213,9 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Convert the output of the producer to the selected type :
-         * DocumentList Document or MongoIterable. DocumentList or MongoIterable
-         * applies to findAll and aggregate. Document applies to all other
-         * operations.
+         * Convert the output of the producer to the selected type: DocumentList
+         * Document or MongoIterable. DocumentList or MongoIterable applies to
+         * findAll and aggregate. Document applies to all other operations.
          * 
          * The option is a:
          * <code>org.apache.camel.component.mongodb.MongoDbOutputType</code>
@@ -218,10 +231,9 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Convert the output of the producer to the selected type :
-         * DocumentList Document or MongoIterable. DocumentList or MongoIterable
-         * applies to findAll and aggregate. Document applies to all other
-         * operations.
+         * Convert the output of the producer to the selected type: DocumentList
+         * Document or MongoIterable. DocumentList or MongoIterable applies to
+         * findAll and aggregate. Document applies to all other operations.
          * 
          * The option will be converted to a
          * <code>org.apache.camel.component.mongodb.MongoDbOutputType</code>
@@ -241,6 +253,7 @@ public interface MongoDbEndpointBuilderFactory {
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
+         * Default: tailable
          * Group: consumer
          * 
          * @param consumerType the value to set
@@ -248,20 +261,6 @@ public interface MongoDbEndpointBuilderFactory {
          */
         default MongoDbEndpointConsumerBuilder consumerType(String consumerType) {
             doSetProperty("consumerType", consumerType);
-            return this;
-        }
-        /**
-         * Set the whole Connection String/Uri for mongodb endpoint.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: additional
-         * 
-         * @param connectionUriString the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointConsumerBuilder connectionUriString(String connectionUriString) {
-            doSetProperty("connectionUriString", connectionUriString);
             return this;
         }
         /**
@@ -273,7 +272,7 @@ public interface MongoDbEndpointBuilderFactory {
          * <code>com.mongodb.client.model.changestream.FullDocument</code> type.
          * 
          * Default: default
-         * Group: changeStream
+         * Group: consumer
          * 
          * @param fullDocument the value to set
          * @return the dsl builder
@@ -291,13 +290,133 @@ public interface MongoDbEndpointBuilderFactory {
          * <code>com.mongodb.client.model.changestream.FullDocument</code> type.
          * 
          * Default: default
-         * Group: changeStream
+         * Group: consumer
          * 
          * @param fullDocument the value to set
          * @return the dsl builder
          */
         default MongoDbEndpointConsumerBuilder fullDocument(String fullDocument) {
             doSetProperty("fullDocument", fullDocument);
+            return this;
+        }
+        /**
+         * One tail tracking collection can host many trackers for several
+         * tailable consumers. To keep them separate, each tracker should have
+         * its own unique persistentId.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param persistentId the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder persistentId(String persistentId) {
+            doSetProperty("persistentId", persistentId);
+            return this;
+        }
+        /**
+         * Enable persistent tail tracking, which is a mechanism to keep track
+         * of the last consumed message across system restarts. The next time
+         * the system is up, the endpoint will recover the cursor from the point
+         * where it last stopped slurping records.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param persistentTailTracking the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder persistentTailTracking(boolean persistentTailTracking) {
+            doSetProperty("persistentTailTracking", persistentTailTracking);
+            return this;
+        }
+        /**
+         * Enable persistent tail tracking, which is a mechanism to keep track
+         * of the last consumed message across system restarts. The next time
+         * the system is up, the endpoint will recover the cursor from the point
+         * where it last stopped slurping records.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param persistentTailTracking the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder persistentTailTracking(String persistentTailTracking) {
+            doSetProperty("persistentTailTracking", persistentTailTracking);
+            return this;
+        }
+        /**
+         * Collection where tail tracking information will be persisted. If not
+         * specified, MongoDbTailTrackingConfig#DEFAULT_COLLECTION will be used
+         * by default.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param tailTrackCollection the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder tailTrackCollection(String tailTrackCollection) {
+            doSetProperty("tailTrackCollection", tailTrackCollection);
+            return this;
+        }
+        /**
+         * Indicates what database the tail tracking mechanism will persist to.
+         * If not specified, the current database will be picked by default.
+         * Dynamicity will not be taken into account even if enabled, i.e., the
+         * tail tracking database will not vary past endpoint initialization.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param tailTrackDb the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder tailTrackDb(String tailTrackDb) {
+            doSetProperty("tailTrackDb", tailTrackDb);
+            return this;
+        }
+        /**
+         * Field where the last tracked value will be placed. If not specified,
+         * MongoDbTailTrackingConfig#DEFAULT_FIELD will be used by default.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param tailTrackField the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder tailTrackField(String tailTrackField) {
+            doSetProperty("tailTrackField", tailTrackField);
+            return this;
+        }
+        /**
+         * Correlation field in the incoming record which is of increasing
+         * nature and will be used to position the tailing cursor every time it
+         * is generated. The cursor will be (re)created with a query of type:
+         * tailTrackIncreasingField greater than lastValue (possibly recovered
+         * from persistent tail tracking). Can be of type Integer, Date, String,
+         * etc. NOTE: No support for dot notation at the current time, so the
+         * field should be at the top level of the document.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param tailTrackIncreasingField the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder tailTrackIncreasingField(String tailTrackIncreasingField) {
+            doSetProperty("tailTrackIncreasingField", tailTrackIncreasingField);
             return this;
         }
         /**
@@ -343,6 +462,74 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
+         * Specifies that all communication with MongoDB instances should use
+         * TLS. Supersedes the ssl option. Default: false.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tls the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder tls(boolean tls) {
+            doSetProperty("tls", tls);
+            return this;
+        }
+        /**
+         * Specifies that all communication with MongoDB instances should use
+         * TLS. Supersedes the ssl option. Default: false.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tls the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder tls(String tls) {
+            doSetProperty("tls", tls);
+            return this;
+        }
+        /**
+         * Specifies that the driver should allow invalid hostnames in the
+         * certificate for TLS connections. Supersedes
+         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
+         * setting tlsAllowInvalidHostnames to true. Default: false.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tlsAllowInvalidHostnames the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder tlsAllowInvalidHostnames(boolean tlsAllowInvalidHostnames) {
+            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
+            return this;
+        }
+        /**
+         * Specifies that the driver should allow invalid hostnames in the
+         * certificate for TLS connections. Supersedes
+         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
+         * setting tlsAllowInvalidHostnames to true. Default: false.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tlsAllowInvalidHostnames the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder tlsAllowInvalidHostnames(String tlsAllowInvalidHostnames) {
+            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
+            return this;
+        }
+        /**
          * Username for mongodb connection.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -354,126 +541,6 @@ public interface MongoDbEndpointBuilderFactory {
          */
         default MongoDbEndpointConsumerBuilder username(String username) {
             doSetProperty("username", username);
-            return this;
-        }
-        /**
-         * One tail tracking collection can host many trackers for several
-         * tailable consumers. To keep them separate, each tracker should have
-         * its own unique persistentId.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: tail
-         * 
-         * @param persistentId the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointConsumerBuilder persistentId(String persistentId) {
-            doSetProperty("persistentId", persistentId);
-            return this;
-        }
-        /**
-         * Enable persistent tail tracking, which is a mechanism to keep track
-         * of the last consumed message across system restarts. The next time
-         * the system is up, the endpoint will recover the cursor from the point
-         * where it last stopped slurping records.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: tail
-         * 
-         * @param persistentTailTracking the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointConsumerBuilder persistentTailTracking(boolean persistentTailTracking) {
-            doSetProperty("persistentTailTracking", persistentTailTracking);
-            return this;
-        }
-        /**
-         * Enable persistent tail tracking, which is a mechanism to keep track
-         * of the last consumed message across system restarts. The next time
-         * the system is up, the endpoint will recover the cursor from the point
-         * where it last stopped slurping records.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: tail
-         * 
-         * @param persistentTailTracking the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointConsumerBuilder persistentTailTracking(String persistentTailTracking) {
-            doSetProperty("persistentTailTracking", persistentTailTracking);
-            return this;
-        }
-        /**
-         * Collection where tail tracking information will be persisted. If not
-         * specified, MongoDbTailTrackingConfig#DEFAULT_COLLECTION will be used
-         * by default.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: tail
-         * 
-         * @param tailTrackCollection the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointConsumerBuilder tailTrackCollection(String tailTrackCollection) {
-            doSetProperty("tailTrackCollection", tailTrackCollection);
-            return this;
-        }
-        /**
-         * Indicates what database the tail tracking mechanism will persist to.
-         * If not specified, the current database will be picked by default.
-         * Dynamicity will not be taken into account even if enabled, i.e. the
-         * tail tracking database will not vary past endpoint initialisation.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: tail
-         * 
-         * @param tailTrackDb the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointConsumerBuilder tailTrackDb(String tailTrackDb) {
-            doSetProperty("tailTrackDb", tailTrackDb);
-            return this;
-        }
-        /**
-         * Field where the last tracked value will be placed. If not specified,
-         * MongoDbTailTrackingConfig#DEFAULT_FIELD will be used by default.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: tail
-         * 
-         * @param tailTrackField the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointConsumerBuilder tailTrackField(String tailTrackField) {
-            doSetProperty("tailTrackField", tailTrackField);
-            return this;
-        }
-        /**
-         * Correlation field in the incoming record which is of increasing
-         * nature and will be used to position the tailing cursor every time it
-         * is generated. The cursor will be (re)created with a query of type:
-         * tailTrackIncreasingField greater than lastValue (possibly recovered
-         * from persistent tail tracking). Can be of type Integer, Date, String,
-         * etc. NOTE: No support for dot notation at the current time, so the
-         * field should be at the top level of the document.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: tail
-         * 
-         * @param tailTrackIncreasingField the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointConsumerBuilder tailTrackIncreasingField(String tailTrackIncreasingField) {
-            doSetProperty("tailTrackIncreasingField", tailTrackIncreasingField);
             return this;
         }
     }
@@ -794,7 +861,7 @@ public interface MongoDbEndpointBuilderFactory {
          * MongoDB deployment. Specify the interval (in milliseconds) between
          * checks, counted from the end of the previous check until the
          * beginning of the next one. Default: Single-threaded drivers: 60
-         * seconds. Multi-threaded drivers: 10 seconds.
+         * seconds. Multithreaded drivers: 10 seconds.
          * 
          * The option is a: <code>java.lang.Integer</code> type.
          * 
@@ -812,7 +879,7 @@ public interface MongoDbEndpointBuilderFactory {
          * MongoDB deployment. Specify the interval (in milliseconds) between
          * checks, counted from the end of the previous check until the
          * beginning of the next one. Default: Single-threaded drivers: 60
-         * seconds. Multi-threaded drivers: 10 seconds.
+         * seconds. Multithreaded drivers: 10 seconds.
          * 
          * The option will be converted to a <code>java.lang.Integer</code>
          * type.
@@ -1129,8 +1196,8 @@ public interface MongoDbEndpointBuilderFactory {
         /**
          * A representation of a tag set as a comma-separated list of
          * colon-separated key-value pairs, e.g. dc:ny,rack:1. Spaces are
-         * stripped from beginning and end of all keys and values. To specify a
-         * list of tag sets, using multiple readPreferenceTags, e.g.
+         * stripped from the beginning and end of all keys and values. To
+         * specify a list of tag sets, using multiple readPreferenceTags, e.g.,
          * readPreferenceTags=dc:ny,rack:1;readPreferenceTags=dc:ny;readPreferenceTags= Note the empty value for the last one, which means match any secondary as a last resort. Order matters when using multiple readPreferenceTags.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -1342,74 +1409,6 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specifies that all communication with MongoDB instances should use
-         * TLS. Supersedes the ssl option. Default: false.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tls the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointConsumerBuilder tls(boolean tls) {
-            doSetProperty("tls", tls);
-            return this;
-        }
-        /**
-         * Specifies that all communication with MongoDB instances should use
-         * TLS. Supersedes the ssl option. Default: false.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tls the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointConsumerBuilder tls(String tls) {
-            doSetProperty("tls", tls);
-            return this;
-        }
-        /**
-         * Specifies that the driver should allow invalid hostnames in the
-         * certificate for TLS connections. Supersedes
-         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
-         * setting tlsAllowInvalidHostnames to true. Default: false.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tlsAllowInvalidHostnames the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointConsumerBuilder tlsAllowInvalidHostnames(boolean tlsAllowInvalidHostnames) {
-            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
-            return this;
-        }
-        /**
-         * Specifies that the driver should allow invalid hostnames in the
-         * certificate for TLS connections. Supersedes
-         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
-         * setting tlsAllowInvalidHostnames to true. Default: false.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tlsAllowInvalidHostnames the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointConsumerBuilder tlsAllowInvalidHostnames(String tlsAllowInvalidHostnames) {
-            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
-            return this;
-        }
-        /**
          * Specifies the maximum amount of time, in milliseconds that a thread
          * may wait for a connection to become available. Default: 120000 (120
          * seconds).
@@ -1575,8 +1574,22 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Create collection during initialisation if it doesn't exist. Default
-         * is true.
+         * Set the whole Connection String/Uri for mongodb endpoint.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common
+         * 
+         * @param connectionUriString the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointProducerBuilder connectionUriString(String connectionUriString) {
+            doSetProperty("connectionUriString", connectionUriString);
+            return this;
+        }
+        /**
+         * Create the collection during initialisation if it doesn't exist.
+         * Default is true.
          * 
          * The option is a: <code>boolean</code> type.
          * 
@@ -1591,8 +1604,8 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Create collection during initialisation if it doesn't exist. Default
-         * is true.
+         * Create the collection during initialisation if it doesn't exist.
+         * Default is true.
          * 
          * The option will be converted to a <code>boolean</code> type.
          * 
@@ -1621,10 +1634,10 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Host address of mongodb server in host:port format. It's possible
-         * also use more than one address, as comma separated list of hosts:
-         * host1:port1,host2:port2. If the hosts parameter is specified, the
-         * provided connectionBean is ignored.
+         * Host address of mongodb server in host:port format. It's possible to
+         * also use more than one address, as a comma separated list of hosts:
+         * host1:port1,host2:port2. If this parameter is specified, the provided
+         * connectionBean is ignored.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -1701,10 +1714,9 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Convert the output of the producer to the selected type :
-         * DocumentList Document or MongoIterable. DocumentList or MongoIterable
-         * applies to findAll and aggregate. Document applies to all other
-         * operations.
+         * Convert the output of the producer to the selected type: DocumentList
+         * Document or MongoIterable. DocumentList or MongoIterable applies to
+         * findAll and aggregate. Document applies to all other operations.
          * 
          * The option is a:
          * <code>org.apache.camel.component.mongodb.MongoDbOutputType</code>
@@ -1720,10 +1732,9 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Convert the output of the producer to the selected type :
-         * DocumentList Document or MongoIterable. DocumentList or MongoIterable
-         * applies to findAll and aggregate. Document applies to all other
-         * operations.
+         * Convert the output of the producer to the selected type: DocumentList
+         * Document or MongoIterable. DocumentList or MongoIterable applies to
+         * findAll and aggregate. Document applies to all other operations.
          * 
          * The option will be converted to a
          * <code>org.apache.camel.component.mongodb.MongoDbOutputType</code>
@@ -1736,20 +1747,6 @@ public interface MongoDbEndpointBuilderFactory {
          */
         default MongoDbEndpointProducerBuilder outputType(String outputType) {
             doSetProperty("outputType", outputType);
-            return this;
-        }
-        /**
-         * Set the whole Connection String/Uri for mongodb endpoint.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: additional
-         * 
-         * @param connectionUriString the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointProducerBuilder connectionUriString(String connectionUriString) {
-            doSetProperty("connectionUriString", connectionUriString);
             return this;
         }
         /**
@@ -1778,6 +1775,74 @@ public interface MongoDbEndpointBuilderFactory {
          */
         default MongoDbEndpointProducerBuilder password(String password) {
             doSetProperty("password", password);
+            return this;
+        }
+        /**
+         * Specifies that all communication with MongoDB instances should use
+         * TLS. Supersedes the ssl option. Default: false.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tls the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointProducerBuilder tls(boolean tls) {
+            doSetProperty("tls", tls);
+            return this;
+        }
+        /**
+         * Specifies that all communication with MongoDB instances should use
+         * TLS. Supersedes the ssl option. Default: false.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tls the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointProducerBuilder tls(String tls) {
+            doSetProperty("tls", tls);
+            return this;
+        }
+        /**
+         * Specifies that the driver should allow invalid hostnames in the
+         * certificate for TLS connections. Supersedes
+         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
+         * setting tlsAllowInvalidHostnames to true. Default: false.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tlsAllowInvalidHostnames the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointProducerBuilder tlsAllowInvalidHostnames(boolean tlsAllowInvalidHostnames) {
+            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
+            return this;
+        }
+        /**
+         * Specifies that the driver should allow invalid hostnames in the
+         * certificate for TLS connections. Supersedes
+         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
+         * setting tlsAllowInvalidHostnames to true. Default: false.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tlsAllowInvalidHostnames the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointProducerBuilder tlsAllowInvalidHostnames(String tlsAllowInvalidHostnames) {
+            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
             return this;
         }
         /**
@@ -2040,7 +2105,7 @@ public interface MongoDbEndpointBuilderFactory {
          * MongoDB deployment. Specify the interval (in milliseconds) between
          * checks, counted from the end of the previous check until the
          * beginning of the next one. Default: Single-threaded drivers: 60
-         * seconds. Multi-threaded drivers: 10 seconds.
+         * seconds. Multithreaded drivers: 10 seconds.
          * 
          * The option is a: <code>java.lang.Integer</code> type.
          * 
@@ -2058,7 +2123,7 @@ public interface MongoDbEndpointBuilderFactory {
          * MongoDB deployment. Specify the interval (in milliseconds) between
          * checks, counted from the end of the previous check until the
          * beginning of the next one. Default: Single-threaded drivers: 60
-         * seconds. Multi-threaded drivers: 10 seconds.
+         * seconds. Multithreaded drivers: 10 seconds.
          * 
          * The option will be converted to a <code>java.lang.Integer</code>
          * type.
@@ -2375,8 +2440,8 @@ public interface MongoDbEndpointBuilderFactory {
         /**
          * A representation of a tag set as a comma-separated list of
          * colon-separated key-value pairs, e.g. dc:ny,rack:1. Spaces are
-         * stripped from beginning and end of all keys and values. To specify a
-         * list of tag sets, using multiple readPreferenceTags, e.g.
+         * stripped from the beginning and end of all keys and values. To
+         * specify a list of tag sets, using multiple readPreferenceTags, e.g.,
          * readPreferenceTags=dc:ny,rack:1;readPreferenceTags=dc:ny;readPreferenceTags= Note the empty value for the last one, which means match any secondary as a last resort. Order matters when using multiple readPreferenceTags.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -2588,74 +2653,6 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specifies that all communication with MongoDB instances should use
-         * TLS. Supersedes the ssl option. Default: false.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tls the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointProducerBuilder tls(boolean tls) {
-            doSetProperty("tls", tls);
-            return this;
-        }
-        /**
-         * Specifies that all communication with MongoDB instances should use
-         * TLS. Supersedes the ssl option. Default: false.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tls the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointProducerBuilder tls(String tls) {
-            doSetProperty("tls", tls);
-            return this;
-        }
-        /**
-         * Specifies that the driver should allow invalid hostnames in the
-         * certificate for TLS connections. Supersedes
-         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
-         * setting tlsAllowInvalidHostnames to true. Default: false.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tlsAllowInvalidHostnames the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointProducerBuilder tlsAllowInvalidHostnames(boolean tlsAllowInvalidHostnames) {
-            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
-            return this;
-        }
-        /**
-         * Specifies that the driver should allow invalid hostnames in the
-         * certificate for TLS connections. Supersedes
-         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
-         * setting tlsAllowInvalidHostnames to true. Default: false.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tlsAllowInvalidHostnames the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointProducerBuilder tlsAllowInvalidHostnames(String tlsAllowInvalidHostnames) {
-            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
-            return this;
-        }
-        /**
          * Specifies the maximum amount of time, in milliseconds that a thread
          * may wait for a connection to become available. Default: 120000 (120
          * seconds).
@@ -2822,8 +2819,22 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Create collection during initialisation if it doesn't exist. Default
-         * is true.
+         * Set the whole Connection String/Uri for mongodb endpoint.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common
+         * 
+         * @param connectionUriString the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointBuilder connectionUriString(String connectionUriString) {
+            doSetProperty("connectionUriString", connectionUriString);
+            return this;
+        }
+        /**
+         * Create the collection during initialisation if it doesn't exist.
+         * Default is true.
          * 
          * The option is a: <code>boolean</code> type.
          * 
@@ -2838,8 +2849,8 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Create collection during initialisation if it doesn't exist. Default
-         * is true.
+         * Create the collection during initialisation if it doesn't exist.
+         * Default is true.
          * 
          * The option will be converted to a <code>boolean</code> type.
          * 
@@ -2868,10 +2879,10 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Host address of mongodb server in host:port format. It's possible
-         * also use more than one address, as comma separated list of hosts:
-         * host1:port1,host2:port2. If the hosts parameter is specified, the
-         * provided connectionBean is ignored.
+         * Host address of mongodb server in host:port format. It's possible to
+         * also use more than one address, as a comma separated list of hosts:
+         * host1:port1,host2:port2. If this parameter is specified, the provided
+         * connectionBean is ignored.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -2948,10 +2959,9 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Convert the output of the producer to the selected type :
-         * DocumentList Document or MongoIterable. DocumentList or MongoIterable
-         * applies to findAll and aggregate. Document applies to all other
-         * operations.
+         * Convert the output of the producer to the selected type: DocumentList
+         * Document or MongoIterable. DocumentList or MongoIterable applies to
+         * findAll and aggregate. Document applies to all other operations.
          * 
          * The option is a:
          * <code>org.apache.camel.component.mongodb.MongoDbOutputType</code>
@@ -2967,10 +2977,9 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
-         * Convert the output of the producer to the selected type :
-         * DocumentList Document or MongoIterable. DocumentList or MongoIterable
-         * applies to findAll and aggregate. Document applies to all other
-         * operations.
+         * Convert the output of the producer to the selected type: DocumentList
+         * Document or MongoIterable. DocumentList or MongoIterable applies to
+         * findAll and aggregate. Document applies to all other operations.
          * 
          * The option will be converted to a
          * <code>org.apache.camel.component.mongodb.MongoDbOutputType</code>
@@ -2983,20 +2992,6 @@ public interface MongoDbEndpointBuilderFactory {
          */
         default MongoDbEndpointBuilder outputType(String outputType) {
             doSetProperty("outputType", outputType);
-            return this;
-        }
-        /**
-         * Set the whole Connection String/Uri for mongodb endpoint.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: additional
-         * 
-         * @param connectionUriString the value to set
-         * @return the dsl builder
-         */
-        default MongoDbEndpointBuilder connectionUriString(String connectionUriString) {
-            doSetProperty("connectionUriString", connectionUriString);
             return this;
         }
         /**
@@ -3025,6 +3020,74 @@ public interface MongoDbEndpointBuilderFactory {
          */
         default MongoDbEndpointBuilder password(String password) {
             doSetProperty("password", password);
+            return this;
+        }
+        /**
+         * Specifies that all communication with MongoDB instances should use
+         * TLS. Supersedes the ssl option. Default: false.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tls the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointBuilder tls(boolean tls) {
+            doSetProperty("tls", tls);
+            return this;
+        }
+        /**
+         * Specifies that all communication with MongoDB instances should use
+         * TLS. Supersedes the ssl option. Default: false.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tls the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointBuilder tls(String tls) {
+            doSetProperty("tls", tls);
+            return this;
+        }
+        /**
+         * Specifies that the driver should allow invalid hostnames in the
+         * certificate for TLS connections. Supersedes
+         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
+         * setting tlsAllowInvalidHostnames to true. Default: false.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tlsAllowInvalidHostnames the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointBuilder tlsAllowInvalidHostnames(boolean tlsAllowInvalidHostnames) {
+            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
+            return this;
+        }
+        /**
+         * Specifies that the driver should allow invalid hostnames in the
+         * certificate for TLS connections. Supersedes
+         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
+         * setting tlsAllowInvalidHostnames to true. Default: false.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param tlsAllowInvalidHostnames the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointBuilder tlsAllowInvalidHostnames(String tlsAllowInvalidHostnames) {
+            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
             return this;
         }
         /**
@@ -3244,7 +3307,7 @@ public interface MongoDbEndpointBuilderFactory {
          * MongoDB deployment. Specify the interval (in milliseconds) between
          * checks, counted from the end of the previous check until the
          * beginning of the next one. Default: Single-threaded drivers: 60
-         * seconds. Multi-threaded drivers: 10 seconds.
+         * seconds. Multithreaded drivers: 10 seconds.
          * 
          * The option is a: <code>java.lang.Integer</code> type.
          * 
@@ -3262,7 +3325,7 @@ public interface MongoDbEndpointBuilderFactory {
          * MongoDB deployment. Specify the interval (in milliseconds) between
          * checks, counted from the end of the previous check until the
          * beginning of the next one. Default: Single-threaded drivers: 60
-         * seconds. Multi-threaded drivers: 10 seconds.
+         * seconds. Multithreaded drivers: 10 seconds.
          * 
          * The option will be converted to a <code>java.lang.Integer</code>
          * type.
@@ -3579,8 +3642,8 @@ public interface MongoDbEndpointBuilderFactory {
         /**
          * A representation of a tag set as a comma-separated list of
          * colon-separated key-value pairs, e.g. dc:ny,rack:1. Spaces are
-         * stripped from beginning and end of all keys and values. To specify a
-         * list of tag sets, using multiple readPreferenceTags, e.g.
+         * stripped from the beginning and end of all keys and values. To
+         * specify a list of tag sets, using multiple readPreferenceTags, e.g.,
          * readPreferenceTags=dc:ny,rack:1;readPreferenceTags=dc:ny;readPreferenceTags= Note the empty value for the last one, which means match any secondary as a last resort. Order matters when using multiple readPreferenceTags.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -3789,74 +3852,6 @@ public interface MongoDbEndpointBuilderFactory {
          */
         default AdvancedMongoDbEndpointBuilder srvServiceName(String srvServiceName) {
             doSetProperty("srvServiceName", srvServiceName);
-            return this;
-        }
-        /**
-         * Specifies that all communication with MongoDB instances should use
-         * TLS. Supersedes the ssl option. Default: false.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tls the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointBuilder tls(boolean tls) {
-            doSetProperty("tls", tls);
-            return this;
-        }
-        /**
-         * Specifies that all communication with MongoDB instances should use
-         * TLS. Supersedes the ssl option. Default: false.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tls the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointBuilder tls(String tls) {
-            doSetProperty("tls", tls);
-            return this;
-        }
-        /**
-         * Specifies that the driver should allow invalid hostnames in the
-         * certificate for TLS connections. Supersedes
-         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
-         * setting tlsAllowInvalidHostnames to true. Default: false.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tlsAllowInvalidHostnames the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointBuilder tlsAllowInvalidHostnames(boolean tlsAllowInvalidHostnames) {
-            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
-            return this;
-        }
-        /**
-         * Specifies that the driver should allow invalid hostnames in the
-         * certificate for TLS connections. Supersedes
-         * sslInvalidHostNameAllowed. Has the same effect as tlsInsecure by
-         * setting tlsAllowInvalidHostnames to true. Default: false.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group: advanced
-         * 
-         * @param tlsAllowInvalidHostnames the value to set
-         * @return the dsl builder
-         */
-        default AdvancedMongoDbEndpointBuilder tlsAllowInvalidHostnames(String tlsAllowInvalidHostnames) {
-            doSetProperty("tlsAllowInvalidHostnames", tlsAllowInvalidHostnames);
             return this;
         }
         /**

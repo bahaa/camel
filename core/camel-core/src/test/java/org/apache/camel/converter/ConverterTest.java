@@ -58,10 +58,10 @@ public class ConverterTest extends TestSupport {
     private static final Logger LOG = LoggerFactory.getLogger(ConverterTest.class);
 
     protected final TypeConverter converter = new DefaultTypeConverter(
-            new DefaultPackageScanClassResolver(), new ReflectionInjector(), true);
+            new DefaultPackageScanClassResolver(), new ReflectionInjector(), true, false);
 
     @BeforeEach
-    public void setUp() throws Exception {
+    public void setUp() {
         ServiceHelper.startService(converter);
     }
 
@@ -157,7 +157,7 @@ public class ConverterTest extends TestSupport {
     }
 
     @Test
-    public void testFileToString() throws Exception {
+    public void testFileToString() {
         URL resource = getClass().getResource("dummy.txt");
         assertNotNull(resource, "Cannot find resource!");
         File file = new File(URLDecoder.decode(resource.getFile(), StandardCharsets.UTF_8));

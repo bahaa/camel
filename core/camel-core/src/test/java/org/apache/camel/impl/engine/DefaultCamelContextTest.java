@@ -38,7 +38,6 @@ import org.apache.camel.spi.EndpointRegistry;
 import org.apache.camel.spi.UuidGenerator;
 import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.DefaultUuidGenerator;
-import org.apache.camel.support.NormalizedUri;
 import org.apache.camel.support.service.ServiceSupport;
 import org.apache.camel.util.URISupport;
 import org.junit.jupiter.api.Test;
@@ -50,7 +49,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultCamelContextTest extends TestSupport {
 
@@ -81,7 +79,7 @@ public class DefaultCamelContextTest extends TestSupport {
     }
 
     @Test
-    public void testAutoStartComponentsOff() throws Exception {
+    public void testAutoStartComponentsOff() {
         DefaultCamelContext ctx = new DefaultCamelContext(false);
         ctx.disableJMX();
         ctx.start();
@@ -92,7 +90,7 @@ public class DefaultCamelContextTest extends TestSupport {
     }
 
     @Test
-    public void testAutoStartComponentsOn() throws Exception {
+    public void testAutoStartComponentsOn() {
         DefaultCamelContext ctx = new DefaultCamelContext();
         ctx.disableJMX();
         ctx.start();
@@ -113,7 +111,7 @@ public class DefaultCamelContextTest extends TestSupport {
     }
 
     @Test
-    public void testGetComponents() throws Exception {
+    public void testGetComponents() {
         DefaultCamelContext ctx = new DefaultCamelContext(false);
         ctx.disableJMX();
         Component component = ctx.getComponent("bean");
@@ -137,18 +135,16 @@ public class DefaultCamelContextTest extends TestSupport {
     @Test
     public void testGetEndPointByTypeUnknown() {
         DefaultCamelContext camelContext = new DefaultCamelContext();
-        try {
-            camelContext.getEndpoint("xxx", Endpoint.class);
-            fail();
-        } catch (NoSuchEndpointException e) {
-            assertEquals(
-                    "No endpoint could be found for: xxx, please check your classpath contains the needed Camel component jar.",
-                    e.getMessage());
-        }
+        NoSuchEndpointException e = assertThrows(NoSuchEndpointException.class,
+                () -> camelContext.getEndpoint("xxx", Endpoint.class));
+
+        assertEquals(
+                "No endpoint could be found for: xxx, please check your classpath contains the needed Camel component jar.",
+                e.getMessage());
     }
 
     @Test
-    public void testRemoveEndpoint() throws Exception {
+    public void testRemoveEndpoint() {
         DefaultCamelContext ctx = new DefaultCamelContext(false);
         ctx.disableJMX();
         ctx.getEndpoint("log:foo");
@@ -204,7 +200,7 @@ public class DefaultCamelContextTest extends TestSupport {
         ctx.disableJMX();
         ctx.addRoutes(new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:endpointA").to("mock:endpointB");
             }
         });
@@ -292,7 +288,7 @@ public class DefaultCamelContextTest extends TestSupport {
 
         ctx.addRoutes(new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:start").routeId("coolRoute").to("mock:result");
             }
         });
@@ -308,7 +304,7 @@ public class DefaultCamelContextTest extends TestSupport {
     }
 
     @Test
-    public void testSuspend() throws Exception {
+    public void testSuspend() {
         DefaultCamelContext ctx = new DefaultCamelContext(false);
         ctx.disableJMX();
 
@@ -333,7 +329,7 @@ public class DefaultCamelContextTest extends TestSupport {
     }
 
     @Test
-    public void testResume() throws Exception {
+    public void testResume() {
         DefaultCamelContext ctx = new DefaultCamelContext(false);
         ctx.disableJMX();
 
@@ -358,7 +354,7 @@ public class DefaultCamelContextTest extends TestSupport {
     }
 
     @Test
-    public void testSuspendResume() throws Exception {
+    public void testSuspendResume() {
         DefaultCamelContext ctx = new DefaultCamelContext();
 
         assertFalse(ctx.isStarted());
@@ -419,13 +415,13 @@ public class DefaultCamelContextTest extends TestSupport {
 
         ctx.addRoutes(new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from("direct:start").routeId("rawRoute").to("bean:MyBean?method=RAW(addString('aa a',${body}))");
             }
         });
         ctx.start();
 
-        EndpointRegistry<NormalizedUri> endpoints = ctx.getEndpointRegistry();
+        EndpointRegistry endpoints = ctx.getEndpointRegistry();
         Map<String, RouteService> routeServices = ctx.getRouteServices();
         Set<Endpoint> routeEndpoints = routeServices.get("rawRoute").gatherEndpoints();
 
@@ -455,16 +451,6 @@ public class DefaultCamelContextTest extends TestSupport {
         @Override
         public void setCamelContext(CamelContext camelContext) {
             this.camelContext = camelContext;
-        }
-
-        @Override
-        protected void doStart() throws Exception {
-            // noop
-        }
-
-        @Override
-        protected void doStop() throws Exception {
-            // noop
         }
     }
 

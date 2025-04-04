@@ -45,35 +45,6 @@ public interface IronMQEndpointBuilderFactory {
             return (AdvancedIronMQEndpointConsumerBuilder) this;
         }
         /**
-         * Reference to a io.iron.ironmq.Client in the Registry.
-         * 
-         * The option is a: <code>io.iron.ironmq.Client</code> type.
-         * 
-         * Group: common
-         * 
-         * @param client the value to set
-         * @return the dsl builder
-         */
-        default IronMQEndpointConsumerBuilder client(io.iron.ironmq.Client client) {
-            doSetProperty("client", client);
-            return this;
-        }
-        /**
-         * Reference to a io.iron.ironmq.Client in the Registry.
-         * 
-         * The option will be converted to a <code>io.iron.ironmq.Client</code>
-         * type.
-         * 
-         * Group: common
-         * 
-         * @param client the value to set
-         * @return the dsl builder
-         */
-        default IronMQEndpointConsumerBuilder client(String client) {
-            doSetProperty("client", client);
-            return this;
-        }
-        /**
          * IronMq Cloud url. Urls for public clusters:
          * https://mq-aws-us-east-1-1.iron.io (US) and
          * https://mq-aws-eu-west-1-1.iron.io (EU).
@@ -141,23 +112,9 @@ public interface IronMQEndpointBuilderFactory {
             return this;
         }
         /**
-         * IronMQ token.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: common
-         * 
-         * @param token the value to set
-         * @return the dsl builder
-         */
-        default IronMQEndpointConsumerBuilder token(String token) {
-            doSetProperty("token", token);
-            return this;
-        }
-        /**
          * Should messages be deleted in one batch. This will limit the number
          * of api requests since messages are deleted in one request, instead of
-         * one pr. exchange. If enabled care should be taken that the consumer
+         * one per exchange. If enabled care should be taken that the consumer
          * is idempotent when processing exchanges.
          * 
          * The option is a: <code>boolean</code> type.
@@ -175,7 +132,7 @@ public interface IronMQEndpointBuilderFactory {
         /**
          * Should messages be deleted in one batch. This will limit the number
          * of api requests since messages are deleted in one request, instead of
-         * one pr. exchange. If enabled care should be taken that the consumer
+         * one per exchange. If enabled care should be taken that the consumer
          * is idempotent when processing exchanges.
          * 
          * The option will be converted to a <code>boolean</code> type.
@@ -221,7 +178,7 @@ public interface IronMQEndpointBuilderFactory {
             return this;
         }
         /**
-         * Number of messages to poll pr. call. Maximum is 100.
+         * Number of messages to poll per call. Maximum is 100.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -236,7 +193,7 @@ public interface IronMQEndpointBuilderFactory {
             return this;
         }
         /**
-         * Number of messages to poll pr. call. Maximum is 100.
+         * Number of messages to poll per call. Maximum is 100.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -797,6 +754,20 @@ public interface IronMQEndpointBuilderFactory {
             doSetProperty("useFixedDelay", useFixedDelay);
             return this;
         }
+        /**
+         * IronMQ token.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param token the value to set
+         * @return the dsl builder
+         */
+        default IronMQEndpointConsumerBuilder token(String token) {
+            doSetProperty("token", token);
+            return this;
+        }
     }
 
     /**
@@ -961,6 +932,35 @@ public interface IronMQEndpointBuilderFactory {
             doSetProperty("pollStrategy", pollStrategy);
             return this;
         }
+        /**
+         * Reference to a io.iron.ironmq.Client in the Registry.
+         * 
+         * The option is a: <code>io.iron.ironmq.Client</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default AdvancedIronMQEndpointConsumerBuilder client(io.iron.ironmq.Client client) {
+            doSetProperty("client", client);
+            return this;
+        }
+        /**
+         * Reference to a io.iron.ironmq.Client in the Registry.
+         * 
+         * The option will be converted to a <code>io.iron.ironmq.Client</code>
+         * type.
+         * 
+         * Group: advanced
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default AdvancedIronMQEndpointConsumerBuilder client(String client) {
+            doSetProperty("client", client);
+            return this;
+        }
     }
 
     /**
@@ -973,35 +973,6 @@ public interface IronMQEndpointBuilderFactory {
             return (AdvancedIronMQEndpointProducerBuilder) this;
         }
 
-        /**
-         * Reference to a io.iron.ironmq.Client in the Registry.
-         * 
-         * The option is a: <code>io.iron.ironmq.Client</code> type.
-         * 
-         * Group: common
-         * 
-         * @param client the value to set
-         * @return the dsl builder
-         */
-        default IronMQEndpointProducerBuilder client(io.iron.ironmq.Client client) {
-            doSetProperty("client", client);
-            return this;
-        }
-        /**
-         * Reference to a io.iron.ironmq.Client in the Registry.
-         * 
-         * The option will be converted to a <code>io.iron.ironmq.Client</code>
-         * type.
-         * 
-         * Group: common
-         * 
-         * @param client the value to set
-         * @return the dsl builder
-         */
-        default IronMQEndpointProducerBuilder client(String client) {
-            doSetProperty("client", client);
-            return this;
-        }
         /**
          * IronMq Cloud url. Urls for public clusters:
          * https://mq-aws-us-east-1-1.iron.io (US) and
@@ -1070,20 +1041,6 @@ public interface IronMQEndpointBuilderFactory {
             return this;
         }
         /**
-         * IronMQ token.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: common
-         * 
-         * @param token the value to set
-         * @return the dsl builder
-         */
-        default IronMQEndpointProducerBuilder token(String token) {
-            doSetProperty("token", token);
-            return this;
-        }
-        /**
          * The item will not be available on the queue until this many seconds
          * have passed. Default is 0 seconds.
          * 
@@ -1111,6 +1068,20 @@ public interface IronMQEndpointBuilderFactory {
          */
         default IronMQEndpointProducerBuilder visibilityDelay(String visibilityDelay) {
             doSetProperty("visibilityDelay", visibilityDelay);
+            return this;
+        }
+        /**
+         * IronMQ token.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param token the value to set
+         * @return the dsl builder
+         */
+        default IronMQEndpointProducerBuilder token(String token) {
+            doSetProperty("token", token);
             return this;
         }
     }
@@ -1169,6 +1140,35 @@ public interface IronMQEndpointBuilderFactory {
             doSetProperty("lazyStartProducer", lazyStartProducer);
             return this;
         }
+        /**
+         * Reference to a io.iron.ironmq.Client in the Registry.
+         * 
+         * The option is a: <code>io.iron.ironmq.Client</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default AdvancedIronMQEndpointProducerBuilder client(io.iron.ironmq.Client client) {
+            doSetProperty("client", client);
+            return this;
+        }
+        /**
+         * Reference to a io.iron.ironmq.Client in the Registry.
+         * 
+         * The option will be converted to a <code>io.iron.ironmq.Client</code>
+         * type.
+         * 
+         * Group: advanced
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default AdvancedIronMQEndpointProducerBuilder client(String client) {
+            doSetProperty("client", client);
+            return this;
+        }
     }
 
     /**
@@ -1182,35 +1182,6 @@ public interface IronMQEndpointBuilderFactory {
             return (AdvancedIronMQEndpointBuilder) this;
         }
 
-        /**
-         * Reference to a io.iron.ironmq.Client in the Registry.
-         * 
-         * The option is a: <code>io.iron.ironmq.Client</code> type.
-         * 
-         * Group: common
-         * 
-         * @param client the value to set
-         * @return the dsl builder
-         */
-        default IronMQEndpointBuilder client(io.iron.ironmq.Client client) {
-            doSetProperty("client", client);
-            return this;
-        }
-        /**
-         * Reference to a io.iron.ironmq.Client in the Registry.
-         * 
-         * The option will be converted to a <code>io.iron.ironmq.Client</code>
-         * type.
-         * 
-         * Group: common
-         * 
-         * @param client the value to set
-         * @return the dsl builder
-         */
-        default IronMQEndpointBuilder client(String client) {
-            doSetProperty("client", client);
-            return this;
-        }
         /**
          * IronMq Cloud url. Urls for public clusters:
          * https://mq-aws-us-east-1-1.iron.io (US) and
@@ -1283,7 +1254,7 @@ public interface IronMQEndpointBuilderFactory {
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
-         * Group: common
+         * Group: security
          * 
          * @param token the value to set
          * @return the dsl builder
@@ -1305,6 +1276,35 @@ public interface IronMQEndpointBuilderFactory {
             return (IronMQEndpointBuilder) this;
         }
 
+        /**
+         * Reference to a io.iron.ironmq.Client in the Registry.
+         * 
+         * The option is a: <code>io.iron.ironmq.Client</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default AdvancedIronMQEndpointBuilder client(io.iron.ironmq.Client client) {
+            doSetProperty("client", client);
+            return this;
+        }
+        /**
+         * Reference to a io.iron.ironmq.Client in the Registry.
+         * 
+         * The option will be converted to a <code>io.iron.ironmq.Client</code>
+         * type.
+         * 
+         * Group: advanced
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default AdvancedIronMQEndpointBuilder client(String client) {
+            doSetProperty("client", client);
+            return this;
+        }
     }
 
     public interface IronMQBuilders {

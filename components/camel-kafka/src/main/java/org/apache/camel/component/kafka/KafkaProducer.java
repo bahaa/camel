@@ -41,18 +41,15 @@ import org.apache.camel.health.HealthCheckHelper;
 import org.apache.camel.health.WritableHealthCheckRepository;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.support.DefaultAsyncProducer;
-import org.apache.camel.support.SynchronizationAdapter;
 import org.apache.camel.util.KeyValueHolder;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.ReflectionHelper;
 import org.apache.camel.util.URISupport;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.NetworkClient;
-import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.slf4j.Logger;
@@ -392,7 +389,7 @@ public class KafkaProducer extends DefaultAsyncProducer {
             startKafkaTransaction(exchange);
         }
 
-        if (isIterable(message.getBody())) {
+        if (endpoint.getConfiguration().isUseIterator() && isIterable(message.getBody())) {
             processIterableSync(exchange, message);
         } else {
             processSingleMessageSync(exchange, message);
@@ -448,9 +445,7 @@ public class KafkaProducer extends DefaultAsyncProducer {
 
         if (configuration.isRecordMetadata()) {
             List<RecordMetadata> metadataList = Collections.singletonList(metadata);
-
             ProducerUtil.setRecordMetadata(key, metadataList);
-
             return metadataList;
         }
 
@@ -471,11 +466,10 @@ public class KafkaProducer extends DefaultAsyncProducer {
 
         try {
             // is the message body a list or something that contains multiple values
-            if (isIterable(body)) {
+            if (endpoint.getConfiguration().isUseIterator() && isIterable(body)) {
                 processIterableAsync(exchange, producerCallBack, message);
             } else {
                 final ProducerRecord<Object, Object> record = createRecord(exchange, message);
-
                 doSend(exchange, record, producerCallBack);
             }
 
@@ -516,7 +510,8 @@ public class KafkaProducer extends DefaultAsyncProducer {
             KafkaProducerMetadataCallBack metadataCallBack = new KafkaProducerMetadataCallBack(
                     key, configuration.isRecordMetadata());
 
-            DelegatingCallback delegatingCallback = new DelegatingCallback(cb, metadataCallBack);
+            // make sure to cb is last in the order here
+            DelegatingCallback delegatingCallback = new DelegatingCallback(metadataCallBack, cb);
 
             kafkaProducer.send(record, delegatingCallback);
         } else {
@@ -528,44 +523,5 @@ public class KafkaProducer extends DefaultAsyncProducer {
         exchange.getUnitOfWork().beginTransactedBy(transactionId);
         kafkaProducer.beginTransaction();
         exchange.getUnitOfWork().addSynchronization(new KafkaTransactionSynchronization(transactionId, kafkaProducer));
-    }
-}
-
-class KafkaTransactionSynchronization extends SynchronizationAdapter {
-    private static final Logger LOG = LoggerFactory.getLogger(KafkaTransactionSynchronization.class);
-    private final String transactionId;
-    private final Producer kafkaProducer;
-
-    public KafkaTransactionSynchronization(String transactionId, Producer kafkaProducer) {
-        this.transactionId = transactionId;
-        this.kafkaProducer = kafkaProducer;
-    }
-
-    @Override
-    public void onDone(Exchange exchange) {
-        try {
-            if (exchange.getException() != null || exchange.isRollbackOnly()) {
-                if (exchange.getException() instanceof KafkaException) {
-                    LOG.warn("Catch {} and will close kafka producer with transaction {} ", exchange.getException(),
-                            transactionId);
-                    kafkaProducer.close();
-                } else {
-                    LOG.warn("Abort kafka transaction {} with exchange {}", transactionId, exchange.getExchangeId());
-                    kafkaProducer.abortTransaction();
-                }
-            } else {
-                LOG.debug("Commit kafka transaction {} with exchange {}", transactionId, exchange.getExchangeId());
-                kafkaProducer.commitTransaction();
-            }
-        } catch (KafkaException e) {
-            exchange.setException(e);
-        } catch (Exception e) {
-            exchange.setException(e);
-            LOG.warn("Abort kafka transaction {} with exchange {} due to {} ", transactionId, exchange.getExchangeId(),
-                    e.getMessage(), e);
-            kafkaProducer.abortTransaction();
-        } finally {
-            exchange.getUnitOfWork().endTransactedBy(transactionId);
-        }
     }
 }

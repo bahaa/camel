@@ -65,6 +65,9 @@ public class ZipAggregationStrategy implements AggregationStrategy {
     @Metadata(description = "Sets the suffix that will be used when creating the ZIP filename.", defaultValue = "zip")
     private String fileSuffix = ".zip";
     @Metadata(label = "advanced",
+              description = "Whether to add empty files to the ZIP.", defaultValue = "false")
+    private boolean allowEmptyFiles;
+    @Metadata(label = "advanced",
               description = "If the incoming message is from a file, then the folder structure of said file can be preserved")
     private boolean preserveFolderStructure;
     @Metadata(label = "advanced",
@@ -106,15 +109,29 @@ public class ZipAggregationStrategy implements AggregationStrategy {
      *                                of memory.
      */
     public ZipAggregationStrategy(boolean preserveFolderStructure, boolean useFilenameHeader, boolean useTempFile) {
+        this(preserveFolderStructure, useFilenameHeader, useTempFile, false);
+    }
+
+    /**
+     * @param preserveFolderStructure if true, the folder structure is preserved when the source is a type of
+     *                                {@link GenericFileMessage}. If used with a file, use recursive=true.
+     * @param useFilenameHeader       if true, the filename header will be used to name aggregated byte arrays within
+     *                                the ZIP file.
+     * @param useTempFile             if true, the ZipFileSystem will use temporary files for zip manipulations instead
+     *                                of memory.
+     * @param allowEmptyFiles         if true, the Aggregation will also add empty files to the zip.
+     *
+     */
+    public ZipAggregationStrategy(boolean preserveFolderStructure, boolean useFilenameHeader, boolean useTempFile,
+                                  boolean allowEmptyFiles) {
         this.preserveFolderStructure = preserveFolderStructure;
         this.useFilenameHeader = useFilenameHeader;
         this.useTempFile = useTempFile;
+        this.allowEmptyFiles = allowEmptyFiles;
     }
 
     /**
      * Gets the prefix used when creating the ZIP file name.
-     *
-     * @return the prefix
      */
     public String getFilePrefix() {
         return filePrefix;
@@ -122,8 +139,6 @@ public class ZipAggregationStrategy implements AggregationStrategy {
 
     /**
      * Sets the prefix that will be used when creating the ZIP filename.
-     *
-     * @param filePrefix prefix to use on ZIP file.
      */
     public void setFilePrefix(String filePrefix) {
         this.filePrefix = filePrefix;
@@ -131,8 +146,6 @@ public class ZipAggregationStrategy implements AggregationStrategy {
 
     /**
      * Gets the suffix used when creating the ZIP file name.
-     *
-     * @return the suffix
      */
     public String getFileSuffix() {
         return fileSuffix;
@@ -140,11 +153,17 @@ public class ZipAggregationStrategy implements AggregationStrategy {
 
     /**
      * Sets the suffix that will be used when creating the ZIP filename.
-     *
-     * @param fileSuffix suffix to use on ZIP file.
      */
     public void setFileSuffix(String fileSuffix) {
         this.fileSuffix = fileSuffix;
+    }
+
+    public boolean isAllowEmptyFiles() {
+        return allowEmptyFiles;
+    }
+
+    public void setAllowEmptyFiles(boolean allowEmptyFiles) {
+        this.allowEmptyFiles = allowEmptyFiles;
     }
 
     public File getParentDir() {
@@ -194,50 +213,44 @@ public class ZipAggregationStrategy implements AggregationStrategy {
         File zipFile;
         Exchange answer = oldExchange;
 
+        boolean isFirstTimeInAggregation = oldExchange == null;
         // Guard against empty new exchanges
-        if (newExchange == null) {
+        if (newExchange.getIn().getBody() == null && !isFirstTimeInAggregation) {
             return oldExchange;
         }
 
-        // First time for this aggregation
-        if (oldExchange == null) {
-            try {
-                zipFile = FileUtil.createTempFile(this.filePrefix, this.fileSuffix, this.parentDir);
-                newZipFile(zipFile);
-            } catch (IOException | URISyntaxException e) {
-                throw new GenericFileOperationFailedException(e.getMessage(), e);
-            }
+        if (isFirstTimeInAggregation) {
+            zipFile = createZipFile();
             answer = newExchange;
             answer.getExchangeExtension().addOnCompletion(new DeleteZipFileOnCompletion(zipFile));
         } else {
             zipFile = oldExchange.getIn().getBody(File.class);
         }
         Object body = newExchange.getIn().getBody();
-        if (body instanceof WrappedFile) {
-            body = ((WrappedFile) body).getFile();
+        if (body instanceof WrappedFile<?> wrappedFile) {
+            body = wrappedFile.getFile();
         }
 
         String charset = ExchangeHelper.getCharsetName(newExchange, true);
 
-        if (body instanceof File) {
-            try {
-                File appendFile = (File) body;
-                // do not try to append empty files
-                if (appendFile.length() > 0) {
-                    String entryName = preserveFolderStructure
-                            ? newExchange.getIn().getHeader(Exchange.FILE_NAME, String.class)
-                            : newExchange.getIn().getMessageId();
-                    addFileToZip(zipFile, appendFile, this.preserveFolderStructure ? entryName : null);
-                }
-            } catch (Exception e) {
-                throw new GenericFileOperationFailedException(e.getMessage(), e);
-            }
+        if (body instanceof File appendFile) {
+            appendFileToZip(newExchange, appendFile, zipFile);
         } else {
-            // Handle all other messages
+            appendIncomingBodyAsBytesToZip(newExchange, zipFile, charset);
+        }
+
+        GenericFile<File> genericFile = FileConsumer.asGenericFile(zipFile.getParent(), zipFile, charset, false);
+        genericFile.bindToExchange(answer);
+
+        return answer;
+    }
+
+    private void appendIncomingBodyAsBytesToZip(Exchange newExchange, File zipFile, String charset) {
+        if (newExchange.getIn().getBody() != null) {
             try {
                 byte[] buffer = newExchange.getIn().getMandatoryBody(byte[].class);
-                // do not try to append empty data
-                if (buffer.length > 0) {
+                // try to append empty data only when explicit set
+                if (this.allowEmptyFiles || buffer.length > 0) {
                     String entryName = useFilenameHeader
                             ? newExchange.getIn().getHeader(Exchange.FILE_NAME, String.class)
                             : newExchange.getIn().getMessageId();
@@ -247,17 +260,37 @@ public class ZipAggregationStrategy implements AggregationStrategy {
                 throw new GenericFileOperationFailedException(e.getMessage(), e);
             }
         }
+    }
 
-        GenericFile<File> genericFile = FileConsumer.asGenericFile(zipFile.getParent(), zipFile, charset, false);
-        genericFile.bindToExchange(answer);
+    private void appendFileToZip(Exchange newExchange, File appendFile, File zipFile) {
+        try {
+            // try to append empty data only when explicit set
+            if (this.allowEmptyFiles || appendFile.length() > 0) {
+                String entryName = preserveFolderStructure
+                        ? newExchange.getIn().getHeader(Exchange.FILE_NAME, String.class)
+                        : newExchange.getIn().getMessageId();
+                addFileToZip(zipFile, appendFile, this.preserveFolderStructure ? entryName : null);
+            }
+        } catch (Exception e) {
+            throw new GenericFileOperationFailedException(e.getMessage(), e);
+        }
+    }
 
-        return answer;
+    private File createZipFile() {
+        File zipFile;
+        try {
+            zipFile = FileUtil.createTempFile(this.filePrefix, this.fileSuffix, this.parentDir);
+            newZipFile(zipFile);
+        } catch (IOException | URISyntaxException e) {
+            throw new GenericFileOperationFailedException(e.getMessage(), e);
+        }
+        return zipFile;
     }
 
     @Override
     public void onCompletion(Exchange exchange, Exchange inputExchange) {
         // this aggregation strategy added onCompletion which we should handover when we are complete
-        if (inputExchange != null) {
+        if (exchange != null && inputExchange != null) {
             exchange.getExchangeExtension().handoverCompletions(inputExchange);
         }
     }
@@ -284,8 +317,6 @@ public class ZipAggregationStrategy implements AggregationStrategy {
             if (parent != null) {
                 Files.createDirectories(parent);
                 Files.copy(file.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
-            } else {
-                // TODO do some logging
             }
         }
     }
@@ -301,8 +332,6 @@ public class ZipAggregationStrategy implements AggregationStrategy {
             if (parent != null) {
                 Files.createDirectories(parent);
                 Files.write(dest, buffer, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-            } else {
-                // TODO do some logging
             }
         }
     }

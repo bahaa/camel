@@ -37,7 +37,7 @@ public class BeanConcurrentTest extends ContextTestSupport {
 
         // start from 1000 to be 4 digit always (easier to string compare)
         for (int i = 1000; i < 2000; i++) {
-            template.sendBody("seda:foo", "" + i);
+            template.sendBody("seda:foo", Integer.toString(i));
         }
 
         context.getRouteController().startRoute("foo");
@@ -69,11 +69,11 @@ public class BeanConcurrentTest extends ContextTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
-                from("seda:foo?concurrentConsumers=10").routeId("foo").noAutoStartup().to("bean:myBean").to("mock:result");
+            public void configure() {
+                from("seda:foo?concurrentConsumers=10").routeId("foo").autoStartup(false).to("bean:myBean").to("mock:result");
             }
         };
     }
@@ -109,6 +109,7 @@ public class BeanConcurrentTest extends ContextTestSupport {
             this.baz = baz;
         }
 
+        @SuppressWarnings("unused")
         public void doSomething() {
             // noop
         }

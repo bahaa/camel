@@ -29,9 +29,9 @@ public class BeanParameterInfoTest extends ContextTestSupport {
     protected CamelContext camelContext = new DefaultCamelContext();
 
     @Test
-    public void testMethodPatternUsingMethodAnnotations() throws Exception {
+    public void testMethodPatternUsingMethodAnnotations() {
         Class<?> foo = Foo.class.getClass();
-        ParameterInfo info = new ParameterInfo(1, foo.getClass(), foo.getAnnotations(), null);
+        ParameterInfo info = new ParameterInfo(1, foo.getClass(), false, foo.getAnnotations(), null);
 
         assertNotNull(info);
         assertNotNull(info.toString());

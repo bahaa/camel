@@ -18,11 +18,12 @@ package org.apache.camel.yaml.io;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 import java.util.StringJoiner;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,7 +33,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.catalog.impl.DefaultRuntimeCamelCatalog;
-import org.apache.camel.support.PluginHelper;
 import org.apache.camel.support.service.ServiceSupport;
 import org.apache.camel.tooling.model.BaseOptionModel;
 import org.apache.camel.tooling.model.EipModel;
@@ -59,16 +59,18 @@ public class YamlWriter extends ServiceSupport implements CamelContextAware {
     private CamelContext camelContext;
     private final Writer writer;
     private final DefaultRuntimeCamelCatalog catalog;
+    private final ModelJSonSchemaResolver resolver;
     private final List<EipModel> roots = new ArrayList<>();
     private boolean routesIsRoot;
-    private final Stack<EipModel> models = new Stack<>();
+    private final ArrayDeque<EipModel> models = new ArrayDeque<>();
     private String expression;
     private boolean uriAsParameters;
 
     public YamlWriter(Writer writer) {
         this.writer = writer;
+        this.resolver = new ModelJSonSchemaResolver();
         this.catalog = new DefaultRuntimeCamelCatalog();
-        this.catalog.setJSonSchemaResolver(new ModelJSonSchemaResolver());
+        this.catalog.setJSonSchemaResolver(this.resolver);
         this.catalog.setCaching(false); // turn cache off as we store state per node
         this.catalog.start();
     }
@@ -86,12 +88,17 @@ public class YamlWriter extends ServiceSupport implements CamelContextAware {
     @Override
     protected void doStart() throws Exception {
         if (camelContext != null) {
-            DefaultRuntimeCamelCatalog runtime = (DefaultRuntimeCamelCatalog) PluginHelper.getRuntimeCamelCatalog(camelContext);
-            if (runtime != null) {
-                // use json schema resolver from camel context
-                this.catalog.setJSonSchemaResolver(runtime.getJSonSchemaResolver());
-            }
+            this.resolver.setCamelContext(camelContext);
+            this.resolver.setClassLoader(camelContext.getApplicationContextClassLoader());
         }
+    }
+
+    private EipModel lookupEipModel(String name) {
+        // namespace is using the property model
+        if ("namespace".equals(name)) {
+            name = "property";
+        }
+        return catalog.eipModel(name);
     }
 
     public void setUriAsParameters(boolean uriAsParameters) {
@@ -99,14 +106,15 @@ public class YamlWriter extends ServiceSupport implements CamelContextAware {
     }
 
     public void startElement(String name) throws IOException {
-        if ("routes".equals(name)) {
+        if ("routes".equals(name) || "dataFormats".equals(name)) {
+            // special for routes or dataFormats
             routesIsRoot = true;
             return;
         }
 
-        EipModel model = catalog.eipModel(name);
+        EipModel model = lookupEipModel(name);
         if (model == null) {
-            // not an EIP model
+            // not an EIP model or namespace
             return;
         }
 
@@ -130,15 +138,38 @@ public class YamlWriter extends ServiceSupport implements CamelContextAware {
     }
 
     public void endElement(String name) throws IOException {
-        if ("routes".equals(name)) {
+        if ("routes".equals(name) || "dataFormats".equals(name)) {
             // we are done
             writer.write(toYaml());
             return;
         }
 
-        EipModel model = catalog.eipModel(name);
+        EipModel model = lookupEipModel(name);
         if (model == null) {
             // not an EIP model
+            return;
+        }
+
+        // special for namespace
+        if ("namespace".equals(name)) {
+            EipModel last = models.isEmpty() ? null : models.peek();
+            if (!models.isEmpty()) {
+                models.pop();
+            }
+            EipModel parent = models.isEmpty() ? null : models.peek();
+            if (parent != null) {
+                Map<String, String> map = (Map<String, String>) parent.getMetadata().get("namespace");
+                if (map == null) {
+                    map = new LinkedHashMap<>();
+                    parent.getMetadata().put("namespace", map);
+                }
+                String key = (String) last.getMetadata().get("key");
+                String value = (String) last.getMetadata().get("value");
+                // skip xsi namespace
+                if (key != null && !"xsi".equals(key) && value != null) {
+                    map.put(key, value);
+                }
+            }
             return;
         }
 
@@ -168,6 +199,14 @@ public class YamlWriter extends ServiceSupport implements CamelContextAware {
                 if ("from".equals(name) && parent.isInput()) {
                     // only set input once
                     parent.getMetadata().put("_input", last);
+                } else if ("dataFormats".equals(parent.getName())) {
+                    // special for dataFormats
+                    List<EipModel> list = (List<EipModel>) parent.getMetadata().get("_output");
+                    if (list == null) {
+                        list = new ArrayList<>();
+                        parent.getMetadata().put("_output", list);
+                    }
+                    list.add(last);
                 } else if ("choice".equals(parent.getName())) {
                     // special for choice/doCatch/doFinally
                     setMetadata(parent, name, last);
@@ -310,16 +349,15 @@ public class YamlWriter extends ServiceSupport implements CamelContextAware {
                     exp = expressionName(model, key);
                 }
                 Object v = entry.getValue();
-                if (v instanceof EipModel) {
-                    EipModel m = (EipModel) entry.getValue();
+                if (v instanceof EipModel m) {
                     if (exp == null || "expression".equals(exp)) {
                         v = asExpressionNode(m, m.getName());
                     } else {
                         v = asExpressionNode(m, exp);
                     }
                 }
-                if (exp != null && v instanceof EipNode) {
-                    node.addExpression((EipNode) v);
+                if (exp != null && v instanceof EipNode eipNode) {
+                    node.addExpression(eipNode);
                 } else {
                     node.addProperty(key, v);
                     if ("expression".equals(key)) {
@@ -385,8 +423,8 @@ public class YamlWriter extends ServiceSupport implements CamelContextAware {
                     List<Object> list = new ArrayList<>();
                     for (Object v : col) {
                         Object r = v;
-                        if (r instanceof EipModel) {
-                            EipNode en = asNode((EipModel) r);
+                        if (r instanceof EipModel eipModel) {
+                            EipNode en = asNode(eipModel);
                             value = en.asJsonObject();
                             JsonObject wrap = new JsonObject();
                             wrap.put(en.getName(), value);
@@ -403,8 +441,8 @@ public class YamlWriter extends ServiceSupport implements CamelContextAware {
                     }
                     jo.put(key, list);
                 } else {
-                    if (value instanceof EipModel) {
-                        EipNode r = asNode((EipModel) value);
+                    if (value instanceof EipModel eipModel) {
+                        EipNode r = asNode(eipModel);
                         value = r.asJsonObject();
                         jo.put(r.getName(), value);
                     } else {

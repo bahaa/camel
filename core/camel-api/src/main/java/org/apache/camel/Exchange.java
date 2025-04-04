@@ -30,15 +30,15 @@ import org.apache.camel.spi.annotations.ConstantProvider;
  * During processing down the {@link Processor} chain, the {@link Exchange} provides access to the current (not the
  * original) request and response {@link Message} messages. The {@link Exchange} also holds meta-data during its entire
  * lifetime stored as properties accessible using the various {@link #getProperty(String)} methods. The
- * {@link #setProperty(String, Object)} is used to store a property. For example you can use this to store security, SLA
- * related data or any other information deemed useful throughout processing. If an {@link Exchange} failed during
+ * {@link #setProperty(String, Object)} is used to store a property. For example, you can use this to store security,
+ * SLA related data or any other information deemed useful throughout processing. If an {@link Exchange} failed during
  * routing the {@link Exception} that caused the failure is stored and accessible via the {@link #getException()}
  * method.
  * <p/>
  * An Exchange is created when a {@link Consumer} receives a request. A new {@link Message} is created, the request is
  * set as the body of the {@link Message} and depending on the {@link Consumer} other {@link Endpoint} and protocol
  * related information is added as headers on the {@link Message}. Then an Exchange is created and the newly created
- * {@link Message} is set as the in on the Exchange. Therefore an Exchange starts its life in a {@link Consumer}. The
+ * {@link Message} is set as the in on the Exchange. Therefore, an Exchange starts its life in a {@link Consumer}. The
  * Exchange is then sent down the {@link Route} for processing along a {@link Processor} chain. The {@link Processor} as
  * the name suggests is what processes the {@link Message} in the Exchange and Camel, in addition to providing
  * out-of-the-box a large number of useful processors, it also allows you to create your own. The rule Camel uses is to
@@ -57,7 +57,7 @@ import org.apache.camel.spi.annotations.ConstantProvider;
  * you could also instantiate your specialized {@link Message} and set it on the exchange using the
  * {@link #setOut(org.apache.camel.Message)} method. Please note that a {@link Message} contains not only the body but
  * also headers and attachments. If you are creating a new {@link Message} the headers and attachments of the in
- * {@link Message} are not automatically copied to the out by Camel and you'll have to set the headers and attachments
+ * {@link Message} are not automatically copied to the out by Camel, and you'll have to set the headers and attachments
  * you need yourself. If your {@link Processor} is not producing a different {@link Message} but only needs to slightly
  * modify the in, you can simply update the in {@link Message} returned by {@link #getIn()}.
  * <p/>
@@ -69,7 +69,7 @@ public interface Exchange extends VariableAware {
 
     String AUTHENTICATION = "CamelAuthentication";
     String AUTHENTICATION_FAILURE_POLICY_ID = "CamelAuthenticationFailurePolicyId";
-    @Deprecated
+    @Deprecated(since = "2.20.0")
     String ACCEPT_CONTENT_TYPE = "CamelAcceptContentType";
     @Metadata(label = "aggregate", description = "Number of exchanges that was grouped together.", javaType = "int")
     String AGGREGATED_SIZE = "CamelAggregatedSize";
@@ -96,20 +96,23 @@ public interface Exchange extends VariableAware {
               javaType = "boolean")
     String AGGREGATION_COMPLETE_ALL_GROUPS_INCLUSIVE = "CamelAggregationCompleteAllGroupsInclusive";
     String ASYNC_WAIT = "CamelAsyncWait";
+    @Metadata(description = "The number of Multipart files uploaded with a single request")
+    String ATTACHMENTS_SIZE = "CamelAttachmentsSize";
 
     String BATCH_INDEX = "CamelBatchIndex";
     String BATCH_SIZE = "CamelBatchSize";
     String BATCH_COMPLETE = "CamelBatchComplete";
+    @Deprecated
     String BEAN_METHOD_NAME = "CamelBeanMethodName";
     String BINDING = "CamelBinding";
-    // do not prefix with Camel and use lower-case starting letter as its a shared key
+    // do not prefix with Camel and use a lower-case starting letter as it's a shared key
     // used across other Apache products such as AMQ, SMX etc.
     String BREADCRUMB_ID = "breadcrumbId";
 
     String CHARSET_NAME = "CamelCharsetName";
-    @Deprecated
+    @Deprecated(since = "4.5.0")
     String CIRCUIT_BREAKER_STATE = "CamelCircuitBreakerState";
-    @Deprecated
+    @Deprecated(since = "3.1.0")
     String CREATED_TIMESTAMP = "CamelCreatedTimestamp";
     String CLAIM_CHECK_REPOSITORY = "CamelClaimCheckRepository";
     String CONTENT_ENCODING = "Content-Encoding";
@@ -142,12 +145,12 @@ public interface Exchange extends VariableAware {
     String EVALUATE_EXPRESSION_RESULT = "CamelEvaluateExpressionResult";
     String ERRORHANDLER_BRIDGE = "CamelErrorHandlerBridge";
     String ERRORHANDLER_CIRCUIT_DETECTED = "CamelErrorHandlerCircuitDetected";
-    @Deprecated
+    @Deprecated(since = "3.1.0")
     String ERRORHANDLER_HANDLED = "CamelErrorHandlerHandled";
-    @Deprecated
+    @Deprecated(since = "3.1.0")
     String EXTERNAL_REDELIVERED = "CamelExternalRedelivered";
 
-    @Deprecated
+    @Deprecated(since = "4.0.0")
     String FAILURE_HANDLED = "CamelFailureHandled";
 
     @Metadata(label = "doCatch,doFinally,errorHandler,onException",
@@ -174,7 +177,8 @@ public interface Exchange extends VariableAware {
     String FILE_LOCK_EXCLUSIVE_LOCK = "CamelFileLockExclusiveLock";
     String FILE_LOCK_RANDOM_ACCESS_FILE = "CamelFileLockRandomAccessFile";
     String FILE_LOCK_CHANNEL_FILE = "CamelFileLockChannelFile";
-    @Deprecated
+    String FILE_EXCHANGE_FILE = "CamelFileExchangeFile";
+    @Deprecated(since = "3.9.0")
     String FILTER_MATCHED = "CamelFilterMatched";
     String FILTER_NON_XML_CHARS = "CamelFilterNonXmlChars";
 
@@ -195,20 +199,23 @@ public interface Exchange extends VariableAware {
     String HTTP_URI = "CamelHttpUri";
     String HTTP_URL = "CamelHttpUrl";
     String HTTP_CHUNKED = "CamelHttpChunked";
+    @Deprecated(since = "4.7.0")
     String HTTP_SERVLET_REQUEST = "CamelHttpServletRequest";
+    @Deprecated(since = "4.7.0")
     String HTTP_SERVLET_RESPONSE = "CamelHttpServletResponse";
 
     @Metadata(label = "interceptFrom,interceptSendToEndpoint", description = "The endpoint URI that was intercepted",
               javaType = "String")
     String INTERCEPTED_ENDPOINT = "CamelInterceptedEndpoint";
     String INTERCEPT_SEND_TO_ENDPOINT_WHEN_MATCHED = "CamelInterceptSendToEndpointWhenMatched";
-    @Deprecated
+    @Deprecated(since = "3.1.0")
     String INTERRUPTED = "CamelInterrupted";
 
     String LANGUAGE_SCRIPT = "CamelLanguageScript";
     String LOG_DEBUG_BODY_MAX_CHARS = "CamelLogDebugBodyMaxChars";
     String LOG_DEBUG_BODY_STREAMS = "CamelLogDebugStreams";
     String LOG_EIP_NAME = "CamelLogEipName";
+    String LOG_EIP_LANGUAGE = "CamelLogEipLanguage";
     @Metadata(label = "loop", description = "Index of the current iteration (0 based).", javaType = "int")
     String LOOP_INDEX = "CamelLoopIndex";
     @Metadata(label = "loop",
@@ -236,7 +243,7 @@ public interface Exchange extends VariableAware {
     @Metadata(label = "multicast", description = "Whether this Exchange is the last.", javaType = "boolean")
     String MULTICAST_COMPLETE = "CamelMulticastComplete";
 
-    @Deprecated
+    @Deprecated(since = "3.1.0")
     String NOTIFY_EVENT = "CamelNotifyEvent";
 
     @Metadata(label = "onCompletion",
@@ -255,26 +262,27 @@ public interface Exchange extends VariableAware {
     String REDELIVERED = "CamelRedelivered";
     String REDELIVERY_COUNTER = "CamelRedeliveryCounter";
     String REDELIVERY_MAX_COUNTER = "CamelRedeliveryMaxCounter";
-    @Deprecated
+    @Deprecated(since = "3.1.0")
     String REDELIVERY_EXHAUSTED = "CamelRedeliveryExhausted";
     String REDELIVERY_DELAY = "CamelRedeliveryDelay";
     String REST_HTTP_URI = "CamelRestHttpUri";
     String REST_HTTP_QUERY = "CamelRestHttpQuery";
-    @Deprecated
+    String REST_OPENAPI = "CamelRestOpenAPI";
+    @Deprecated(since = "3.1.0")
     String ROLLBACK_ONLY = "CamelRollbackOnly";
-    @Deprecated
+    @Deprecated(since = "3.1.0")
     String ROLLBACK_ONLY_LAST = "CamelRollbackOnlyLast";
-    @Deprecated
+    @Deprecated(since = "3.1.0")
     String ROUTE_STOP = "CamelRouteStop";
 
     String REUSE_SCRIPT_ENGINE = "CamelReuseScripteEngine";
     String COMPILE_SCRIPT = "CamelCompileScript";
 
-    @Deprecated
+    @Deprecated(since = "3.15.0")
     String SAXPARSER_FACTORY = "CamelSAXParserFactory";
 
     String SCHEDULER_POLLED_MESSAGES = "CamelSchedulerPolledMessages";
-    @Deprecated
+    @Deprecated(since = "3.15.0")
     String SOAP_ACTION = "CamelSoapAction";
     String SKIP_GZIP_ENCODING = "CamelSkipGzipEncoding";
     String SKIP_WWW_FORM_URLENCODED = "CamelSkipWwwFormUrlEncoding";
@@ -303,17 +311,17 @@ public interface Exchange extends VariableAware {
     @Metadata(label = "enrich,multicast,pollEnrich,recipientList,routingSlip,toD,to,wireTap",
               description = "Endpoint URI where this Exchange is being sent to", javaType = "String")
     String TO_ENDPOINT = "CamelToEndpoint";
-    @Deprecated
+    @Deprecated(since = "4.0.0")
     String TRACE_EVENT = "CamelTraceEvent";
-    @Deprecated
+    @Deprecated(since = "4.0.0")
     String TRACE_EVENT_NODE_ID = "CamelTraceEventNodeId";
-    @Deprecated
+    @Deprecated(since = "4.0.0")
     String TRACE_EVENT_TIMESTAMP = "CamelTraceEventTimestamp";
-    @Deprecated
+    @Deprecated(since = "4.0.0")
     String TRACE_EVENT_EXCHANGE = "CamelTraceEventExchange";
-    @Deprecated
+    @Deprecated(since = "3.15.0")
     String TRACING_HEADER_FORMAT = "CamelTracingHeaderFormat";
-    @Deprecated
+    @Deprecated(since = "3.15.0")
     String TRACING_OUTPUT_FORMAT = "CamelTracingOutputFormat";
     String TRANSACTION_CONTEXT_DATA = "CamelTransactionContextData";
     String TRY_ROUTE_BLOCK = "TryRouteBlock";
@@ -325,6 +333,10 @@ public interface Exchange extends VariableAware {
     String XSLT_ERROR = "CamelXsltError";
     String XSLT_FATAL_ERROR = "CamelXsltFatalError";
     String XSLT_WARNING = "CamelXsltWarning";
+
+    // special for camel-tracing/open-telemetry
+    String OTEL_ACTIVE_SPAN = "OpenTracing.activeSpan";
+    String OTEL_CLOSE_CLIENT_SCOPE = "OpenTracing.closeClientScope";
 
     /**
      * Returns the {@link ExchangePattern} (MEP) of this exchange.
@@ -470,14 +482,15 @@ public interface Exchange extends VariableAware {
     /**
      * Returns whether any properties have been set
      *
-     * @return <tt>true</tt> if any properties has been set
+     * @return <tt>true</tt> if any property has been set
      */
     boolean hasProperties();
 
     /**
      * Returns a variable by name
      *
-     * @param  name the name of the variable
+     * @param  name the variable name. Can be prefixed with repo-id:name to lookup the variable from a specific
+     *              repository. If no repo-id is provided, then variables will be from the current exchange.
      * @return      the value of the given variable or <tt>null</tt> if there is no variable for the given name
      */
     Object getVariable(String name);
@@ -485,7 +498,8 @@ public interface Exchange extends VariableAware {
     /**
      * Returns a variable by name and specifying the type required
      *
-     * @param  name the name of the variable
+     * @param  name the variable name. Can be prefixed with repo-id:name to lookup the variable from a specific
+     *              repository. If no repo-id is provided, then variables will be from the current exchange.
      * @param  type the type of the variable
      * @return      the value of the given variable or <tt>null</tt> if there is no variable for the given name or
      *              <tt>null</tt> if it cannot be converted to the given type
@@ -495,7 +509,8 @@ public interface Exchange extends VariableAware {
     /**
      * Returns a variable by name and specifying the type required
      *
-     * @param  name         the name of the variable
+     * @param  name         the variable name. Can be prefixed with repo-id:name to look up the variable from a specific
+     *                      repository. If no repo-id is provided, then variables will be from the current exchange.
      * @param  defaultValue the default value to return if variable was absent
      * @param  type         the type of the variable
      * @return              the value of the given variable or <tt>defaultValue</tt> if there is no variable for the
@@ -506,7 +521,8 @@ public interface Exchange extends VariableAware {
     /**
      * Sets a variable on the exchange
      *
-     * @param name  of the variable
+     * @param name  the variable name. Can be prefixed with repo-id:name to store the variable in a specific repository.
+     *              If no repo-id is provided, then variables will be stored in the current exchange.
      * @param value the value of the variable
      */
     void setVariable(String name, Object value);
@@ -514,22 +530,25 @@ public interface Exchange extends VariableAware {
     /**
      * Removes the given variable
      *
-     * @param  name of the variable, or use * to remove all variables
+     * If the name is <tt>*</tt> then all variables from the current exchange is removed, and null is returned.
+     *
+     * @param  name the variable name. Can be prefixed with repo-id:name to remove the variable in a specific
+     *              repository. If no repo-id is provided, then the variable from the current exchange will be removed
      * @return      the old value of the variable, or <tt>null</tt> if there was no variable for the given name
      */
     Object removeVariable(String name);
 
     /**
-     * Returns the variables
+     * Returns the variables from the current exchange
      *
-     * @return the variables in a Map.
+     * @return the variables from the current exchange in a Map.
      */
     Map<String, Object> getVariables();
 
     /**
-     * Returns whether any variables have been set
+     * Returns whether any variables have been set on the current exchange
      *
-     * @return <tt>true</tt> if any variables has been set
+     * @return <tt>true</tt> if any variables has been set on the current exchange
      */
     boolean hasVariables();
 
@@ -585,16 +604,16 @@ public interface Exchange extends VariableAware {
      * headers etc. is kept and propagated when routing continues. Bottom line end users should rarely use this method.
      * <p/>
      * <br/>
-     * If you want to test whether an OUT message have been set or not, use the {@link #hasOut()} method.
+     * If you want to test whether an OUT message has been set or not, use the {@link #hasOut()} method.
      * <p/>
-     * See also the class java doc for this {@link Exchange} for more details and this
+     * See also the class Javadoc for this {@link Exchange} for more details and this
      * <a href="http://camel.apache.org/using-getin-or-getout-methods-on-exchange.html">FAQ entry</a>.
      *
      * @return     the response
      * @see        #getIn()
      * @deprecated use {@link #getMessage()}
      */
-    @Deprecated
+    @Deprecated(since = "3.0.0")
     Message getOut();
 
     /**
@@ -605,9 +624,9 @@ public interface Exchange extends VariableAware {
      * headers etc. is kept and propagated when routing continues. Bottom line end users should rarely use this method.
      * <p/>
      * <br/>
-     * If you want to test whether an OUT message have been set or not, use the {@link #hasOut()} method.
+     * If you want to test whether an OUT message has been set or not, use the {@link #hasOut()} method.
      * <p/>
-     * See also the class java doc for this {@link Exchange} for more details and this
+     * See also the class Javadoc for this {@link Exchange} for more details and this
      * <a href="http://camel.apache.org/using-getin-or-getout-methods-on-exchange.html">FAQ entry</a>.
      *
      * @param      type the given type
@@ -615,7 +634,7 @@ public interface Exchange extends VariableAware {
      * @see             #getIn(Class)
      * @deprecated      use {@link #getMessage(Class)}
      */
-    @Deprecated
+    @Deprecated(since = "3.0.0")
     <T> T getOut(Class<T> type);
 
     /**
@@ -624,7 +643,7 @@ public interface Exchange extends VariableAware {
      * @return     <tt>true</tt> if an OUT message exists, <tt>false</tt> otherwise.
      * @deprecated use {@link #getMessage()}
      */
-    @Deprecated
+    @Deprecated(since = "3.0.0")
     boolean hasOut();
 
     /**
@@ -633,7 +652,7 @@ public interface Exchange extends VariableAware {
      * @param      out the outbound message
      * @deprecated     use {@link #setMessage(Message)}
      */
-    @Deprecated
+    @Deprecated(since = "3.0.0")
     void setOut(Message out);
 
     /**
@@ -777,7 +796,7 @@ public interface Exchange extends VariableAware {
      *
      * @see Message#getMessageTimestamp()
      */
-    @Deprecated
+    @Deprecated(since = "4.4.0")
     long getCreated();
 
     /**

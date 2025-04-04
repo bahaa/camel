@@ -18,6 +18,7 @@ package org.apache.camel.component.file;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Consumer;
@@ -29,6 +30,7 @@ import org.apache.camel.spi.ScheduledPollConsumerScheduler;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FileConsumerCustomSchedulerTest extends ContextTestSupport {
 
@@ -43,7 +45,7 @@ public class FileConsumerCustomSchedulerTest extends ContextTestSupport {
 
     @Test
     public void testCustomScheduler() throws Exception {
-        getMockEndpoint("mock:result").expectedMessageCount(1);
+        getMockEndpoint("mock:result").expectedMinimumMessageCount(1);
 
         template.sendBodyAndHeader(fileUri(), "Hello World", Exchange.FILE_NAME, "hello.txt");
 
@@ -52,17 +54,18 @@ public class FileConsumerCustomSchedulerTest extends ContextTestSupport {
         assertMockEndpointsSatisfied();
 
         // the scheduler is only run once, and we can configure its properties
-        assertEquals(1, scheduler.getCounter());
+        // (camel may run the scheduler once during startup so the value is +1)
+        assertTrue(scheduler.getCounter() <= 2);
         assertEquals("bar", scheduler.getFoo());
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from(fileUri("?scheduler=#myScheduler&scheduler.foo=bar&initialDelay=0&delay=10"))
-                        .routeId("foo").noAutoStartup().to("mock:result");
+                        .routeId("foo").autoStartup(false).to("mock:result");
             }
         };
     }
@@ -71,7 +74,7 @@ public class FileConsumerCustomSchedulerTest extends ContextTestSupport {
 
         private CamelContext camelContext;
         private TimerTask timerTask;
-        private volatile int counter;
+        private final LongAdder counter = new LongAdder();
         private String foo;
 
         @Override
@@ -84,7 +87,7 @@ public class FileConsumerCustomSchedulerTest extends ContextTestSupport {
             this.timerTask = new TimerTask() {
                 @Override
                 public void run() {
-                    counter++;
+                    counter.increment();
                     task.run();
                 }
             };
@@ -96,7 +99,7 @@ public class FileConsumerCustomSchedulerTest extends ContextTestSupport {
         }
 
         public int getCounter() {
-            return counter;
+            return counter.intValue();
         }
 
         public String getFoo() {

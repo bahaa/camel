@@ -18,6 +18,7 @@ package org.apache.camel.impl.console;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -32,6 +33,8 @@ import org.apache.camel.api.management.ManagedCamelContext;
 import org.apache.camel.api.management.mbean.ManagedProcessorMBean;
 import org.apache.camel.api.management.mbean.ManagedRouteMBean;
 import org.apache.camel.spi.annotations.DevConsole;
+import org.apache.camel.support.ExceptionHelper;
+import org.apache.camel.support.LoggerHelper;
 import org.apache.camel.support.PatternHelper;
 import org.apache.camel.support.console.AbstractDevConsole;
 import org.apache.camel.util.StringHelper;
@@ -39,9 +42,13 @@ import org.apache.camel.util.TimeUtils;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 import org.apache.camel.util.json.Jsoner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @DevConsole(name = "route", description = "Route information")
 public class RouteDevConsole extends AbstractDevConsole {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RouteDevConsole.class);
 
     /**
      * Filters the routes matching by route id, route uri, and source location
@@ -86,11 +93,30 @@ public class RouteDevConsole extends AbstractDevConsole {
             if (mrb.getNodePrefixId() != null) {
                 sb.append(String.format("    Node Prefix Id: %s", mrb.getNodePrefixId()));
             }
+            if (mrb.getDescription() != null) {
+                sb.append(String.format("    Description: %s", mrb.getDescription()));
+            }
             sb.append(String.format("\n    From: %s", mrb.getEndpointUri()));
+            sb.append(String.format("\n    Remote: %s", mrb.isRemoteEndpoint()));
             if (mrb.getSourceLocation() != null) {
                 sb.append(String.format("\n    Source: %s", mrb.getSourceLocation()));
             }
             sb.append(String.format("\n    State: %s", mrb.getState()));
+            if (mrb.getLastError() != null) {
+                String phase = StringHelper.capitalize(mrb.getLastError().getPhase().name().toLowerCase());
+                String ago = TimeUtils.printSince(mrb.getLastError().getDate().getTime());
+                sb.append(String.format("\n    Error Ago: %s", ago));
+                sb.append(String.format("\n    Error Phase: %s", phase));
+                Throwable cause = mrb.getLastError().getException();
+                if (cause != null) {
+                    sb.append(String.format("\n    Error Message: %s", cause.getMessage()));
+
+                    final String stackTrace = ExceptionHelper.stackTraceToString(cause);
+                    sb.append("\n\n");
+                    sb.append(stackTrace);
+                    sb.append("\n\n");
+                }
+            }
             sb.append(String.format("\n    Uptime: %s", mrb.getUptime()));
             String coverage = calculateRouteCoverage(mrb, true);
             if (coverage != null) {
@@ -174,6 +200,9 @@ public class RouteDevConsole extends AbstractDevConsole {
             if (mp.getNodePrefixId() != null) {
                 sb.append(String.format("\n        Node Prefix Id: %s", mp.getNodePrefixId()));
             }
+            if (mp.getDescription() != null) {
+                sb.append(String.format("\n        Description: %s", mp.getDescription()));
+            }
             sb.append(String.format("\n        Processor: %s", mp.getProcessorName()));
             sb.append(String.format("\n        Level: %d", mp.getLevel()));
             if (mp.getSourceLocation() != null) {
@@ -232,12 +261,31 @@ public class RouteDevConsole extends AbstractDevConsole {
             if (mrb.getNodePrefixId() != null) {
                 jo.put("nodePrefixId", mrb.getNodePrefixId());
             }
+            if (mrb.getDescription() != null) {
+                jo.put("description", mrb.getDescription());
+            }
             jo.put("from", mrb.getEndpointUri());
+            jo.put("remote", mrb.isRemoteEndpoint());
             if (mrb.getSourceLocation() != null) {
                 jo.put("source", mrb.getSourceLocation());
             }
             jo.put("state", mrb.getState());
             jo.put("uptime", mrb.getUptime());
+            if (mrb.getLastError() != null) {
+                String phase = StringHelper.capitalize(mrb.getLastError().getPhase().name().toLowerCase());
+                JsonObject eo = new JsonObject();
+                eo.put("phase", phase);
+                eo.put("timestamp", mrb.getLastError().getDate().getTime());
+                Throwable cause = mrb.getLastError().getException();
+                if (cause != null) {
+                    eo.put("message", cause.getMessage());
+                    JsonArray arr2 = new JsonArray();
+                    final String trace = ExceptionHelper.stackTraceToString(cause);
+                    eo.put("stackTrace", arr2);
+                    Collections.addAll(arr2, trace.split("\n"));
+                }
+                jo.put("lastError", eo);
+            }
             JsonObject stats = new JsonObject();
             String coverage = calculateRouteCoverage(mrb, false);
             if (coverage != null) {
@@ -301,23 +349,23 @@ public class RouteDevConsole extends AbstractDevConsole {
             return;
         }
 
-        // sort by index
-        List<ManagedProcessorMBean> mps = new ArrayList<>();
-        for (String id : ids) {
-            ManagedProcessorMBean mp = mcc.getManagedProcessor(id);
-            if (mp != null) {
-                mps.add(mp);
-            }
-        }
-        // sort processors by index
-        mps.sort(Comparator.comparingInt(ManagedProcessorMBean::getIndex));
+        List<ManagedProcessorMBean> mps = ids.stream().map(mcc::getManagedProcessor)
+                .filter(Objects::nonNull)
+                // sort processors by index
+                .sorted(Comparator.comparingInt(ManagedProcessorMBean::getIndex))
+                .toList();
 
         for (ManagedProcessorMBean mp : mps) {
             JsonObject jo = new JsonObject();
             arr.add(jo);
 
             jo.put("id", mp.getProcessorId());
-            jo.put("nodePrefixId", mp.getNodePrefixId());
+            if (mp.getNodePrefixId() != null) {
+                jo.put("nodePrefixId", mp.getNodePrefixId());
+            }
+            if (mp.getDescription() != null) {
+                jo.put("description", mp.getDescription());
+            }
             if (mp.getSourceLocation() != null) {
                 String loc = mp.getSourceLocation();
                 if (mp.getSourceLineNumber() != null) {
@@ -399,9 +447,11 @@ public class RouteDevConsole extends AbstractDevConsole {
             return true;
         }
 
+        String onlyName = LoggerHelper.sourceNameOnly(mrb.getSourceLocation());
         return PatternHelper.matchPattern(mrb.getRouteId(), filter)
                 || PatternHelper.matchPattern(mrb.getEndpointUri(), filter)
-                || PatternHelper.matchPattern(mrb.getSourceLocationShort(), filter);
+                || PatternHelper.matchPattern(mrb.getSourceLocationShort(), filter)
+                || PatternHelper.matchPattern(onlyName, filter);
     }
 
     private static int sort(ManagedRouteMBean o1, ManagedRouteMBean o2) {
@@ -461,7 +511,7 @@ public class RouteDevConsole extends AbstractDevConsole {
         if (percent) {
             double p;
             if (total > 0) {
-                p = (covered / total) * 100;
+                p = ((double) covered / total) * 100;
             } else {
                 p = 0;
             }
@@ -517,7 +567,7 @@ public class RouteDevConsole extends AbstractDevConsole {
                     }
                 }
             } catch (Exception e) {
-                // ignore
+                LOG.warn("Error {} route: {} due to: {}. This exception is ignored.", command, id, e.getMessage(), e);
             }
         }
     }

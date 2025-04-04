@@ -27,11 +27,11 @@ import org.slf4j.LoggerFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BeanWithXPathInjectionPreCompileTest extends ContextTestSupport {
-    private static final Logger LOG = LoggerFactory.getLogger(BeanRouteTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(BeanWithXPathInjectionPreCompileTest.class);
     protected final MyBean myBean = new MyBean();
 
     @Test
-    public void testSendMessage() throws Exception {
+    public void testSendMessage() {
         String expectedBody = "<env:Envelope xmlns:env='http://www.w3.org/2003/05/soap-envelope'><env:Body>"
                               + "<foo>bar</foo></env:Body></env:Envelope>";
 
@@ -42,7 +42,7 @@ public class BeanWithXPathInjectionPreCompileTest extends ContextTestSupport {
     }
 
     @Test
-    public void testSendTwoMessages() throws Exception {
+    public void testSendTwoMessages() {
         // 1st message
         String expectedBody = "<env:Envelope xmlns:env='http://www.w3.org/2003/05/soap-envelope'><env:Body>"
                               + "<foo>bar</foo></env:Body></env:Envelope>";

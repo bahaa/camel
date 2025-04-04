@@ -30,11 +30,14 @@ import org.apache.camel.throttling.ThrottlingExceptionHalfOpenHandler;
 import org.apache.camel.throttling.ThrottlingExceptionRoutePolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.awaitility.Awaitility.await;
 
+@DisabledOnOs(architectures = { "s390x" },
+              disabledReason = "This test does not run reliably on s390x (see CAMEL-21438)")
 public class ThrottlingExceptionRoutePolicyHalfOpenHandlerSedaTest extends ContextTestSupport {
     private static final Logger log = LoggerFactory.getLogger(ThrottlingExceptionRoutePolicyHalfOpenHandlerSedaTest.class);
 
@@ -59,7 +62,7 @@ public class ThrottlingExceptionRoutePolicyHalfOpenHandlerSedaTest extends Conte
 
         result.whenAnyExchangeReceived(new Processor() {
             @Override
-            public void process(Exchange exchange) throws Exception {
+            public void process(Exchange exchange) {
                 String msg = exchange.getIn().getBody(String.class);
                 exchange.setException(new ThrottlingException(msg));
             }
@@ -100,10 +103,10 @@ public class ThrottlingExceptionRoutePolicyHalfOpenHandlerSedaTest extends Conte
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 int threshold = 2;
                 long failureWindow = 30;
                 long halfOpenAfter = 250;

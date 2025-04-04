@@ -1098,6 +1098,24 @@ public interface SalesforceComponentBuilderFactory {
     
         
         /**
+         * Timeout in seconds to validate when a custom pubSubReplayId has been
+         * configured, when starting the Camel Salesforce consumer.
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Default: 30
+         * Group: consumer (advanced)
+         * 
+         * @param initialReplyIdTimeout the value to set
+         * @return the dsl builder
+         */
+        default SalesforceComponentBuilder initialReplyIdTimeout(int initialReplyIdTimeout) {
+            doSetProperty("initialReplyIdTimeout", initialReplyIdTimeout);
+            return this;
+        }
+    
+        
+        /**
          * Composite API option to indicate to rollback all records if any are
          * not successful.
          * 
@@ -1384,11 +1402,29 @@ public interface SalesforceComponentBuilderFactory {
             return this;
         }
     
+        
+        /**
+         * Allow the Pub/Sub API client to use the proxy detected by
+         * java.net.ProxySelector. If false then no proxy server will be used.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: proxy
+         * 
+         * @param pubsubAllowUseSystemProxy the value to set
+         * @return the dsl builder
+         */
+        default SalesforceComponentBuilder pubsubAllowUseSystemProxy(boolean pubsubAllowUseSystemProxy) {
+            doSetProperty("pubsubAllowUseSystemProxy", pubsubAllowUseSystemProxy);
+            return this;
+        }
+    
         /**
          * Explicit authentication method to be used, one of USERNAME_PASSWORD,
-         * REFRESH_TOKEN or JWT. Salesforce component can auto-determine the
-         * authentication method to use from the properties set, set this
-         * property to eliminate any ambiguity.
+         * REFRESH_TOKEN, CLIENT_CREDENTIALS, or JWT. Salesforce component can
+         * auto-determine the authentication method to use from the properties
+         * set, set this property to eliminate any ambiguity.
          * 
          * The option is a:
          * &lt;code&gt;org.apache.camel.component.salesforce.AuthenticationType&lt;/code&gt; type.
@@ -1851,6 +1887,7 @@ public interface SalesforceComponentBuilderFactory {
             case "pubSubDeserializeType": getOrCreateConfiguration((SalesforceComponent) component).setPubSubDeserializeType((org.apache.camel.component.salesforce.PubSubDeserializeType) value); return true;
             case "pubSubPojoClass": getOrCreateConfiguration((SalesforceComponent) component).setPubSubPojoClass((java.lang.String) value); return true;
             case "replayPreset": getOrCreateConfiguration((SalesforceComponent) component).setReplayPreset((com.salesforce.eventbus.protobuf.ReplayPreset) value); return true;
+            case "initialReplyIdTimeout": ((SalesforceComponent) component).setInitialReplyIdTimeout((int) value); return true;
             case "allOrNone": getOrCreateConfiguration((SalesforceComponent) component).setAllOrNone((boolean) value); return true;
             case "apexUrl": getOrCreateConfiguration((SalesforceComponent) component).setApexUrl((java.lang.String) value); return true;
             case "compositeMethod": getOrCreateConfiguration((SalesforceComponent) component).setCompositeMethod((java.lang.String) value); return true;
@@ -1868,6 +1905,7 @@ public interface SalesforceComponentBuilderFactory {
             case "httpProxyIncludedAddresses": ((SalesforceComponent) component).setHttpProxyIncludedAddresses((java.util.Set) value); return true;
             case "httpProxyPort": ((SalesforceComponent) component).setHttpProxyPort((java.lang.Integer) value); return true;
             case "httpProxySocks4": ((SalesforceComponent) component).setHttpProxySocks4((boolean) value); return true;
+            case "pubsubAllowUseSystemProxy": ((SalesforceComponent) component).setPubsubAllowUseSystemProxy((boolean) value); return true;
             case "authenticationType": ((SalesforceComponent) component).setAuthenticationType((org.apache.camel.component.salesforce.AuthenticationType) value); return true;
             case "clientId": ((SalesforceComponent) component).setClientId((java.lang.String) value); return true;
             case "clientSecret": ((SalesforceComponent) component).setClientSecret((java.lang.String) value); return true;

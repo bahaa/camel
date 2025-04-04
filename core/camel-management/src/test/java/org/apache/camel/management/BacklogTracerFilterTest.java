@@ -49,7 +49,7 @@ public class BacklogTracerFilterTest extends ManagementTestSupport {
         assertEquals(Boolean.FALSE, enabled, "Should not be enabled");
 
         Integer size = (Integer) mbeanServer.getAttribute(on, "BacklogSize");
-        assertEquals(1000, size.intValue(), "Should be 1000");
+        assertEquals(100, size.intValue(), "Should be 100");
 
         // set the filter to match only if header foo exists
         mbeanServer.setAttribute(on, new Attribute("TraceFilter", "${header.foo} != null"));
@@ -77,6 +77,9 @@ public class BacklogTracerFilterTest extends ManagementTestSupport {
         assertNull(event.getToNode());
         assertEquals("    <message exchangeId=\"" + exchanges.get(1).getExchangeId()
                      + "\" exchangePattern=\"InOnly\" exchangeType=\"org.apache.camel.support.DefaultExchange\" messageType=\"org.apache.camel.support.DefaultMessage\">\n"
+                     + "      <exchangeProperties>\n"
+                     + "        <exchangeProperty key=\"CamelToEndpoint\" type=\"java.lang.String\">direct://start</exchangeProperty>\n"
+                     + "      </exchangeProperties>\n"
                      + "      <headers>\n"
                      + "        <header key=\"foo\" type=\"java.lang.Integer\">123</header>\n"
                      + "      </headers>\n"
@@ -88,6 +91,9 @@ public class BacklogTracerFilterTest extends ManagementTestSupport {
         assertEquals("foo", event1.getToNode());
         assertEquals("    <message exchangeId=\"" + exchanges.get(1).getExchangeId()
                      + "\" exchangePattern=\"InOnly\" exchangeType=\"org.apache.camel.support.DefaultExchange\" messageType=\"org.apache.camel.support.DefaultMessage\">\n"
+                     + "      <exchangeProperties>\n"
+                     + "        <exchangeProperty key=\"CamelToEndpoint\" type=\"java.lang.String\">direct://start</exchangeProperty>\n"
+                     + "      </exchangeProperties>\n"
                      + "      <headers>\n"
                      + "        <header key=\"foo\" type=\"java.lang.Integer\">123</header>\n"
                      + "      </headers>\n"
@@ -99,6 +105,9 @@ public class BacklogTracerFilterTest extends ManagementTestSupport {
         assertEquals("bar", event2.getToNode());
         assertEquals("    <message exchangeId=\"" + exchanges.get(1).getExchangeId()
                      + "\" exchangePattern=\"InOnly\" exchangeType=\"org.apache.camel.support.DefaultExchange\" messageType=\"org.apache.camel.support.DefaultMessage\">\n"
+                     + "      <exchangeProperties>\n"
+                     + "        <exchangeProperty key=\"CamelToEndpoint\" type=\"java.lang.String\">mock://foo</exchangeProperty>\n"
+                     + "      </exchangeProperties>\n"
                      + "      <headers>\n"
                      + "        <header key=\"foo\" type=\"java.lang.Integer\">123</header>\n"
                      + "      </headers>\n"
@@ -108,10 +117,10 @@ public class BacklogTracerFilterTest extends ManagementTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 context.setUseBreadcrumb(false);
                 context.setBacklogTracingStandby(true);
 

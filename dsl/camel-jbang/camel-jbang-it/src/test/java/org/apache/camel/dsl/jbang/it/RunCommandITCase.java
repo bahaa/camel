@@ -30,7 +30,7 @@ import org.apache.camel.dsl.jbang.it.support.JiraIssue;
 import org.apache.camel.test.infra.cli.common.CliProperties;
 import org.assertj.core.api.Assertions;
 import org.awaitility.Awaitility;
-import org.junit.Assume;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
@@ -43,10 +43,11 @@ import static org.junit.jupiter.api.condition.OS.LINUX;
 public class RunCommandITCase extends JBangTestSupport {
 
     @Test
-    public void initClearDirectoryTest() {
-        initFileInDataFolder("willbedeleted.yaml");
+    @JiraIssue("CAMEL-21082")
+    public void initKeepFilesInDirectoryTest() {
+        initFileInDataFolder("willbekept.yaml");
         initFileInDataFolder("keepthisone.yaml");
-        assertFileInDataFolderDoesNotExist("willbedeleted.yaml");
+        assertFileInDataFolderExists("willbekept.yaml");
         assertFileInDataFolderExists("keepthisone.yaml");
     }
 
@@ -83,7 +84,7 @@ public class RunCommandITCase extends JBangTestSupport {
     public void runRouteFromInputParameterTest() {
         executeBackground("run --code='from(\"kamelet:beer-source\").to(\"log:beer\")'");
         checkLogContains("Started route1 (kamelet://beer-source)");
-        checkLogContains("Started beer-source-1 (timer://beer)");
+        checkLogContains("[ - timer://beer] beer");
     }
 
     @Test
@@ -102,11 +103,8 @@ public class RunCommandITCase extends JBangTestSupport {
     @Test
     @JiraIssue("CAMEL-20351")
     public void runRouteFromGithubUsingWildcardTest() {
-        executeBackground("run https://github.com/apache/camel-kamelets-examples/tree/main/jbang/languages/*.groovy");
-        checkLogContains("Hello Camel K from groovy");
-        execute("stop simple");
-        executeBackground("run https://github.com/apache/camel-kamelets-examples/tree/main/jbang/languages/rou*");
-        checkLogContains("Hello Camel K from kotlin");
+        execute("init https://github.com/apache/camel-kamelets-examples/tree/main/jbang/languages/rou*");
+        executeBackground("run *");
         checkLogContains("HELLO YAML !!!");
     }
 
@@ -131,10 +129,11 @@ public class RunCommandITCase extends JBangTestSupport {
     public void runDownloadedInDirectoryFromGithubTest() {
         execute("init https://github.com/apache/camel-kamelets-examples/tree/main/jbang/dependency-injection --directory="
                 + mountPoint());
-        Assertions.assertThat(Paths.get(getDataFolder()).toFile().listFiles())
+        Assertions
+                .assertThat(Paths.get(getDataFolder()).toFile().listFiles())
+                .as("custom route directory")
                 .extracting("name")
-                .containsExactlyInAnyOrder("Echo.java", "Hello.java", "README.adoc", "application.properties")
-                .as("custom route directory");
+                .containsExactlyInAnyOrder("Echo.java", "Hello.java", "README.adoc", "application.properties");
         executeBackground(String.format("run %s/*", mountPoint()));
         checkLogContains("JackJack!! from Echo");
     }
@@ -162,8 +161,8 @@ public class RunCommandITCase extends JBangTestSupport {
     @EnabledOnOs(LINUX)
     @DisabledIf(value = "java.awt.GraphicsEnvironment#isHeadless")
     public void runFromClipboardTest() throws IOException {
-        Assume.assumeTrue(execInHost("command -v ssh").contains("ssh"));
-        Assume.assumeTrue(execInHost("command -v sshpass").contains("sshpass"));
+        Assumptions.assumeTrue(execInHost("command -v ssh").contains("ssh"));
+        Assumptions.assumeTrue(execInHost("command -v sshpass").contains("sshpass"));
         final String msg = "Hello World " + new Date();
         Toolkit.getDefaultToolkit().getSystemClipboard()
                 .setContents(new StringSelection(
@@ -179,9 +178,9 @@ public class RunCommandITCase extends JBangTestSupport {
             Assertions.assertThatCode(() -> Awaitility.await()
                     .pollInterval(Duration.ofSeconds(1))
                     .atMost(Duration.ofMinutes(1))
-                    .untilAsserted(() -> Assertions.assertThat(input.readLine()).isNotNull()
-                            .contains("generated-clipboard.xml")
-                            .contains(msg)))
+                    .untilAsserted(() -> Assertions.assertThat(input.lines()
+                            .anyMatch(line -> line.contains("generated-clipboard.xml") && line.contains(msg))).isTrue()))
+                    .as("Check application log")
                     .doesNotThrowAnyException();
         }
     }

@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import io.smallrye.faulttolerance.ExecutorHolder;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.timer.Timer;
+import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.Route;
 import org.apache.camel.model.CircuitBreakerDefinition;
@@ -49,8 +50,8 @@ public class FaultToleranceReifier extends ProcessorReifier<CircuitBreakerDefini
         // create the regular and fallback processors
         Processor processor = createChildProcessor(true);
         Processor fallback = null;
-        if (definition.getOnFallback() != null) {
-            fallback = createProcessor(definition.getOnFallback());
+        if (definition.getOnFallback() != null && !definition.getOnFallback().getOutputs().isEmpty()) {
+            fallback = createOutputsProcessor(definition.getOnFallback().getOutputs());
         }
         boolean fallbackViaNetwork
                 = definition.getOnFallback() != null && parseBoolean(definition.getOnFallback().getFallbackViaNetwork(), false);
@@ -67,7 +68,7 @@ public class FaultToleranceReifier extends ProcessorReifier<CircuitBreakerDefini
         FaultToleranceProcessor answer = new FaultToleranceProcessor(configuration, processor, fallback);
         // using any existing circuit breakers?
         if (config.getCircuitBreaker() != null) {
-            CircuitBreaker<?> cb = mandatoryLookup(parseString(config.getCircuitBreaker()), CircuitBreaker.class);
+            CircuitBreaker<Exchange> cb = mandatoryLookup(parseString(config.getCircuitBreaker()), CircuitBreaker.class);
             answer.setCircuitBreaker(cb);
         }
         configureBulkheadExecutorService(answer, config);

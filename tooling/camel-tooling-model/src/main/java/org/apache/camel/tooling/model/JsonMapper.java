@@ -193,6 +193,7 @@ public final class JsonMapper {
         model.setConsumerOnly(mobj.getBooleanOrDefault("consumerOnly", false));
         model.setProducerOnly(mobj.getBooleanOrDefault("producerOnly", false));
         model.setLenientProperties(mobj.getBooleanOrDefault("lenientProperties", false));
+        model.setBrowsable(mobj.getBooleanOrDefault("browsable", false));
         model.setRemote(mobj.getBooleanOrDefault("remote", false));
         parseArtifact(mobj, model);
     }
@@ -225,6 +226,7 @@ public final class JsonMapper {
         obj.put("consumerOnly", model.isConsumerOnly());
         obj.put("producerOnly", model.isProducerOnly());
         obj.put("lenientProperties", model.isLenientProperties());
+        obj.put("browsable", model.isBrowsable());
         obj.put("remote", model.isRemote());
         obj.put("verifiers", model.getVerifiers());
         obj.entrySet().removeIf(e -> e.getValue() == null);
@@ -326,6 +328,7 @@ public final class JsonMapper {
         JsonObject mobj = (JsonObject) obj.get("bean");
         PojoBeanModel model = new PojoBeanModel();
         parseModel(mobj, model);
+        parseArtifact(mobj, model);
         JsonObject mprp = (JsonObject) mobj.get("properties");
         if (mprp != null) {
             for (Map.Entry<String, Object> entry : mprp.entrySet()) {
@@ -370,7 +373,7 @@ public final class JsonMapper {
         artifactToJson(model, obj);
         obj.entrySet().removeIf(e -> e.getValue() == null);
         JsonObject wrapper = new JsonObject();
-        wrapper.put("model", obj);
+        wrapper.put("bean", obj);
         wrapper.put("properties", asJsonObject(model.getOptions()));
         return wrapper;
     }
@@ -412,6 +415,10 @@ public final class JsonMapper {
         JsonObject wrapper = new JsonObject();
         wrapper.put("language", obj);
         wrapper.put("properties", asJsonObject(model.getOptions()));
+        final List<LanguageModel.LanguageFunctionModel> functions = model.getFunctions();
+        if (!functions.isEmpty()) {
+            wrapper.put("functions", asJsonObjectFunctions(functions));
+        }
         return wrapper;
     }
 
@@ -594,6 +601,24 @@ public final class JsonMapper {
             var o = options.get(i);
             o.setIndex(i);
             json.put(o.getName(), asJsonObject(o));
+        }
+        return json;
+    }
+
+    public static JsonObject asJsonObjectFunctions(List<LanguageModel.LanguageFunctionModel> options) {
+        JsonObject json = new JsonObject();
+        for (int i = 0; i < options.size(); i++) {
+            var o = options.get(i);
+            o.setIndex(i);
+            JsonObject jo = asJsonObject(o);
+            jo.put("ognl", o.isOgnl());
+            if (o.getPrefix() != null) {
+                jo.put("prefix", o.getPrefix());
+            }
+            if (o.getSuffix() != null) {
+                jo.put("suffix", o.getSuffix());
+            }
+            json.put(o.getName(), jo);
         }
         return json;
     }

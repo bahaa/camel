@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.camel.Component;
@@ -60,7 +61,7 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
     private long delay = 500;
     private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
     private boolean useFixedDelay = true;
-    private PollingConsumerPollStrategy pollStrategy = new DefaultPollingConsumerPollStrategy();
+    private PollingConsumerPollStrategy pollStrategy;
     private LoggingLevel runLoggingLevel = LoggingLevel.TRACE;
     private boolean sendEmptyMessageWhenIdle;
     private boolean greedy;
@@ -72,10 +73,10 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
 
     // state during running
     private volatile boolean polling;
-    private volatile int backoffCounter;
-    private volatile long idleCounter;
-    private volatile long errorCounter;
-    private volatile long successCounter;
+    private final AtomicInteger backoffCounter = new AtomicInteger();
+    private final AtomicLong idleCounter = new AtomicLong();
+    private final AtomicLong errorCounter = new AtomicLong();
+    private final AtomicLong successCounter = new AtomicLong();
     private volatile Throwable lastError;
     private volatile Map<String, Object> lastErrorDetails;
     private final AtomicLong counter = new AtomicLong();
@@ -129,9 +130,12 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
             } else {
                 LOG.trace("Scheduled task completed on: {}", this.getEndpoint());
             }
-
         } catch (Error e) {
-            // must catch Error, to ensure the task is re-scheduled
+            // need to log so there is visibility as otherwise the user may not see anything in logs
+            LOG.error("Fatal error occurred during running scheduled task on: {}, due: {}.",
+                    this.getEndpoint(), e.getMessage(), e);
+            throw e;
+        } catch (Throwable e) {
             LOG.error("Error occurred during running scheduled task on: {}, due: {}."
                       + " This exception is ignored and the task will run again on next poll.",
                     this.getEndpoint(), e.getMessage(), e);
@@ -147,24 +151,25 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
         // should we backoff if its enabled, and either the idle or error counter is > the threshold
         if (backoffMultiplier > 0
                 // either idle or error threshold could be not in use, so check for that and use MAX_VALUE if not in use
-                && idleCounter >= (backoffIdleThreshold > 0 ? backoffIdleThreshold : Integer.MAX_VALUE)
-                || errorCounter >= (backoffErrorThreshold > 0 ? backoffErrorThreshold : Integer.MAX_VALUE)) {
-            if (backoffCounter++ < backoffMultiplier) {
+                && idleCounter.longValue() >= (backoffIdleThreshold > 0 ? backoffIdleThreshold : Integer.MAX_VALUE)
+                || errorCounter.longValue() >= (backoffErrorThreshold > 0 ? backoffErrorThreshold : Integer.MAX_VALUE)) {
+            final int currentBackoffCounter = backoffCounter.incrementAndGet();
+            if (currentBackoffCounter < backoffMultiplier) {
                 // yes we should backoff
-                if (idleCounter > 0) {
-                    LOG.debug("doRun() backoff due subsequent {} idles (backoff at {}/{})", idleCounter, backoffCounter,
-                            backoffMultiplier);
+                if (idleCounter.intValue() > 0) {
+                    LOG.debug("doRun() backoff due subsequent {} idles (backoff at {}/{})", idleCounter.longValue(),
+                            backoffCounter.intValue(), backoffMultiplier);
                 } else {
-                    LOG.debug("doRun() backoff due subsequent {} errors (backoff at {}/{})", errorCounter, backoffCounter,
-                            backoffMultiplier);
+                    LOG.debug("doRun() backoff due subsequent {} errors (backoff at {}/{})", errorCounter.intValue(),
+                            backoffCounter.intValue(), backoffMultiplier);
                 }
                 return;
             } else {
                 // we are finished with backoff so reset counters
-                idleCounter = 0;
-                errorCounter = 0;
-                backoffCounter = 0;
-                successCounter = 0;
+                idleCounter.set(0);
+                errorCounter.set(0);
+                backoffCounter.set(0);
+                successCounter.set(0);
                 LOG.trace("doRun() backoff finished, resetting counters.");
             }
         }
@@ -184,7 +189,6 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
 
         while (!done) {
             try {
-                cause = null;
                 // eager assume we are done
                 done = true;
                 if (isPollAllowed()) {
@@ -218,7 +222,7 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
 
                                 // clear any error that might be since we have successfully polled, otherwise readiness checks might believe the
                                 // consumer to be unhealthy
-                                errorCounter = 0;
+                                errorCounter.set(0);
                                 lastError = null;
                                 lastErrorDetails = null;
 
@@ -264,21 +268,25 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
         }
 
         if (cause != null) {
-            idleCounter = 0;
-            successCounter = 0;
-            errorCounter++;
+            idleCounter.set(0);
+            successCounter.set(0);
+            errorCounter.incrementAndGet();
             lastError = cause;
             // enrich last error with http response code if possible
-            if (cause instanceof HttpResponseAware) {
-                int code = ((HttpResponseAware) cause).getHttpResponseCode();
+            if (cause instanceof HttpResponseAware httpResponseAware) {
+                int code = httpResponseAware.getHttpResponseCode();
                 if (code > 0) {
                     addLastErrorDetail(HealthCheck.HTTP_RESPONSE_CODE, code);
                 }
             }
         } else {
-            idleCounter = polledMessages == 0 ? ++idleCounter : 0;
-            successCounter++;
-            errorCounter = 0;
+            if (polledMessages == 0) {
+                idleCounter.incrementAndGet();
+            } else {
+                idleCounter.set(0);
+            }
+            successCounter.incrementAndGet();
+            errorCounter.set(0);
             lastError = null;
             lastErrorDetails = null;
         }
@@ -286,8 +294,8 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
         // now first pool is done after the poll is complete
         firstPollDone = true;
 
-        LOG.trace("doRun() done with idleCounter={}, successCounter={}, errorCounter={}", idleCounter, successCounter,
-                errorCounter);
+        LOG.trace("doRun() done with idleCounter={}, successCounter={}, errorCounter={}", idleCounter.longValue(),
+                successCounter.longValue(), errorCounter.longValue());
 
         // avoid this thread to throw exceptions because the thread pool wont re-schedule a new thread
     }
@@ -406,7 +414,7 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
     }
 
     public int getBackoffCounter() {
-        return backoffCounter;
+        return backoffCounter.intValue();
     }
 
     public int getBackoffMultiplier() {
@@ -460,7 +468,7 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
      * @see #getSuccessCounter()
      */
     public long getErrorCounter() {
-        return errorCounter;
+        return errorCounter.longValue();
     }
 
     /**
@@ -470,7 +478,7 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
      * @see #getErrorCounter()
      */
     public long getSuccessCounter() {
-        return successCounter;
+        return successCounter.longValue();
     }
 
     /**
@@ -563,6 +571,18 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
      */
     protected abstract int poll() throws Exception;
 
+    /**
+     * The polling method which is invoked periodically to poll this consumer, for components that support
+     * {@link org.apache.camel.DynamicPollingConsumer} such as camel-file.
+     *
+     * @param  dynamic   the current exchange when being used from Poll and PollEnrich EIPs in dynamic mode,
+     * @return           number of messages polled, will be <tt>0</tt> if no message was polled at all.
+     * @throws Exception can be thrown if an exception occurred during polling
+     */
+    protected int poll(Exchange dynamic) throws Exception {
+        return poll();
+    }
+
     @Override
     protected void doBuild() throws Exception {
         if (getHealthCheck() == null) {
@@ -610,8 +630,9 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
             LOG.debug("Using backoff[multiplier={}, idleThreshold={}, errorThreshold={}] on {}", backoffMultiplier,
                     backoffIdleThreshold, backoffErrorThreshold, getEndpoint());
         }
-
-        ObjectHelper.notNull(pollStrategy, "pollStrategy", this);
+        if (pollStrategy == null) {
+            pollStrategy = new DefaultPollingConsumerPollStrategy();
+        }
     }
 
     @Override
@@ -693,10 +714,10 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
         }
 
         // clear counters
-        backoffCounter = 0;
-        idleCounter = 0;
-        errorCounter = 0;
-        successCounter = 0;
+        backoffCounter.set(0);
+        idleCounter.set(0);
+        errorCounter.set(0);
+        successCounter.set(0);
         counter.set(0);
         // clear ready state
         firstPollDone = false;

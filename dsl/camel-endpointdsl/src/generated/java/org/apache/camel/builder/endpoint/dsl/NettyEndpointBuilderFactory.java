@@ -368,36 +368,6 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * To enable/disable hostname verification on SSLEngine.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group:  security
-         * 
-         * @param hostnameVerification the value to set
-         * @return the dsl builder
-         */
-        default NettyEndpointConsumerBuilder hostnameVerification(boolean hostnameVerification) {
-            doSetProperty("hostnameVerification", hostnameVerification);
-            return this;
-        }
-        /**
-         * To enable/disable hostname verification on SSLEngine.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group:  security
-         * 
-         * @param hostnameVerification the value to set
-         * @return the dsl builder
-         */
-        default NettyEndpointConsumerBuilder hostnameVerification(String hostnameVerification) {
-            doSetProperty("hostnameVerification", hostnameVerification);
-            return this;
-        }
-        /**
          * The netty component installs a default codec if both, encoder/decoder
          * is null and textline is false. Setting allowDefaultCodec to false
          * prevents the netty component from installing a default codec as the
@@ -627,6 +597,36 @@ public interface NettyEndpointBuilderFactory {
          */
         default NettyEndpointConsumerBuilder enabledProtocols(String enabledProtocols) {
             doSetProperty("enabledProtocols", enabledProtocols);
+            return this;
+        }
+        /**
+         * To enable/disable hostname verification on SSLEngine.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param hostnameVerification the value to set
+         * @return the dsl builder
+         */
+        default NettyEndpointConsumerBuilder hostnameVerification(boolean hostnameVerification) {
+            doSetProperty("hostnameVerification", hostnameVerification);
+            return this;
+        }
+        /**
+         * To enable/disable hostname verification on SSLEngine.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param hostnameVerification the value to set
+         * @return the dsl builder
+         */
+        default NettyEndpointConsumerBuilder hostnameVerification(String hostnameVerification) {
+            doSetProperty("hostnameVerification", hostnameVerification);
             return this;
         }
         /**
@@ -2101,36 +2101,6 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * To enable/disable hostname verification on SSLEngine.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group:  security
-         * 
-         * @param hostnameVerification the value to set
-         * @return the dsl builder
-         */
-        default NettyEndpointProducerBuilder hostnameVerification(boolean hostnameVerification) {
-            doSetProperty("hostnameVerification", hostnameVerification);
-            return this;
-        }
-        /**
-         * To enable/disable hostname verification on SSLEngine.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group:  security
-         * 
-         * @param hostnameVerification the value to set
-         * @return the dsl builder
-         */
-        default NettyEndpointProducerBuilder hostnameVerification(String hostnameVerification) {
-            doSetProperty("hostnameVerification", hostnameVerification);
-            return this;
-        }
-        /**
          * The netty component installs a default codec if both, encoder/decoder
          * is null and textline is false. Setting allowDefaultCodec to false
          * prevents the netty component from installing a default codec as the
@@ -2360,6 +2330,36 @@ public interface NettyEndpointBuilderFactory {
          */
         default NettyEndpointProducerBuilder enabledProtocols(String enabledProtocols) {
             doSetProperty("enabledProtocols", enabledProtocols);
+            return this;
+        }
+        /**
+         * To enable/disable hostname verification on SSLEngine.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param hostnameVerification the value to set
+         * @return the dsl builder
+         */
+        default NettyEndpointProducerBuilder hostnameVerification(boolean hostnameVerification) {
+            doSetProperty("hostnameVerification", hostnameVerification);
+            return this;
+        }
+        /**
+         * To enable/disable hostname verification on SSLEngine.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param hostnameVerification the value to set
+         * @return the dsl builder
+         */
+        default NettyEndpointProducerBuilder hostnameVerification(String hostnameVerification) {
+            doSetProperty("hostnameVerification", hostnameVerification);
             return this;
         }
         /**
@@ -2916,7 +2916,12 @@ public interface NettyEndpointBuilderFactory {
         /**
          * Sets the cap on the number of objects that can be allocated by the
          * pool (checked out to clients, or idle awaiting checkout) at a given
-         * time. Use a negative value for no limit.
+         * time. Use a negative value for no limit. Be careful to not set this
+         * value too low (such as 1) as the pool must have space to create a
+         * producer such as when performing retries. Be mindful that the option
+         * producerPoolBlockWhenExhausted is default true, and the pool will
+         * then block when there is no space, which can lead to the application
+         * to hang.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -2933,7 +2938,12 @@ public interface NettyEndpointBuilderFactory {
         /**
          * Sets the cap on the number of objects that can be allocated by the
          * pool (checked out to clients, or idle awaiting checkout) at a given
-         * time. Use a negative value for no limit.
+         * time. Use a negative value for no limit. Be careful to not set this
+         * value too low (such as 1) as the pool must have space to create a
+         * producer such as when performing retries. Be mindful that the option
+         * producerPoolBlockWhenExhausted is default true, and the pool will
+         * then block when there is no space, which can lead to the application
+         * to hang.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -3752,36 +3762,6 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * To enable/disable hostname verification on SSLEngine.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group:  security
-         * 
-         * @param hostnameVerification the value to set
-         * @return the dsl builder
-         */
-        default NettyEndpointBuilder hostnameVerification(boolean hostnameVerification) {
-            doSetProperty("hostnameVerification", hostnameVerification);
-            return this;
-        }
-        /**
-         * To enable/disable hostname verification on SSLEngine.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
-         * Group:  security
-         * 
-         * @param hostnameVerification the value to set
-         * @return the dsl builder
-         */
-        default NettyEndpointBuilder hostnameVerification(String hostnameVerification) {
-            doSetProperty("hostnameVerification", hostnameVerification);
-            return this;
-        }
-        /**
          * The netty component installs a default codec if both, encoder/decoder
          * is null and textline is false. Setting allowDefaultCodec to false
          * prevents the netty component from installing a default codec as the
@@ -4011,6 +3991,36 @@ public interface NettyEndpointBuilderFactory {
          */
         default NettyEndpointBuilder enabledProtocols(String enabledProtocols) {
             doSetProperty("enabledProtocols", enabledProtocols);
+            return this;
+        }
+        /**
+         * To enable/disable hostname verification on SSLEngine.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param hostnameVerification the value to set
+         * @return the dsl builder
+         */
+        default NettyEndpointBuilder hostnameVerification(boolean hostnameVerification) {
+            doSetProperty("hostnameVerification", hostnameVerification);
+            return this;
+        }
+        /**
+         * To enable/disable hostname verification on SSLEngine.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: security
+         * 
+         * @param hostnameVerification the value to set
+         * @return the dsl builder
+         */
+        default NettyEndpointBuilder hostnameVerification(String hostnameVerification) {
+            doSetProperty("hostnameVerification", hostnameVerification);
             return this;
         }
         /**

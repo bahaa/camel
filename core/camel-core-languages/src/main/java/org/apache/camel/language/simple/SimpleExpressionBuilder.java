@@ -18,10 +18,12 @@ package org.apache.camel.language.simple;
 
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -32,6 +34,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.ExchangePropertyKey;
 import org.apache.camel.Expression;
 import org.apache.camel.InvalidPayloadException;
+import org.apache.camel.Predicate;
 import org.apache.camel.spi.ClassResolver;
 import org.apache.camel.spi.ExchangeFormatter;
 import org.apache.camel.spi.Language;
@@ -177,6 +180,117 @@ public final class SimpleExpressionBuilder {
     }
 
     /**
+     * A ternary condition expression
+     */
+    public static Expression iifExpression(final String predicate, final String trueValue, final String falseValue) {
+        return new ExpressionAdapter() {
+            private Predicate pred;
+            private Expression expTrue;
+            private Expression expFalse;
+
+            @Override
+            public void init(CamelContext context) {
+                pred = context.resolveLanguage("simple").createPredicate(predicate);
+                pred.init(context);
+                expTrue = context.resolveLanguage("simple").createExpression(trueValue);
+                expTrue.init(context);
+                expFalse = context.resolveLanguage("simple").createExpression(falseValue);
+                expFalse.init(context);
+            }
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                if (pred.matches(exchange)) {
+                    return expTrue.evaluate(exchange, Object.class);
+                } else {
+                    return expFalse.evaluate(exchange, Object.class);
+                }
+            }
+
+            @Override
+            public String toString() {
+                return "iif(" + predicate + "," + trueValue + "," + falseValue + ")";
+            }
+        };
+    }
+
+    /**
+     * An expression that creates an ArrayList
+     */
+    public static Expression listExpression(String[] values) {
+        return new ExpressionAdapter() {
+
+            private final Expression[] exps = new Expression[values != null ? values.length : 0];
+
+            @Override
+            public void init(CamelContext context) {
+                for (int i = 0; values != null && i < values.length; i++) {
+                    Expression exp = context.resolveLanguage("simple").createExpression(values[i]);
+                    exp.init(context);
+                    exps[i] = exp;
+                }
+            }
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                List<Object> answer = new ArrayList<>(values != null ? values.length : 0);
+                for (Expression exp : exps) {
+                    Object val = exp.evaluate(exchange, Object.class);
+                    answer.add(val);
+                }
+                return answer;
+            }
+
+            @Override
+            public String toString() {
+                return "list(" + Arrays.toString(values) + ")";
+            }
+        };
+    }
+
+    /**
+     * An expression that creates an LinkedHashMap
+     */
+    public static Expression mapExpression(String[] pairs) {
+        return new ExpressionAdapter() {
+
+            private final Expression[] keys = new Expression[pairs != null ? pairs.length / 2 : 0];
+            private final Expression[] values = new Expression[pairs != null ? pairs.length / 2 : 0];
+
+            @Override
+            public void init(CamelContext context) {
+                for (int i = 0, j = 0; pairs != null && i < pairs.length - 1; j++) {
+                    String key = pairs[i];
+                    String value = pairs[i + 1];
+                    Expression exp = context.resolveLanguage("simple").createExpression(key);
+                    exp.init(context);
+                    keys[j] = exp;
+                    exp = context.resolveLanguage("simple").createExpression(value);
+                    exp.init(context);
+                    values[j] = exp;
+                    i = i + 2;
+                }
+            }
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                Map<String, Object> answer = new LinkedHashMap<>(keys.length);
+                for (int i = 0; i < keys.length; i++) {
+                    String key = keys[i].evaluate(exchange, String.class);
+                    Object val = values[i].evaluate(exchange, Object.class);
+                    answer.put(key, val);
+                }
+                return answer;
+            }
+
+            @Override
+            public String toString() {
+                return "map(" + Arrays.toString(values) + ")";
+            }
+        };
+    }
+
+    /**
      * Joins together the values from the expression
      */
     public static Expression joinExpression(final String expression, final String separator, final String prefix) {
@@ -203,6 +317,73 @@ public final class SimpleExpressionBuilder {
                 } else {
                     return "join(" + expression + "," + separator + ")";
                 }
+            }
+        };
+    }
+
+    /**
+     * Replaces string values from the expression
+     */
+    public static Expression replaceExpression(final String expression, final String from, final String to) {
+        return new ExpressionAdapter() {
+            private Expression exp;
+
+            @Override
+            public void init(CamelContext context) {
+                exp = context.resolveLanguage("simple").createExpression(expression);
+                exp.init(context);
+                exp = ExpressionBuilder.replaceAll(exp, from, to);
+                exp.init(context);
+            }
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                return exp.evaluate(exchange, Object.class);
+            }
+
+            @Override
+            public String toString() {
+                return "replace(" + expression + "," + from + "," + to + ")";
+            }
+        };
+    }
+
+    /**
+     * Substring string values from the expression
+     */
+    public static Expression substringExpression(final String expression, final String head, final String tail) {
+        return new ExpressionAdapter() {
+            private Expression exp;
+            private Expression exp1;
+            private Expression exp2;
+
+            @Override
+            public void init(CamelContext context) {
+                exp = context.resolveLanguage("simple").createExpression(expression);
+                exp.init(context);
+                exp1 = ExpressionBuilder.simpleExpression(head);
+                exp1.init(context);
+                exp2 = ExpressionBuilder.simpleExpression(tail);
+                exp2.init(context);
+            }
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                int num1 = exp1.evaluate(exchange, Integer.class);
+                int num2 = exp2.evaluate(exchange, Integer.class);
+                if (num1 < 0 && num2 == 0) {
+                    // if there is only one value and its negative then we want to clip from tail
+                    num2 = num1;
+                    num1 = 0;
+                }
+                num1 = Math.abs(num1);
+                num2 = Math.abs(num2);
+                return ExpressionBuilder.substring(exp, num1, num2).evaluate(exchange, Object.class);
+            }
+
+            @Override
+            public String toString() {
+                return "substring(" + expression + "," + head + "," + tail + ")";
             }
         };
     }
@@ -324,7 +505,7 @@ public final class SimpleExpressionBuilder {
     }
 
     /**
-     * Returns a uuid string based on the given generator (default, classic, short, simple)
+     * Returns an uuid string based on the given generator (default, classic, short, simple)
      */
     public static Expression uuidExpression(final String generator) {
         return new ExpressionAdapter() {
@@ -1022,9 +1203,7 @@ public final class SimpleExpressionBuilder {
             public String toString() {
                 return "type:" + name;
             }
-        }
-
-        ;
+        };
     }
 
     /**
@@ -1043,7 +1222,7 @@ public final class SimpleExpressionBuilder {
     }
 
     /**
-     * Returns the expression for the exchanges exception invoking methods defined in a simple OGNL notation
+     * Returns the expression for the exchange's exception invoking methods defined in a simple OGNL notation
      *
      * @param ognl methods to invoke on the body in a simple OGNL syntax
      */
@@ -1089,14 +1268,13 @@ public final class SimpleExpressionBuilder {
         private final String toStringValue;
         private final KeyedEntityRetrievalStrategy keyedEntityRetrievalStrategy;
         private String key;
-        private String keySuffix;
         private final String method;
         private Expression keyExpression;
         private Expression ognlExpression;
         private Language beanLanguage;
 
-        KeyedOgnlExpressionAdapter(String ognl, String toStringValue,
-                                   KeyedEntityRetrievalStrategy keyedEntityRetrievalStrategy) {
+        public KeyedOgnlExpressionAdapter(String ognl, String toStringValue,
+                                          KeyedEntityRetrievalStrategy keyedEntityRetrievalStrategy) {
             this.ognl = ognl;
             this.toStringValue = toStringValue;
             this.keyedEntityRetrievalStrategy = keyedEntityRetrievalStrategy;
@@ -1106,7 +1284,7 @@ public final class SimpleExpressionBuilder {
             List<String> methods = OgnlHelper.splitOgnl(ognl);
 
             key = methods.get(0);
-            keySuffix = "";
+            String keySuffix = "";
             // if ognl starts with a key inside brackets (eg: [foo.bar])
             // remove starting and ending brackets from key
             if (key.startsWith("[") && key.endsWith("]")) {

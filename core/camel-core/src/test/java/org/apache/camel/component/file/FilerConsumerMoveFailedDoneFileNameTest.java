@@ -16,6 +16,7 @@
  */
 package org.apache.camel.component.file;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.ContextTestSupport;
@@ -27,12 +28,13 @@ import org.junit.jupiter.api.Test;
  * Unit test done files with moveFailed option
  */
 public class FilerConsumerMoveFailedDoneFileNameTest extends ContextTestSupport {
+    private static final String TEST_FILE_NAME = "hello" + UUID.randomUUID() + ".txt";
 
     @Test
     public void testDoneFile() throws Exception {
         getMockEndpoint("mock:input").expectedMessageCount(1);
 
-        template.sendBodyAndHeader(fileUri(), "Hello World", Exchange.FILE_NAME, "hello.txt");
+        template.sendBodyAndHeader(fileUri(), "Hello World", Exchange.FILE_NAME, TEST_FILE_NAME);
         template.sendBodyAndHeader(fileUri(), "", Exchange.FILE_NAME, "done");
 
         // wait a bit for the file processing to complete
@@ -44,14 +46,14 @@ public class FilerConsumerMoveFailedDoneFileNameTest extends ContextTestSupport 
         assertFileNotExists(testFile("done"));
 
         // as well the original file should be moved to failed
-        assertFileExists(testFile("failed/hello.txt"));
+        assertFileExists(testFile("failed/" + TEST_FILE_NAME));
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from(fileUri("?doneFileName=done&initialDelay=0&delay=10&moveFailed=failed")).to("mock:input")
                         .throwException(new IllegalArgumentException("Forced"));
             }

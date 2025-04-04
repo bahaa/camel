@@ -17,6 +17,7 @@
 package org.apache.camel.spi;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.NamedNode;
@@ -59,10 +60,20 @@ public interface ModelToXMLDumper {
      * Dumps the beans as XML
      *
      * @param  context   the CamelContext
-     * @param  beans     list of beans (RegistryBeanDefinition)
+     * @param  beans     list of beans (BeanFactoryDefinition)
      * @return           the output in XML (is formatted)
      * @throws Exception is throw if error marshalling to XML
      */
     String dumpBeansAsXml(CamelContext context, List<Object> beans) throws Exception;
+
+    /**
+     * Dumps the global data formats as XML
+     *
+     * @param  context     the CamelContext
+     * @param  dataFormats list of data formats (DataFormatDefinition)
+     * @return             the output in XML (is formatted)
+     * @throws Exception   is throw if error marshalling to XML
+     */
+    String dumpDataFormatsAsXml(CamelContext context, Map<String, Object> dataFormats) throws Exception;
 
 }

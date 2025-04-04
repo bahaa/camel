@@ -27,7 +27,7 @@ import org.apache.camel.spi.NamespaceAware;
 public class XQueryExpressionReifier extends SingleInputTypedExpressionReifier<XQueryExpression> {
 
     public XQueryExpressionReifier(CamelContext camelContext, ExpressionDefinition definition) {
-        super(camelContext, (XQueryExpression) definition);
+        super(camelContext, definition);
     }
 
     @Override
@@ -41,16 +41,16 @@ public class XQueryExpressionReifier extends SingleInputTypedExpressionReifier<X
     }
 
     protected void configureNamespaceAware(Object builder) {
-        if (definition.getNamespaces() != null && builder instanceof NamespaceAware) {
-            NamespaceAware namespaceAware = (NamespaceAware) builder;
+        if (definition.getNamespaces() != null && builder instanceof NamespaceAware namespaceAware) {
             namespaceAware.setNamespaces(definition.getNamespaces());
         }
     }
 
     protected Object[] createProperties() {
-        Object[] properties = new Object[2];
+        Object[] properties = new Object[3];
         properties[0] = asResultType();
         properties[1] = parseString(definition.getSource());
+        properties[2] = definition.getNamespaces();
         return properties;
     }
 

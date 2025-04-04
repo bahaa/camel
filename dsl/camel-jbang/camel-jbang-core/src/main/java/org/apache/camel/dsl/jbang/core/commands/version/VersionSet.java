@@ -20,17 +20,22 @@ import org.apache.camel.dsl.jbang.core.commands.CamelCommand;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.RuntimeCompletionCandidates;
+import org.apache.camel.dsl.jbang.core.common.RuntimeType;
+import org.apache.camel.dsl.jbang.core.common.RuntimeTypeConverter;
 import picocli.CommandLine;
 
-@CommandLine.Command(name = "set", description = "Set/change current Camel version")
+@CommandLine.Command(name = "set", description = "Set/change current Camel version", sortOptions = false,
+                     showDefaultValues = true)
 public class VersionSet extends CamelCommand {
 
     @CommandLine.Parameters(description = "Camel version", arity = "0..1")
     String version;
 
-    @CommandLine.Option(names = { "--runtime" }, completionCandidates = RuntimeCompletionCandidates.class,
-                        description = "Runtime (spring-boot, quarkus, or camel-main)")
-    String runtime;
+    @CommandLine.Option(names = { "--runtime" },
+                        completionCandidates = RuntimeCompletionCandidates.class,
+                        converter = RuntimeTypeConverter.class,
+                        description = "Runtime (${COMPLETION-CANDIDATES})")
+    RuntimeType runtime;
 
     @CommandLine.Option(names = { "--repo", "--repos" }, description = "Maven repository for downloading the dependencies")
     String repo;
@@ -38,13 +43,17 @@ public class VersionSet extends CamelCommand {
     @CommandLine.Option(names = { "--reset" }, description = "Reset by removing any custom version settings")
     boolean reset;
 
+    @CommandLine.Option(names = { "--global" }, description = "Use global or local configuration")
+    boolean global = true;
+
     public VersionSet(CamelJBangMain main) {
         super(main);
     }
 
     @Override
     public Integer doCall() throws Exception {
-        CommandLineHelper.createPropertyFile();
+        boolean local = !global;
+        CommandLineHelper.createPropertyFile(local);
 
         CommandLineHelper.loadProperties(properties -> {
             if (reset) {
@@ -59,11 +68,11 @@ public class VersionSet extends CamelCommand {
                     properties.put("repos", repo);
                 }
                 if (runtime != null) {
-                    properties.put("runtime", runtime);
+                    properties.put("runtime", runtime.runtime());
                 }
             }
-            CommandLineHelper.storeProperties(properties, printer());
-        });
+            CommandLineHelper.storeProperties(properties, printer(), local);
+        }, local);
 
         return 0;
     }

@@ -18,6 +18,7 @@ package org.apache.camel.component.platform.http.plugin;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +36,9 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.impl.Utils;
 import org.apache.camel.CamelContext;
 import org.apache.camel.spi.annotations.JdkService;
+import org.apache.camel.support.ObjectHelper;
 import org.apache.camel.support.service.ServiceSupport;
+import org.apache.camel.util.ReflectionHelper;
 import org.jolokia.server.core.config.ConfigKey;
 import org.jolokia.server.core.config.StaticConfiguration;
 import org.jolokia.server.core.http.HttpRequestHandler;
@@ -49,8 +52,6 @@ import org.jolokia.server.core.service.api.Restrictor;
 import org.jolokia.server.core.util.NetworkUtil;
 import org.jolokia.service.jmx.LocalRequestHandler;
 import org.jolokia.service.serializer.JolokiaSerializer;
-import org.json.simple.JSONAware;
-import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +69,7 @@ public class DefaultJolokiaPlatformHttpPlugin extends ServiceSupport implements 
     public DefaultJolokiaPlatformHttpPlugin() {
         var config = new StaticConfiguration(ConfigKey.AGENT_ID, NetworkUtil.getAgentId(hashCode(), "vertx"));
         jolokiaLogHandler = new JolokiaLogHandler(LOG);
-        var restrictor = createRestrictor(NetworkUtil.replaceExpression(config.getConfig(ConfigKey.POLICY_LOCATION)));
+        var restrictor = createRestrictor(config.getConfig(ConfigKey.POLICY_LOCATION));
 
         serviceManager = JolokiaServiceManagerFactory.createJolokiaServiceManager(
                 config,
@@ -107,15 +108,19 @@ public class DefaultJolokiaPlatformHttpPlugin extends ServiceSupport implements 
         try {
             var restrictor = RestrictorFactory.lookupPolicyRestrictor(pLocation);
             if (restrictor != null) {
-                jolokiaLogHandler.info("Using access restrictor: " + pLocation);
+                LOG.info("Using access restrictor: " + pLocation);
                 return restrictor;
             } else {
-                jolokiaLogHandler.info("No access restrictor found at: " + pLocation + ", access to all MBeans is allowed");
+                LOG.warn("No access restrictor found at: " + pLocation + ", access to all MBeans is allowed." +
+                         " Mind that this is an unsecure and dangerous configuration that you may only want to use for development environments."
+                         +
+                         " NEVER use this in a production environment as it would expose sensitive information with no authentication"
+                         + " and is a potential vector of remote attacks.");
                 return new AllowAllRestrictor();
             }
         } catch (IOException e) {
-            jolokiaLogHandler.error("Error while accessing access restrictor: at " + pLocation +
-                                    ". Denying all access to MBeans for security reasons. Exception: " + e,
+            LOG.error("Error while accessing access restrictor: at " + pLocation +
+                      ". Denying all access to MBeans for security reasons. Exception: " + e,
                     e);
             return new DenyAllRestrictor();
         }
@@ -159,34 +164,78 @@ public class DefaultJolokiaPlatformHttpPlugin extends ServiceSupport implements 
         }
     }
 
+    /**
+     * This method uses reflection to invoke the Jolokia HttpRequestHandler because its shading JSon library which at
+     * runtime causes NoSuchMethodError due to JSONObject has been shaded into a different package.
+     */
     private Handler<RoutingContext> createVertxHandler() {
         return routingContext -> {
             HttpServerRequest req = routingContext.request();
             String remainingPath = Utils.pathOffset(req.path(), routingContext);
 
-            JSONAware json = null;
+            Object json = null;
+            int status = 200;
             try {
-                requestHandler.checkAccess(req.scheme(), req.remoteAddress().host(), req.remoteAddress().host(),
-                        getOriginOrReferer(req));
+                ObjectHelper.invokeMethodSafe("checkAccess", requestHandler, req.scheme(), req.remoteAddress().host(),
+                        req.remoteAddress().host(), getOriginOrReferer(req));
                 if (req.method() == HttpMethod.GET) {
-                    json = requestHandler.handleGetRequest(req.uri(), remainingPath, getParams(req.params()));
+                    Method m = ReflectionHelper.findMethod(requestHandler.getClass(), "handleGetRequest", String.class,
+                            String.class, Map.class);
+                    if (m != null) {
+                        json = ObjectHelper.invokeMethodSafe(m, requestHandler, req.uri(), remainingPath,
+                                getParams(req.params()));
+                    }
                 } else {
                     Arguments.require(routingContext.body() != null, "Missing body");
                     InputStream inputStream = new ByteBufInputStream(routingContext.body().buffer().getByteBuf());
-                    json = requestHandler.handlePostRequest(req.uri(), inputStream, StandardCharsets.UTF_8.name(),
-                            getParams(req.params()));
+                    Method m = ReflectionHelper.findMethod(requestHandler.getClass(), "handlePostRequest", String.class,
+                            InputStream.class, String.class, Map.class);
+                    if (m != null) {
+                        json = ObjectHelper.invokeMethodSafe(m, requestHandler, req.uri(), inputStream,
+                                StandardCharsets.UTF_8.name(), getParams(req.params()));
+                    }
                 }
             } catch (Throwable exp) {
-                json = requestHandler.handleThrowable(
-                        exp instanceof RuntimeMBeanException ? ((RuntimeMBeanException) exp).getTargetException() : exp);
+                status = 500;
+                try {
+                    Method m = ReflectionHelper.findMethod(requestHandler.getClass(), "handleThrowable", Throwable.class);
+                    if (m != null) {
+                        json = ObjectHelper.invokeMethodSafe(m, requestHandler, exp instanceof RuntimeMBeanException
+                                ? ((RuntimeMBeanException) exp).getTargetException() : exp);
+                    }
+                } catch (Exception e) {
+                    // ignore
+                }
             } finally {
-                if (json == null)
-                    json = requestHandler.handleThrowable(new Exception("Internal error while handling an exception"));
+                if (json == null) {
+                    try {
+                        Method m = ReflectionHelper.findMethod(requestHandler.getClass(), "handleThrowable", Throwable.class);
+                        if (m != null) {
+                            json = ObjectHelper.invokeMethodSafe(m, requestHandler,
+                                    new Exception("Internal error while handling an exception"));
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+
+                // convert data to string
+                if (json != null) {
+                    try {
+                        Method m = ReflectionHelper.findMethod(json.getClass(), "toJSONString");
+                        if (m != null) {
+                            json = ObjectHelper.invokeMethodSafe(m, json);
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+                String data = json != null ? json.toString() : "";
 
                 routingContext.response()
-                        .setStatusCode(getStatusCode(json))
+                        .setStatusCode(status)
                         .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                        .end(json.toJSONString());
+                        .end(data);
             }
         };
     }
@@ -204,14 +253,7 @@ public class DefaultJolokiaPlatformHttpPlugin extends ServiceSupport implements 
         if (origin == null) {
             origin = req.getHeader(HttpHeaders.REFERER);
         }
-        return origin != null ? origin.replaceAll("[\\n\\r]*", "") : null;
-    }
-
-    private int getStatusCode(JSONAware json) {
-        if (json instanceof JSONObject && ((JSONObject) json).get("status") instanceof Integer) {
-            return (Integer) ((JSONObject) json).get("status");
-        }
-        return 200;
+        return origin != null ? origin.replaceAll("[\\n\\r]*", "") : "";
     }
 
 }

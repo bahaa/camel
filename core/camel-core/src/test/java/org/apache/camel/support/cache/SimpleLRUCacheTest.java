@@ -17,13 +17,23 @@
 package org.apache.camel.support.cache;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
+import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import static org.apache.camel.support.cache.SimpleLRUCache.MINIMUM_QUEUE_SIZE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,6 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * The test class for {@link SimpleLRUCache}.
  */
+@Isolated("Some of these tests creates a lot of threads")
+@DisabledIfSystemProperty(named = "ci.env.name", matches = "apache.org",
+                          disabledReason = "Apache CI nodes are too resource constrained for this test")
 class SimpleLRUCacheTest {
 
     private final List<String> consumed = new ArrayList<>();
@@ -48,38 +61,102 @@ class SimpleLRUCacheTest {
         assertNull(map.put("1", "One"));
         assertEquals(1, map.size());
         assertEquals(1, map.getQueueSize());
+        assertEquals("One", map.get("1"));
         map.entrySet().iterator().next().setValue("bar");
         assertEquals(1, map.size());
         assertEquals(2, map.getQueueSize());
+        assertEquals("bar", map.get("1"));
+        assertThrows(NullPointerException.class, () -> map.entrySet().iterator().next().setValue(null));
     }
 
     @Test
     void queueSize() {
         assertEquals(0, map.getQueueSize());
-        map.put("1", "1");
+        for (int i = 1; i <= MINIMUM_QUEUE_SIZE; i++) {
+            map.put("1", Integer.toString(i));
+            assertEquals(1, map.size());
+            assertEquals(i, map.getQueueSize());
+        }
+        map.put("1", "A");
         assertEquals(1, map.size());
         assertEquals(1, map.getQueueSize());
-        map.put("1", "2");
+        map.put("1", "B");
         assertEquals(1, map.size());
         assertEquals(2, map.getQueueSize());
-        map.put("1", "3");
-        assertEquals(1, map.size());
+        map.put("2", "A");
+        assertEquals(2, map.size());
         assertEquals(3, map.getQueueSize());
-        map.put("1", "4");
-        assertEquals(1, map.size());
+        map.put("3", "A");
+        assertEquals(3, map.size());
         assertEquals(4, map.getQueueSize());
-        map.put("1", "5");
+        map.put("4", "A");
+        assertEquals(3, map.size());
+        assertEquals(3, map.getQueueSize());
+    }
+
+    @Test
+    void size() {
+        assertEquals(0, map.size());
+        assertNull(map.put("1", "One"));
         assertEquals(1, map.size());
-        assertEquals(5, map.getQueueSize());
-        map.put("1", "6");
-        assertEquals(1, map.size());
-        assertEquals(6, map.getQueueSize());
-        map.put("1", "7");
-        assertEquals(1, map.size());
-        assertEquals(6, map.getQueueSize());
-        map.put("1", "8");
-        assertEquals(1, map.size());
-        assertEquals(6, map.getQueueSize());
+    }
+
+    @Test
+    void isEmpty() {
+        assertTrue(map.isEmpty());
+        assertNull(map.put("1", "One"));
+        assertFalse(map.isEmpty());
+        map.remove("1");
+        assertTrue(map.isEmpty());
+    }
+
+    @Test
+    void containsKey() {
+        assertFalse(map.containsKey("1"));
+        assertNull(map.put("1", "One"));
+        assertTrue(map.containsKey("1"));
+        map.remove("1");
+        assertFalse(map.containsKey("1"));
+        assertThrows(NullPointerException.class, () -> map.containsKey(null));
+    }
+
+    @Test
+    void containsValue() {
+        assertFalse(map.containsValue("One"));
+        assertNull(map.put("1", "One"));
+        assertTrue(map.containsValue("One"));
+        map.remove("1");
+        assertFalse(map.containsValue("One"));
+        assertThrows(NullPointerException.class, () -> map.containsValue(null));
+    }
+
+    @Test
+    void remove() {
+        assertTrue(map.isEmpty());
+        map.remove("1");
+        assertTrue(map.isEmpty());
+        assertNull(map.put("1", "One"));
+        assertFalse(map.isEmpty());
+        map.remove("1");
+        assertTrue(map.isEmpty());
+        assertThrows(NullPointerException.class, () -> map.remove(null));
+    }
+
+    @Test
+    void removeWithValue() {
+        assertTrue(map.isEmpty());
+        map.remove("1", "One");
+        assertTrue(map.isEmpty());
+        assertNull(map.put("1", "One"));
+        assertFalse(map.isEmpty());
+        map.remove("1", "Two");
+        assertFalse(map.isEmpty());
+        map.remove("2", "One");
+        assertFalse(map.isEmpty());
+        map.remove("1", "One");
+        assertTrue(map.isEmpty());
+        assertThrows(NullPointerException.class, () -> map.remove(null, "A"));
+        assertThrows(NullPointerException.class, () -> map.remove("A", null));
     }
 
     @Test
@@ -102,6 +179,54 @@ class SimpleLRUCacheTest {
         assertEquals(1, consumed.size());
         assertTrue(map.containsKey("2"));
         assertEquals("Two v2", map.get("2"));
+        assertThrows(NullPointerException.class, () -> map.put("A", null));
+        assertThrows(NullPointerException.class, () -> map.put(null, "A"));
+    }
+
+    @Test
+    void putAll() {
+        assertEquals(0, map.size());
+        Map<String, String> data = new LinkedHashMap<>();
+        data.put("1", "One");
+        data.put("2", "Two");
+        data.put("3", "Three");
+        map.putAll(data);
+        assertEquals(3, map.size());
+        assertEquals(0, consumed.size());
+        data.clear();
+        data.put("4", "Four");
+        data.put("5", "Five");
+        map.putAll(data);
+        assertEquals(3, map.size());
+        assertEquals(2, consumed.size());
+        assertFalse(map.containsKey("1"));
+        assertFalse(map.containsKey("2"));
+        assertTrue(consumed.contains("One"));
+        assertTrue(consumed.contains("Two"));
+        assertThrows(NullPointerException.class, () -> map.putAll(null));
+    }
+
+    @Test
+    void clear() {
+        assertEquals(0, map.size());
+        map.putAll(Map.of("1", "One", "2", "Two", "3", "Three"));
+        assertEquals(3, map.size());
+        map.clear();
+        assertEquals(0, map.size());
+    }
+
+    @Test
+    void replaceAll() {
+        map.replaceAll((k, v) -> v + " v2");
+        assertEquals(0, map.size());
+        map.putAll(Map.of("1", "One", "2", "Two", "3", "Three"));
+        assertEquals(3, map.size());
+        map.replaceAll((k, v) -> v + " v2");
+        assertEquals(3, map.size());
+        assertEquals("One v2", map.get("1"));
+        assertEquals("Two v2", map.get("2"));
+        assertEquals("Three v2", map.get("3"));
+        assertThrows(NullPointerException.class, () -> map.replaceAll(null));
     }
 
     @Test
@@ -129,6 +254,8 @@ class SimpleLRUCacheTest {
         assertEquals(2, consumed.size());
         assertFalse(map.containsKey("2"));
         assertTrue(consumed.contains("Two"));
+        assertThrows(NullPointerException.class, () -> map.putIfAbsent("A", null));
+        assertThrows(NullPointerException.class, () -> map.putIfAbsent(null, "A"));
     }
 
     @Test
@@ -165,6 +292,8 @@ class SimpleLRUCacheTest {
         assertEquals("Five", map.computeIfAbsent("5", k -> null));
         assertEquals(3, map.size());
         assertEquals(2, consumed.size());
+        assertThrows(NullPointerException.class, () -> map.computeIfAbsent(null, k -> null));
+        assertThrows(NullPointerException.class, () -> map.computeIfAbsent("A", null));
     }
 
     @Test
@@ -190,6 +319,8 @@ class SimpleLRUCacheTest {
         assertEquals(2, map.size());
         assertEquals(0, consumed.size());
         assertFalse(map.containsKey("1"));
+        assertThrows(NullPointerException.class, () -> map.computeIfPresent(null, (k, v) -> null));
+        assertThrows(NullPointerException.class, () -> map.computeIfPresent("A", null));
     }
 
     @Test
@@ -216,6 +347,8 @@ class SimpleLRUCacheTest {
         assertEquals(2, map.size());
         assertEquals(1, consumed.size());
         assertFalse(map.containsKey("2"));
+        assertThrows(NullPointerException.class, () -> map.compute(null, (k, v) -> null));
+        assertThrows(NullPointerException.class, () -> map.compute("A", null));
     }
 
     @Test
@@ -239,6 +372,9 @@ class SimpleLRUCacheTest {
         assertNull(map.merge("2", "V2", (v1, v2) -> null));
         assertEquals(2, map.size());
         assertEquals(1, consumed.size());
+        assertThrows(NullPointerException.class, () -> map.merge("A", "B", null));
+        assertThrows(NullPointerException.class, () -> map.merge("A", null, (v1, v2) -> null));
+        assertThrows(NullPointerException.class, () -> map.merge(null, "A", (v1, v2) -> null));
     }
 
     @Test
@@ -260,6 +396,8 @@ class SimpleLRUCacheTest {
         assertEquals("Three v2", map.get("3"));
         assertEquals(3, map.size());
         assertEquals(0, consumed.size());
+        assertThrows(NullPointerException.class, () -> map.replace("A", null));
+        assertThrows(NullPointerException.class, () -> map.replace(null, "A"));
     }
 
     @Test
@@ -286,5 +424,116 @@ class SimpleLRUCacheTest {
         assertEquals("Three v2", map.get("3"));
         assertEquals(3, map.size());
         assertEquals(0, consumed.size());
+        assertThrows(NullPointerException.class, () -> map.replace("A", "B", null));
+        assertThrows(NullPointerException.class, () -> map.replace("A", null, "B"));
+        assertThrows(NullPointerException.class, () -> map.replace(null, "A", "B"));
+    }
+
+    @Test
+    void ignoreDuplicates() {
+        assertEquals(0, map.size());
+        for (int i = 0; i < 100; i++) {
+            map.put("1", Integer.toString(i));
+            assertEquals(1, map.size(), String.format("The expected size is 1 but it fails after %d puts", i + 1));
+        }
+        assertEquals("99", map.get("1"));
+        assertNull(map.put("2", "Two"));
+        assertEquals(2, map.size());
+        assertEquals("99", map.get("1"));
+        assertNull(map.put("3", "Three"));
+        assertEquals(3, map.size());
+        assertEquals(0, consumed.size());
+        assertEquals("99", map.get("1"));
+        assertNull(map.put("4", "Four"));
+        assertEquals(3, map.size());
+        assertEquals(1, consumed.size());
+        assertFalse(map.containsKey("1"));
+        assertTrue(consumed.contains("99"));
+    }
+
+    @Test
+    void ensureEvictionOrdering() {
+        assertEquals(0, map.size());
+        assertNull(map.put("1", "One"));
+        assertNotNull(map.put("1", "One"));
+        assertNotNull(map.put("1", "One"));
+        assertNotNull(map.put("1", "One"));
+        assertNotNull(map.put("1", "One"));
+        assertNotNull(map.put("1", "One"));
+        assertNull(map.put("2", "Two"));
+        assertNotNull(map.put("1", "One"));
+        assertNull(map.put("3", "Three"));
+        assertEquals(3, map.size());
+        assertNull(map.put("4", "Four"));
+        assertEquals(3, map.size());
+        assertEquals(1, consumed.size());
+        assertFalse(map.containsKey("2"));
+        assertTrue(consumed.contains("Two"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, -1 })
+    void validateCacheSize(int maximumCacheSize) {
+        assertThrows(IllegalArgumentException.class, () -> new SimpleLRUCache<>(16, maximumCacheSize, x -> {
+        }));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 1, 2, 5, 10, 20, 50, 100, 1_000 })
+    void concurrentPut(int maximumCacheSize) throws Exception {
+        int threads = Runtime.getRuntime().availableProcessors();
+        int totalKeysPerThread = 1_000;
+        AtomicInteger counter = new AtomicInteger();
+        SimpleLRUCache<String, String> cache = new SimpleLRUCache<>(16, maximumCacheSize, v -> counter.incrementAndGet());
+
+        CountDownLatch latch = new CountDownLatch(threads);
+        for (int i = 0; i < threads; i++) {
+            int threadId = i;
+            new Thread(() -> {
+                try {
+                    for (int j = 0; j < totalKeysPerThread; j++) {
+                        cache.put(threadId + "-" + j, Integer.toString(j));
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            }).start();
+        }
+        assertTrue(latch.await(20, TimeUnit.SECONDS),
+                "Should have completed within a reasonable timeframe. Latch at: " + latch.getCount());
+        assertEquals(maximumCacheSize, cache.size());
+        assertEquals(totalKeysPerThread * threads - maximumCacheSize, counter.get());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 1, 2, 5, 10, 20, 50, 100, 500 })
+    void concurrentPutWithCollisions(int maximumCacheSize) throws Exception {
+        int threads = Runtime.getRuntime().availableProcessors();
+        int totalKeys = 1_000;
+        AtomicInteger counter = new AtomicInteger();
+        SimpleLRUCache<String, String> cache = new SimpleLRUCache<>(16, maximumCacheSize, v -> counter.incrementAndGet());
+        CountDownLatch latch = new CountDownLatch(threads);
+        for (int i = 0; i < threads; i++) {
+            new Thread(() -> {
+                try {
+                    for (int j = 0; j < totalKeys; j++) {
+                        cache.put(Integer.toString(j), Integer.toString(j));
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            }).start();
+        }
+        assertTrue(latch.await(20, TimeUnit.SECONDS),
+                "Should have completed within a reasonable timeframe. Latch at: " + latch.getCount());
+        assertEquals(maximumCacheSize, cache.size());
+        counter.set(0);
+        for (int j = 0; j < maximumCacheSize; j++) {
+            cache.put(Integer.toString(j), "OK");
+        }
+        assertEquals(maximumCacheSize, counter.get());
+        for (int j = 0; j < maximumCacheSize; j++) {
+            assertEquals("OK", cache.get(Integer.toString(j)));
+        }
     }
 }

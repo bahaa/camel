@@ -51,10 +51,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -78,17 +78,18 @@ public class KafkaProducerTest {
     public KafkaProducerTest() throws Exception {
         KafkaComponent kafka = new KafkaComponent(new DefaultCamelContext());
         kafka.getConfiguration().setBrokers("broker1:1234,broker2:4567");
+        kafka.getConfiguration().setRecordMetadata(true);
         kafka.init();
 
         endpoint = kafka.createEndpoint("kafka:sometopic", "sometopic", new HashMap());
         endpoint.doBuild();
-        assertTrue(endpoint.getKafkaClientFactory() instanceof DefaultKafkaClientFactory);
+        assertInstanceOf(DefaultKafkaClientFactory.class, endpoint.getKafkaClientFactory());
 
         producer = new KafkaProducer(endpoint);
 
         fromEndpoint = kafka.createEndpoint("kafka:fromtopic", "fromtopic", new HashMap());
         fromEndpoint.doBuild();
-        assertTrue(fromEndpoint.getKafkaClientFactory() instanceof DefaultKafkaClientFactory);
+        assertInstanceOf(DefaultKafkaClientFactory.class, fromEndpoint.getKafkaClientFactory());
 
         RecordMetadata rm = new RecordMetadata(null, 0, 0, 0, 0, 0);
         Future future = Mockito.mock(Future.class);

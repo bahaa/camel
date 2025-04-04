@@ -59,7 +59,7 @@ public class ConcurrentConsumerLoadManualTest extends CamelTestSupport {
         int noOfBlocks = 0;
         ArrayList<String> list = new ArrayList<>();
         for (int i = 1; i <= NO_OF_MESSAGES; i++) {
-            String payloadToSend = PAYLOAD.replace("#", "" + i);
+            String payloadToSend = PAYLOAD.replace("#", Integer.toString(i));
             list.add(payloadToSend);
             if (i % 100 == 0) {
                 noOfBlocks++;
@@ -76,7 +76,7 @@ public class ConcurrentConsumerLoadManualTest extends CamelTestSupport {
         int seconds = (int) watch.taken() / 1000;
         int msgPrSec = NO_OF_MESSAGES / seconds;
         LOGGER.info("IronMQPerformanceTest: Took: " + seconds + " seconds to produce " + NO_OF_MESSAGES + " messages. Which is "
-                    + msgPrSec + " messages pr. second");
+                    + msgPrSec + " messages per second");
     }
 
     @Test
@@ -89,7 +89,7 @@ public class ConcurrentConsumerLoadManualTest extends CamelTestSupport {
         int seconds = (int) watch.taken() / 1000;
         int msgPrSec = NO_OF_MESSAGES / seconds;
         LOGGER.info("IronmqPerformanceTest: Took: " + seconds + " seconds to consume " + NO_OF_MESSAGES + " messages. Which is "
-                    + msgPrSec + " messages pr. second");
+                    + msgPrSec + " messages per second");
     }
 
     @Override

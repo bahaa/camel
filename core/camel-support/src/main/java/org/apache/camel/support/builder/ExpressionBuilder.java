@@ -43,23 +43,28 @@ import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.RuntimeExchangeException;
 import org.apache.camel.TypeConverter;
 import org.apache.camel.spi.ClassResolver;
+import org.apache.camel.spi.ExchangeFormatter;
 import org.apache.camel.spi.Language;
 import org.apache.camel.spi.PropertiesComponent;
 import org.apache.camel.spi.Registry;
 import org.apache.camel.spi.UnitOfWork;
 import org.apache.camel.support.ConstantExpressionAdapter;
+import org.apache.camel.support.DefaultExchange;
 import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.support.ExpressionAdapter;
 import org.apache.camel.support.GroupIterator;
 import org.apache.camel.support.GroupTokenIterator;
 import org.apache.camel.support.LanguageHelper;
 import org.apache.camel.support.LanguageSupport;
+import org.apache.camel.support.PropertyBindingSupport;
 import org.apache.camel.support.SingleInputTypedLanguageSupport;
 import org.apache.camel.util.InetAddressUtil;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.json.Jsoner;
 import org.apache.camel.util.xml.pretty.XmlPrettyPrinter;
+
+import static org.apache.camel.util.StringHelper.between;
 
 /**
  * A helper class for working with <a href="http://camel.apache.org/expression.html">expressions</a>.
@@ -363,6 +368,23 @@ public class ExpressionBuilder {
     }
 
     /**
+     * Returns an expression for the size of the message headers
+     */
+    public static Expression headersSizeExpression() {
+        return new ExpressionAdapter() {
+            @Override
+            public Object evaluate(Exchange exchange) {
+                return exchange.getIn().getHeaders().size();
+            }
+
+            @Override
+            public String toString() {
+                return "headers.size";
+            }
+        };
+    }
+
+    /**
      * Returns an expression for the {@link Exchange} variables
      *
      * @return an expression object which will return the variables
@@ -377,6 +399,23 @@ public class ExpressionBuilder {
             @Override
             public String toString() {
                 return "variables";
+            }
+        };
+    }
+
+    /**
+     * Returns an expression for the number of {@link Exchange} variables
+     */
+    public static Expression variablesSizeExpression() {
+        return new ExpressionAdapter() {
+            @Override
+            public Object evaluate(Exchange exchange) {
+                return exchange.getVariables().size();
+            }
+
+            @Override
+            public String toString() {
+                return "variables.size";
             }
         };
     }
@@ -411,11 +450,7 @@ public class ExpressionBuilder {
         return new ExpressionAdapter() {
             @Override
             public Object evaluate(Exchange exchange) {
-                Exception exception = exchange.getException();
-                if (exception == null) {
-                    exception = exchange.getProperty(ExchangePropertyKey.EXCEPTION_CAUGHT, Exception.class);
-                }
-                return exception;
+                return LanguageHelper.exception(exchange);
             }
 
             @Override
@@ -1016,6 +1051,64 @@ public class ExpressionBuilder {
     /**
      * Returns an expression for evaluating the expression/predicate using the given language
      *
+     * @param  expression the expression providing the input
+     * @param  language   the language
+     * @param  value      the value to use for evaluation
+     * @return            an expression object which will evaluate the expression/predicate using the given language
+     */
+    public static Expression languageExpression(
+            final Expression expression, final String language, final String value, Class<?> resultType) {
+        return new ExpressionAdapter() {
+            private Expression expr;
+            private Predicate pred;
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                Object result = expression.evaluate(exchange, Object.class);
+                if (result != null) {
+                    Exchange dummy = new DefaultExchange(exchange);
+                    dummy.getMessage().setBody(result);
+                    return expr.evaluate(dummy, resultType);
+                }
+                return null;
+            }
+
+            @Override
+            public boolean matches(Exchange exchange) {
+                Object result = expression.evaluate(exchange, Object.class);
+                if (result != null) {
+                    Exchange dummy = new DefaultExchange(exchange);
+                    dummy.getMessage().setBody(result);
+                    return pred.matches(dummy);
+                }
+                return false;
+            }
+
+            @Override
+            public void init(CamelContext context) {
+                super.init(context);
+                Language lan = context.resolveLanguage(language);
+                if (lan != null) {
+                    pred = lan.createPredicate(value);
+                    pred.init(context);
+                    expr = lan.createExpression(value);
+                    expr.init(context);
+                    PropertyBindingSupport.build().bind(context, expr, "resultQName", "string");
+                } else {
+                    throw new NoSuchLanguageException(language);
+                }
+            }
+
+            @Override
+            public String toString() {
+                return language + "(" + expression + ")";
+            }
+        };
+    }
+
+    /**
+     * Returns an expression for evaluating the expression/predicate using the given language
+     *
      * @param  expression the expression or predicate
      * @param  source     Source to use, instead of message body. You can prefix with variable:, header:, or property:
      *                    to specify kind of source. Otherwise, the source is assumed to be a variable. Use empty or
@@ -1431,6 +1524,31 @@ public class ExpressionBuilder {
     }
 
     /**
+     * Dumps the exchange for logging purpose (uses {@link ExchangeFormatter} to format the output).
+     */
+    public static Expression logExchange() {
+        return new ExpressionAdapter() {
+            private ExchangeFormatter formatter;
+
+            @Override
+            public void init(CamelContext context) {
+                super.init(context);
+                this.formatter = LanguageHelper.getOrCreateExchangeFormatter(context, null);
+            }
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                return formatter.format(exchange);
+            }
+
+            @Override
+            public String toString() {
+                return "logExchange";
+            }
+        };
+    }
+
+    /**
      * Returns a functional expression for the exchange
      */
     public static Expression exchangeExpression(final Function<Exchange, Object> function) {
@@ -1779,7 +1897,7 @@ public class ExpressionBuilder {
                 ObjectHelper.notNull(it,
                         "expression: " + expression + " evaluated on " + exchange + " must return an java.util.Iterator");
 
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new StringBuilder(128);
                 while (it.hasNext()) {
                     Object o = it.next();
                     if (o != null) {
@@ -1841,6 +1959,64 @@ public class ExpressionBuilder {
             @Override
             public String toString() {
                 return "sort(" + expression + " by: " + comparator + ")";
+            }
+        };
+    }
+
+    /**
+     * Substring string values in the given expression.
+     */
+    public static Expression substring(
+            final Expression expression,
+            final int head, final int tail) {
+        return new ExpressionAdapter() {
+            @Override
+            public Object evaluate(Exchange exchange) {
+                String text = expression.evaluate(exchange, String.class);
+                if (text == null) {
+                    return null;
+                }
+                return between(text, head, tail);
+            }
+
+            @Override
+            public void init(CamelContext context) {
+                super.init(context);
+                expression.init(context);
+            }
+
+            @Override
+            public String toString() {
+                return "substring(" + expression + ", " + head + ", " + tail + ")";
+            }
+        };
+    }
+
+    /**
+     * Replaces string values in the given expression.
+     */
+    public static Expression replaceAll(
+            final Expression expression,
+            final String from, final String to) {
+        return new ExpressionAdapter() {
+            @Override
+            public Object evaluate(Exchange exchange) {
+                String text = expression.evaluate(exchange, String.class);
+                if (text == null) {
+                    return null;
+                }
+                return text.replace(from, to);
+            }
+
+            @Override
+            public void init(CamelContext context) {
+                super.init(context);
+                expression.init(context);
+            }
+
+            @Override
+            public String toString() {
+                return "replaceAll(" + expression + ", " + from + ", " + to + ")";
             }
         };
     }
@@ -1996,7 +2172,7 @@ public class ExpressionBuilder {
 
             @Override
             public Object evaluate(Exchange exchange) {
-                StringBuilder buffer = new StringBuilder();
+                StringBuilder buffer = new StringBuilder(256);
                 for (Expression expression : expressions) {
                     String text = expression.evaluate(exchange, String.class);
                     if (text != null) {
@@ -2042,7 +2218,7 @@ public class ExpressionBuilder {
                 if (optimizedValue != null) {
                     return optimizedValue;
                 }
-                StringBuilder buffer = new StringBuilder();
+                StringBuilder buffer = new StringBuilder(256);
                 Collection<?> col = optimized != null ? optimized : expressions;
                 for (Object obj : col) {
                     if (obj instanceof Expression expression) {
@@ -2065,16 +2241,16 @@ public class ExpressionBuilder {
                     boolean constantsOnly = true;
                     for (Expression expression : expressions) {
                         expression.init(context);
-                        if (expression instanceof ConstantExpressionAdapter) {
-                            Object value = ((ConstantExpressionAdapter) expression).getValue();
-                            preprocessedExpression.add(value.toString());
+                        if (expression instanceof ConstantExpressionAdapter constantExpressionAdapter) {
+                            Object value = constantExpressionAdapter.getValue();
+                            preprocessedExpression.add(String.valueOf(value));
                         } else {
                             preprocessedExpression.add(expression);
                             constantsOnly = false;
                         }
                     }
                     if (constantsOnly) {
-                        StringBuilder sb = new StringBuilder();
+                        StringBuilder sb = new StringBuilder(256);
                         for (Object o : preprocessedExpression) {
                             sb.append(o);
                         }
@@ -2164,6 +2340,23 @@ public class ExpressionBuilder {
             @Override
             public String toString() {
                 return "routeId";
+            }
+        };
+    }
+
+    /**
+     * Returns an Expression for the original route id where this exchange was created.
+     */
+    public static Expression fromRouteIdExpression() {
+        return new ExpressionAdapter() {
+            @Override
+            public Object evaluate(Exchange exchange) {
+                return exchange.getFromRouteId();
+            }
+
+            @Override
+            public String toString() {
+                return "fromRouteId";
             }
         };
     }
@@ -2286,6 +2479,29 @@ public class ExpressionBuilder {
         };
     }
 
+    public static Expression beanExpression(final Class<?> bean, final String method) {
+        return new ExpressionAdapter() {
+            private Language language;
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                Expression exp = language.createExpression(null, new Object[] { null, null, method, bean });
+                exp.init(exchange.getContext());
+                return exp.evaluate(exchange, Object.class);
+            }
+
+            @Override
+            public void init(CamelContext context) {
+                super.init(context);
+                this.language = context.resolveLanguage("bean");
+            }
+
+            public String toString() {
+                return "bean(" + bean + ", " + method + ")";
+            }
+        };
+    }
+
     public static Expression propertiesComponentExpression(final String key, final String defaultValue) {
         return new ExpressionAdapter() {
             private Expression exp;
@@ -2404,6 +2620,21 @@ public class ExpressionBuilder {
             @Override
             public String toString() {
                 return "xtokenize(" + path + ")";
+            }
+        };
+    }
+
+    public static Expression customExpression(final Expression expression, final Function<Object, Object> function) {
+        return new ExpressionAdapter() {
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                Object input = expression.evaluate(exchange, Object.class);
+                return function.apply(input);
+            }
+
+            public String toString() {
+                return "custom(" + expression + ")";
             }
         };
     }

@@ -22,8 +22,6 @@ import org.apache.camel.Exchange;
 import org.apache.camel.component.http.handler.BasicValidationHandler;
 import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
 import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.camel.component.http.HttpMethods.POST;
@@ -35,22 +33,18 @@ public class HttpCharsetTest extends BaseHttpTest {
 
     private HttpServer localServer;
 
-    @BeforeEach
     @Override
-    public void setUp() throws Exception {
-        localServer = ServerBootstrap.bootstrap().setHttpProcessor(getBasicHttpProcessor())
+    public void setupResources() throws Exception {
+        localServer = ServerBootstrap.bootstrap()
+                .setCanonicalHostName("localhost").setHttpProcessor(getBasicHttpProcessor())
                 .setConnectionReuseStrategy(getConnectionReuseStrategy()).setResponseFactory(getHttpResponseFactory())
                 .setSslContext(getSSLContext())
                 .register("/", new BasicValidationHandler(POST.name(), null, getBody(), getExpectedContent())).create();
         localServer.start();
-
-        super.setUp();
     }
 
-    @AfterEach
     @Override
-    public void tearDown() throws Exception {
-        super.tearDown();
+    public void cleanupResources() throws Exception {
 
         if (localServer != null) {
             localServer.stop();
@@ -61,7 +55,7 @@ public class HttpCharsetTest extends BaseHttpTest {
     public void sendCharsetInExchangeProperty() {
         Exchange exchange = template.request(
                 "http://localhost:" + localServer.getLocalPort() + "/", exchange1 -> {
-                    exchange1.setProperty(Exchange.CHARSET_NAME, charset);
+                    exchange1.getIn().setHeader(Exchange.CONTENT_TYPE, "text/plain;charset=iso8859-1");
                     exchange1.getIn().setBody(getBody());
                 });
 
@@ -72,7 +66,7 @@ public class HttpCharsetTest extends BaseHttpTest {
     public void sendByteArrayCharsetInExchangeProperty() {
         Exchange exchange = template.request(
                 "http://localhost:" + localServer.getLocalPort() + "/", exchange1 -> {
-                    exchange1.setProperty(Exchange.CHARSET_NAME, charset);
+                    exchange1.getIn().setHeader(Exchange.CONTENT_TYPE, "text/plain;charset=iso8859-1");
                     exchange1.getIn().setBody(getBody().getBytes(charset));
                 });
 
@@ -83,7 +77,7 @@ public class HttpCharsetTest extends BaseHttpTest {
     public void sendInputStreamCharsetInExchangeProperty() {
         Exchange exchange = template.request(
                 "http://localhost:" + localServer.getLocalPort() + "/", exchange1 -> {
-                    exchange1.setProperty(Exchange.CHARSET_NAME, charset);
+                    exchange1.getIn().setHeader(Exchange.CONTENT_TYPE, "text/plain;charset=iso8859-1");
                     exchange1.getIn().setBody(new ByteArrayInputStream(getBody().getBytes(charset)));
                 });
 

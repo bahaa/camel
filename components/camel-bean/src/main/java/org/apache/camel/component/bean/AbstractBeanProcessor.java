@@ -16,6 +16,9 @@
  */
 package org.apache.camel.component.bean;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.camel.AsyncCallback;
 import org.apache.camel.BeanScope;
 import org.apache.camel.Exchange;
@@ -38,7 +41,7 @@ public abstract class AbstractBeanProcessor extends AsyncProcessorSupport {
     private transient Processor processor;
     private transient Object bean;
     private transient boolean lookupProcessorDone;
-    private final Object lock = new Object();
+    private final Lock lock = new ReentrantLock();
     private BeanScope scope;
     private String method;
     private boolean shorthandMethod;
@@ -58,9 +61,8 @@ public abstract class AbstractBeanProcessor extends AsyncProcessorSupport {
 
     @Override
     public boolean process(Exchange exchange, AsyncCallback callback) {
-        // do we have an explicit method name we always should invoke (either configured on endpoint or as a header)
-        final String explicitMethodName = exchange.getIn().getHeader(BeanConstants.BEAN_METHOD_NAME, method, String.class);
-
+        // do we have an explicit method name we always should invoke
+        final String explicitMethodName = method;
         final Object beanInstance;
         final BeanInfo beanInfo;
         try {
@@ -80,7 +82,6 @@ public abstract class AbstractBeanProcessor extends AsyncProcessorSupport {
             final Processor target = getCustomAdapter(exchange, beanInstance);
             if (target != null) {
                 useCustomAdapter(exchange, callback, target);
-
                 return true;
             }
         }
@@ -92,22 +93,22 @@ public abstract class AbstractBeanProcessor extends AsyncProcessorSupport {
             Exchange exchange, AsyncCallback callback, String explicitMethodName, BeanInfo beanInfo, Object beanInstance) {
         final Message in = exchange.getIn();
 
-        // set explicit method name to invoke as a header, which is how BeanInfo can detect it
+        // set explicit method name to invoke as a exchange property, which is how BeanInfo can detect it
         if (explicitMethodName != null) {
-            in.setHeader(BeanConstants.BEAN_METHOD_NAME, explicitMethodName);
+            exchange.setProperty(BeanConstants.BEAN_METHOD_NAME, explicitMethodName);
         }
 
         final MethodInvocation invocation;
         try {
-            invocation = beanInfo.createInvocation(beanInstance, exchange);
+            invocation = beanInfo.createInvocation(beanInstance, exchange, explicitMethodName);
         } catch (Exception e) {
             exchange.setException(e);
             callback.done(true);
             return true;
         } finally {
-            // must remove headers as they were provisional
+            // must remove property as they were provisional
             if (explicitMethodName != null) {
-                in.removeHeader(Exchange.BEAN_METHOD_NAME);
+                exchange.removeProperty(BeanConstants.BEAN_METHOD_NAME);
             }
         }
 
@@ -130,11 +131,14 @@ public abstract class AbstractBeanProcessor extends AsyncProcessorSupport {
             boolean allowCache = scope == null || scope == BeanScope.Singleton;
             if (allowCache) {
                 if (!lookupProcessorDone) {
-                    synchronized (lock) {
+                    lock.lock();
+                    try {
                         lookupProcessorDone = true;
                         // so if there is a custom type converter for the bean to processor
                         target = exchange.getContext().getTypeConverter().tryConvertTo(Processor.class, exchange, beanTmp);
                         processor = target;
+                    } finally {
+                        lock.unlock();
                     }
                 }
             } else {

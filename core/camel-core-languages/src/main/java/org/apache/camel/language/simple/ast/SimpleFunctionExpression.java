@@ -20,14 +20,19 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.StringJoiner;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Expression;
 import org.apache.camel.RuntimeCamelException;
+import org.apache.camel.language.simple.BaseSimpleParser;
 import org.apache.camel.language.simple.SimpleExpressionBuilder;
 import org.apache.camel.language.simple.types.SimpleParserException;
 import org.apache.camel.language.simple.types.SimpleToken;
 import org.apache.camel.spi.Language;
+import org.apache.camel.spi.SimpleLanguageFunctionFactory;
+import org.apache.camel.support.ResolverHelper;
 import org.apache.camel.support.builder.ExpressionBuilder;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.OgnlHelper;
@@ -278,7 +283,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
         if (remainder != null) {
             String[] parts = remainder.split(":", 2);
             if (parts.length > 2) {
-                throw new SimpleParserException("Valid syntax: ${propertiesExist:key was: " + function, token.getIndex());
+                throw new SimpleParserException("Valid syntax: ${propertiesExist:key} was: " + function, token.getIndex());
             }
             String key = parts[0];
             boolean negate = key != null && key.startsWith("!");
@@ -314,7 +319,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
         if (remainder != null) {
             Expression exp = SimpleExpressionBuilder.typeExpression(remainder);
             exp.init(camelContext);
-            // we want to cache this expression so we wont re-evaluate it as the type/constant wont change
+            // we want to cache this expression, so we won't re-evaluate it as the type/constant won't change
             return SimpleExpressionBuilder.cacheExpression(exp);
         }
 
@@ -324,11 +329,33 @@ public class SimpleFunctionExpression extends LiteralExpression {
             return misc;
         }
 
+        // attachments
+        if ("attachments".equals(function) || ifStartsWithReturnRemainder("attachment", function) != null) {
+            Expression exp = createSimpleAttachments(camelContext, function);
+            if (exp != null) {
+                return exp;
+            }
+        }
+
         if (strict) {
             throw new SimpleParserException("Unknown function: " + function, token.getIndex());
         } else {
             return null;
         }
+    }
+
+    private Expression createSimpleAttachments(CamelContext camelContext, String function) {
+        Optional<SimpleLanguageFunctionFactory> factory = ResolverHelper.resolveService(
+                camelContext,
+                camelContext.getCamelContextExtension().getBootstrapFactoryFinder(),
+                SimpleLanguageFunctionFactory.FACTORY + "/camel-attachments",
+                SimpleLanguageFunctionFactory.class);
+
+        if (factory.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Cannot find SimpleLanguageFunctionFactory on classpath. Add camel-attachments to classpath.");
+        }
+        return factory.get().createFunction(camelContext, function, token.getIndex());
     }
 
     private Expression createSimpleExpressionMessage(CamelContext camelContext, String function, boolean strict) {
@@ -403,7 +430,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
             remainder = ifStartsWithReturnRemainder("in.body", function);
         }
         if (remainder != null) {
-            // OGNL must start with a . ? or [
+            // OGNL must start with a ".", "?" or "[".
             boolean ognlStart = remainder.startsWith(".") || remainder.startsWith("?") || remainder.startsWith("[");
             boolean invalid = !ognlStart || OgnlHelper.isInvalidValidOgnlExpression(remainder);
             if (invalid) {
@@ -434,6 +461,9 @@ public class SimpleFunctionExpression extends LiteralExpression {
         // headers function
         if ("in.headers".equals(function) || "headers".equals(function)) {
             return ExpressionBuilder.headersExpression();
+        } else if ("headers.size".equals(function) || "headers.size()".equals(function)
+                || "headers.length".equals(function) || "headers.length()".equals(function)) {
+            return ExpressionBuilder.headersSizeExpression();
         }
 
         // in header function
@@ -491,6 +521,9 @@ public class SimpleFunctionExpression extends LiteralExpression {
         // variables function
         if ("variables".equals(function)) {
             return ExpressionBuilder.variablesExpression();
+        } else if ("variables.size".equals(function) || "variables.size()".equals(function)
+                || "variables.length".equals(function) || "variables.length()".equals(function)) {
+            return ExpressionBuilder.variablesSizeExpression();
         }
 
         // variable function
@@ -594,6 +627,8 @@ public class SimpleFunctionExpression extends LiteralExpression {
             return ExpressionBuilder.exchangeIdExpression();
         } else if (ObjectHelper.equal(expression, "exchange")) {
             return ExpressionBuilder.exchangeExpression();
+        } else if (ObjectHelper.equal(expression, "logExchange")) {
+            return ExpressionBuilder.logExchange();
         } else if (ObjectHelper.equal(expression, "exception")) {
             return ExpressionBuilder.exchangeExceptionExpression();
         } else if (ObjectHelper.equal(expression, "exception.message")) {
@@ -610,6 +645,8 @@ public class SimpleFunctionExpression extends LiteralExpression {
             return ExpressionBuilder.camelContextNameExpression();
         } else if (ObjectHelper.equal(expression, "routeId")) {
             return ExpressionBuilder.routeIdExpression();
+        } else if (ObjectHelper.equal(expression, "fromRouteId")) {
+            return ExpressionBuilder.fromRouteIdExpression();
         } else if (ObjectHelper.equal(expression, "routeGroup")) {
             return ExpressionBuilder.routeGroupExpression();
         } else if (ObjectHelper.equal(expression, "stepId")) {
@@ -659,6 +696,60 @@ public class SimpleFunctionExpression extends LiteralExpression {
 
     private Expression createSimpleExpressionMisc(String function) {
         String remainder;
+
+        // replace function
+        remainder = ifStartsWithReturnRemainder("replace(", function);
+        if (remainder != null) {
+            String values = StringHelper.before(remainder, ")");
+            if (values == null || ObjectHelper.isEmpty(values)) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${replace(from,to)} or ${replace(from,to,expression)} was: " + function,
+                        token.getIndex());
+            }
+            String[] tokens = StringQuoteHelper.splitSafeQuote(values, ',', false);
+            if (tokens.length > 3) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${replace(from,to,expression)} was: " + function, token.getIndex());
+            }
+            String from = StringHelper.xmlDecode(tokens[0]);
+            String to = StringHelper.xmlDecode(tokens[1]);
+            // special to make it easy to replace to an empty value (ie remove)
+            if ("&empty;".equals(to)) {
+                to = "";
+            }
+            String exp = "${body}";
+            if (tokens.length == 3) {
+                exp = tokens[2];
+            }
+            return SimpleExpressionBuilder.replaceExpression(exp, from, to);
+        }
+
+        // substring function
+        remainder = ifStartsWithReturnRemainder("substring(", function);
+        if (remainder != null) {
+            String values = StringHelper.before(remainder, ")");
+            if (values == null || ObjectHelper.isEmpty(values)) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${substring(num)}, ${substring(num,num)}, or ${substring(num,num,expression)} was: "
+                                                + function,
+                        token.getIndex());
+            }
+            String[] tokens = StringQuoteHelper.splitSafeQuote(values, ',', false);
+            if (tokens.length > 3) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${substring(num,num,expression)} was: " + function, token.getIndex());
+            }
+            String num1 = tokens[0];
+            String num2 = "0";
+            if (tokens.length > 1) {
+                num2 = tokens[1];
+            }
+            String exp = "${body}";
+            if (tokens.length == 3) {
+                exp = tokens[2];
+            }
+            return SimpleExpressionBuilder.substringExpression(exp, num1, num2);
+        }
 
         // random function
         remainder = ifStartsWithReturnRemainder("random(", function);
@@ -785,6 +876,48 @@ public class SimpleFunctionExpression extends LiteralExpression {
             }
             return SimpleExpressionBuilder.newEmptyExpression(value);
         }
+        // iif function
+        remainder = ifStartsWithReturnRemainder("iif(", function);
+        if (remainder != null) {
+            String values = StringHelper.beforeLast(remainder, ")");
+            if (values == null || ObjectHelper.isEmpty(values)) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${iif(predicate,trueExpression,falseExpression)} was: " + function, token.getIndex());
+            }
+            String[] tokens = StringQuoteHelper.splitSafeQuote(values, ',');
+            if (tokens.length > 3) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${iif(predicate,trueExpression,falseExpression)} was: " + function, token.getIndex());
+            }
+            return SimpleExpressionBuilder.iifExpression(tokens[0].trim(), tokens[1].trim(), tokens[2].trim());
+        }
+
+        // list function
+        remainder = ifStartsWithReturnRemainder("list(", function);
+        if (remainder != null) {
+            String values = StringHelper.beforeLast(remainder, ")");
+            String[] tokens = null;
+            if (ObjectHelper.isNotEmpty(values)) {
+                tokens = StringQuoteHelper.splitSafeQuote(values, ',');
+            }
+            return SimpleExpressionBuilder.listExpression(tokens);
+        }
+        // map function
+        remainder = ifStartsWithReturnRemainder("map(", function);
+        if (remainder != null) {
+            String values = StringHelper.beforeLast(remainder, ")");
+            String[] tokens = null;
+            if (ObjectHelper.isNotEmpty(values)) {
+                tokens = StringQuoteHelper.splitSafeQuote(values, ',');
+            }
+            // there must be an even number of tokens as each map element is a pair
+            if (tokens != null && tokens.length % 2 == 1) {
+                throw new SimpleParserException(
+                        "Map function must have an even number of values, was: " + tokens.length + " values.",
+                        token.getIndex());
+            }
+            return SimpleExpressionBuilder.mapExpression(tokens);
+        }
 
         return null;
     }
@@ -800,7 +933,11 @@ public class SimpleFunctionExpression extends LiteralExpression {
     }
 
     @Override
-    public String createCode(String expression) throws SimpleParserException {
+    public String createCode(CamelContext camelContext, String expression) throws SimpleParserException {
+        return BaseSimpleParser.CODE_START + doCreateCode(camelContext, expression) + BaseSimpleParser.CODE_END;
+    }
+
+    private String doCreateCode(CamelContext camelContext, String expression) throws SimpleParserException {
         String function = getText();
 
         // return the function directly if we can create function without analyzing the prefix
@@ -819,6 +956,10 @@ public class SimpleFunctionExpression extends LiteralExpression {
             return answer;
         }
         answer = createCodeExchangeProperty(function);
+        if (answer != null) {
+            return answer;
+        }
+        answer = createCodeVariables(function);
         if (answer != null) {
             return answer;
         }
@@ -847,6 +988,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
             }
             return "exceptionAs(exchange, " + type + ")" + ognlCodeMethods(remainder, type);
         }
+
         // Exception OGNL
         remainder = ifStartsWithReturnRemainder("exception", function);
         if (remainder != null) {
@@ -1007,6 +1149,14 @@ public class SimpleFunctionExpression extends LiteralExpression {
             return misc;
         }
 
+        // attachments
+        if ("attachments".equals(function) || ifStartsWithReturnRemainder("attachment", function) != null) {
+            String code = createCodeAttachments(camelContext, function);
+            if (code != null) {
+                return code;
+            }
+        }
+
         throw new SimpleParserException("Unknown function: " + function, token.getIndex());
     }
 
@@ -1025,6 +1175,8 @@ public class SimpleFunctionExpression extends LiteralExpression {
             return "exchange.getExchangeId()";
         } else if (ObjectHelper.equal(expression, "exchange")) {
             return "exchange";
+        } else if (ObjectHelper.equal(expression, "logExchange")) {
+            return "logExchange(exchange)";
         } else if (ObjectHelper.equal(expression, "exception")) {
             return "exception(exchange)";
         } else if (ObjectHelper.equal(expression, "exception.message")) {
@@ -1039,6 +1191,8 @@ public class SimpleFunctionExpression extends LiteralExpression {
             return "hostName()";
         } else if (ObjectHelper.equal(expression, "camelId")) {
             return "context.getName()";
+        } else if (ObjectHelper.equal(expression, "fromRouteId")) {
+            return "fromRouteId(exchange)";
         } else if (ObjectHelper.equal(expression, "routeId")) {
             return "routeId(exchange)";
         } else if (ObjectHelper.equal(expression, "stepId")) {
@@ -1286,6 +1440,9 @@ public class SimpleFunctionExpression extends LiteralExpression {
         // headers function
         if ("in.headers".equals(function) || "headers".equals(function)) {
             return "message.getHeaders()";
+        } else if ("headers.size".equals(function) || "headers.size()".equals(function)
+                || "headers.length".equals(function) || "headers.length()".equals(function)) {
+            return "message.getHeaders().size()";
         }
 
         // in header function
@@ -1310,7 +1467,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
             }
 
             // the key can contain index as it may be a map header.foo[0]
-            // and the key can also be OGNL (eg if there is a dot)
+            // and the key can also be OGNL (e.g., if there is a dot)
             boolean index = false;
             List<String> parts = splitOgnl(key);
             if (!parts.isEmpty()) {
@@ -1327,7 +1484,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
             }
             if (index) {
                 // is there any index, then we should use headerAsIndex function instead
-                // (use splitOgnl which assembles multiple indexes into a single part)
+                // (use splitOgnl which assembles multiple indexes into a single part?)
                 String func = "headerAsIndex(\"" + parts.get(0) + "\", Object.class, \"" + parts.get(1) + "\")";
                 if (parts.size() > 2) {
                     String last = String.join("", parts.subList(2, parts.size()));
@@ -1370,6 +1527,83 @@ public class SimpleFunctionExpression extends LiteralExpression {
             remainder = ifStartsWithReturnRemainder("variable", function);
         }
         return remainder;
+    }
+
+    private String createCodeVariables(final String function) {
+        // variableAs
+        String remainder = ifStartsWithReturnRemainder("variableAs(", function);
+        if (remainder != null) {
+            String keyAndType = StringHelper.before(remainder, ")");
+            if (keyAndType == null) {
+                throw new SimpleParserException("Valid syntax: ${variableAs(key, type)} was: " + function, token.getIndex());
+            }
+            String key = StringHelper.before(keyAndType, ",");
+            String type = StringHelper.after(keyAndType, ",");
+            remainder = StringHelper.after(remainder, ")");
+            if (ObjectHelper.isEmpty(key) || ObjectHelper.isEmpty(type)) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${variableAs(key, type)} was: " + function, token.getIndex());
+            }
+            key = StringHelper.removeQuotes(key);
+            key = key.trim();
+            type = appendClass(type);
+            type = type.replace('$', '.');
+            type = type.trim();
+            return "variableAs(exchange, \"" + key + "\", " + type + ")" + ognlCodeMethods(remainder, type);
+        }
+
+        // variables function
+        if ("variables".equals(function)) {
+            return "variables(exchange)";
+        } else if ("variables.size".equals(function) || "variables.size()".equals(function)
+                || "variables.length".equals(function) || "variables.length()".equals(function)) {
+            return "variablesSize(exchange)";
+        }
+
+        // variable
+        remainder = ifStartsWithReturnRemainder("variable", function);
+        if (remainder != null) {
+            // remove leading character (dot or ?)
+            if (remainder.startsWith(".") || remainder.startsWith("?")) {
+                remainder = remainder.substring(1);
+            }
+            // remove starting and ending brackets
+            if (remainder.startsWith("[") && remainder.endsWith("]")) {
+                remainder = remainder.substring(1, remainder.length() - 1);
+            }
+            // remove quotes from key
+            String key = StringHelper.removeLeadingAndEndingQuotes(remainder);
+            key = key.trim();
+
+            // validate syntax
+            boolean invalid = OgnlHelper.isInvalidValidOgnlExpression(key);
+            if (invalid) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${variable.name[key]} was: " + function, token.getIndex());
+            }
+
+            // it is an index?
+            String index = null;
+            if (key.endsWith("]")) {
+                index = StringHelper.between(key, "[", "]");
+                if (index != null) {
+                    key = StringHelper.before(key, "[");
+                }
+            }
+            if (index != null) {
+                index = StringHelper.removeLeadingAndEndingQuotes(index);
+                return "variableAsIndex(exchange, Object.class, \"" + key + "\", \"" + index + "\")";
+            } else if (OgnlHelper.isValidOgnlExpression(remainder)) {
+                // ognl based exchange property must be typed
+                throw new SimpleParserException(
+                        "Valid syntax: ${variableAs(key, type)} was: " + function, token.getIndex());
+            } else {
+                // regular property
+                return "variable(exchange, \"" + key + "\")";
+            }
+        }
+
+        return null;
     }
 
     private String createCodeExchangeProperty(final String function) {
@@ -1526,8 +1760,47 @@ public class SimpleFunctionExpression extends LiteralExpression {
         throw new SimpleParserException("Unknown file language syntax: " + remainder, token.getIndex());
     }
 
+    private String createCodeAttachments(CamelContext camelContext, String function) {
+        Optional<SimpleLanguageFunctionFactory> factory = ResolverHelper.resolveService(
+                camelContext,
+                camelContext.getCamelContextExtension().getBootstrapFactoryFinder(),
+                SimpleLanguageFunctionFactory.FACTORY + "/camel-attachments",
+                SimpleLanguageFunctionFactory.class);
+
+        if (factory.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Cannot find SimpleLanguageFunctionFactory on classpath. Add camel-attachments to classpath.");
+        }
+        return factory.get().createCode(camelContext, function, token.getIndex());
+    }
+
     private String createCodeExpressionMisc(String function) {
         String remainder;
+
+        // substring function
+        remainder = ifStartsWithReturnRemainder("substring(", function);
+        if (remainder != null) {
+            String values = StringHelper.before(remainder, ")");
+            if (values == null || ObjectHelper.isEmpty(values)) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${substring(num)}, ${substring(num,num)} was: "
+                                                + function,
+                        token.getIndex());
+            }
+            String[] tokens = codeSplitSafe(values, ',', true, true);
+            if (tokens.length > 2) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${substring(num,num)} was: " + function, token.getIndex());
+            }
+            String num1 = tokens[0];
+            String num2 = "0";
+            if (tokens.length > 1) {
+                num2 = tokens[1];
+            }
+            num1 = num1.trim();
+            num2 = num2.trim();
+            return "substring(exchange, " + num1 + ", " + num2 + ")";
+        }
 
         // random function
         remainder = ifStartsWithReturnRemainder("random(", function);
@@ -1549,6 +1822,37 @@ public class SimpleFunctionExpression extends LiteralExpression {
             } else {
                 return "random(exchange, 0, " + values.trim() + ")";
             }
+        }
+
+        // replace function
+        remainder = ifStartsWithReturnRemainder("replace(", function);
+        if (remainder != null) {
+            String values = StringHelper.before(remainder, ")");
+            if (values == null || ObjectHelper.isEmpty(values)) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${replace(from,to)} was: " + function,
+                        token.getIndex());
+            }
+            String[] tokens = codeSplitSafe(values, ',', true, false);
+            if (tokens.length > 2) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${replace(from,to)} was: " + function, token.getIndex());
+            }
+            String from = StringHelper.xmlDecode(tokens[0]);
+            String to = StringHelper.xmlDecode(tokens[1]);
+            // special to make it easy to replace to an empty value (ie remove)
+            if ("&empty;".equals(to)) {
+                to = "";
+            }
+            if ("\"".equals(from)) {
+                from = "\\\"";
+            }
+            if ("\"".equals(to)) {
+                to = "\\\"";
+            }
+            from = StringQuoteHelper.doubleQuote(from);
+            to = StringQuoteHelper.doubleQuote(to);
+            return "replace(exchange, " + from + ", " + to + ")";
         }
 
         // skip function
@@ -1586,6 +1890,180 @@ public class SimpleFunctionExpression extends LiteralExpression {
             return "messageHistory(exchange, true)";
         }
 
+        // join
+        remainder = ifStartsWithReturnRemainder("join(", function);
+        if (remainder != null) {
+            String values = StringHelper.beforeLast(remainder, ")");
+            String separator = "\",\"";
+            String prefix = null;
+            String exp = "body";
+            if (ObjectHelper.isNotEmpty(values)) {
+                String[] tokens = codeSplitSafe(values, ',', true, true);
+                if (tokens.length > 3) {
+                    throw new SimpleParserException(
+                            "Valid syntax: ${join(separator,prefix,expression)} was: " + function, token.getIndex());
+                }
+                // single quotes should be double quotes
+                for (int i = 0; i < tokens.length; i++) {
+                    String s = tokens[i];
+                    if (StringHelper.isSingleQuoted(s)) {
+                        s = StringHelper.removeLeadingAndEndingQuotes(s);
+                        s = StringQuoteHelper.doubleQuote(s);
+                        tokens[i] = s;
+                    } else if (i < 2 && !StringHelper.isDoubleQuoted(s)) {
+                        s = StringQuoteHelper.doubleQuote(s);
+                        tokens[i] = s;
+                    }
+                }
+                if (tokens.length == 3) {
+                    separator = tokens[0];
+                    prefix = tokens[1];
+                    exp = tokens[2];
+                } else if (tokens.length == 2) {
+                    separator = tokens[0];
+                    prefix = tokens[1];
+                } else {
+                    separator = tokens[0];
+                }
+            }
+            return "var val = " + exp + ";\n        return join(exchange, val, " + separator + ", " + prefix + ");";
+        }
+
+        // empty function
+        remainder = ifStartsWithReturnRemainder("empty(", function);
+        if (remainder != null) {
+            String value = StringHelper.beforeLast(remainder, ")");
+            if (ObjectHelper.isEmpty(value)) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${empty(<type>)} but was: " + function, token.getIndex());
+            }
+            value = StringQuoteHelper.doubleQuote(value);
+            return "empty(exchange, " + value + ")";
+        }
+
+        // list function
+        remainder = ifStartsWithReturnRemainder("list(", function);
+        if (remainder != null) {
+            String values = StringHelper.beforeLast(remainder, ")");
+            String[] tokens = null;
+            if (ObjectHelper.isNotEmpty(values)) {
+                tokens = codeSplitSafe(values, ',', true, true);
+            }
+            StringJoiner sj = new StringJoiner(", ");
+            for (int i = 0; tokens != null && i < tokens.length; i++) {
+                sj.add(tokens[i]);
+            }
+            String p = sj.length() > 0 ? sj.toString() : "null";
+            return "list(exchange, " + p + ")";
+        }
+
+        // map function
+        remainder = ifStartsWithReturnRemainder("map(", function);
+        if (remainder != null) {
+            String values = StringHelper.beforeLast(remainder, ")");
+            String[] tokens = null;
+            if (ObjectHelper.isNotEmpty(values)) {
+                tokens = codeSplitSafe(values, ',', true, true);
+            }
+            StringJoiner sj = new StringJoiner(", ");
+            for (int i = 0; tokens != null && i < tokens.length; i++) {
+                sj.add(tokens[i]);
+            }
+            String p = sj.length() > 0 ? sj.toString() : "null";
+            return "map(exchange, " + p + ")";
+        }
+
+        // hash function
+        remainder = ifStartsWithReturnRemainder("hash(", function);
+        if (remainder != null) {
+            String values = StringHelper.beforeLast(remainder, ")");
+            if (values == null || ObjectHelper.isEmpty(values)) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${hash(value,algorithm)} or ${hash(value)} was: " + function, token.getIndex());
+            }
+            String[] tokens = codeSplitSafe(values, ',', true, true);
+            if (tokens.length > 2) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${hash(value,algorithm)} or ${hash(value)} was: " + function, token.getIndex());
+            }
+            // single quotes should be double quotes
+            for (int i = 0; i < tokens.length; i++) {
+                String s = tokens[i];
+                if (StringHelper.isSingleQuoted(s)) {
+                    s = StringHelper.removeLeadingAndEndingQuotes(s);
+                    s = StringQuoteHelper.doubleQuote(s);
+                    tokens[i] = s;
+                }
+            }
+            String algo = "\"SHA-256\"";
+            if (tokens.length == 2) {
+                algo = tokens[1];
+                if (!StringHelper.isQuoted(algo)) {
+                    algo = StringQuoteHelper.doubleQuote(algo);
+                }
+            }
+            return "var val = " + tokens[0] + ";\n        return hash(exchange, val, " + algo + ");";
+        }
+
+        // uuid function
+        remainder = ifStartsWithReturnRemainder("uuid", function);
+        if (remainder == null && "uuid".equals(function)) {
+            remainder = "(default)";
+        }
+        if (remainder != null) {
+            String generator = StringHelper.between(remainder, "(", ")");
+            if (generator == null) {
+                generator = "default";
+            }
+            StringBuilder sb = new StringBuilder(128);
+            if ("classic".equals(generator)) {
+                sb.append("    UuidGenerator uuid = new org.apache.camel.support.ClassicUuidGenerator();\n");
+                sb.append("return uuid.generateUuid();");
+            } else if ("short".equals(generator)) {
+                sb.append("    UuidGenerator uuid = new org.apache.camel.support.ShortUuidGenerator();\n");
+                sb.append("return uuid.generateUuid();");
+            } else if ("simple".equals(generator)) {
+                sb.append("    UuidGenerator uuid = new org.apache.camel.support.SimpleUuidGenerator();\n");
+                sb.append("return uuid.generateUuid();");
+            } else if ("default".equals(generator)) {
+                sb.append("    UuidGenerator uuid = new org.apache.camel.support.DefaultUuidGenerator();\n");
+                sb.append("return uuid.generateUuid();");
+            } else {
+                generator = StringQuoteHelper.doubleQuote(generator);
+                sb.append("if (uuid == null) uuid = customUuidGenerator(exchange, ").append(generator)
+                        .append("); return uuid.generateUuid();");
+            }
+            return sb.toString();
+        }
+
+        // iif function
+        remainder = ifStartsWithReturnRemainder("iif(", function);
+        if (remainder != null) {
+            String values = StringHelper.beforeLast(remainder, ")");
+            if (values == null || ObjectHelper.isEmpty(values)) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${iif(predicate,trueExpression,falseExpression)} was: " + function, token.getIndex());
+            }
+            String[] tokens = codeSplitSafe(values, ',', true, true);
+            if (tokens.length != 3) {
+                throw new SimpleParserException(
+                        "Valid syntax: ${iif(predicate,trueExpression,falseExpression)} was: " + function, token.getIndex());
+            }
+            // single quotes should be double quotes
+            for (int i = 0; i < 3; i++) {
+                String s = tokens[i];
+                if (StringHelper.isSingleQuoted(s)) {
+                    s = StringHelper.removeLeadingAndEndingQuotes(s);
+                    s = StringQuoteHelper.doubleQuote(s);
+                    tokens[i] = s;
+                }
+            }
+
+            return "Object o = " + tokens[0]
+                   + ";\n        boolean b = convertTo(exchange, boolean.class, o);\n        return b ? "
+                   + tokens[1] + " : " + tokens[2];
+        }
+
         return null;
     }
 
@@ -1616,7 +2094,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
     }
 
     private static String ognlCodeMethods(String remainder, String type) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(256);
 
         if (remainder != null) {
             List<String> methods = splitOgnl(remainder);
@@ -1692,6 +2170,151 @@ public class SimpleFunctionExpression extends LiteralExpression {
         } else {
             return remainder;
         }
+    }
+
+    private static String[] codeSplitSafe(String input, char separator, boolean trim, boolean keepQuotes) {
+        if (input == null) {
+            return null;
+        }
+
+        if (input.indexOf(separator) == -1) {
+            if (input.length() > 1) {
+                char ch = input.charAt(0);
+                char ch2 = input.charAt(input.length() - 1);
+                boolean singleQuoted = ch == '\'' && ch2 == '\'';
+                boolean doubleQuoted = ch == '"' && ch2 == '"';
+                if (!keepQuotes && (singleQuoted || doubleQuoted)) {
+                    input = input.substring(1, input.length() - 1);
+                    // do not trim quoted text
+                } else if (trim) {
+                    input = input.trim();
+                }
+            }
+            // no separator in data, so return single string with input as is
+            return new String[] { input };
+        }
+
+        List<String> answer = new ArrayList<>();
+        StringBuilder sb = new StringBuilder(256);
+
+        int codeLevel = 0;
+        boolean singleQuoted = false;
+        boolean doubleQuoted = false;
+        boolean separating = false;
+
+        for (int i = 0; i < input.length(); i++) {
+            char ch = input.charAt(i);
+            char prev = i > 0 ? input.charAt(i - 1) : 0;
+            boolean isQuoting = singleQuoted || doubleQuoted;
+            boolean last = i == input.length() - 1;
+
+            // do not split inside code blocks
+            if (input.indexOf(BaseSimpleParser.CODE_START, i) == i) {
+                codeLevel++;
+                sb.append(BaseSimpleParser.CODE_START);
+                i = i + BaseSimpleParser.CODE_START.length() - 1;
+                continue;
+            } else if (input.indexOf(BaseSimpleParser.CODE_END, i) == i) {
+                codeLevel--;
+                sb.append(BaseSimpleParser.CODE_END);
+                i = i + BaseSimpleParser.CODE_END.length() - 1;
+                continue;
+            }
+            if (codeLevel > 0) {
+                sb.append(ch);
+                continue;
+            }
+
+            if (!doubleQuoted && ch == '\'') {
+                if (singleQuoted && prev == ch && sb.isEmpty()) {
+                    // its an empty quote so add empty text
+                    if (keepQuotes) {
+                        answer.add("''");
+                    } else {
+                        answer.add("");
+                    }
+                }
+                // special logic needed if this quote is the end
+                if (last) {
+                    if (singleQuoted && !sb.isEmpty()) {
+                        String text = sb.toString();
+                        // do not trim a quoted string
+                        if (keepQuotes) {
+                            answer.add(text + "'"); // append ending quote
+                        } else {
+                            answer.add(text);
+                        }
+                        sb.setLength(0);
+                    }
+                    break; // break out as we are finished
+                }
+                singleQuoted = !singleQuoted;
+                if (keepQuotes) {
+                    sb.append(ch);
+                }
+                continue;
+            } else if (!singleQuoted && ch == '"') {
+                if (doubleQuoted && prev == ch && sb.isEmpty()) {
+                    // its an empty quote so add empty text
+                    if (keepQuotes) {
+                        answer.add("\""); // append ending quote
+                    } else {
+                        answer.add("");
+                    }
+                }
+                // special logic needed if this quote is the end
+                if (last) {
+                    if (doubleQuoted && !sb.isEmpty()) {
+                        String text = sb.toString();
+                        // do not trim a quoted string
+                        if (keepQuotes) {
+                            answer.add(text + "\"");
+                        } else {
+                            answer.add(text);
+                        }
+                        sb.setLength(0);
+                    }
+                    break; // break out as we are finished
+                }
+                doubleQuoted = !doubleQuoted;
+                if (keepQuotes) {
+                    sb.append(ch);
+                }
+                continue;
+            } else if (!isQuoting && ch == separator) {
+                separating = true;
+                // add as answer if we are not in a quote
+                if (!sb.isEmpty()) {
+                    String text = sb.toString();
+                    if (trim) {
+                        text = text.trim();
+                    }
+                    answer.add(text);
+                    sb.setLength(0);
+                }
+                // we should avoid adding the separator
+                continue;
+            }
+
+            if (trim && !isQuoting && separating && separator != ' ' && ch == ' ') {
+                continue;
+            }
+            separating = false;
+
+            // append char
+            sb.append(ch);
+        }
+
+        // any leftover
+        if (!sb.isEmpty()) {
+            String text = sb.toString();
+            if (trim) {
+                text = text.trim();
+            }
+            answer.add(text);
+        }
+
+        return answer.toArray(new String[0]);
     }
 
 }

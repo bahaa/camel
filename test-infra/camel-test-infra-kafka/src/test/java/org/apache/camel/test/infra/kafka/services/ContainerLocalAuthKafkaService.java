@@ -14,29 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.camel.test.infra.kafka.services;
 
 import org.apache.camel.test.infra.common.services.ContainerService;
 import org.apache.camel.test.infra.kafka.common.KafkaProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 public class ContainerLocalAuthKafkaService implements KafkaService, ContainerService<KafkaContainer> {
     private static final Logger LOG = LoggerFactory.getLogger(ContainerLocalAuthKafkaService.class);
-    private final KafkaContainer kafka;
+    protected final KafkaContainer kafka;
 
     public static class TransientAuthenticatedKafkaContainer extends KafkaContainer {
         public TransientAuthenticatedKafkaContainer(String jaasConfigFile) {
             super(DockerImageName.parse(System.getProperty(
                     KafkaProperties.KAFKA_CONTAINER,
-                    ContainerLocalKafkaService.KAFKA3_IMAGE_NAME))
-                    .asCompatibleSubstituteFor(ContainerLocalKafkaService.KAFKA3_IMAGE_NAME));
-
-            withEmbeddedZookeeper();
+                    KafkaServiceFactory.ContainerLocalKafkaService.KAFKA3_IMAGE_NAME))
+                    .asCompatibleSubstituteFor("apache/kafka"));
 
             final MountableFile mountableFile = MountableFile.forClasspathResource(jaasConfigFile);
             LOG.debug("Using mountable file at: {}", mountableFile.getFilesystemPath());

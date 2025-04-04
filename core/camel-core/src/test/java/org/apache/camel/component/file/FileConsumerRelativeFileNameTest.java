@@ -49,12 +49,12 @@ public class FileConsumerRelativeFileNameTest extends ContextTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
-            public void configure() throws Exception {
+            public void configure() {
                 from(fileUri("filename-consumer?initialDelay=0&delay=10&recursive=true&sortBy=file:name"))
-                        .noAutoStartup().to("mock:result");
+                        .autoStartup(false).to("mock:result");
             }
         };
     }

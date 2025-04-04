@@ -274,19 +274,21 @@ public final class RouteDefinitionHelper {
         }
 
         // gather all ids for the target route, but only include custom ids, and
-        // no abstract ids
-        // as abstract nodes is cross-cutting functionality such as interceptors
-        // etc
+        // no abstract ids as abstract nodes is cross-cutting functionality such as interceptors etc
         Set<String> targetIds = new LinkedHashSet<>();
         ProcessorDefinitionHelper.gatherAllNodeIds(target, targetIds, true, false);
 
         // now check for clash with the target route
         for (String id : targetIds) {
-            if (prefixId != null) {
-                id = prefixId + id;
-            }
-            if (routesIds.contains(id)) {
-                return id;
+            // skip ids that are placeholders
+            boolean accept = !id.startsWith("{{");
+            if (accept) {
+                if (prefixId != null) {
+                    id = prefixId + id;
+                }
+                if (routesIds.contains(id)) {
+                    return id;
+                }
             }
         }
 
@@ -457,7 +459,8 @@ public final class RouteDefinitionHelper {
             // validate that top-level is only added on the route (eg top level)
             RouteDefinition route = ProcessorDefinitionHelper.getRoute(child);
             boolean parentIsRoute = child.getParent() == route;
-            if (child.isTopLevelOnly() && !parentIsRoute) {
+            boolean parentIsAlreadyTop = child.getParent() == null || child.getParent().isTopLevelOnly();
+            if (child.isTopLevelOnly() && !(parentIsRoute || parentIsAlreadyTop)) {
                 throw new IllegalArgumentException(
                         "The output must be added as top-level on the route. Try moving " + child + " to the top of route.");
             }
@@ -546,21 +549,21 @@ public final class RouteDefinitionHelper {
 
         // move the abstracts interceptors into the dedicated list
         for (ProcessorDefinition processor : abstracts) {
-            if (processor instanceof InterceptSendToEndpointDefinition) {
+            if (processor instanceof InterceptSendToEndpointDefinition interceptSendToEndpointDefinition) {
                 if (interceptSendToEndpointDefinitions == null) {
                     interceptSendToEndpointDefinitions = new ArrayList<>();
                 }
-                interceptSendToEndpointDefinitions.add((InterceptSendToEndpointDefinition) processor);
-            } else if (processor instanceof InterceptFromDefinition) {
+                interceptSendToEndpointDefinitions.add(interceptSendToEndpointDefinition);
+            } else if (processor instanceof InterceptFromDefinition interceptFromDefinition) {
                 if (interceptFromDefinitions == null) {
                     interceptFromDefinitions = new ArrayList<>();
                 }
-                interceptFromDefinitions.add((InterceptFromDefinition) processor);
-            } else if (processor instanceof InterceptDefinition) {
+                interceptFromDefinitions.add(interceptFromDefinition);
+            } else if (processor instanceof InterceptDefinition interceptDefinition) {
                 if (intercepts == null) {
                     intercepts = new ArrayList<>();
                 }
-                intercepts.add((InterceptDefinition) processor);
+                intercepts.add(interceptDefinition);
             }
         }
 
@@ -576,7 +579,6 @@ public final class RouteDefinitionHelper {
         // configure intercept
         if (intercepts != null && !intercepts.isEmpty()) {
             for (InterceptDefinition intercept : intercepts) {
-                intercept.afterPropertiesSet();
                 // init the parent
                 initParent(intercept);
                 // add as first output so intercept is handled before the actual
@@ -641,7 +643,6 @@ public final class RouteDefinitionHelper {
                 }
 
                 if (match) {
-                    intercept.afterPropertiesSet();
                     // init the parent
                     initParent(intercept);
                     // add as first output so intercept is handled before the
@@ -675,8 +676,8 @@ public final class RouteDefinitionHelper {
 
         // find the route scoped onCompletions
         for (ProcessorDefinition out : abstracts) {
-            if (out instanceof OnCompletionDefinition) {
-                completions.add((OnCompletionDefinition) out);
+            if (out instanceof OnCompletionDefinition onCompletionDefinition) {
+                completions.add(onCompletionDefinition);
             }
         }
 
@@ -702,9 +703,9 @@ public final class RouteDefinitionHelper {
 
         // add to correct type
         for (ProcessorDefinition<?> type : abstracts) {
-            if (type instanceof SagaDefinition) {
+            if (type instanceof SagaDefinition sagaDefinition) {
                 if (saga == null) {
-                    saga = (SagaDefinition) type;
+                    saga = sagaDefinition;
                 } else {
                     throw new IllegalArgumentException("The route can only have one saga defined");
                 }
@@ -725,9 +726,9 @@ public final class RouteDefinitionHelper {
 
         // add to correct type
         for (ProcessorDefinition<?> type : abstracts) {
-            if (type instanceof TransactedDefinition) {
+            if (type instanceof TransactedDefinition transactedDefinition) {
                 if (transacted == null) {
-                    transacted = (TransactedDefinition) type;
+                    transacted = transactedDefinition;
                 } else {
                     throw new IllegalArgumentException("The route can only have one transacted defined");
                 }

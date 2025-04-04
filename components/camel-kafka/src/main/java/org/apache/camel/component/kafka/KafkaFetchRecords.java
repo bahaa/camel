@@ -25,6 +25,9 @@ import java.util.regex.Pattern;
 import org.apache.camel.CamelContext;
 import org.apache.camel.component.kafka.consumer.CommitManager;
 import org.apache.camel.component.kafka.consumer.CommitManagers;
+import org.apache.camel.component.kafka.consumer.devconsole.DefaultMetricsCollector;
+import org.apache.camel.component.kafka.consumer.devconsole.DevConsoleMetricsCollector;
+import org.apache.camel.component.kafka.consumer.devconsole.NoopMetricsCollector;
 import org.apache.camel.component.kafka.consumer.errorhandler.KafkaConsumerListener;
 import org.apache.camel.component.kafka.consumer.errorhandler.KafkaErrorStrategies;
 import org.apache.camel.component.kafka.consumer.support.KafkaRecordProcessorFacade;
@@ -55,9 +58,8 @@ import org.apache.kafka.common.errors.WakeupException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.rmi.registry.LocateRegistry.getRegistry;
-
 public class KafkaFetchRecords implements Runnable {
+
     /*
      This keeps track of the state the record fetcher is. Because the Kafka consumer is not thread safe, it may take
      some time between the pause or resume request is triggered and it is actually set.
@@ -92,11 +94,11 @@ public class KafkaFetchRecords implements Runnable {
 
     private volatile boolean terminated;
     private volatile long currentBackoffInterval;
-
     private volatile boolean reconnect; // The reconnect must be false at init (this is the policy whether to reconnect).
     private volatile boolean connected; // this is the state (connected or not)
-
     private volatile State state = State.RUNNING;
+
+    private final DevConsoleMetricsCollector metricsCollector;
 
     KafkaFetchRecords(KafkaConsumer kafkaConsumer,
                       BridgeExceptionHandlerToErrorHandler bridge, String topicName, Pattern topicPattern, String id,
@@ -108,6 +110,13 @@ public class KafkaFetchRecords implements Runnable {
         this.consumerListener = consumerListener;
         this.threadId = topicName + "-" + "Thread " + id;
         this.kafkaProps = kafkaProps;
+        final boolean devConsoleEnabled = kafkaConsumer.getEndpoint().getCamelContext().isDevConsole();
+
+        if (devConsoleEnabled) {
+            metricsCollector = new DefaultMetricsCollector(threadId);
+        } else {
+            metricsCollector = new NoopMetricsCollector();
+        }
     }
 
     @Override
@@ -159,7 +168,7 @@ public class KafkaFetchRecords implements Runnable {
                         .build();
                 success = task.run(this::initializeConsumerTask);
                 if (!success) {
-                    int max = kafkaConsumer.getEndpoint().getComponent().getCreateConsumerBackoffMaxAttempts();
+                    int max = kafkaConsumer.getEndpoint().getComponent().getSubscribeConsumerBackoffMaxAttempts();
                     setupInitializeErrorException(task, max);
                     // give up and terminate this consumer
                     terminated = true;
@@ -167,6 +176,10 @@ public class KafkaFetchRecords implements Runnable {
                 }
 
                 setConnected(true);
+            }
+
+            if (isConnected()) {
+                metricsCollector.storeMetadata(consumer);
             }
 
             setLastError(null);
@@ -207,6 +220,12 @@ public class KafkaFetchRecords implements Runnable {
             LOG.warn("Error subscribing org.apache.kafka.clients.consumer.KafkaConsumer due to: {}", e.getMessage(),
                     e);
             setLastError(e);
+
+            // allow camel error handler to be aware
+            if (kafkaConsumer.getEndpoint().isBridgeErrorHandler()) {
+                kafkaConsumer.getExceptionHandler().handleException(e);
+            }
+
             return false;
         }
 
@@ -238,6 +257,12 @@ public class KafkaFetchRecords implements Runnable {
             LOG.warn("Error creating org.apache.kafka.clients.consumer.KafkaConsumer due to: {}", e.getMessage(),
                     e);
             setLastError(e);
+
+            // allow camel error handler to be aware
+            if (kafkaConsumer.getEndpoint().isBridgeErrorHandler()) {
+                kafkaConsumer.getExceptionHandler().handleException(e);
+            }
+
             return false;
         }
 
@@ -315,17 +340,18 @@ public class KafkaFetchRecords implements Runnable {
         adapter.subscribe(consumer, listener, topicInfo);
     }
 
-    private static SubscribeAdapter resolveSubscribeAdapter(CamelContext camelContext) {
+    private SubscribeAdapter resolveSubscribeAdapter(CamelContext camelContext) {
         SubscribeAdapter adapter = camelContext.getRegistry().lookupByNameAndType(KafkaConstants.KAFKA_SUBSCRIBE_ADAPTER,
                 SubscribeAdapter.class);
         if (adapter == null) {
-            adapter = new DefaultSubscribeAdapter();
+            adapter = new DefaultSubscribeAdapter(
+                    kafkaConsumer.getEndpoint().getConfiguration().getTopic(),
+                    kafkaConsumer.getEndpoint().getComponent().isSubscribeConsumerTopicMustExists());
         }
         return adapter;
     }
 
     protected void startPolling() {
-
         try {
             /*
              * We lock the processing of the record to avoid raising a WakeUpException as a result to a call
@@ -343,6 +369,11 @@ public class KafkaFetchRecords implements Runnable {
             final KafkaRecordProcessorFacade recordProcessorFacade = createRecordProcessor();
 
             while (isKafkaConsumerRunnableAndNotStopped() && isConnected() && pollExceptionStrategy.canContinue()) {
+
+                // if dev-console is in use then a request to fetch the commit offsets can be requested on-demand
+                // which must happen using this polling thread, so we use the commitRecordsRequested to trigger this
+                metricsCollector.collectCommitMetrics(consumer);
+
                 ConsumerRecords<Object, Object> allRecords = consumer.poll(pollDuration);
                 if (consumerListener != null) {
                     if (!consumerListener.afterConsume(consumer)) {
@@ -351,6 +382,9 @@ public class KafkaFetchRecords implements Runnable {
                 }
 
                 ProcessingResult result = recordProcessorFacade.processPolledRecords(allRecords);
+                if (result != null && result.getTopic() != null) {
+                    metricsCollector.storeLastRecord(result);
+                }
                 updateTaskState();
 
                 // when breakOnFirstError we want to unsubscribe from Kafka
@@ -494,7 +528,7 @@ public class KafkaFetchRecords implements Runnable {
         return kafkaConsumer.isRunAllowed() && !kafkaConsumer.isStoppingOrStopped();
     }
 
-    private boolean isReconnect() {
+    boolean isReconnect() {
         return reconnect;
     }
 
@@ -549,7 +583,9 @@ public class KafkaFetchRecords implements Runnable {
     }
 
     public boolean isPaused() {
-        return !consumer.paused().isEmpty();
+        // cannot use consumer directly as you can have ConcurrentModificationException as kafka client does not permit
+        // multiple threads to use the client consumer, so we check the state only
+        return state == State.PAUSED;
     }
 
     public void setConnected(boolean connected) {
@@ -628,7 +664,19 @@ public class KafkaFetchRecords implements Runnable {
         state = State.RESUME_REQUESTED;
     }
 
-    private synchronized void setLastError(Exception lastError) {
+    private void setLastError(Exception lastError) {
         this.lastError = lastError;
+    }
+
+    /**
+     * Gets the metrics collector for the dev console. Defaults to the {@link NoopMetricsCollector} unless the dev
+     * console is enabled
+     */
+    public DevConsoleMetricsCollector getMetricsCollector() {
+        return metricsCollector;
+    }
+
+    String getState() {
+        return state.name();
     }
 }

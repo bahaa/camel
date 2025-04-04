@@ -20,8 +20,6 @@ import org.apache.camel.Exchange;
 import org.apache.camel.component.http.handler.BasicValidationHandler;
 import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
 import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.camel.component.http.HttpMethods.GET;
@@ -32,10 +30,10 @@ public class HttpPathTest extends BaseHttpTest {
 
     private String endpointUrl;
 
-    @BeforeEach
     @Override
-    public void setUp() throws Exception {
-        localServer = ServerBootstrap.bootstrap().setHttpProcessor(getBasicHttpProcessor())
+    public void setupResources() throws Exception {
+        localServer = ServerBootstrap.bootstrap()
+                .setCanonicalHostName("localhost").setHttpProcessor(getBasicHttpProcessor())
                 .setConnectionReuseStrategy(getConnectionReuseStrategy()).setResponseFactory(getHttpResponseFactory())
                 .setSslContext(getSSLContext())
                 .register("/search", new BasicValidationHandler(GET.name(), null, null, getExpectedContent()))
@@ -46,14 +44,10 @@ public class HttpPathTest extends BaseHttpTest {
         localServer.start();
 
         endpointUrl = "http://localhost:" + localServer.getLocalPort();
-
-        super.setUp();
     }
 
-    @AfterEach
     @Override
-    public void tearDown() throws Exception {
-        super.tearDown();
+    public void cleanupResources() throws Exception {
 
         if (localServer != null) {
             localServer.stop();

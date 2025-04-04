@@ -18,6 +18,7 @@ package org.apache.camel.component.sjms2.support;
 
 import jakarta.jms.Connection;
 import jakarta.jms.ConnectionFactory;
+import jakarta.jms.JMSException;
 import jakarta.jms.MessageConsumer;
 import jakarta.jms.Session;
 
@@ -30,8 +31,8 @@ import org.apache.camel.component.sjms.jms.DefaultDestinationCreationStrategy;
 import org.apache.camel.component.sjms.jms.DestinationCreationStrategy;
 import org.apache.camel.component.sjms2.Sjms2Component;
 import org.apache.camel.component.sjms2.jms.Jms2ObjectFactory;
-import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.test.junit5.CamelTestSupport;
+import org.junit.jupiter.api.AfterEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,18 +49,8 @@ public abstract class Jms2TestSupport extends CamelTestSupport {
     private Session session;
     private DestinationCreationStrategy destinationCreationStrategy = new DefaultDestinationCreationStrategy();
 
-    @Override
-    protected boolean useJmx() {
-        return false;
-    }
-
-    @Override
-    public void tearDown() throws Exception {
-        super.tearDown();
-        DefaultCamelContext dcc = (DefaultCamelContext) context;
-        while (!dcc.isStopped()) {
-            log.info("Waiting on the Camel Context to stop");
-        }
+    @AfterEach
+    public void closeSessions() throws JMSException {
         log.info("Closing JMS Session");
         if (getSession() != null) {
             getSession().close();

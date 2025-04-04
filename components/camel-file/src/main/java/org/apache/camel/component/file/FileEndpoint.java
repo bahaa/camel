@@ -17,8 +17,6 @@
 package org.apache.camel.component.file;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
@@ -63,6 +61,8 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
     @UriPath(name = "directoryName")
     @Metadata(required = true)
     private File file;
+    @UriParam(label = "advanced")
+    protected boolean autoCreateStepwise;
     @UriParam(label = "advanced", defaultValue = "true")
     private boolean copyAndDeleteOnRenameFail = true;
     @UriParam(label = "advanced")
@@ -100,53 +100,26 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
         ObjectHelper.notNull(operations, PARAM_OPERATIONS);
         ObjectHelper.notNull(file, "file");
 
-        // auto create starting directory if needed
-        if (!file.exists() && !file.isDirectory()) {
-            if (isAutoCreate()) {
-                LOG.debug("Creating non existing starting directory: {}", file);
-                boolean absolute = FileUtil.isAbsolute(file);
-                boolean created = operations.buildDirectory(file.getPath(), absolute);
-                if (!created) {
-                    LOG.warn("Cannot auto create starting directory: {}", file);
-                }
-            } else if (isStartingDirectoryMustExist()) {
-                throw new FileNotFoundException("Starting directory does not exist: " + file);
-            }
-        }
-        if (!isStartingDirectoryMustExist() && isStartingDirectoryMustHaveAccess()) {
-            throw new IllegalArgumentException(
-                    "You cannot set startingDirectoryMustHaveAccess=true without setting startingDirectoryMustExist=true");
-        } else if (isStartingDirectoryMustExist() && isStartingDirectoryMustHaveAccess()) {
-            if (!file.canRead() || !file.canWrite()) {
-                throw new IOException("Starting directory permission denied: " + file);
-            }
-        }
         FileConsumer result = newFileConsumer(processor, operations);
 
         if (isDelete() && getMove() != null) {
             throw new IllegalArgumentException("You cannot set both delete=true and move options");
         }
 
-        // if noop=true then idempotent should also be configured
+        // if noop= true, then idempotent should also be configured
         if (isNoop() && !isIdempotentSet()) {
             LOG.info("Endpoint is configured with noop=true so forcing endpoint to be idempotent as well");
             setIdempotent(true);
         }
 
-        // if idempotent and no repository set then create a default one
+        // if idempotent and no repository set, then create a default one
         if (isIdempotentSet() && Boolean.TRUE.equals(isIdempotent()) && idempotentRepository == null) {
             LOG.info("Using default memory based idempotent repository with cache max size: {}", DEFAULT_IDEMPOTENT_CACHE_SIZE);
             idempotentRepository = MemoryIdempotentRepository.memoryIdempotentRepository(DEFAULT_IDEMPOTENT_CACHE_SIZE);
         }
 
         if (ObjectHelper.isNotEmpty(getReadLock())) {
-            // check if its a valid
-            String valid = "none,markerFile,fileLock,rename,changed,idempotent,idempotent-changed,idempotent-rename";
-            String[] arr = valid.split(",");
-            boolean matched = Arrays.stream(arr).anyMatch(n -> n.equals(getReadLock()));
-            if (!matched) {
-                throw new IllegalArgumentException("ReadLock invalid: " + getReadLock() + ", must be one of: " + valid);
-            }
+            readLockCheck();
         }
 
         // set max messages per poll
@@ -155,6 +128,16 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
 
         configureConsumer(result);
         return result;
+    }
+
+    private void readLockCheck() {
+        // check if it's valid
+        String valid = "none,markerFile,fileLock,rename,changed,idempotent,idempotent-changed,idempotent-rename";
+        String[] arr = valid.split(",");
+        boolean matched = Arrays.stream(arr).anyMatch(n -> n.equals(getReadLock()));
+        if (!matched) {
+            throw new IllegalArgumentException("ReadLock invalid: " + getReadLock() + ", must be one of: " + valid);
+        }
     }
 
     @Override
@@ -185,7 +168,7 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
             throw new IllegalArgumentException("You cannot set both fileExist=Append and tempPrefix/tempFileName options");
         }
 
-        // ensure fileExist and moveExisting is configured correctly if in use
+        // ensure fileExist and moveExisting are configured correctly if in use
         if (getFileExist() == GenericFileExist.Move && getMoveExisting() == null) {
             throw new IllegalArgumentException("You must configure moveExisting option when fileExist=Move");
         } else if (getMoveExisting() != null && getFileExist() != GenericFileExist.Move) {
@@ -271,13 +254,25 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
         return includeHiddenFiles;
     }
 
+    public boolean isAutoCreateStepwise() {
+        return autoCreateStepwise;
+    }
+
+    /**
+     * When auto-creating directories should each subdirectory be created one at a time. This may be needed due to
+     * security issues on some file-shares.
+     */
+    public void setAutoCreateStepwise(boolean autoCreateStepwise) {
+        this.autoCreateStepwise = autoCreateStepwise;
+    }
+
     public boolean isCopyAndDeleteOnRenameFail() {
         return copyAndDeleteOnRenameFail;
     }
 
     /**
-     * Whether to fallback and do a copy and delete file, in case the file could not be renamed directly. This option is
-     * not available for the FTP component.
+     * Whether to fall back and do a copy and delete file, in case the file could not be renamed directly. This option
+     * is not available for the FTP component.
      */
     public void setCopyAndDeleteOnRenameFail(boolean copyAndDeleteOnRenameFail) {
         this.copyAndDeleteOnRenameFail = copyAndDeleteOnRenameFail;
@@ -289,7 +284,7 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
 
     /**
      * Perform rename operations using a copy and delete strategy. This is primarily used in environments where the
-     * regular rename operation is unreliable (e.g. across different file systems or networks). This option takes
+     * regular rename operation is unreliable (e.g., across different file systems or networks). This option takes
      * precedence over the copyAndDeleteOnRenameFail parameter that will automatically fall back to the copy and delete
      * strategy, but only after additional delays.
      */
@@ -314,8 +309,8 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
     }
 
     /**
-     * Whether to accept hidden directories. Directories which names starts with dot is regarded as a hidden directory,
-     * and by default not included. Set this option to true to include hidden directories in the file consumer.
+     * Whether to accept hidden directories. Directories which names starts with dot are regarded as a hidden directory,
+     * and by default are not included. Set this option to true to include hidden directories in the file consumer.
      */
     public void setIncludeHiddenDirs(boolean includeHiddenDirs) {
         this.includeHiddenDirs = includeHiddenDirs;
@@ -340,8 +335,8 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
 
     /**
      * Whether the starting directory has access permissions. Mind that the startingDirectoryMustExist parameter must be
-     * set to true in order to verify that the directory exists. Will thrown an exception if the directory doesn't have
-     * read and write permissions.
+     * set to true to verify that the directory exists. Will throw an exception if the directory doesn't have read and
+     * write permissions.
      */
     public void setStartingDirectoryMustHaveAccess(boolean startingDirectoryMustHaveAccess) {
         this.startingDirectoryMustHaveAccess = startingDirectoryMustHaveAccess;
@@ -352,7 +347,7 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
     }
 
     /**
-     * Similar to the startingDirectoryMustExist option but this applies during polling (after starting the consumer).
+     * Similar to the startingDirectoryMustExist option, but this applies during polling (after starting the consumer).
      */
     public void setDirectoryMustExist(boolean directoryMustExist) {
         this.directoryMustExist = directoryMustExist;
@@ -363,8 +358,8 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
     }
 
     /**
-     * Whether to force syncing writes to the file system. You can turn this off if you do not want this level of
-     * guarantee, for example if writing to logs / audit logs etc; this would yield better performance.
+     * Whether to force syncing, writes to the file system. You can turn this off if you do not want this level of
+     * guarantee, for example, if writing to logs / audit logs etc.; this would yield better performance.
      */
     public void setForceWrites(boolean forceWrites) {
         this.forceWrites = forceWrites;
@@ -465,8 +460,8 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
     }
 
     /**
-     * Specify the file permissions which is sent by the producer, the chmod value must be between 000 and 777; If there
-     * is a leading digit like in 0755 we will ignore it.
+     * Specify the file permissions that are sent by the producer, the chmod value must be between 000 and 777; If there
+     * is a leading digit like in 0755, we will ignore it.
      */
     public void setChmod(String chmod) {
         if (ObjectHelper.isNotEmpty(chmod) && chmodPermissionsAreValid(chmod)) {
@@ -528,7 +523,7 @@ public class FileEndpoint extends GenericFileEndpoint<File> {
 
     /**
      * Specify the directory permissions used when the producer creates missing directories, the chmod value must be
-     * between 000 and 777; If there is a leading digit like in 0755 we will ignore it.
+     * between 000 and 777; If there is a leading digit like in 0755, we will ignore it.
      */
     public void setChmodDirectory(String chmodDirectory) {
         if (ObjectHelper.isNotEmpty(chmodDirectory) && chmodPermissionsAreValid(chmodDirectory)) {

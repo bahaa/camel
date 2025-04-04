@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 import io.vertx.core.Vertx;
@@ -28,7 +29,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.Router;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Message;
-import org.apache.camel.component.cloudevents.CloudEvent;
+import org.apache.camel.cloudevents.CloudEvent;
 import org.apache.camel.component.knative.spi.KnativeResource;
 import org.apache.camel.support.CamelContextHelper;
 
@@ -138,5 +139,37 @@ public final class KnativeHttpSupport {
         }
 
         return Vertx.vertx(options);
+    }
+
+    /**
+     * Retrieve client options from given CamelContext.
+     *
+     * @param  camelContext the current context.
+     * @return              client options or empty
+     */
+    public static Optional<KnativeSslClientOptions> lookupClientOptions(CamelContext camelContext) {
+        KnativeSslClientOptions clientOptions
+                = CamelContextHelper.findSingleByType(camelContext, KnativeSslClientOptions.class);
+        if (clientOptions != null) {
+            return Optional.of(clientOptions);
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Retrieve service options from given CamelContext.
+     *
+     * @param  camelContext the current context.
+     * @return              service options or empty
+     */
+    public static Optional<KnativeHttpServiceOptions> lookupServiceOptions(CamelContext camelContext) {
+        KnativeHttpServiceOptions serviceOptions
+                = CamelContextHelper.findSingleByType(camelContext, KnativeHttpServiceOptions.class);
+        if (serviceOptions != null) {
+            return Optional.of(serviceOptions);
+        }
+
+        return Optional.empty();
     }
 }

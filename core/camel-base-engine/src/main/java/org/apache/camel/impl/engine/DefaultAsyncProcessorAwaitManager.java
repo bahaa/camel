@@ -178,7 +178,7 @@ public class DefaultAsyncProcessorAwaitManager extends ServiceSupport implements
         AwaitThreadEntry entry = (AwaitThreadEntry) inflight.get(exchange);
         if (entry != null) {
             try {
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new StringBuilder(512);
                 sb.append(
                         "Interrupted while waiting for asynchronous callback, will release the following blocked thread which was waiting for exchange to finish processing with exchangeId: ");
                 sb.append(exchange.getExchangeId());
@@ -188,9 +188,7 @@ public class DefaultAsyncProcessorAwaitManager extends ServiceSupport implements
 
                 // dump a route stack trace of the exchange
                 String routeStackTrace = MessageHelper.dumpMessageHistoryStacktrace(exchange, exchangeFormatter, false);
-                if (routeStackTrace != null) {
-                    sb.append(routeStackTrace);
-                }
+                sb.append(routeStackTrace);
                 LOG.warn(sb.toString());
 
             } catch (Exception e) {
@@ -229,7 +227,7 @@ public class DefaultAsyncProcessorAwaitManager extends ServiceSupport implements
         if (count > 0) {
             LOG.warn("Shutting down while there are still {} inflight threads currently blocked.", count);
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder(1024);
             for (AwaitThread entry : threads) {
                 sb.append(dumpBlockedThread(entry));
             }
@@ -256,7 +254,7 @@ public class DefaultAsyncProcessorAwaitManager extends ServiceSupport implements
     }
 
     private static String dumpBlockedThread(AwaitThread entry) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(512);
         sb.append("\n");
         sb.append("Blocked Thread\n");
         sb.append(

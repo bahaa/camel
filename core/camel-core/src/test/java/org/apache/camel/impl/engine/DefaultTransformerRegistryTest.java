@@ -21,6 +21,7 @@ import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.processor.transformer.ByteArrayDataTypeTransformer;
 import org.apache.camel.processor.transformer.StringDataTypeTransformer;
 import org.apache.camel.spi.Transformer;
+import org.apache.camel.spi.TransformerKey;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +30,7 @@ class DefaultTransformerRegistryTest {
     private final DefaultTransformerRegistry dataTypeRegistry = new DefaultTransformerRegistry(new DefaultCamelContext());
 
     @Test
-    public void shouldLookupDefaultDataTypeTransformers() throws Exception {
+    public void shouldLookupDefaultDataTypeTransformers() {
         Transformer transformer = dataTypeRegistry.resolveTransformer(new TransformerKey("text-plain"));
         Assertions.assertNotNull(transformer);
         Assertions.assertEquals(StringDataTypeTransformer.class, transformer.getClass());

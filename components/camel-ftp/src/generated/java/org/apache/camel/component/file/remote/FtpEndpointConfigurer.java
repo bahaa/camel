@@ -45,6 +45,8 @@ public class FtpEndpointConfigurer extends PropertyConfigurerSupport implements 
         case "binary": target.getConfiguration().setBinary(property(camelContext, boolean.class, value)); return true;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
+        case "browselimit":
+        case "browseLimit": target.setBrowseLimit(property(camelContext, int.class, value)); return true;
         case "buffersize":
         case "bufferSize": target.setBufferSize(property(camelContext, int.class, value)); return true;
         case "charset": target.setCharset(property(camelContext, java.lang.String.class, value)); return true;
@@ -98,6 +100,8 @@ public class FtpEndpointConfigurer extends PropertyConfigurerSupport implements 
         case "handledirectoryparserabsoluteresult":
         case "handleDirectoryParserAbsoluteResult": target.getConfiguration().setHandleDirectoryParserAbsoluteResult(property(camelContext, boolean.class, value)); return true;
         case "idempotent": target.setIdempotent(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "idempotenteager":
+        case "idempotentEager": target.setIdempotentEager(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "idempotentkey":
         case "idempotentKey": target.setIdempotentKey(property(camelContext, java.lang.String.class, value)); return true;
         case "idempotentrepository":
@@ -249,6 +253,8 @@ public class FtpEndpointConfigurer extends PropertyConfigurerSupport implements 
         case "binary": return boolean.class;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
+        case "browselimit":
+        case "browseLimit": return int.class;
         case "buffersize":
         case "bufferSize": return int.class;
         case "charset": return java.lang.String.class;
@@ -302,6 +308,8 @@ public class FtpEndpointConfigurer extends PropertyConfigurerSupport implements 
         case "handledirectoryparserabsoluteresult":
         case "handleDirectoryParserAbsoluteResult": return boolean.class;
         case "idempotent": return java.lang.Boolean.class;
+        case "idempotenteager":
+        case "idempotentEager": return java.lang.Boolean.class;
         case "idempotentkey":
         case "idempotentKey": return java.lang.String.class;
         case "idempotentrepository":
@@ -454,6 +462,8 @@ public class FtpEndpointConfigurer extends PropertyConfigurerSupport implements 
         case "binary": return target.getConfiguration().isBinary();
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
+        case "browselimit":
+        case "browseLimit": return target.getBrowseLimit();
         case "buffersize":
         case "bufferSize": return target.getBufferSize();
         case "charset": return target.getCharset();
@@ -507,6 +517,8 @@ public class FtpEndpointConfigurer extends PropertyConfigurerSupport implements 
         case "handledirectoryparserabsoluteresult":
         case "handleDirectoryParserAbsoluteResult": return target.getConfiguration().isHandleDirectoryParserAbsoluteResult();
         case "idempotent": return target.getIdempotent();
+        case "idempotenteager":
+        case "idempotentEager": return target.getIdempotentEager();
         case "idempotentkey":
         case "idempotentKey": return target.getIdempotentKey();
         case "idempotentrepository":

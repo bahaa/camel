@@ -40,11 +40,11 @@ public class FileConsumerFileNameFilterTest extends ContextTestSupport {
     }
 
     @Override
-    protected RouteBuilder createRouteBuilder() throws Exception {
+    protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from(fileUri("?initialDelay=0&delay=10&fileName=${file:onlyname.noext}.txt")).noAutoStartup()
+                from(fileUri("?initialDelay=0&delay=10&fileName=${file:onlyname.noext}.txt")).autoStartup(false)
                         .to("mock:txt");
             }
         };

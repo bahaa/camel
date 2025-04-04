@@ -16,8 +16,6 @@
  */
 package org.apache.camel.component.knative.http;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
@@ -26,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -38,6 +37,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.NoTypeConversionAvailableException;
 import org.apache.camel.Processor;
+import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.TypeConverter;
 import org.apache.camel.api.management.ManagedAttribute;
 import org.apache.camel.api.management.ManagedResource;
@@ -45,9 +45,9 @@ import org.apache.camel.component.knative.spi.KnativeResource;
 import org.apache.camel.component.knative.spi.KnativeTransportConfiguration;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.support.DefaultConsumer;
+import org.apache.camel.support.ExceptionHelper;
 import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.support.MessageHelper;
-import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +61,7 @@ public class KnativeHttpConsumer extends DefaultConsumer {
     private final KnativeTransportConfiguration configuration;
     private final Predicate<HttpServerRequest> filter;
     private final KnativeResource resource;
+    private final KnativeHttpServiceOptions serviceOptions;
     private final Supplier<Router> router;
     private final HeaderFilterStrategy headerFilterStrategy;
     private volatile String path;
@@ -74,14 +75,21 @@ public class KnativeHttpConsumer extends DefaultConsumer {
                                Endpoint endpoint,
                                KnativeResource resource,
                                Supplier<Router> router,
+                               KnativeHttpServiceOptions serviceOptions,
                                Processor processor) {
         super(endpoint, processor);
         this.configuration = configuration;
         this.resource = resource;
         this.router = router;
+        this.serviceOptions = serviceOptions;
         this.headerFilterStrategy = new KnativeHttpHeaderFilterStrategy();
         this.filter = KnativeHttpSupport.createFilter(this.configuration.getCloudEvent(), resource);
         this.preallocateBodyBuffer = true;
+    }
+
+    @Override
+    public boolean isHostedService() {
+        return true;
     }
 
     @ManagedAttribute(description = "Path for accessing the Knative service")
@@ -137,6 +145,26 @@ public class KnativeHttpConsumer extends DefaultConsumer {
             bodyHandler.setPreallocateBodyBuffer(this.preallocateBodyBuffer);
             if (this.maxBodySize != null) {
                 bodyHandler.setBodyLimit(this.maxBodySize.longValueExact());
+            }
+
+            // add OIDC token verification handler
+            if (serviceOptions instanceof KnativeOidcServiceOptions oidcServiceOptions &&
+                    oidcServiceOptions.isOidcEnabled()) {
+                route.handler(routingContext -> {
+                    if (routingContext.request().headers().contains(HttpHeaders.AUTHORIZATION)) {
+                        String auth = routingContext.request().getHeader(HttpHeaders.AUTHORIZATION);
+                        String token = oidcServiceOptions.retrieveOidcToken();
+                        if (("Bearer " + token).equals(auth)) {
+                            routingContext.next();
+                        } else {
+                            routingContext.fail(401, new RuntimeCamelException("OIDC request verification failed - forbidden"));
+                        }
+                    } else {
+                        routingContext.fail(401, new RuntimeCamelException(
+                                "OIDC request verification failed - " +
+                                                                           "missing proper authorization token"));
+                    }
+                });
             }
 
             // add body handler
@@ -326,23 +354,18 @@ public class KnativeHttpConsumer extends DefaultConsumer {
 
         if (exception != null) {
             // we failed due an exception so print it as plain text
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
 
-            try {
-                exception.printStackTrace(pw);
+            final String stackTrace = ExceptionHelper.stackTraceToString(exception);
 
-                // the body should then be the stacktrace
-                body = sw.toString().getBytes(StandardCharsets.UTF_8);
-                // force content type to be text/plain as that is what the stacktrace is
-                message.setHeader(Exchange.CONTENT_TYPE, "text/plain");
+            // the body should then be the stacktrace
+            body = stackTrace.getBytes(StandardCharsets.UTF_8);
+            // force content type to be text/plain as that is what the stacktrace is
+            message.setHeader(Exchange.CONTENT_TYPE, "text/plain");
 
-                // and mark the exception as failure handled, as we handled it by returning
-                // it as the response
-                ExchangeHelper.setFailureHandled(message.getExchange());
-            } finally {
-                IOHelper.close(pw, sw);
-            }
+            // and mark the exception as failure handled, as we handled it by returning
+            // it as the response
+            ExchangeHelper.setFailureHandled(message.getExchange());
+
         }
 
         return body != null

@@ -39,12 +39,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class ZipFileSplitAndDeleteTest extends CamelTestSupport {
 
-    @Override
     @BeforeEach
-    public void setUp() throws Exception {
+    public void deleteTestDirs() {
         deleteDirectory("target/testDeleteZipFileWhenUnmarshalWithDataFormat");
         deleteDirectory("target/testDeleteZipFileWhenUnmarshalWithSplitter");
-        super.setUp();
     }
 
     @Test

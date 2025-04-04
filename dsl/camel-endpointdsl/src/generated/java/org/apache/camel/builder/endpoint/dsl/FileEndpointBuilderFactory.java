@@ -563,6 +563,39 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
+         * Sets whether to eagerly add the filename to the idempotent repository
+         * or wait until the exchange is complete.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: true
+         * Group: filter
+         * 
+         * @param idempotentEager the value to set
+         * @return the dsl builder
+         */
+        default FileEndpointConsumerBuilder idempotentEager(Boolean idempotentEager) {
+            doSetProperty("idempotentEager", idempotentEager);
+            return this;
+        }
+        /**
+         * Sets whether to eagerly add the filename to the idempotent repository
+         * or wait until the exchange is complete.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: true
+         * Group: filter
+         * 
+         * @param idempotentEager the value to set
+         * @return the dsl builder
+         */
+        default FileEndpointConsumerBuilder idempotentEager(String idempotentEager) {
+            doSetProperty("idempotentEager", idempotentEager);
+            return this;
+        }
+        /**
          * To use a custom idempotent key. By default the absolute path of the
          * file is used. You can use the File Language, for example to use the
          * file name and file size, you can do:
@@ -1989,7 +2022,7 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Similar to the startingDirectoryMustExist option but this applies
+         * Similar to the startingDirectoryMustExist option, but this applies
          * during polling (after starting the consumer).
          * 
          * The option is a: <code>boolean</code> type.
@@ -2005,7 +2038,7 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Similar to the startingDirectoryMustExist option but this applies
+         * Similar to the startingDirectoryMustExist option, but this applies
          * during polling (after starting the consumer).
          * 
          * The option will be converted to a <code>boolean</code> type.
@@ -2103,7 +2136,7 @@ public interface FileEndpointBuilderFactory {
         }
         /**
          * Whether to accept hidden directories. Directories which names starts
-         * with dot is regarded as a hidden directory, and by default not
+         * with dot are regarded as a hidden directory, and by default are not
          * included. Set this option to true to include hidden directories in
          * the file consumer.
          * 
@@ -2121,7 +2154,7 @@ public interface FileEndpointBuilderFactory {
         }
         /**
          * Whether to accept hidden directories. Directories which names starts
-         * with dot is regarded as a hidden directory, and by default not
+         * with dot are regarded as a hidden directory, and by default are not
          * included. Set this option to true to include hidden directories in
          * the file consumer.
          * 
@@ -2412,9 +2445,9 @@ public interface FileEndpointBuilderFactory {
         }
         /**
          * Whether the starting directory has access permissions. Mind that the
-         * startingDirectoryMustExist parameter must be set to true in order to
-         * verify that the directory exists. Will thrown an exception if the
-         * directory doesn't have read and write permissions.
+         * startingDirectoryMustExist parameter must be set to true to verify
+         * that the directory exists. Will throw an exception if the directory
+         * doesn't have read and write permissions.
          * 
          * The option is a: <code>boolean</code> type.
          * 
@@ -2430,9 +2463,9 @@ public interface FileEndpointBuilderFactory {
         }
         /**
          * Whether the starting directory has access permissions. Mind that the
-         * startingDirectoryMustExist parameter must be set to true in order to
-         * verify that the directory exists. Will thrown an exception if the
-         * directory doesn't have read and write permissions.
+         * startingDirectoryMustExist parameter must be set to true to verify
+         * that the directory exists. Will throw an exception if the directory
+         * doesn't have read and write permissions.
          * 
          * The option will be converted to a <code>boolean</code> type.
          * 
@@ -2483,6 +2516,72 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
+         * When auto-creating directories should each subdirectory be created
+         * one at a time. This may be needed due to security issues on some
+         * file-shares.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param autoCreateStepwise the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointConsumerBuilder autoCreateStepwise(boolean autoCreateStepwise) {
+            doSetProperty("autoCreateStepwise", autoCreateStepwise);
+            return this;
+        }
+        /**
+         * When auto-creating directories should each subdirectory be created
+         * one at a time. This may be needed due to security issues on some
+         * file-shares.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param autoCreateStepwise the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointConsumerBuilder autoCreateStepwise(String autoCreateStepwise) {
+            doSetProperty("autoCreateStepwise", autoCreateStepwise);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointConsumerBuilder browseLimit(int browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointConsumerBuilder browseLimit(String browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
+            return this;
+        }
+        /**
          * Buffer size in bytes used for writing files (or in case of FTP for
          * downloading and uploading files).
          * 
@@ -2515,7 +2614,7 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Whether to fallback and do a copy and delete file, in case the file
+         * Whether to fall back and do a copy and delete file, in case the file
          * could not be renamed directly. This option is not available for the
          * FTP component.
          * 
@@ -2532,7 +2631,7 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Whether to fallback and do a copy and delete file, in case the file
+         * Whether to fall back and do a copy and delete file, in case the file
          * could not be renamed directly. This option is not available for the
          * FTP component.
          * 
@@ -2551,7 +2650,7 @@ public interface FileEndpointBuilderFactory {
         /**
          * Perform rename operations using a copy and delete strategy. This is
          * primarily used in environments where the regular rename operation is
-         * unreliable (e.g. across different file systems or networks). This
+         * unreliable (e.g., across different file systems or networks). This
          * option takes precedence over the copyAndDeleteOnRenameFail parameter
          * that will automatically fall back to the copy and delete strategy,
          * but only after additional delays.
@@ -2571,7 +2670,7 @@ public interface FileEndpointBuilderFactory {
         /**
          * Perform rename operations using a copy and delete strategy. This is
          * primarily used in environments where the regular rename operation is
-         * unreliable (e.g. across different file systems or networks). This
+         * unreliable (e.g., across different file systems or networks). This
          * option takes precedence over the copyAndDeleteOnRenameFail parameter
          * that will automatically fall back to the copy and delete strategy,
          * but only after additional delays.
@@ -2993,9 +3092,9 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specify the file permissions which is sent by the producer, the chmod
+         * Specify the file permissions that are sent by the producer, the chmod
          * value must be between 000 and 777; If there is a leading digit like
-         * in 0755 we will ignore it.
+         * in 0755, we will ignore it.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -3011,7 +3110,7 @@ public interface FileEndpointBuilderFactory {
         /**
          * Specify the directory permissions used when the producer creates
          * missing directories, the chmod value must be between 000 and 777; If
-         * there is a leading digit like in 0755 we will ignore it.
+         * there is a leading digit like in 0755, we will ignore it.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -3079,9 +3178,9 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Whether to force syncing writes to the file system. You can turn this
-         * off if you do not want this level of guarantee, for example if
-         * writing to logs / audit logs etc; this would yield better
+         * Whether to force syncing, writes to the file system. You can turn
+         * this off if you do not want this level of guarantee, for example, if
+         * writing to logs / audit logs etc.; this would yield better
          * performance.
          * 
          * The option is a: <code>boolean</code> type.
@@ -3097,9 +3196,9 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Whether to force syncing writes to the file system. You can turn this
-         * off if you do not want this level of guarantee, for example if
-         * writing to logs / audit logs etc; this would yield better
+         * Whether to force syncing, writes to the file system. You can turn
+         * this off if you do not want this level of guarantee, for example, if
+         * writing to logs / audit logs etc.; this would yield better
          * performance.
          * 
          * The option will be converted to a <code>boolean</code> type.
@@ -3273,6 +3372,72 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
+         * When auto-creating directories should each subdirectory be created
+         * one at a time. This may be needed due to security issues on some
+         * file-shares.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param autoCreateStepwise the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointProducerBuilder autoCreateStepwise(boolean autoCreateStepwise) {
+            doSetProperty("autoCreateStepwise", autoCreateStepwise);
+            return this;
+        }
+        /**
+         * When auto-creating directories should each subdirectory be created
+         * one at a time. This may be needed due to security issues on some
+         * file-shares.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param autoCreateStepwise the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointProducerBuilder autoCreateStepwise(String autoCreateStepwise) {
+            doSetProperty("autoCreateStepwise", autoCreateStepwise);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointProducerBuilder browseLimit(int browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointProducerBuilder browseLimit(String browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
+            return this;
+        }
+        /**
          * Buffer size in bytes used for writing files (or in case of FTP for
          * downloading and uploading files).
          * 
@@ -3305,7 +3470,7 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Whether to fallback and do a copy and delete file, in case the file
+         * Whether to fall back and do a copy and delete file, in case the file
          * could not be renamed directly. This option is not available for the
          * FTP component.
          * 
@@ -3322,7 +3487,7 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Whether to fallback and do a copy and delete file, in case the file
+         * Whether to fall back and do a copy and delete file, in case the file
          * could not be renamed directly. This option is not available for the
          * FTP component.
          * 
@@ -3341,7 +3506,7 @@ public interface FileEndpointBuilderFactory {
         /**
          * Perform rename operations using a copy and delete strategy. This is
          * primarily used in environments where the regular rename operation is
-         * unreliable (e.g. across different file systems or networks). This
+         * unreliable (e.g., across different file systems or networks). This
          * option takes precedence over the copyAndDeleteOnRenameFail parameter
          * that will automatically fall back to the copy and delete strategy,
          * but only after additional delays.
@@ -3361,7 +3526,7 @@ public interface FileEndpointBuilderFactory {
         /**
          * Perform rename operations using a copy and delete strategy. This is
          * primarily used in environments where the regular rename operation is
-         * unreliable (e.g. across different file systems or networks). This
+         * unreliable (e.g., across different file systems or networks). This
          * option takes precedence over the copyAndDeleteOnRenameFail parameter
          * that will automatically fall back to the copy and delete strategy,
          * but only after additional delays.
@@ -3546,6 +3711,72 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
+         * When auto-creating directories should each subdirectory be created
+         * one at a time. This may be needed due to security issues on some
+         * file-shares.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param autoCreateStepwise the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointBuilder autoCreateStepwise(boolean autoCreateStepwise) {
+            doSetProperty("autoCreateStepwise", autoCreateStepwise);
+            return this;
+        }
+        /**
+         * When auto-creating directories should each subdirectory be created
+         * one at a time. This may be needed due to security issues on some
+         * file-shares.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param autoCreateStepwise the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointBuilder autoCreateStepwise(String autoCreateStepwise) {
+            doSetProperty("autoCreateStepwise", autoCreateStepwise);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointBuilder browseLimit(int browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
+            return this;
+        }
+        /**
+         * Maximum number of messages to keep in memory available for browsing.
+         * Use 0 for unlimited.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 100
+         * Group: advanced
+         * 
+         * @param browseLimit the value to set
+         * @return the dsl builder
+         */
+        default AdvancedFileEndpointBuilder browseLimit(String browseLimit) {
+            doSetProperty("browseLimit", browseLimit);
+            return this;
+        }
+        /**
          * Buffer size in bytes used for writing files (or in case of FTP for
          * downloading and uploading files).
          * 
@@ -3578,7 +3809,7 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Whether to fallback and do a copy and delete file, in case the file
+         * Whether to fall back and do a copy and delete file, in case the file
          * could not be renamed directly. This option is not available for the
          * FTP component.
          * 
@@ -3595,7 +3826,7 @@ public interface FileEndpointBuilderFactory {
             return this;
         }
         /**
-         * Whether to fallback and do a copy and delete file, in case the file
+         * Whether to fall back and do a copy and delete file, in case the file
          * could not be renamed directly. This option is not available for the
          * FTP component.
          * 
@@ -3614,7 +3845,7 @@ public interface FileEndpointBuilderFactory {
         /**
          * Perform rename operations using a copy and delete strategy. This is
          * primarily used in environments where the regular rename operation is
-         * unreliable (e.g. across different file systems or networks). This
+         * unreliable (e.g., across different file systems or networks). This
          * option takes precedence over the copyAndDeleteOnRenameFail parameter
          * that will automatically fall back to the copy and delete strategy,
          * but only after additional delays.
@@ -3634,7 +3865,7 @@ public interface FileEndpointBuilderFactory {
         /**
          * Perform rename operations using a copy and delete strategy. This is
          * primarily used in environments where the regular rename operation is
-         * unreliable (e.g. across different file systems or networks). This
+         * unreliable (e.g., across different file systems or networks). This
          * option takes precedence over the copyAndDeleteOnRenameFail parameter
          * that will automatically fall back to the copy and delete strategy,
          * but only after additional delays.
@@ -3790,7 +4021,7 @@ public interface FileEndpointBuilderFactory {
          * 
          * The option is a: {@code String} type.
          * 
-         * Group: common
+         * Group: consumer
          * 
          * @return the name of the header {@code FileNameOnly}.
          */
@@ -3799,13 +4030,11 @@ public interface FileEndpointBuilderFactory {
         }
         /**
          * (producer) Specifies the name of the file to write (relative to the
-         * endpoint directory). This name can be a String; a String with a
-         * xref:languages:file-language.adocFile Language or
-         * xref:languages:simple-language.adocSimple expression; or an
-         * Expression object. If it's null then Camel will auto-generate a
-         * filename based on the message unique ID. (consumer) Name of the
-         * consumed file as a relative file path with offset from the starting
-         * directory configured on the endpoint.
+         * endpoint directory). This name can be a String; a String with a file
+         * or simple Language expression; or an Expression object. If it's null
+         * then Camel will auto-generate a filename based on the message unique
+         * ID. (consumer) Name of the consumed file as a relative file path with
+         * offset from the starting directory configured on the endpoint.
          * 
          * The option is a: {@code String} type.
          * 
@@ -3882,8 +4111,8 @@ public interface FileEndpointBuilderFactory {
             return "CamelFileContentType";
         }
         /**
-         * The file path. For relative files this is the starting directory the
-         * relative filename. For absolute files this is the absolute path.
+         * The file path. For relative files this is the starting directory. For
+         * absolute files this is the absolute path.
          * 
          * The option is a: {@code String} type.
          * 

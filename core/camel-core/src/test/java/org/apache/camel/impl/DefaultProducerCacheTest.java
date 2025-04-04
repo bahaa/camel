@@ -45,11 +45,14 @@ import org.apache.camel.support.cache.ProducerServicePool;
 import org.apache.camel.util.function.ThrowingFunction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+@DisabledOnOs(architectures = { "s390x" },
+              disabledReason = "This test does not run reliably on s390x (see CAMEL-21438)")
 public class DefaultProducerCacheTest extends ContextTestSupport {
 
     private final AtomicInteger producerCounter = new AtomicInteger();
@@ -59,7 +62,7 @@ public class DefaultProducerCacheTest extends ContextTestSupport {
     private MyComponent component;
 
     @Test
-    public void testCacheProducerAcquireAndRelease() throws Exception {
+    public void testCacheProducerAcquireAndRelease() {
         DefaultProducerCache cache = new DefaultProducerCache(this, context, 0);
         cache.start();
 
@@ -85,7 +88,7 @@ public class DefaultProducerCacheTest extends ContextTestSupport {
     }
 
     @Test
-    public void testCacheStopExpired() throws Exception {
+    public void testCacheStopExpired() {
         DefaultProducerCache cache = new DefaultProducerCache(this, context, 5);
         cache.start();
 
@@ -113,7 +116,7 @@ public class DefaultProducerCacheTest extends ContextTestSupport {
     }
 
     @Test
-    public void testExtendedStatistics() throws Exception {
+    public void testExtendedStatistics() {
         DefaultProducerCache cache = new DefaultProducerCache(this, context, 5);
         cache.setExtendedStatistics(true);
         cache.start();
@@ -162,7 +165,7 @@ public class DefaultProducerCacheTest extends ContextTestSupport {
     }
 
     @Test
-    public void testCacheEvictWhileInUse() throws Exception {
+    public void testCacheEvictWhileInUse() {
         producerCounter.set(0);
 
         MyProducerCache cache = new MyProducerCache(this, context, 2);
@@ -310,7 +313,7 @@ public class DefaultProducerCacheTest extends ContextTestSupport {
         }
 
         @Override
-        protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
+        protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) {
             throw new UnsupportedOperationException();
         }
     }
@@ -325,12 +328,12 @@ public class DefaultProducerCacheTest extends ContextTestSupport {
         }
 
         @Override
-        public Producer createProducer() throws Exception {
+        public Producer createProducer() {
             return new MyProducer(this);
         }
 
         @Override
-        public Consumer createConsumer(Processor processor) throws Exception {
+        public Consumer createConsumer(Processor processor) {
             return null;
         }
 
@@ -350,17 +353,17 @@ public class DefaultProducerCacheTest extends ContextTestSupport {
         }
 
         @Override
-        public void process(Exchange exchange) throws Exception {
+        public void process(Exchange exchange) {
             // noop
         }
 
         @Override
-        protected void doStop() throws Exception {
+        protected void doStop() {
             stopCounter.incrementAndGet();
         }
 
         @Override
-        protected void doShutdown() throws Exception {
+        protected void doShutdown() {
             shutdownCounter.incrementAndGet();
         }
 

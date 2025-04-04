@@ -34,7 +34,7 @@ import org.apache.camel.spi.NodeIdFactory;
  */
 @XmlType(name = "optionalIdentifiedDefinition")
 @XmlAccessorType(XmlAccessType.PROPERTY)
-// must use XmlAccessType.PROPERTY which is required by camel-spring / camel-blueprint for their namespace parsers
+// must use XmlAccessType.PROPERTY which is required by camel-spring for its namespace parsers
 public abstract class OptionalIdentifiedDefinition<T extends OptionalIdentifiedDefinition<T>>
         implements NamedNode, IdAware, CamelContextAware {
 
@@ -45,10 +45,10 @@ public abstract class OptionalIdentifiedDefinition<T extends OptionalIdentifiedD
     private int lineNumber = -1;
     private String location;
 
-    public OptionalIdentifiedDefinition() {
+    protected OptionalIdentifiedDefinition() {
     }
 
-    protected OptionalIdentifiedDefinition(OptionalIdentifiedDefinition source) {
+    protected OptionalIdentifiedDefinition(OptionalIdentifiedDefinition<?> source) {
         this.camelContext = source.camelContext;
         this.id = source.id;
         this.customId = source.customId;
@@ -78,7 +78,7 @@ public abstract class OptionalIdentifiedDefinition<T extends OptionalIdentifiedD
         // prefix is only for nodes in the route (not the route id)
         String prefix = null;
         boolean iAmRoute = this instanceof RouteDefinition;
-        boolean allowPrefix = !iAmRoute && this instanceof ProcessorDefinition;
+        boolean allowPrefix = !iAmRoute;
         if (allowPrefix) {
             RouteDefinition route = ProcessorDefinitionHelper.getRoute(this);
             if (route != null) {
@@ -186,7 +186,7 @@ public abstract class OptionalIdentifiedDefinition<T extends OptionalIdentifiedD
 
         // return with prefix if configured
         boolean iAmRoute = this instanceof RouteDefinition;
-        boolean allowPrefix = !iAmRoute && this instanceof ProcessorDefinition;
+        boolean allowPrefix = !iAmRoute;
         if (allowPrefix) {
             String prefix = getNodePrefixId();
             if (prefix != null) {
