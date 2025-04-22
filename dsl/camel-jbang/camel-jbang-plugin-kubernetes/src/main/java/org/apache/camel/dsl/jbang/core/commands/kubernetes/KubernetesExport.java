@@ -172,9 +172,11 @@ public class KubernetesExport extends Export {
         gradleWrapper = configurer.gradleWrapper;
         fresh = configurer.fresh;
         download = configurer.download;
+        packageScanJars = configurer.packageScanJars;
         quiet = configurer.quiet;
         logging = configurer.logging;
         loggingLevel = configurer.loggingLevel;
+        verbose = configurer.verbose;
     }
 
     public Integer export() throws Exception {
@@ -210,7 +212,7 @@ public class KubernetesExport extends Export {
 
         List<Source> sources;
         try {
-            addFile("classpath:templates/run-java.sh");
+            addFile(Run.RUN_JAVA_SH);
             sources = SourceHelper.resolveSources(files);
         } catch (Exception e) {
             printer().printf("Project export failed: %s - %s%n", e.getMessage(),
@@ -339,7 +341,7 @@ public class KubernetesExport extends Export {
         setContainerHealthPaths();
 
         // Run export
-        int exit = super.export();
+        int exit = super.doExport();
         if (exit != 0) {
             printer().println("Project export failed");
             return exit;
@@ -582,8 +584,10 @@ public class KubernetesExport extends Export {
             boolean gradleWrapper,
             boolean fresh,
             boolean download,
+            boolean packageScanJars,
             boolean quiet,
             boolean logging,
-            String loggingLevel) {
+            String loggingLevel,
+            boolean verbose) {
     }
 }

@@ -83,6 +83,9 @@ import static org.apache.camel.dsl.jbang.core.common.GitHubHelper.fetchGithubUrl
 @Command(name = "run", description = "Run as local Camel integration", sortOptions = false, showDefaultValues = true)
 public class Run extends CamelCommand {
 
+    // special template for running camel-jbang in docker containers
+    public static final String RUN_JAVA_SH = "classpath:templates/run-java.sh";
+
     public static final String RUN_SETTINGS_FILE = "camel-jbang-run.properties";
     private static final String RUN_PLATFORM_DIR = ".camel-jbang-run";
 
@@ -195,20 +198,24 @@ public class Run extends CamelCommand {
             description = "Optional location of Maven settings-security.xml file to decrypt settings.xml")
     String mavenSettingsSecurity;
 
-    @Option(names = { "--maven-central-enabled" },
+    @Option(names = { "--maven-central-enabled" }, defaultValue = "true",
             description = "Whether downloading JARs from Maven Central repository is enabled")
     boolean mavenCentralEnabled = true;
 
-    @Option(names = { "--maven-apache-snapshot-enabled" },
+    @Option(names = { "--maven-apache-snapshot-enabled" }, defaultValue = "true",
             description = "Whether downloading JARs from ASF Maven Snapshot repository is enabled")
     boolean mavenApacheSnapshotEnabled = true;
 
-    @Option(names = { "--fresh" }, description = "Make sure we use fresh (i.e. non-cached) resources")
+    @Option(names = { "--fresh" }, defaultValue = "false", description = "Make sure we use fresh (i.e. non-cached) resources")
     boolean fresh;
 
     @Option(names = { "--download" }, defaultValue = "true",
             description = "Whether to allow automatic downloading JAR dependencies (over the internet)")
     boolean download = true;
+
+    @CommandLine.Option(names = { "--package-scan-jars" }, defaultValue = "false",
+                        description = "Whether to automatic package scan JARs for custom Spring or Quarkus beans making them available for Camel JBang")
+    boolean packageScanJars;
 
     @Option(names = { "--jvm-debug" }, parameterConsumer = DebugConsumer.class, paramLabel = "<true|false|port>",
             description = "To enable JVM remote debugging on port 4004 by default. The supported values are true to " +
@@ -231,7 +238,7 @@ public class Run extends CamelCommand {
     @Option(names = { "--logging-color" }, defaultValue = "true", description = "Use colored logging")
     boolean loggingColor = true;
 
-    @Option(names = { "--logging-json" }, description = "Use JSON logging (ECS Layout)")
+    @Option(names = { "--logging-json" }, defaultValue = "false", description = "Use JSON logging (ECS Layout)")
     boolean loggingJson;
 
     @Option(names = { "--logging-config-path" }, description = "Path to file with custom logging configuration")
@@ -254,7 +261,8 @@ public class Run extends CamelCommand {
             description = "Enables dev mode (live reload when source files are updated and saved)")
     boolean dev;
 
-    @Option(names = { "--trace" }, description = "Enables trace logging of the routed messages")
+    @Option(names = { "--trace" }, defaultValue = "false",
+            description = "Enables trace logging of the routed messages")
     boolean trace;
 
     @Option(names = { "--properties" },
@@ -269,7 +277,7 @@ public class Run extends CamelCommand {
                                                 + " Multiple names can be separated by comma. (all = everything).")
     String stub;
 
-    @Option(names = { "--jfr" },
+    @Option(names = { "--jfr" }, defaultValue = "false",
             description = "Enables Java Flight Recorder saving recording to disk on exit")
     boolean jfr;
 
@@ -284,18 +292,19 @@ public class Run extends CamelCommand {
     @Option(names = { "--port" }, description = "Embeds a local HTTP server on this port", defaultValue = "8080")
     int port;
 
-    @Option(names = { "--console" }, description = "Developer console at /q/dev on local HTTP server (port 8080 by default)")
+    @Option(names = { "--console" }, defaultValue = "false",
+            description = "Developer console at /q/dev on local HTTP server (port 8080 by default)")
     boolean console;
 
-    @Option(names = { "--health" },
+    @Option(names = { "--health" }, defaultValue = "false",
             description = "Deprecated: use --observe instead. Health check at /q/health on local HTTP server (port 8080 by default)")
     boolean health;
 
-    @Option(names = { "--metrics" },
+    @Option(names = { "--metrics" }, defaultValue = "false",
             description = "Deprecated: use --observe instead. Metrics (Micrometer and Prometheus) at /q/metrics on local HTTP server (port 8080 by default)")
     boolean metrics;
 
-    @Option(names = { "--observe" },
+    @Option(names = { "--observe" }, defaultValue = "false",
             description = "Enable observability services")
     boolean observe;
 
@@ -309,18 +318,19 @@ public class Run extends CamelCommand {
     @Option(names = { "--code" }, description = "Run the given text or file as Java DSL routes")
     String code;
 
-    @Option(names = { "--verbose" }, description = "Verbose output of startup activity (dependency resolution and downloading")
+    @Option(names = { "--verbose" }, defaultValue = "false",
+            description = "Verbose output of startup activity (dependency resolution and downloading")
     boolean verbose;
 
-    @Option(names = { "--ignore-loading-error" },
+    @Option(names = { "--ignore-loading-error" }, defaultValue = "false",
             description = "Whether to ignore route loading and compilation errors (use this with care!)")
     protected boolean ignoreLoadingError;
 
-    @Option(names = { "--lazy-bean" },
+    @Option(names = { "--lazy-bean" }, defaultValue = "false",
             description = "Whether to use lazy bean initialization (can help with complex classloading issues")
     protected boolean lazyBean;
 
-    @Option(names = { "--prompt" },
+    @Option(names = { "--prompt" }, defaultValue = "false",
             description = "Allow user to type in required parameters in prompt if not present in application")
     boolean prompt;
 
@@ -330,6 +340,9 @@ public class Run extends CamelCommand {
 
     @Override
     public boolean disarrangeLogging() {
+        if (exportRun) {
+            return false;
+        }
         if (RuntimeType.quarkus == runtime) {
             return true;
         } else if (RuntimeType.springBoot == runtime) {
@@ -366,11 +379,12 @@ public class Run extends CamelCommand {
         return run();
     }
 
-    public Integer runTransformMessage(String camelVersion) throws Exception {
+    public Integer runTransformMessage(String camelVersion, String repositories) throws Exception {
         // just boot silently an empty camel in the background and exit
         this.transformMessageRun = true;
         this.background = true;
         this.camelVersion = camelVersion;
+        this.repositories = repositories;
         this.empty = true;
         this.ignoreLoadingError = true;
         this.name = "transform";
@@ -452,10 +466,12 @@ public class Run extends CamelCommand {
             }
         }
 
-        if (RuntimeType.quarkus == runtime) {
-            return runQuarkus();
-        } else if (RuntimeType.springBoot == runtime) {
-            return runSpringBoot();
+        if (!exportRun) {
+            if (RuntimeType.quarkus == runtime) {
+                return runQuarkus();
+            } else if (RuntimeType.springBoot == runtime) {
+                return runSpringBoot();
+            }
         }
 
         File work = CommandLineHelper.getWorkDir();
@@ -493,8 +509,10 @@ public class Run extends CamelCommand {
             files.add(0, codeFile);
         }
 
+        boolean autoDetectFiles = files.isEmpty() || RUN_JAVA_SH.equals(files.get(0));
+
         // if no specific file to run then try to auto-detect
-        if (!empty && files.isEmpty()) {
+        if (!empty && autoDetectFiles) {
             if (sourceDir != null) {
                 // silent-run then auto-detect all initial files for source-dir
                 String[] allFiles = new File(sourceDir).list();
@@ -539,6 +557,7 @@ public class Run extends CamelCommand {
             main.setRepositories(String.join(",", repositories));
         }
         main.setDownload(download);
+        main.setPackageScanJars(packageScanJars);
         main.setFresh(fresh);
         main.setMavenSettings(mavenSettings);
         main.setMavenSettingsSecurity(mavenSettingsSecurity);
@@ -628,7 +647,9 @@ public class Run extends CamelCommand {
         }
 
         if (exportRun) {
-            main.setSilent(true);
+            if (!verbose) {
+                main.setSilent(true);
+            }
             main.addInitialProperty("camel.jbang.export", "true");
             // enable stub in silent mode so we do not use real components
             main.setStubPattern("*");
@@ -992,11 +1013,10 @@ public class Run extends CamelCommand {
             eq.gav = "org.example.project:" + eq.name + ":1.0-SNAPSHOT";
         }
         eq.dependencies = this.dependencies;
-        if (!this.exportRun) {
-            eq.addDependencies("camel:cli-connector");
-        }
+        eq.addDependencies("camel:cli-connector");
         eq.fresh = this.fresh;
         eq.download = this.download;
+        eq.packageScanJars = this.packageScanJars;
         eq.quiet = true;
         eq.logging = false;
         eq.loggingLevel = "off";
@@ -1008,7 +1028,7 @@ public class Run extends CamelCommand {
 
         // run export
         int exit = eq.export();
-        if (exit != 0 || this.exportRun) {
+        if (exit != 0) {
             return exit;
         }
 
@@ -1066,15 +1086,14 @@ public class Run extends CamelCommand {
             eq.gav = "org.example.project:" + eq.name + ":1.0-SNAPSHOT";
         }
         eq.dependencies.addAll(this.dependencies);
-        if (!this.exportRun) {
-            eq.addDependencies("camel:cli-connector");
-        }
+        eq.addDependencies("camel:cli-connector");
         if (this.dev) {
             // hot-reload of spring-boot
             eq.addDependencies("mvn:org.springframework.boot:spring-boot-devtools");
         }
         eq.fresh = this.fresh;
         eq.download = this.download;
+        eq.packageScanJars = this.packageScanJars;
         eq.quiet = true;
         eq.logging = false;
         eq.loggingLevel = "off";
@@ -1086,7 +1105,7 @@ public class Run extends CamelCommand {
 
         // run export
         int exit = eq.export();
-        if (exit != 0 || exportRun) {
+        if (exit != 0) {
             return exit;
         }
 
@@ -1212,6 +1231,8 @@ public class Run extends CamelCommand {
                     mavenApacheSnapshotEnabled ? "true" : "false"));
             openapi = answer.getProperty("camel.jbang.open-api", openapi);
             download = "true".equals(answer.getProperty("camel.jbang.download", download ? "true" : "false"));
+            packageScanJars
+                    = "true".equals(answer.getProperty("camel.jbang.packageScanJars", packageScanJars ? "true" : "false"));
             background = "true".equals(answer.getProperty("camel.jbang.background", background ? "true" : "false"));
             backgroundWait = "true".equals(answer.getProperty("camel.jbang.backgroundWait", backgroundWait ? "true" : "false"));
             jvmDebugPort = parseJvmDebugPort(answer.getProperty("camel.jbang.jvmDebug", Integer.toString(jvmDebugPort)));
@@ -1670,8 +1691,13 @@ public class Run extends CamelCommand {
                 logFile.deleteOnExit();
             }
         } else {
-            RuntimeUtil.configureLog("off", false, false, false, false, null, null);
-            writeSettings("loggingLevel", "off");
+            if (exportRun) {
+                RuntimeUtil.configureLog(loggingLevel, false, false, false, true, null, null);
+                writeSettings("loggingLevel", loggingLevel);
+            } else {
+                RuntimeUtil.configureLog("off", false, false, false, false, null, null);
+                writeSettings("loggingLevel", "off");
+            }
         }
     }
 
@@ -2011,8 +2037,8 @@ public class Run extends CamelCommand {
 
     @Override
     protected Printer printer() {
-        // Export run should be silent
-        if (exportRun) {
+        if (exportRun && (!logging && !verbose)) {
+            // Export run should be silent unless in logging or verbose mode
             if (quietPrinter == null) {
                 quietPrinter = new Printer.QuietPrinter(super.printer());
             }

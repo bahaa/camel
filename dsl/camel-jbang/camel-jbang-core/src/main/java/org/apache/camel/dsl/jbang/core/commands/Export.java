@@ -43,7 +43,20 @@ public class Export extends ExportBaseCommand {
     }
 
     @Override
+    public boolean disarrangeLogging() {
+        return false; // export logs specially to a camel-export.log
+    }
+
+    @Override
     protected Integer export() throws Exception {
+        int answer = doExport();
+        if (answer == 0 && !quiet) {
+            printer().println("Project export successful!");
+        }
+        return answer;
+    }
+
+    protected Integer doExport() throws Exception {
         // application.properties
         doLoadAndInitProfileProperties(new File("application.properties"));
         if (profile != null) {
@@ -80,7 +93,6 @@ public class Export extends ExportBaseCommand {
                 return 1;
             }
         }
-
     }
 
     private void doLoadAndInitProfileProperties(File file) throws Exception {
@@ -137,6 +149,7 @@ public class Export extends ExportBaseCommand {
         cmd.cleanExportDir = this.cleanExportDir;
         cmd.fresh = this.fresh;
         cmd.download = this.download;
+        cmd.packageScanJars = this.packageScanJars;
         cmd.javaVersion = this.javaVersion;
         cmd.camelVersion = this.camelVersion;
         cmd.kameletsVersion = this.kameletsVersion;
@@ -160,6 +173,7 @@ public class Export extends ExportBaseCommand {
         cmd.excludes = this.excludes;
         cmd.ignoreLoadingError = this.ignoreLoadingError;
         cmd.lazyBean = this.lazyBean;
+        cmd.verbose = this.verbose;
         cmd.applicationProperties = this.applicationProperties;
         // run export
         return cmd.export();

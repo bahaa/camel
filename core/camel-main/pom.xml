@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>core</artifactId>
-        <version>4.11.0-SNAPSHOT</version>
+        <version>4.12.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-main</artifactId>
@@ -171,6 +171,8 @@
                                 <class>org.apache.camel.vault.KubernetesConfigMapVaultConfiguration=org.apache.camel.main.KubernetesConfigMapVaultConfiguration</class>
                                 <!-- we want to have configurer for IBMSecretsManagerVaultConfiguration in the package main to prevent a split packages issue -->
                                 <class>org.apache.camel.vault.IBMSecretsManagerVaultConfiguration=org.apache.camel.main.IBMSecretsManagerVaultConfiguration</class>
+                                <!-- we want to have configurer for SpringCloudConfigConfiguration in the package main to prevent a split packages issue -->
+                                <class>org.apache.camel.vault.SpringCloudConfigConfiguration=org.apache.camel.main.SpringCloudConfigConfiguration</class>
                             </classes>
                         </configuration>
                     </execution>

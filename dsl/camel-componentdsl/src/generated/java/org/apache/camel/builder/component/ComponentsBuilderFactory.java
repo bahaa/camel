@@ -3579,6 +3579,19 @@ public interface ComponentsBuilderFactory {
         return Pop3sComponentBuilderFactory.pop3s();
     }
     /**
+     * PQC Algorithms (camel-pqc)
+     * Post Quantum Computing Signature and Verification component.
+     * 
+     * Category: security
+     * Since: 4.12
+     * Maven coordinates: org.apache.camel:camel-pqc
+     * 
+     * @return the dsl builder
+     */
+    static PqcComponentBuilderFactory.PqcComponentBuilder pqc() {
+        return PqcComponentBuilderFactory.pqc();
+    }
+    /**
      * PubNub (camel-pubnub)
      * Send and receive messages to/from PubNub data stream network for
      * connected devices.
@@ -4561,6 +4574,19 @@ public interface ComponentsBuilderFactory {
      */
     static WeatherComponentBuilderFactory.WeatherComponentBuilder weather() {
         return WeatherComponentBuilderFactory.weather();
+    }
+    /**
+     * weaviate (camel-weaviate)
+     * Perform operations on the Weaviate Vector Database.
+     * 
+     * Category: database,ai
+     * Since: 4.12
+     * Maven coordinates: org.apache.camel:camel-weaviate
+     * 
+     * @return the dsl builder
+     */
+    static WeaviateComponentBuilderFactory.WeaviateComponentBuilder weaviate() {
+        return WeaviateComponentBuilderFactory.weaviate();
     }
     /**
      * Web3j Ethereum Blockchain (camel-web3j)
