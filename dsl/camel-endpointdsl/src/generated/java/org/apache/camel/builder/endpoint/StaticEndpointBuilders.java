@@ -3304,6 +3304,48 @@ public class StaticEndpointBuilders {
         return CxfRsEndpointBuilderFactory.endpointBuilder(componentName, path);
     }
     /**
+     * Dapr (camel-dapr)
+     * Dapr component which interfaces with Dapr Building Blocks.
+     * 
+     * Category: cloud,saas
+     * Since: 4.12
+     * Maven coordinates: org.apache.camel:camel-dapr
+     * 
+     * Syntax: <code>dapr:operation</code>
+     * 
+     * Path parameter: operation (required)
+     * The Dapr building block operation to perform with this component
+     * There are 2 enums and the value can be one of: invokeService, state
+     * 
+     * @param path operation
+     * @return the dsl builder
+     */
+    public static DaprEndpointBuilderFactory.DaprEndpointBuilder dapr(String path) {
+        return dapr("dapr", path);
+    }
+    /**
+     * Dapr (camel-dapr)
+     * Dapr component which interfaces with Dapr Building Blocks.
+     * 
+     * Category: cloud,saas
+     * Since: 4.12
+     * Maven coordinates: org.apache.camel:camel-dapr
+     * 
+     * Syntax: <code>dapr:operation</code>
+     * 
+     * Path parameter: operation (required)
+     * The Dapr building block operation to perform with this component
+     * There are 2 enums and the value can be one of: invokeService, state
+     * 
+     * @param componentName to use a custom component name for the endpoint
+     * instead of the default name
+     * @param path operation
+     * @return the dsl builder
+     */
+    public static DaprEndpointBuilderFactory.DaprEndpointBuilder dapr(String componentName, String path) {
+        return DaprEndpointBuilderFactory.endpointBuilder(componentName, path);
+    }
+    /**
      * Data Format (camel-dataformat)
      * Use a Camel Data Format as a regular Camel Component.
      * 
@@ -8368,7 +8410,7 @@ public class StaticEndpointBuilders {
     }
     /**
      * Kafka (camel-kafka)
-     * Sent and receive messages to/from an Apache Kafka broker.
+     * Send and receive messages to/from an Apache Kafka broker.
      * 
      * Category: messaging
      * Since: 2.13
@@ -8388,7 +8430,7 @@ public class StaticEndpointBuilders {
     }
     /**
      * Kafka (camel-kafka)
-     * Sent and receive messages to/from an Apache Kafka broker.
+     * Send and receive messages to/from an Apache Kafka broker.
      * 
      * Category: messaging
      * Since: 2.13
@@ -10142,9 +10184,6 @@ public class StaticEndpointBuilders {
      * Path parameter: metricsName (required)
      * Name of metrics
      * 
-     * Path parameter: tags
-     * Tags of metrics
-     * 
      * @param path metricsType:metricsName
      * @return the dsl builder
      */
@@ -10168,9 +10207,6 @@ public class StaticEndpointBuilders {
      * 
      * Path parameter: metricsName (required)
      * Name of metrics
-     * 
-     * Path parameter: tags
-     * Tags of metrics
      * 
      * @param componentName to use a custom component name for the endpoint
      * instead of the default name
@@ -13324,7 +13360,7 @@ public class StaticEndpointBuilders {
      * Since: 4.3
      * Maven coordinates: org.apache.camel:camel-smb
      * 
-     * Syntax: <code>smb:hostname:port/shareName</code>
+     * Syntax: <code>smb:hostname:port/shareName/path</code>
      * 
      * Path parameter: hostname (required)
      * The share hostname or IP address
@@ -13336,7 +13372,10 @@ public class StaticEndpointBuilders {
      * Path parameter: shareName (required)
      * The name of the share directory
      * 
-     * @param path hostname:port/shareName
+     * Path parameter: path
+     * The base directory within the share
+     * 
+     * @param path hostname:port/shareName/path
      * @return the dsl builder
      */
     public static SmbEndpointBuilderFactory.SmbEndpointBuilder smb(String path) {
@@ -13350,7 +13389,7 @@ public class StaticEndpointBuilders {
      * Since: 4.3
      * Maven coordinates: org.apache.camel:camel-smb
      * 
-     * Syntax: <code>smb:hostname:port/shareName</code>
+     * Syntax: <code>smb:hostname:port/shareName/path</code>
      * 
      * Path parameter: hostname (required)
      * The share hostname or IP address
@@ -13362,9 +13401,12 @@ public class StaticEndpointBuilders {
      * Path parameter: shareName (required)
      * The name of the share directory
      * 
+     * Path parameter: path
+     * The base directory within the share
+     * 
      * @param componentName to use a custom component name for the endpoint
      * instead of the default name
-     * @param path hostname:port/shareName
+     * @param path hostname:port/shareName/path
      * @return the dsl builder
      */
     public static SmbEndpointBuilderFactory.SmbEndpointBuilder smb(String componentName, String path) {

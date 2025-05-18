@@ -4,6 +4,13 @@ This document is for helping you upgrade your Apache Camel application
 from Camel 4.x to 4.y. For example, if you are upgrading Camel 4.0 to 4.2, then you should follow the guides
 from both 4.0 to 4.1 and 4.1 to 4.2.
 
+== Upgrading from 4.10.4 to 4.10.5
+
+=== camel-core
+
+Removed unused `Johnzon` in `org.apache.camel.model.dataformat.JsonLibrary` enum as `camel-johnzon` is not supported
+in Camel v4. This removal also means `johnzon` was removed from XSD and YAML DSL schemas.
+
 == Upgrading from 4.10.3 to 4.10.4
 
 === Java DSL
@@ -56,6 +63,16 @@ Notice that the `endChoice` is changed to `end().endChoice()`. This is required 
 to end the current choice (inner) and then afterwards change the scope to be Choice EIP to be able to
 continue in the outer Choice. Otherwise the Java DSL cannot know the scope is Choice EIP and you would
 not be able to add the `otherwise` block to the outer Choice.
+
+=== Propagating variables in EIPs in seda/kamelet components
+
+The kamelet and seda component and EIPs such as Split, Multicast, Recipient List, Enrich, PollEnrich, Loop (copy mode)
+will now also propagate exchange variables as well into the result (i.e. exchange properties and message headers is already being propagated).
+
+=== camel-micrometer
+
+The `tags` parameter has been _fixed_ to be multivalued and tooling friendly. So
+instead of configuring `tags=a=1&b=2` then this should be configured as `tags.a=1&tags.b=2` and so forth.
 
 == Upgrading from 4.10.2 to 4.10.3
 

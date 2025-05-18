@@ -42,21 +42,24 @@ public class PQCConfiguration implements Cloneable {
     @UriParam
     @Metadata(label = "advanced", autowired = true)
     private Signature signer;
-    @UriParam
+    @UriParam(enums = "MLDSA,SLHDSA,LMS,XMSS,FALCON,PICNIC,RAINBOW")
     @Metadata(label = "advanced")
     private String signatureAlgorithm;
     @UriParam
     @Metadata(label = "advanced", autowired = true)
     private KeyGenerator keyGenerator;
-    @UriParam
+    @UriParam(enums = "MLKEM,BIKE,HQC,CMCE,SABER,FRODO,NTRU,NTRULPRime")
     @Metadata(label = "advanced")
     private String keyEncapsulationAlgorithm;
-    @UriParam
+    @UriParam(enums = "AES,ARIA,RC2,RC5,CAMELLIA,CAST5,CAST6,CHACHA7539,DSTU7624,GOST28147,GOST3412_2015,GRAIN128,HC128,HC256,SALSA20,SEED,SM4,DESEDE")
     @Metadata(label = "advanced")
     private String symmetricKeyAlgorithm;
     @UriParam
     @Metadata(label = "advanced", defaultValue = "128")
     private int symmetricKeyLength = 128;
+    @UriParam
+    @Metadata(label = "advanced", defaultValue = "false")
+    private boolean storeExtractedSecretKeyAsHeader = false;
 
     public PQCOperations getOperation() {
         return operation;
@@ -144,6 +147,18 @@ public class PQCConfiguration implements Cloneable {
      */
     public void setSymmetricKeyLength(int symmetricKeyLength) {
         this.symmetricKeyLength = symmetricKeyLength;
+    }
+
+    public boolean isStoreExtractedSecretKeyAsHeader() {
+        return storeExtractedSecretKeyAsHeader;
+    }
+
+    /**
+     * In the context of extractSecretKeyFromEncapsulation operation, this option define if we want to have the key set
+     * as header
+     */
+    public void setStoreExtractedSecretKeyAsHeader(boolean storeExtractedSecretKeyAsHeader) {
+        this.storeExtractedSecretKeyAsHeader = storeExtractedSecretKeyAsHeader;
     }
 
     // *************************************************

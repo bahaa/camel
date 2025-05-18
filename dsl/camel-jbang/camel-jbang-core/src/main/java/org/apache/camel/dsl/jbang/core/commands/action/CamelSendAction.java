@@ -16,15 +16,15 @@
  */
 package org.apache.camel.dsl.jbang.core.commands.action;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
-import org.apache.camel.util.FileUtil;
-import org.apache.camel.util.IOHelper;
+import org.apache.camel.dsl.jbang.core.common.PathUtils;
 import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.TimeUtils;
@@ -72,27 +72,31 @@ public class CamelSendAction extends ActionBaseCommand {
     long timeout = 20000;
 
     @CommandLine.Option(names = { "--show-exchange-properties" }, defaultValue = "false",
-                        description = "Show exchange properties in traced messages")
+                        description = "Show exchange properties from response message (InOut)")
     boolean showExchangeProperties;
 
+    @CommandLine.Option(names = { "--show-exchange-variables" }, defaultValue = "false",
+                        description = "Show exchange variables from response message (InOut)")
+    boolean showExchangeVariables;
+
     @CommandLine.Option(names = { "--show-headers" }, defaultValue = "true",
-                        description = "Show message headers in traced messages")
+                        description = "Show message headers from response message (InOut)")
     boolean showHeaders = true;
 
     @CommandLine.Option(names = { "--show-body" }, defaultValue = "true",
-                        description = "Show message body in traced messages")
+                        description = "Show message body from response message (InOut)")
     boolean showBody = true;
 
     @CommandLine.Option(names = { "--show-exception" }, defaultValue = "true",
                         description = "Show exception and stacktrace for failed messages")
     boolean showException = true;
 
+    @CommandLine.Option(names = { "--pretty" },
+                        description = "Pretty print response message body (InOut) when using JSon or XML format")
+    boolean pretty;
+
     @CommandLine.Option(names = { "--logging-color" }, defaultValue = "true", description = "Use colored logging")
     boolean loggingColor = true;
-
-    @CommandLine.Option(names = { "--pretty" },
-                        description = "Pretty print message body when using JSon or XML format")
-    boolean pretty;
 
     private volatile long pid;
 
@@ -116,8 +120,8 @@ public class CamelSendAction extends ActionBaseCommand {
         this.pid = pids.get(0);
 
         // ensure output file is deleted before executing action
-        File outputFile = getOutputFile(Long.toString(pid));
-        FileUtil.deleteFile(outputFile);
+        Path outputFile = getOutputFile(Long.toString(pid));
+        PathUtils.deleteFile(outputFile);
 
         JsonObject root = new JsonObject();
         root.put("action", "send");
@@ -147,9 +151,10 @@ public class CamelSendAction extends ActionBaseCommand {
             }
             root.put("headers", arr);
         }
-        File f = getActionFile(Long.toString(pid));
+        Path f = getActionFile(Long.toString(pid));
         try {
-            IOHelper.writeText(root.toJson(), f);
+            String text = root.toJson();
+            Files.writeString(f, text);
         } catch (Exception e) {
             // ignore
         }
@@ -162,15 +167,22 @@ public class CamelSendAction extends ActionBaseCommand {
             JsonObject cause = jo.getMap("exception");
             if (message != null || cause != null) {
                 if (replyFile != null) {
-                    File target = new File(replyFile);
+                    Path target = Path.of(replyFile);
                     String json = jo.toJson();
                     if (pretty) {
                         json = Jsoner.prettyPrint(json, 2);
                     }
-                    IOHelper.writeText(json, target);
+                    try {
+                        Files.writeString(target, json);
+                    } catch (IOException e) {
+                        // ignore
+                    }
                 }
                 if (!showExchangeProperties && message != null) {
                     message.remove("exchangeProperties");
+                }
+                if (!showExchangeVariables && message != null) {
+                    message.remove("exchangeVariables");
                 }
                 if (!showHeaders && message != null) {
                     message.remove("headers");
@@ -186,6 +198,7 @@ public class CamelSendAction extends ActionBaseCommand {
                     tableHelper.setPretty(pretty);
                     tableHelper.setLoggingColor(loggingColor);
                     tableHelper.setShowExchangeProperties(showExchangeProperties);
+                    tableHelper.setShowExchangeVariables(showExchangeVariables);
                     String table = tableHelper.getDataAsTable(exchangeId, mep, jo, null, message, cause);
                     printer().println(table);
                 }
@@ -193,7 +206,7 @@ public class CamelSendAction extends ActionBaseCommand {
         }
 
         // delete output file after use
-        FileUtil.deleteFile(outputFile);
+        PathUtils.deleteFile(outputFile);
 
         return 0;
     }
@@ -277,7 +290,7 @@ public class CamelSendAction extends ActionBaseCommand {
         }
     }
 
-    protected JsonObject waitForOutputFile(File outputFile) {
+    protected JsonObject waitForOutputFile(Path outputFile) {
         StopWatch watch = new StopWatch();
         long wait = timeout + 10000; // wait longer than timeout
         while (watch.taken() < wait) {
@@ -285,10 +298,8 @@ public class CamelSendAction extends ActionBaseCommand {
                 // give time for response to be ready
                 Thread.sleep(20);
 
-                if (outputFile.exists()) {
-                    FileInputStream fis = new FileInputStream(outputFile);
-                    String text = IOHelper.loadText(fis);
-                    IOHelper.close(fis);
+                if (Files.exists(outputFile)) {
+                    String text = Files.readString(outputFile);
                     return (JsonObject) Jsoner.deserialize(text);
                 }
             } catch (InterruptedException e) {

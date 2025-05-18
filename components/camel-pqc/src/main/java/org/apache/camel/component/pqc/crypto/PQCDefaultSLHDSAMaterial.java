@@ -16,26 +16,29 @@
  */
 package org.apache.camel.component.pqc.crypto;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.SecureRandom;
-import java.security.Signature;
+import java.security.*;
 
+import org.apache.camel.component.pqc.PQCSignatureAlgorithms;
 import org.bouncycastle.jcajce.spec.SLHDSAParameterSpec;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider;
 
 public class PQCDefaultSLHDSAMaterial {
     public static final KeyPair keyPair;
     public static final Signature signer;
 
     static {
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
+        if (Security.getProvider(BouncyCastlePQCProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastlePQCProvider());
+        }
         KeyPairGenerator generator;
         try {
             generator = prepareKeyPair();
             keyPair = generator.generateKeyPair();
-            signer = Signature.getInstance("SLH-DSA");
+            signer = Signature.getInstance(PQCSignatureAlgorithms.SLHDSA.getAlgorithm());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -43,7 +46,8 @@ public class PQCDefaultSLHDSAMaterial {
 
     protected static KeyPairGenerator prepareKeyPair()
             throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
-        KeyPairGenerator kpGen = KeyPairGenerator.getInstance("SLH-DSA", "BC");
+        KeyPairGenerator kpGen = KeyPairGenerator.getInstance(PQCSignatureAlgorithms.SLHDSA.getAlgorithm(),
+                PQCSignatureAlgorithms.SLHDSA.getBcProvider());
         kpGen.initialize(SLHDSAParameterSpec.slh_dsa_sha2_128s, new SecureRandom());
         return kpGen;
     }

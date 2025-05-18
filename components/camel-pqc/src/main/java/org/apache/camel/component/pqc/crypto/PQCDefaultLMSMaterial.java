@@ -16,15 +16,13 @@
  */
 package org.apache.camel.component.pqc.crypto;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.Signature;
+import java.security.*;
 
+import org.apache.camel.component.pqc.PQCSignatureAlgorithms;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pqc.crypto.lms.LMOtsParameters;
 import org.bouncycastle.pqc.crypto.lms.LMSigParameters;
+import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider;
 import org.bouncycastle.pqc.jcajce.spec.LMSKeyGenParameterSpec;
 
 public class PQCDefaultLMSMaterial {
@@ -32,11 +30,17 @@ public class PQCDefaultLMSMaterial {
     public static final Signature signer;
 
     static {
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
+        if (Security.getProvider(BouncyCastlePQCProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastlePQCProvider());
+        }
         KeyPairGenerator generator;
         try {
             generator = prepareKeyPair();
             keyPair = generator.generateKeyPair();
-            signer = Signature.getInstance("LMS");
+            signer = Signature.getInstance(PQCSignatureAlgorithms.LMS.getAlgorithm());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -44,7 +48,8 @@ public class PQCDefaultLMSMaterial {
 
     protected static KeyPairGenerator prepareKeyPair()
             throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
-        KeyPairGenerator kpGen = KeyPairGenerator.getInstance("LMS", "BC");
+        KeyPairGenerator kpGen = KeyPairGenerator.getInstance(PQCSignatureAlgorithms.LMS.getAlgorithm(),
+                PQCSignatureAlgorithms.LMS.getBcProvider());
         kpGen.initialize(new LMSKeyGenParameterSpec(LMSigParameters.lms_sha256_n32_h5, LMOtsParameters.sha256_n32_w1));
         return kpGen;
     }

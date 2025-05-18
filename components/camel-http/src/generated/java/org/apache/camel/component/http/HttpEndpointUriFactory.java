@@ -24,7 +24,8 @@ public class HttpEndpointUriFactory extends org.apache.camel.support.component.E
     private static final Set<String> SECRET_PROPERTY_NAMES;
     private static final Set<String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(60);
+        Set<String> props = new HashSet<>(63);
+        props.add("authBearerToken");
         props.add("authDomain");
         props.add("authHost");
         props.add("authMethod");
@@ -59,6 +60,8 @@ public class HttpEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("lazyStartProducer");
         props.add("logHttpActivity");
         props.add("maxTotalConnections");
+        props.add("multipartUpload");
+        props.add("multipartUploadName");
         props.add("oauth2CacheTokens");
         props.add("oauth2CachedTokensDefaultExpirySeconds");
         props.add("oauth2CachedTokensExpirationMarginSeconds");
@@ -86,7 +89,8 @@ public class HttpEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("userAgent");
         props.add("x509HostnameVerifier");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
-        Set<String> secretProps = new HashSet<>(6);
+        Set<String> secretProps = new HashSet<>(7);
+        secretProps.add("authBearerToken");
         secretProps.add("authPassword");
         secretProps.add("authUsername");
         secretProps.add("oauth2ClientId");

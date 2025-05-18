@@ -20,10 +20,15 @@ import java.util.Map;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Endpoint;
-import org.apache.camel.component.pqc.crypto.PQCDefaultLMSMaterial;
-import org.apache.camel.component.pqc.crypto.PQCDefaultMLDSAMaterial;
-import org.apache.camel.component.pqc.crypto.PQCDefaultSLHDSAMaterial;
-import org.apache.camel.component.pqc.crypto.PQCDefaultXMSSMaterial;
+import org.apache.camel.component.pqc.crypto.*;
+import org.apache.camel.component.pqc.crypto.kem.PQCDefaultBIKEMaterial;
+import org.apache.camel.component.pqc.crypto.kem.PQCDefaultCMCEMaterial;
+import org.apache.camel.component.pqc.crypto.kem.PQCDefaultFRODOMaterial;
+import org.apache.camel.component.pqc.crypto.kem.PQCDefaultHQCMaterial;
+import org.apache.camel.component.pqc.crypto.kem.PQCDefaultMLKEMMaterial;
+import org.apache.camel.component.pqc.crypto.kem.PQCDefaultNTRULPRimeMaterial;
+import org.apache.camel.component.pqc.crypto.kem.PQCDefaultNTRUMaterial;
+import org.apache.camel.component.pqc.crypto.kem.PQCDefaultSABERMaterial;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.Component;
 import org.apache.camel.support.HealthCheckComponent;
@@ -54,25 +59,80 @@ public class PQCComponent extends HealthCheckComponent {
         setProperties(endpoint, parameters);
 
         if (ObjectHelper.isEmpty(configuration.getSigner()) && ObjectHelper.isEmpty(configuration.getKeyPair())) {
-            switch (configuration.getSignatureAlgorithm()) {
-                case "MLDSA":
-                    configuration.setSigner(PQCDefaultMLDSAMaterial.signer);
-                    configuration.setKeyPair(PQCDefaultMLDSAMaterial.keyPair);
-                    break;
-                case "SLHDSA":
-                    configuration.setSigner(PQCDefaultSLHDSAMaterial.signer);
-                    configuration.setKeyPair(PQCDefaultSLHDSAMaterial.keyPair);
-                    break;
-                case "LMS":
-                    configuration.setSigner(PQCDefaultLMSMaterial.signer);
-                    configuration.setKeyPair(PQCDefaultLMSMaterial.keyPair);
-                    break;
-                case "XMSS":
-                    configuration.setSigner(PQCDefaultXMSSMaterial.signer);
-                    configuration.setKeyPair(PQCDefaultXMSSMaterial.keyPair);
-                    break;
-                default:
-                    break;
+            if (ObjectHelper.isNotEmpty(configuration.getSignatureAlgorithm())) {
+                switch (configuration.getSignatureAlgorithm()) {
+                    case "MLDSA":
+                        configuration.setSigner(PQCDefaultMLDSAMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultMLDSAMaterial.keyPair);
+                        break;
+                    case "SLHDSA":
+                        configuration.setSigner(PQCDefaultSLHDSAMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultSLHDSAMaterial.keyPair);
+                        break;
+                    case "LMS":
+                        configuration.setSigner(PQCDefaultLMSMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultLMSMaterial.keyPair);
+                        break;
+                    case "XMSS":
+                        configuration.setSigner(PQCDefaultXMSSMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultXMSSMaterial.keyPair);
+                        break;
+                    case "FALCON":
+                        configuration.setSigner(PQCDefaultFalconMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultFalconMaterial.keyPair);
+                        break;
+                    case "PICNIC":
+                        configuration.setSigner(PQCDefaultPicnicMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultPicnicMaterial.keyPair);
+                        break;
+                    case "RAINBOW":
+                        configuration.setSigner(PQCDefaultRainbowMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultRainbowMaterial.keyPair);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        if (ObjectHelper.isEmpty(configuration.getKeyGenerator()) && ObjectHelper.isEmpty(configuration.getKeyPair())) {
+            if (ObjectHelper.isNotEmpty(configuration.getKeyEncapsulationAlgorithm())) {
+                switch (configuration.getKeyEncapsulationAlgorithm()) {
+                    case "MLKEM":
+                        configuration.setKeyGenerator(PQCDefaultMLKEMMaterial.keyGenerator);
+                        configuration.setKeyPair(PQCDefaultMLKEMMaterial.keyPair);
+                        break;
+                    case "BIKE":
+                        configuration.setKeyGenerator(PQCDefaultBIKEMaterial.keyGenerator);
+                        configuration.setKeyPair(PQCDefaultBIKEMaterial.keyPair);
+                        break;
+                    case "HQC":
+                        configuration.setKeyGenerator(PQCDefaultHQCMaterial.keyGenerator);
+                        configuration.setKeyPair(PQCDefaultHQCMaterial.keyPair);
+                        break;
+                    case "CMCE":
+                        configuration.setKeyGenerator(PQCDefaultCMCEMaterial.keyGenerator);
+                        configuration.setKeyPair(PQCDefaultCMCEMaterial.keyPair);
+                        break;
+                    case "SABER":
+                        configuration.setKeyGenerator(PQCDefaultSABERMaterial.keyGenerator);
+                        configuration.setKeyPair(PQCDefaultSABERMaterial.keyPair);
+                        break;
+                    case "FRODO":
+                        configuration.setKeyGenerator(PQCDefaultFRODOMaterial.keyGenerator);
+                        configuration.setKeyPair(PQCDefaultFRODOMaterial.keyPair);
+                        break;
+                    case "NTRU":
+                        configuration.setKeyGenerator(PQCDefaultNTRUMaterial.keyGenerator);
+                        configuration.setKeyPair(PQCDefaultNTRUMaterial.keyPair);
+                        break;
+                    case "NTRULPRime":
+                        configuration.setKeyGenerator(PQCDefaultNTRULPRimeMaterial.keyGenerator);
+                        configuration.setKeyPair(PQCDefaultNTRULPRimeMaterial.keyPair);
+                        break;
+                    default:
+                        break;
+                }
             }
         }
 

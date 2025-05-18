@@ -58,8 +58,8 @@ import org.apache.camel.main.download.DependencyDownloaderRoutesLoader;
 import org.apache.camel.main.download.DependencyDownloaderStrategy;
 import org.apache.camel.main.download.DependencyDownloaderTransformerResolver;
 import org.apache.camel.main.download.DependencyDownloaderUriFactoryResolver;
+import org.apache.camel.main.download.DownloadEndpointStrategy;
 import org.apache.camel.main.download.DownloadListener;
-import org.apache.camel.main.download.DownloadModelineParser;
 import org.apache.camel.main.download.ExportPropertiesParser;
 import org.apache.camel.main.download.ExportTypeConverter;
 import org.apache.camel.main.download.JavaKnownImportsDownloader;
@@ -641,6 +641,7 @@ public class KameletMain extends MainCommandLineSupport {
                     ff, answer, Optional.ofNullable(camelVersion).map(Object::toString).orElse(null), export);
             answer.getCamelContextExtension().addContextPlugin(PeriodTaskResolver.class, ptr);
 
+            answer.getCamelContextExtension().registerEndpointCallback(new DownloadEndpointStrategy(answer, silent));
             answer.getCamelContextExtension().addContextPlugin(ComponentResolver.class,
                     new DependencyDownloaderComponentResolver(answer, stubPattern, silent, transform));
             answer.getCamelContextExtension().addContextPlugin(DataFormatResolver.class,
@@ -667,9 +668,6 @@ public class KameletMain extends MainCommandLineSupport {
             } else {
                 answer.addService(new DependencyDownloaderKamelet(answer));
             }
-            answer.getCamelContextExtension().getRegistry().bind(DownloadModelineParser.class.getSimpleName(),
-                    new DownloadModelineParser(answer));
-
             answer.addService(new DependencyDownloaderPropertiesComponent(answer, knownDeps, silent));
 
             // reloader

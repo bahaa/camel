@@ -3380,15 +3380,22 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
     }
 
     @YamlType(
+            nodes = {
+                    "custom-transformer",
+                    "customTransformer"
+            },
             types = org.apache.camel.model.transformer.CustomTransformerDefinition.class,
             order = org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1,
+            displayName = "Custom Transformer",
+            description = "To use a custom transformer on a route level.",
+            deprecated = false,
             properties = {
-                    @YamlProperty(name = "className", type = "string"),
-                    @YamlProperty(name = "fromType", type = "string"),
-                    @YamlProperty(name = "name", type = "string"),
-                    @YamlProperty(name = "ref", type = "string"),
-                    @YamlProperty(name = "scheme", type = "string"),
-                    @YamlProperty(name = "toType", type = "string")
+                    @YamlProperty(name = "className", type = "string", description = "Set a class name of the Transformer", displayName = "Class Name"),
+                    @YamlProperty(name = "fromType", type = "string", description = "Set the 'from' data type name. If you specify 'xml:XYZ', the transformer will be picked up if source type is 'xml:XYZ'. If you specify just 'xml', the transformer matches with all of 'xml' source type like 'xml:ABC' or 'xml:DEF'.", displayName = "From Type"),
+                    @YamlProperty(name = "name", type = "string", description = "Set the transformer name under which the transformer gets referenced when specifying the input/output data type on routes. If you specify a transformer name that matches a data type scheme like 'csv' the transformer will be picked up for all of 'csv:' from/to Java transformation. Note that the scheme matching is performed only when no exactly matched transformer exists.", displayName = "Name"),
+                    @YamlProperty(name = "ref", type = "string", description = "Set a bean reference of the Transformer", displayName = "Ref"),
+                    @YamlProperty(name = "scheme", type = "string", description = "Set a scheme name supported by the transformer. If you specify 'csv', the transformer will be picked up for all of 'csv' from/to Java transformation. Note that the scheme matching is performed only when no exactly matched transformer exists.", displayName = "Scheme"),
+                    @YamlProperty(name = "toType", type = "string", description = "Set the 'to' data type name. If you specify 'json:XYZ', the transformer will be picked up if destination type is 'json:XYZ'. If you specify just 'json', the transformer matches with all of 'json' destination type like 'json:ABC' or 'json:DEF'.", displayName = "To Type")
             }
     )
     public static class CustomTransformerDefinitionDeserializer extends YamlDeserializerBase<CustomTransformerDefinition> {
@@ -3445,12 +3452,19 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
     }
 
     @YamlType(
+            nodes = {
+                    "custom-validator",
+                    "customValidator"
+            },
             types = org.apache.camel.model.validator.CustomValidatorDefinition.class,
             order = org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1,
+            displayName = "Custom Validator",
+            description = "To use a custom validator on the route level.",
+            deprecated = false,
             properties = {
-                    @YamlProperty(name = "className", type = "string"),
-                    @YamlProperty(name = "ref", type = "string"),
-                    @YamlProperty(name = "type", type = "string")
+                    @YamlProperty(name = "className", type = "string", description = "Set a class name of the Validator", displayName = "Class Name"),
+                    @YamlProperty(name = "ref", type = "string", description = "Set a bean reference of the Validator", displayName = "Ref"),
+                    @YamlProperty(name = "type", type = "string", description = "Set the data type name. If you specify 'xml:XYZ', the validator will be picked up if message type is 'xml:XYZ'. If you specify just 'xml', the validator matches with all of 'xml' message type like 'xml:ABC' or 'xml:DEF'.", displayName = "Type")
             }
     )
     public static class CustomValidatorDefinitionDeserializer extends YamlDeserializerBase<CustomValidatorDefinition> {
@@ -3525,8 +3539,15 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
     }
 
     @YamlType(
+            nodes = {
+                    "data-format-transformer",
+                    "dataFormatTransformer"
+            },
             types = org.apache.camel.model.transformer.DataFormatTransformerDefinition.class,
             order = org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1,
+            displayName = "Data Format Transformer",
+            description = "Represents a org.apache.camel.processor.transformer.DataFormatTransformer which leverages org.apache.camel.spi.DataFormat to perform transformation. One of the DataFormat 'ref' or DataFormat 'type' needs to be specified.",
+            deprecated = false,
             properties = {
                     @YamlProperty(name = "asn1", type = "object:org.apache.camel.model.dataformat.ASN1DataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "avro", type = "object:org.apache.camel.model.dataformat.AvroDataFormat", oneOf = "dataFormatType"),
@@ -3541,7 +3562,7 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     @YamlProperty(name = "fhirJson", type = "object:org.apache.camel.model.dataformat.FhirJsonDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "fhirXml", type = "object:org.apache.camel.model.dataformat.FhirXmlDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "flatpack", type = "object:org.apache.camel.model.dataformat.FlatpackDataFormat", oneOf = "dataFormatType"),
-                    @YamlProperty(name = "fromType", type = "string"),
+                    @YamlProperty(name = "fromType", type = "string", description = "Set the 'from' data type name. If you specify 'xml:XYZ', the transformer will be picked up if source type is 'xml:XYZ'. If you specify just 'xml', the transformer matches with all of 'xml' source type like 'xml:ABC' or 'xml:DEF'.", displayName = "From Type"),
                     @YamlProperty(name = "fury", type = "object:org.apache.camel.model.dataformat.FuryDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "grok", type = "object:org.apache.camel.model.dataformat.GrokDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "gzipDeflater", type = "object:org.apache.camel.model.dataformat.GzipDeflaterDataFormat", oneOf = "dataFormatType"),
@@ -3553,12 +3574,12 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     @YamlProperty(name = "jsonApi", type = "object:org.apache.camel.model.dataformat.JsonApiDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "lzf", type = "object:org.apache.camel.model.dataformat.LZFDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "mimeMultipart", type = "object:org.apache.camel.model.dataformat.MimeMultipartDataFormat", oneOf = "dataFormatType"),
-                    @YamlProperty(name = "name", type = "string"),
+                    @YamlProperty(name = "name", type = "string", description = "Set the transformer name under which the transformer gets referenced when specifying the input/output data type on routes. If you specify a transformer name that matches a data type scheme like 'csv' the transformer will be picked up for all of 'csv:' from/to Java transformation. Note that the scheme matching is performed only when no exactly matched transformer exists.", displayName = "Name"),
                     @YamlProperty(name = "parquetAvro", type = "object:org.apache.camel.model.dataformat.ParquetAvroDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "pgp", type = "object:org.apache.camel.model.dataformat.PGPDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "protobuf", type = "object:org.apache.camel.model.dataformat.ProtobufDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "rss", type = "object:org.apache.camel.model.dataformat.RssDataFormat", oneOf = "dataFormatType"),
-                    @YamlProperty(name = "scheme", type = "string"),
+                    @YamlProperty(name = "scheme", type = "string", description = "Set a scheme name supported by the transformer. If you specify 'csv', the transformer will be picked up for all of 'csv' from/to Java transformation. Note that the scheme matching is performed only when no exactly matched transformer exists.", displayName = "Scheme"),
                     @YamlProperty(name = "smooks", type = "object:org.apache.camel.model.dataformat.SmooksDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "soap", type = "object:org.apache.camel.model.dataformat.SoapDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "swiftMt", type = "object:org.apache.camel.model.dataformat.SwiftMtDataFormat", oneOf = "dataFormatType"),
@@ -3567,7 +3588,7 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     @YamlProperty(name = "tarFile", type = "object:org.apache.camel.model.dataformat.TarFileDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "thrift", type = "object:org.apache.camel.model.dataformat.ThriftDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "tidyMarkup", type = "object:org.apache.camel.model.dataformat.TidyMarkupDataFormat", oneOf = "dataFormatType"),
-                    @YamlProperty(name = "toType", type = "string"),
+                    @YamlProperty(name = "toType", type = "string", description = "Set the 'to' data type name. If you specify 'json:XYZ', the transformer will be picked up if destination type is 'json:XYZ'. If you specify just 'json', the transformer matches with all of 'json' destination type like 'json:ABC' or 'json:DEF'.", displayName = "To Type"),
                     @YamlProperty(name = "univocityCsv", type = "object:org.apache.camel.model.dataformat.UniVocityCsvDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "univocityFixed", type = "object:org.apache.camel.model.dataformat.UniVocityFixedDataFormat", oneOf = "dataFormatType"),
                     @YamlProperty(name = "univocityTsv", type = "object:org.apache.camel.model.dataformat.UniVocityTsvDataFormat", oneOf = "dataFormatType"),
@@ -5186,15 +5207,22 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
     }
 
     @YamlType(
+            nodes = {
+                    "endpoint-transformer",
+                    "endpointTransformer"
+            },
             types = org.apache.camel.model.transformer.EndpointTransformerDefinition.class,
             order = org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1,
+            displayName = "Endpoint Transformer",
+            description = "To use a Camel endpoint to perform transformation on the route level.",
+            deprecated = false,
             properties = {
-                    @YamlProperty(name = "fromType", type = "string"),
-                    @YamlProperty(name = "name", type = "string"),
-                    @YamlProperty(name = "ref", type = "string"),
-                    @YamlProperty(name = "scheme", type = "string"),
-                    @YamlProperty(name = "toType", type = "string"),
-                    @YamlProperty(name = "uri", type = "string")
+                    @YamlProperty(name = "fromType", type = "string", description = "Set the 'from' data type name. If you specify 'xml:XYZ', the transformer will be picked up if source type is 'xml:XYZ'. If you specify just 'xml', the transformer matches with all of 'xml' source type like 'xml:ABC' or 'xml:DEF'.", displayName = "From Type"),
+                    @YamlProperty(name = "name", type = "string", description = "Set the transformer name under which the transformer gets referenced when specifying the input/output data type on routes. If you specify a transformer name that matches a data type scheme like 'csv' the transformer will be picked up for all of 'csv:' from/to Java transformation. Note that the scheme matching is performed only when no exactly matched transformer exists.", displayName = "Name"),
+                    @YamlProperty(name = "ref", type = "string", description = "Set the reference of the Endpoint.", displayName = "Ref"),
+                    @YamlProperty(name = "scheme", type = "string", description = "Set a scheme name supported by the transformer. If you specify 'csv', the transformer will be picked up for all of 'csv' from/to Java transformation. Note that the scheme matching is performed only when no exactly matched transformer exists.", displayName = "Scheme"),
+                    @YamlProperty(name = "toType", type = "string", description = "Set the 'to' data type name. If you specify 'json:XYZ', the transformer will be picked up if destination type is 'json:XYZ'. If you specify just 'json', the transformer matches with all of 'json' destination type like 'json:ABC' or 'json:DEF'.", displayName = "To Type"),
+                    @YamlProperty(name = "uri", type = "string", description = "Set the URI of the Endpoint.", displayName = "Uri")
             }
     )
     public static class EndpointTransformerDefinitionDeserializer extends YamlDeserializerBase<EndpointTransformerDefinition> {
@@ -5251,12 +5279,19 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
     }
 
     @YamlType(
+            nodes = {
+                    "endpoint-validator",
+                    "endpointValidator"
+            },
             types = org.apache.camel.model.validator.EndpointValidatorDefinition.class,
             order = org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1,
+            displayName = "Endpoint Validator",
+            description = "To use a Camel endpoint to perform validation on the route level.",
+            deprecated = false,
             properties = {
-                    @YamlProperty(name = "ref", type = "string"),
-                    @YamlProperty(name = "type", type = "string"),
-                    @YamlProperty(name = "uri", type = "string")
+                    @YamlProperty(name = "ref", type = "string", description = "Set the reference of the Endpoint.", displayName = "Ref"),
+                    @YamlProperty(name = "type", type = "string", description = "Set the data type name. If you specify 'xml:XYZ', the validator will be picked up if message type is 'xml:XYZ'. If you specify just 'xml', the validator matches with all of 'xml' message type like 'xml:ABC' or 'xml:DEF'.", displayName = "Type"),
+                    @YamlProperty(name = "uri", type = "string", description = "Set the URI of the Endpoint.", displayName = "Uri")
             }
     )
     public static class EndpointValidatorDefinitionDeserializer extends YamlDeserializerBase<EndpointValidatorDefinition> {
@@ -5666,19 +5701,18 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
             deprecated = false,
             properties = {
                     @YamlProperty(name = "bulkheadEnabled", type = "boolean", description = "Whether bulkhead is enabled or not on the circuit breaker. Default is false.", displayName = "Bulkhead Enabled"),
-                    @YamlProperty(name = "bulkheadExecutorService", type = "string", description = "References to a custom thread pool to use when bulkhead is enabled.", displayName = "Bulkhead Executor Service"),
                     @YamlProperty(name = "bulkheadMaxConcurrentCalls", type = "number", defaultValue = "10", description = "Configures the max amount of concurrent calls the bulkhead will support.", displayName = "Bulkhead Max Concurrent Calls"),
                     @YamlProperty(name = "bulkheadWaitingTaskQueue", type = "number", defaultValue = "10", description = "Configures the task queue size for holding waiting tasks to be processed by the bulkhead.", displayName = "Bulkhead Waiting Task Queue"),
-                    @YamlProperty(name = "circuitBreaker", type = "string", description = "Refers to an existing io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker instance to lookup and use from the registry. When using this, then any other circuit breaker options are not in use.", displayName = "Circuit Breaker"),
                     @YamlProperty(name = "delay", type = "string", defaultValue = "5000", description = "Control how long the circuit breaker stays open. The default is 5 seconds.", displayName = "Delay"),
                     @YamlProperty(name = "failureRatio", type = "number", defaultValue = "50", description = "Configures the failure rate threshold in percentage. If the failure rate is equal or greater than the threshold the CircuitBreaker transitions to open and starts short-circuiting calls. The threshold must be greater than 0 and not greater than 100. Default value is 50 percentage.", displayName = "Failure Ratio"),
                     @YamlProperty(name = "id", type = "string", description = "The id of this node", displayName = "Id"),
                     @YamlProperty(name = "requestVolumeThreshold", type = "number", defaultValue = "20", description = "Controls the size of the rolling window used when the circuit breaker is closed", displayName = "Request Volume Threshold"),
                     @YamlProperty(name = "successThreshold", type = "number", defaultValue = "1", description = "Controls the number of trial calls which are allowed when the circuit breaker is half-open", displayName = "Success Threshold"),
+                    @YamlProperty(name = "threadOffloadExecutorService", type = "string", description = "References a custom thread pool to use when offloading a guarded action to another thread.", displayName = "Thread Offload Executor Service"),
                     @YamlProperty(name = "timeoutDuration", type = "string", defaultValue = "1000", description = "Configures the thread execution timeout. Default value is 1 second.", displayName = "Timeout Duration"),
                     @YamlProperty(name = "timeoutEnabled", type = "boolean", description = "Whether timeout is enabled or not on the circuit breaker. Default is false.", displayName = "Timeout Enabled"),
                     @YamlProperty(name = "timeoutPoolSize", type = "number", defaultValue = "10", description = "Configures the pool size of the thread pool when timeout is enabled. Default value is 10.", displayName = "Timeout Pool Size"),
-                    @YamlProperty(name = "timeoutScheduledExecutorService", type = "string", description = "References to a custom thread pool to use when timeout is enabled", displayName = "Timeout Scheduled Executor Service")
+                    @YamlProperty(name = "typedGuard", type = "string", description = "Refers to an existing io.smallrye.faulttolerance.api.TypedGuard instance to lookup and use from the registry. When using this, then any other TypedGuard circuit breaker options are not in use.", displayName = "Typed Guard")
             }
     )
     public static class FaultToleranceConfigurationDefinitionDeserializer extends YamlDeserializerBase<FaultToleranceConfigurationDefinition> {
@@ -5701,11 +5735,6 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     target.setBulkheadEnabled(val);
                     break;
                 }
-                case "bulkheadExecutorService": {
-                    String val = asText(node);
-                    target.setBulkheadExecutorService(val);
-                    break;
-                }
                 case "bulkheadMaxConcurrentCalls": {
                     String val = asText(node);
                     target.setBulkheadMaxConcurrentCalls(val);
@@ -5714,11 +5743,6 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                 case "bulkheadWaitingTaskQueue": {
                     String val = asText(node);
                     target.setBulkheadWaitingTaskQueue(val);
-                    break;
-                }
-                case "circuitBreaker": {
-                    String val = asText(node);
-                    target.setCircuitBreaker(val);
                     break;
                 }
                 case "delay": {
@@ -5746,6 +5770,11 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     target.setSuccessThreshold(val);
                     break;
                 }
+                case "threadOffloadExecutorService": {
+                    String val = asText(node);
+                    target.setThreadOffloadExecutorService(val);
+                    break;
+                }
                 case "timeoutDuration": {
                     String val = asText(node);
                     target.setTimeoutDuration(val);
@@ -5761,9 +5790,9 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     target.setTimeoutPoolSize(val);
                     break;
                 }
-                case "timeoutScheduledExecutorService": {
+                case "typedGuard": {
                     String val = asText(node);
-                    target.setTimeoutScheduledExecutorService(val);
+                    target.setTypedGuard(val);
                     break;
                 }
                 default: {
@@ -8309,7 +8338,7 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     @YamlProperty(name = "id", type = "string", description = "The id of this node", displayName = "Id"),
                     @YamlProperty(name = "include", type = "string", description = "If you want to marshal a pojo to JSON, and the pojo has some fields with null values. And you want to skip these null values, you can set this option to NON_NULL", displayName = "Include"),
                     @YamlProperty(name = "jsonView", type = "string", description = "When marshalling a POJO to JSON you might want to exclude certain fields from the JSON output. With Jackson you can use JSON views to accomplish this. This option is to refer to the class which has JsonView annotations", displayName = "Json View"),
-                    @YamlProperty(name = "library", type = "enum:Fastjson,Gson,Jackson,Johnzon,Jsonb", defaultValue = "Jackson", description = "Which json library to use.", displayName = "Library"),
+                    @YamlProperty(name = "library", type = "enum:Fastjson,Gson,Jackson,Jsonb", defaultValue = "Jackson", description = "Which json library to use.", displayName = "Library"),
                     @YamlProperty(name = "moduleClassNames", type = "string", description = "To use custom Jackson modules com.fasterxml.jackson.databind.Module specified as a String with FQN class names. Multiple classes can be separated by comma.", displayName = "Module Class Names"),
                     @YamlProperty(name = "moduleRefs", type = "string", description = "To use custom Jackson modules referred from the Camel registry. Multiple modules can be separated by comma.", displayName = "Module Refs"),
                     @YamlProperty(name = "namingStrategy", type = "string", description = "If set then Jackson will use the the defined Property Naming Strategy.Possible values are: LOWER_CAMEL_CASE, LOWER_DOT_CASE, LOWER_CASE, KEBAB_CASE, SNAKE_CASE and UPPER_CAMEL_CASE", displayName = "Naming Strategy"),
@@ -9436,15 +9465,22 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
     }
 
     @YamlType(
+            nodes = {
+                    "load-transformer",
+                    "loadTransformer"
+            },
             types = org.apache.camel.model.transformer.LoadTransformerDefinition.class,
             order = org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1,
+            displayName = "Load Transformer",
+            description = "To load custom transformers from classpath scanning to be used for route level transformations.",
+            deprecated = false,
             properties = {
-                    @YamlProperty(name = "defaults", type = "boolean"),
-                    @YamlProperty(name = "fromType", type = "string"),
-                    @YamlProperty(name = "name", type = "string"),
-                    @YamlProperty(name = "packageScan", type = "string"),
-                    @YamlProperty(name = "scheme", type = "string"),
-                    @YamlProperty(name = "toType", type = "string")
+                    @YamlProperty(name = "defaults", type = "boolean", description = "Enable loading of default transformers.", displayName = "Defaults"),
+                    @YamlProperty(name = "fromType", type = "string", description = "Set the 'from' data type name. If you specify 'xml:XYZ', the transformer will be picked up if source type is 'xml:XYZ'. If you specify just 'xml', the transformer matches with all of 'xml' source type like 'xml:ABC' or 'xml:DEF'.", displayName = "From Type"),
+                    @YamlProperty(name = "name", type = "string", description = "Set the transformer name under which the transformer gets referenced when specifying the input/output data type on routes. If you specify a transformer name that matches a data type scheme like 'csv' the transformer will be picked up for all of 'csv:' from/to Java transformation. Note that the scheme matching is performed only when no exactly matched transformer exists.", displayName = "Name"),
+                    @YamlProperty(name = "packageScan", type = "string", description = "Set the classpath location to scan for annotated transformers.", displayName = "Package Scan"),
+                    @YamlProperty(name = "scheme", type = "string", description = "Set a scheme name supported by the transformer. If you specify 'csv', the transformer will be picked up for all of 'csv' from/to Java transformation. Note that the scheme matching is performed only when no exactly matched transformer exists.", displayName = "Scheme"),
+                    @YamlProperty(name = "toType", type = "string", description = "Set the 'to' data type name. If you specify 'json:XYZ', the transformer will be picked up if destination type is 'json:XYZ'. If you specify just 'json', the transformer matches with all of 'json' destination type like 'json:ABC' or 'json:DEF'.", displayName = "To Type")
             }
     )
     public static class LoadTransformerDefinitionDeserializer extends YamlDeserializerBase<LoadTransformerDefinition> {
@@ -10986,6 +11022,7 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
             description = "To use OpenApi as contract-first with Camel Rest DSL.",
             deprecated = false,
             properties = {
+                    @YamlProperty(name = "apiContextPath", type = "string", description = "Whether to enable api-doc that exposes the OpenAPI specification file as a REST endpoint. This allows clients to obtain the specification from the running Camel application.", displayName = "Api Context Path"),
                     @YamlProperty(name = "description", type = "string", description = "Sets the description of this node", displayName = "Description"),
                     @YamlProperty(name = "disabled", type = "boolean", description = "Whether to disable all the REST services from the OpenAPI contract from the route during build time. Once an REST service has been disabled then it cannot be enabled later at runtime.", displayName = "Disabled"),
                     @YamlProperty(name = "id", type = "string", description = "Sets the id of this node", displayName = "Id"),
@@ -11010,6 +11047,11 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                 String propertyName, Node node) {
             propertyKey = org.apache.camel.util.StringHelper.dashToCamelCase(propertyKey);
             switch(propertyKey) {
+                case "apiContextPath": {
+                    String val = asText(node);
+                    target.setApiContextPath(val);
+                    break;
+                }
                 case "disabled": {
                     String val = asText(node);
                     target.setDisabled(val);
@@ -12440,11 +12482,18 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
     }
 
     @YamlType(
+            nodes = {
+                    "predicate-validator",
+                    "predicateValidator"
+            },
             types = org.apache.camel.model.validator.PredicateValidatorDefinition.class,
             order = org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1,
+            displayName = "Predicate Validator",
+            description = "To use a predicate to perform validation on the route level.",
+            deprecated = false,
             properties = {
-                    @YamlProperty(name = "expression", type = "object:org.apache.camel.model.language.ExpressionDefinition", oneOf = "expression"),
-                    @YamlProperty(name = "type", type = "string")
+                    @YamlProperty(name = "expression", type = "object:org.apache.camel.model.language.ExpressionDefinition", displayName = "Expression", oneOf = "expression"),
+                    @YamlProperty(name = "type", type = "string", description = "Set the data type name. If you specify 'xml:XYZ', the validator will be picked up if message type is 'xml:XYZ'. If you specify just 'xml', the validator matches with all of 'xml' message type like 'xml:ABC' or 'xml:DEF'.", displayName = "Type")
             }
     )
     public static class PredicateValidatorDefinitionDeserializer extends YamlDeserializerBase<PredicateValidatorDefinition> {
@@ -14927,7 +14976,7 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
             properties = {
                     @YamlProperty(name = "apiKey", type = "object:org.apache.camel.model.rest.ApiKeyDefinition"),
                     @YamlProperty(name = "basicAuth", type = "object:org.apache.camel.model.rest.BasicAuthDefinition"),
-                    @YamlProperty(name = "bearer", type = "object:org.apache.camel.model.rest.BearerTokenDefinition"),
+                    @YamlProperty(name = "bearerToken", type = "object:org.apache.camel.model.rest.BearerTokenDefinition"),
                     @YamlProperty(name = "mutualTLS", type = "object:org.apache.camel.model.rest.MutualTLSDefinition"),
                     @YamlProperty(name = "oauth2", type = "object:org.apache.camel.model.rest.OAuth2Definition"),
                     @YamlProperty(name = "openIdConnect", type = "object:org.apache.camel.model.rest.OpenIdConnectDefinition")
@@ -14973,7 +15022,7 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     target.setSecurityDefinitions(existing);
                     break;
                 }
-                case "bearer": {
+                case "bearerToken": {
                     org.apache.camel.model.rest.BearerTokenDefinition val = asType(node, org.apache.camel.model.rest.BearerTokenDefinition.class);
                     java.util.List<org.apache.camel.model.rest.RestSecurityDefinition> existing = target.getSecurityDefinitions();
                     if (existing == null) {
@@ -15084,7 +15133,7 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     @YamlProperty(name = "disabled", type = "boolean", description = "Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled later at runtime.", displayName = "Disabled"),
                     @YamlProperty(name = "id", type = "string", description = "Sets the id of this node", displayName = "Id"),
                     @YamlProperty(name = "intermittent", type = "boolean", description = "Sets whether the offsets will be intermittently present or whether they must be present in every exchange", displayName = "Intermittent"),
-                    @YamlProperty(name = "loggingLevel", type = "enum:TRACE,DEBUG,INFO,WARN,ERROR,OFF", defaultValue = "ERROR", displayName = "Logging Level"),
+                    @YamlProperty(name = "loggingLevel", type = "enum:TRACE,DEBUG,INFO,WARN,ERROR,OFF", defaultValue = "ERROR", description = "The logging level to use in case of failures.", displayName = "Logging Level"),
                     @YamlProperty(name = "resumeStrategy", type = "string", required = true, description = "Sets the resume strategy to use", displayName = "Resume Strategy")
             }
     )
@@ -19025,7 +19074,7 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     @YamlProperty(name = "disabled", type = "boolean", description = "Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled later at runtime.", displayName = "Disabled"),
                     @YamlProperty(name = "id", type = "string", description = "Sets the id of this node", displayName = "Id"),
                     @YamlProperty(name = "langChain4jCharacterTokenizer", type = "object:org.apache.camel.model.tokenizer.LangChain4jCharacterTokenizerDefinition", oneOf = "tokenizerImplementation"),
-                    @YamlProperty(name = "langChain4jLineTokenizer", type = "object:org.apache.camel.model.tokenizer.LangChain4jTokenizerDefinition", oneOf = "tokenizerImplementation"),
+                    @YamlProperty(name = "langChain4jLineTokenizer", type = "object:org.apache.camel.model.tokenizer.LangChain4jLineTokenizerDefinition", oneOf = "tokenizerImplementation"),
                     @YamlProperty(name = "langChain4jParagraphTokenizer", type = "object:org.apache.camel.model.tokenizer.LangChain4jParagraphTokenizerDefinition", oneOf = "tokenizerImplementation"),
                     @YamlProperty(name = "langChain4jSentenceTokenizer", type = "object:org.apache.camel.model.tokenizer.LangChain4jSentenceTokenizerDefinition", oneOf = "tokenizerImplementation"),
                     @YamlProperty(name = "langChain4jWordTokenizer", type = "object:org.apache.camel.model.tokenizer.LangChain4jWordTokenizerDefinition", oneOf = "tokenizerImplementation")
@@ -19062,7 +19111,7 @@ public final class ModelDeserializers extends YamlDeserializerSupport {
                     break;
                 }
                 case "langChain4jLineTokenizer": {
-                    org.apache.camel.model.tokenizer.LangChain4jTokenizerDefinition val = asType(node, org.apache.camel.model.tokenizer.LangChain4jTokenizerDefinition.class);
+                    org.apache.camel.model.tokenizer.LangChain4jLineTokenizerDefinition val = asType(node, org.apache.camel.model.tokenizer.LangChain4jLineTokenizerDefinition.class);
                     target.setTokenizerImplementation(val);
                     break;
                 }

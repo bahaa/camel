@@ -1256,6 +1256,16 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
     boolean isBacklogTracingTemplates();
 
     /**
+     * Whether backlog tracing should trace details from rest-dsl.
+     */
+    void setBacklogTracingRests(boolean backlogTracingRests);
+
+    /**
+     * Whether backlog tracing should trace details from rest-dsl.
+     */
+    boolean isBacklogTracingRests();
+
+    /**
      * Gets the current {@link UuidGenerator}
      *
      * @return the uuidGenerator
@@ -1334,17 +1344,13 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
     void setSourceLocationEnabled(Boolean sourceLocationEnabled);
 
     /**
-     * Whether camel-k style modeline is also enabled when not using camel-k. Enabling this allows to use a camel-k like
-     * experience by being able to configure various settings using modeline directly in your route source code.
+     * Whether to support JBang style //DEPS to specify additional dependencies when running Camel JBang
      */
-    @Deprecated(since = "4.10")
     Boolean isModeline();
 
     /**
-     * Whether camel-k style modeline is also enabled when not using camel-k. Enabling this allows to use a camel-k like
-     * experience by being able to configure various settings using modeline directly in your route source code.
+     * Whether to support JBang style //DEPS to specify additional dependencies when running Camel JBang
      */
-    @Deprecated(since = "4.10")
     void setModeline(Boolean modeline);
 
     /**
@@ -1462,6 +1468,16 @@ public interface CamelContext extends CamelContextLifecycle, RuntimeConfiguratio
      * verbosity of tracing when using many route templates, and allow to focus on tracing your own Camel routes only.
      */
     boolean isTracingTemplates();
+
+    /**
+     * Whether tracing should trace details from rest-dsl.
+     */
+    void setTracingRests(boolean tracingRests);
+
+    /**
+     * Whether tracing should trace details from rest-dsl.
+     */
+    boolean isTracingRests();
 
     /**
      * If dumping is enabled then Camel will during startup dump all loaded routes (incl rests and route templates)
