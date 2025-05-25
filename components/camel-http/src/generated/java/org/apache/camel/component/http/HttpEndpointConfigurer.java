@@ -31,8 +31,6 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "authHost": target.setAuthHost(property(camelContext, java.lang.String.class, value)); return true;
         case "authmethod":
         case "authMethod": target.setAuthMethod(property(camelContext, java.lang.String.class, value)); return true;
-        case "authmethodpriority":
-        case "authMethodPriority": target.setAuthMethodPriority(property(camelContext, java.lang.String.class, value)); return true;
         case "authpassword":
         case "authPassword": target.setAuthPassword(property(camelContext, java.lang.String.class, value)); return true;
         case "authusername":
@@ -105,6 +103,8 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "oauth2ClientId": target.setOauth2ClientId(property(camelContext, java.lang.String.class, value)); return true;
         case "oauth2clientsecret":
         case "oauth2ClientSecret": target.setOauth2ClientSecret(property(camelContext, java.lang.String.class, value)); return true;
+        case "oauth2resourceindicator":
+        case "oauth2ResourceIndicator": target.setOauth2ResourceIndicator(property(camelContext, java.lang.String.class, value)); return true;
         case "oauth2scope":
         case "oauth2Scope": target.setOauth2Scope(property(camelContext, java.lang.String.class, value)); return true;
         case "oauth2tokenendpoint":
@@ -162,8 +162,6 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "authHost": return java.lang.String.class;
         case "authmethod":
         case "authMethod": return java.lang.String.class;
-        case "authmethodpriority":
-        case "authMethodPriority": return java.lang.String.class;
         case "authpassword":
         case "authPassword": return java.lang.String.class;
         case "authusername":
@@ -236,6 +234,8 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "oauth2ClientId": return java.lang.String.class;
         case "oauth2clientsecret":
         case "oauth2ClientSecret": return java.lang.String.class;
+        case "oauth2resourceindicator":
+        case "oauth2ResourceIndicator": return java.lang.String.class;
         case "oauth2scope":
         case "oauth2Scope": return java.lang.String.class;
         case "oauth2tokenendpoint":
@@ -294,8 +294,6 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "authHost": return target.getAuthHost();
         case "authmethod":
         case "authMethod": return target.getAuthMethod();
-        case "authmethodpriority":
-        case "authMethodPriority": return target.getAuthMethodPriority();
         case "authpassword":
         case "authPassword": return target.getAuthPassword();
         case "authusername":
@@ -368,6 +366,8 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "oauth2ClientId": return target.getOauth2ClientId();
         case "oauth2clientsecret":
         case "oauth2ClientSecret": return target.getOauth2ClientSecret();
+        case "oauth2resourceindicator":
+        case "oauth2ResourceIndicator": return target.getOauth2ResourceIndicator();
         case "oauth2scope":
         case "oauth2Scope": return target.getOauth2Scope();
         case "oauth2tokenendpoint":

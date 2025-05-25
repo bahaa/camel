@@ -115,6 +115,14 @@ public abstract class ExportBaseCommand extends CamelCommand {
                         description = "The integration name. Use this when the name should not get derived otherwise.")
     protected String name;
 
+    @CommandLine.Option(names = { "--port" },
+                        description = "Embeds a local HTTP server on this port", defaultValue = "8080")
+    int port;
+
+    @CommandLine.Option(names = { "--management-port" },
+                        description = "To use a dedicated port for HTTP management")
+    int managementPort = -1;
+
     @CommandLine.Option(names = { "--gav" }, description = "The Maven group:artifact:version")
     protected String gav;
 
@@ -335,6 +343,9 @@ public abstract class ExportBaseCommand extends CamelCommand {
         // need to declare the profile to use for run
         run.dependencies = dependencies;
         run.files = files;
+        run.name = name;
+        run.port = port;
+        run.managementPort = managementPort;
         run.excludes = excludes;
         run.openapi = openapi;
         run.download = download;
@@ -944,7 +955,19 @@ public abstract class ExportBaseCommand extends CamelCommand {
     protected static int httpServerPort(Path settings) {
         try {
             List<String> lines = RuntimeUtil.loadPropertiesLines(settings);
-            String port = lines.stream().filter(l -> l.startsWith("camel.jbang.platform-http.port="))
+            String port = lines.stream().filter(l -> l.startsWith("camel.server.port="))
+                    .map(s -> StringHelper.after(s, "=")).findFirst().orElse("-1");
+            return Integer.parseInt(port);
+        } catch (Exception e) {
+            // ignore
+        }
+        return -1;
+    }
+
+    protected static int httpManagementPort(Path settings) {
+        try {
+            List<String> lines = RuntimeUtil.loadPropertiesLines(settings);
+            String port = lines.stream().filter(l -> l.startsWith("camel.management.port="))
                     .map(s -> StringHelper.after(s, "=")).findFirst().orElse("-1");
             return Integer.parseInt(port);
         } catch (Exception e) {

@@ -398,7 +398,7 @@ public interface HttpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Proxy authentication domain to use with NTML.
+         * Proxy authentication domain to use with NTLM.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -441,7 +441,7 @@ public interface HttpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Proxy authentication domain (workstation name) to use with NTML.
+         * Proxy authentication domain (workstation name) to use with NTLM.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -582,7 +582,7 @@ public interface HttpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Authentication domain to use with NTML.
+         * Authentication domain to use with NTLM.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -629,7 +629,7 @@ public interface HttpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Authentication host to use with NTML.
+         * Authentication host to use with NTLM.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -645,7 +645,7 @@ public interface HttpEndpointBuilderFactory {
         }
         /**
          * Authentication methods allowed to use as a comma separated list of
-         * values Basic, Bearer, Digest or NTLM. (NTLM is deprecated).
+         * values Basic, Bearer, or NTLM. (NTLM is deprecated).
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -656,21 +656,6 @@ public interface HttpEndpointBuilderFactory {
          */
         default HttpEndpointBuilder authMethod(String authMethod) {
             doSetProperty("authMethod", authMethod);
-            return this;
-        }
-        /**
-         * Which authentication method to prioritize to use, either as Basic,
-         * Bearer, Digest or NTLM. (NTLM is deprecated).
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: security
-         * 
-         * @param authMethodPriority the value to set
-         * @return the dsl builder
-         */
-        default HttpEndpointBuilder authMethodPriority(String authMethodPriority) {
-            doSetProperty("authMethodPriority", authMethodPriority);
             return this;
         }
         /**
@@ -836,6 +821,20 @@ public interface HttpEndpointBuilderFactory {
             return this;
         }
         /**
+         * OAuth2 Token endpoint.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauth2ResourceIndicator the value to set
+         * @return the dsl builder
+         */
+        default HttpEndpointBuilder oauth2ResourceIndicator(String oauth2ResourceIndicator) {
+            doSetProperty("oauth2ResourceIndicator", oauth2ResourceIndicator);
+            return this;
+        }
+        /**
          * OAuth2 scope.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -850,7 +849,7 @@ public interface HttpEndpointBuilderFactory {
             return this;
         }
         /**
-         * OAuth2 Token endpoint.
+         * OAuth2 Resource Indicator.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 

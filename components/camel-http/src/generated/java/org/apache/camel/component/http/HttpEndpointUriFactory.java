@@ -29,7 +29,6 @@ public class HttpEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("authDomain");
         props.add("authHost");
         props.add("authMethod");
-        props.add("authMethodPriority");
         props.add("authPassword");
         props.add("authUsername");
         props.add("authenticationPreemptive");
@@ -67,6 +66,7 @@ public class HttpEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("oauth2CachedTokensExpirationMarginSeconds");
         props.add("oauth2ClientId");
         props.add("oauth2ClientSecret");
+        props.add("oauth2ResourceIndicator");
         props.add("oauth2Scope");
         props.add("oauth2TokenEndpoint");
         props.add("okStatusCodeRange");

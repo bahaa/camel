@@ -110,6 +110,16 @@ public interface DependencyDownloader extends CamelContextAware, StaticService {
     /**
      * Downloads the dependency incl transitive dependencies
      *
+     * @param parentGav  maven parent GAV
+     * @param groupId    maven group id
+     * @param artifactId maven artifact id
+     * @param version    maven version
+     */
+    void downloadDependencyWithParent(String parentGav, String groupId, String artifactId, String version);
+
+    /**
+     * Downloads the dependency incl transitive dependencies
+     *
      * @param groupId    maven group id
      * @param artifactId maven artifact id
      * @param version    maven version
@@ -154,6 +164,17 @@ public interface DependencyDownloader extends CamelContextAware, StaticService {
      * @return            the artifact, or null if none found
      */
     MavenArtifact downloadArtifact(String groupId, String artifactId, String version);
+
+    /**
+     * Downloads maven artifact (can also include transitive dependencies).
+     *
+     * @param  groupId      maven group id
+     * @param  artifactId   maven artifact id
+     * @param  version      maven version
+     * @param  transitively whether to include transitive dependencies
+     * @return              the artifacts, or null if none found
+     */
+    List<MavenArtifact> downloadArtifacts(String groupId, String artifactId, String version, boolean transitively);
 
     /**
      * Resolves the available versions for the given maven artifact
