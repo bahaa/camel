@@ -80,6 +80,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class VertxPlatformHttpEngineTest {
     public static SSLContextParameters serverSSLParameters;
@@ -141,6 +142,7 @@ public class VertxPlatformHttpEngineTest {
     @Test
     public void testEngine() throws Exception {
         final CamelContext context = createCamelContext();
+        VertxPlatformHttpServer platformHttpServer;
 
         try {
             context.addRoutes(new RouteBuilder() {
@@ -184,9 +186,14 @@ public class VertxPlatformHttpEngineTest {
             assertNotNull(server);
             assertEquals("http", server.getScheme());
             assertEquals(RestAssured.port, server.getServerPort());
+
+            platformHttpServer = context.hasService(VertxPlatformHttpServer.class);
+            assertNotNull(platformHttpServer.getVertx());
         } finally {
             context.stop();
         }
+
+        assertNull(platformHttpServer.getVertx());
     }
 
     @Test
@@ -218,6 +225,69 @@ public class VertxPlatformHttpEngineTest {
                     .then()
                     .statusCode(200)
                     .body(equalTo("get"));
+
+        } finally {
+            context.stop();
+        }
+    }
+
+    @Test
+    public void testSlowConsumerWithTimeout() throws Exception {
+        final CamelContext context = createCamelContext();
+
+        try {
+            context.getRegistry().bind(
+                    "vertx-options",
+                    new VertxOptions()
+                            .setMaxEventLoopExecuteTime(2)
+                            .setMaxEventLoopExecuteTimeUnit(TimeUnit.SECONDS));
+
+            context.addRoutes(new RouteBuilder() {
+                @Override
+                public void configure() {
+                    from("platform-http:/get?requestTimeout=500")
+                            .routeId("get")
+                            .delay(1000)
+                            .setBody().constant("get");
+                }
+            });
+
+            context.start();
+
+            given()
+                    .when()
+                    .get("/get")
+                    .then()
+                    .statusCode(503);
+
+        } finally {
+            context.stop();
+        }
+    }
+
+    @Test
+    public void testTimeoutNotExceeded() throws Exception {
+        final CamelContext context = createCamelContext();
+
+        String response = "Request did not time out";
+        try {
+            context.addRoutes(new RouteBuilder() {
+                @Override
+                public void configure() {
+                    from("platform-http:/get?requestTimeout=500")
+                            .routeId("get")
+                            .setBody().constant(response);
+                }
+            });
+
+            context.start();
+
+            given()
+                    .when()
+                    .get("/get")
+                    .then()
+                    .statusCode(200)
+                    .body(equalTo(response));
 
         } finally {
             context.stop();

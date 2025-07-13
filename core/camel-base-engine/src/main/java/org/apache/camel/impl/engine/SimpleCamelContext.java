@@ -34,6 +34,7 @@ import org.apache.camel.health.HealthCheckResolver;
 import org.apache.camel.impl.converter.DefaultTypeConverter;
 import org.apache.camel.spi.AnnotationBasedProcessorFactory;
 import org.apache.camel.spi.AsyncProcessorAwaitManager;
+import org.apache.camel.spi.BackOffTimerFactory;
 import org.apache.camel.spi.BeanIntrospection;
 import org.apache.camel.spi.BeanProcessorFactory;
 import org.apache.camel.spi.BeanProxyFactory;
@@ -103,6 +104,8 @@ import org.apache.camel.support.scan.DefaultPackageScanClassResolver;
 import org.apache.camel.support.scan.DefaultPackageScanResourceResolver;
 import org.apache.camel.support.scan.WebSpherePackageScanClassResolver;
 import org.apache.camel.support.startup.DefaultStartupConditionStrategy;
+import org.apache.camel.support.task.DefaultTaskManagerRegistry;
+import org.apache.camel.support.task.TaskManagerRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -741,6 +744,16 @@ public class SimpleCamelContext extends AbstractCamelContext {
     }
 
     @Override
+    protected BackOffTimerFactory createBackOffTimerFactory() {
+        return new DefaultBackOffTimerFactory(this);
+    }
+
+    @Override
+    protected TaskManagerRegistry createTaskManagerRegistry() {
+        return new DefaultTaskManagerRegistry(this);
+    }
+
+    @Override
     protected TransformerRegistry createTransformerRegistry() {
         return new DefaultTransformerRegistry(getCamelContextReference());
     }
@@ -769,6 +782,20 @@ public class SimpleCamelContext extends AbstractCamelContext {
 
     @Override
     public String addRouteFromTemplate(
+            String routeId, String routeTemplateId, String prefixId, String group, Map<String, Object> parameters)
+            throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String addRouteFromTemplate(
+            String routeId, String routeTemplateId, String prefixId, String group, RouteTemplateContext routeTemplateContext)
+            throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String addRouteFromTemplate(
             String routeId, String routeTemplateId, String prefixId, RouteTemplateContext routeTemplateContext)
             throws Exception {
         throw new UnsupportedOperationException();
@@ -778,6 +805,14 @@ public class SimpleCamelContext extends AbstractCamelContext {
     public String addRouteFromKamelet(
             String routeId, String routeTemplateId, String prefixId, String parentRouteId, String parentProcessorId,
             Map<String, Object> parameters)
+            throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String addRouteFromKamelet(
+            String routeId, String routeTemplateId, String prefixId, String group, String parentRouteId,
+            String parentProcessorId, Map<String, Object> parameters)
             throws Exception {
         throw new UnsupportedOperationException();
     }

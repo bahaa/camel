@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -758,13 +758,8 @@ public abstract class ExportBaseCommand extends CamelCommand {
             customize.apply(profileProps);
         }
 
-        // User properties
-        Properties userProps = new CamelCaseOrderedProperties();
-        prepareUserProperties(userProps);
-
         Path appPropsPath = targetDir.resolve("application.properties");
         StringBuilder content = new StringBuilder();
-
         for (Map.Entry<Object, Object> entry : profileProps.entrySet()) {
             String k = entry.getKey().toString();
             String v = entry.getValue().toString();
@@ -791,6 +786,10 @@ public abstract class ExportBaseCommand extends CamelCommand {
                 }
             }
         }
+
+        // User properties
+        Properties userProps = new CamelCaseOrderedProperties();
+        prepareUserProperties(userProps);
         for (Map.Entry<Object, Object> entryUserProp : userProps.entrySet()) {
             String uK = entryUserProp.getKey().toString();
             String uV = entryUserProp.getValue().toString();
@@ -800,6 +799,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
             }
         }
 
+        // write all the properties
         Files.writeString(appPropsPath, content.toString(), StandardCharsets.UTF_8);
     }
 
@@ -814,7 +814,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
     protected Map<String, String> propertiesMap(String[]... propertySources) {
         Map<String, String> result = new LinkedHashMap<>();
         if (propertySources != null) {
-            for (String[] props : Arrays.stream(propertySources).filter((arr) -> arr != null).toList()) {
+            for (String[] props : Arrays.stream(propertySources).filter(Objects::nonNull).toList()) {
                 for (String s : props) {
                     String[] kv = s.split("=");
                     if (kv.length != 2) {
@@ -864,8 +864,8 @@ public abstract class ExportBaseCommand extends CamelCommand {
         }
 
         // set execute file permission on mvnw/mvnw.cmd files
-        Files.setPosixFilePermissions(mvnwPath, PosixFilePermissions.fromString("rwxr-xr-x"));
-        Files.setPosixFilePermissions(mvnwCmdPath, PosixFilePermissions.fromString("rwxr-xr-x"));
+        FileUtil.setPosixFilePermissions(mvnwPath, "rwxr-xr-x");
+        FileUtil.setPosixFilePermissions(mvnwCmdPath, "rwxr-xr-x");
     }
 
     protected void copyGradleWrapper() throws Exception {
@@ -893,8 +893,8 @@ public abstract class ExportBaseCommand extends CamelCommand {
         }
 
         // set execute file permission on gradlew/gradlew.bat files
-        Files.setPosixFilePermissions(gradlewPath, PosixFilePermissions.fromString("rwxr-xr-x"));
-        Files.setPosixFilePermissions(gradlewBatPath, PosixFilePermissions.fromString("rwxr-xr-x"));
+        FileUtil.setPosixFilePermissions(gradlewPath, "rwxr-xr-x");
+        FileUtil.setPosixFilePermissions(gradlewBatPath, "rwxr-xr-x");
     }
 
     protected String applicationPropertyLine(String key, String value) {

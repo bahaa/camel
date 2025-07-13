@@ -484,8 +484,8 @@ public class ModelWriter extends BaseWriter {
     public void writeFlatpackDataFormat(FlatpackDataFormat def) throws IOException {
         doWriteFlatpackDataFormat("flatpack", def);
     }
-    public void writeFuryDataFormat(FuryDataFormat def) throws IOException {
-        doWriteFuryDataFormat("fury", def);
+    public void writeForyDataFormat(ForyDataFormat def) throws IOException {
+        doWriteForyDataFormat("fory", def);
     }
     public void writeGrokDataFormat(GrokDataFormat def) throws IOException {
         doWriteGrokDataFormat("grok", def);
@@ -884,6 +884,7 @@ public class ModelWriter extends BaseWriter {
         doWriteAttribute("builderClass", def.getBuilderClass(), null);
         doWriteAttribute("type", def.getType(), null);
         doWriteAttribute("factoryBean", def.getFactoryBean(), null);
+        doWriteAttribute("scriptPropertyPlaceholders", def.getScriptPropertyPlaceholders(), "true");
         doWriteAttribute("initMethod", def.getInitMethod(), null);
         doWriteAttribute("name", def.getName(), null);
         doWriteAttribute("builderMethod", def.getBuilderMethod(), "build");
@@ -1214,7 +1215,7 @@ public class ModelWriter extends BaseWriter {
                 case "FhirJsonDataFormat" -> doWriteFhirJsonDataFormat("fhirJson", (FhirJsonDataFormat) v);
                 case "FhirXmlDataFormat" -> doWriteFhirXmlDataFormat("fhirXml", (FhirXmlDataFormat) v);
                 case "FlatpackDataFormat" -> doWriteFlatpackDataFormat("flatpack", (FlatpackDataFormat) v);
-                case "FuryDataFormat" -> doWriteFuryDataFormat("fury", (FuryDataFormat) v);
+                case "ForyDataFormat" -> doWriteForyDataFormat("fory", (ForyDataFormat) v);
                 case "GrokDataFormat" -> doWriteGrokDataFormat("grok", (GrokDataFormat) v);
                 case "GzipDeflaterDataFormat" -> doWriteGzipDeflaterDataFormat("gzipDeflater", (GzipDeflaterDataFormat) v);
                 case "HL7DataFormat" -> doWriteHL7DataFormat("hl7", (HL7DataFormat) v);
@@ -1822,6 +1823,7 @@ public class ModelWriter extends BaseWriter {
         doWriteAttribute("routeId", def.getRouteId(), null);
         doWriteAttribute("routeTemplateRef", def.getRouteTemplateRef(), null);
         doWriteAttribute("prefixId", def.getPrefixId(), null);
+        doWriteAttribute("group", def.getGroup(), null);
         doWriteList(null, "bean", def.getBeans(), this::doWriteBeanFactoryDefinition);
         doWriteList(null, "parameter", def.getParameters(), this::doWriteTemplatedRouteParameterDefinition);
         endElement(name);
@@ -1973,7 +1975,7 @@ public class ModelWriter extends BaseWriter {
                 case "FhirJsonDataFormat" -> doWriteFhirJsonDataFormat("fhirJson", (FhirJsonDataFormat) v);
                 case "FhirXmlDataFormat" -> doWriteFhirXmlDataFormat("fhirXml", (FhirXmlDataFormat) v);
                 case "FlatpackDataFormat" -> doWriteFlatpackDataFormat("flatpack", (FlatpackDataFormat) v);
-                case "FuryDataFormat" -> doWriteFuryDataFormat("fury", (FuryDataFormat) v);
+                case "ForyDataFormat" -> doWriteForyDataFormat("fory", (ForyDataFormat) v);
                 case "GrokDataFormat" -> doWriteGrokDataFormat("grok", (GrokDataFormat) v);
                 case "GzipDeflaterDataFormat" -> doWriteGzipDeflaterDataFormat("gzipDeflater", (GzipDeflaterDataFormat) v);
                 case "HL7DataFormat" -> doWriteHL7DataFormat("hl7", (HL7DataFormat) v);
@@ -2535,7 +2537,7 @@ public class ModelWriter extends BaseWriter {
                 case "FhirJsonDataFormat" -> doWriteFhirJsonDataFormat("fhirJson", (FhirJsonDataFormat) v);
                 case "FhirXmlDataFormat" -> doWriteFhirXmlDataFormat("fhirXml", (FhirXmlDataFormat) v);
                 case "FlatpackDataFormat" -> doWriteFlatpackDataFormat("flatpack", (FlatpackDataFormat) v);
-                case "FuryDataFormat" -> doWriteFuryDataFormat("fury", (FuryDataFormat) v);
+                case "ForyDataFormat" -> doWriteForyDataFormat("fory", (ForyDataFormat) v);
                 case "GrokDataFormat" -> doWriteGrokDataFormat("grok", (GrokDataFormat) v);
                 case "GzipDeflaterDataFormat" -> doWriteGzipDeflaterDataFormat("gzipDeflater", (GzipDeflaterDataFormat) v);
                 case "HL7DataFormat" -> doWriteHL7DataFormat("hl7", (HL7DataFormat) v);
@@ -2626,13 +2628,13 @@ public class ModelWriter extends BaseWriter {
         doWriteAttribute("ignoreExtraColumns", def.getIgnoreExtraColumns(), null);
         endElement(name);
     }
-    protected void doWriteFuryDataFormat(String name, FuryDataFormat def) throws IOException {
+    protected void doWriteForyDataFormat(String name, ForyDataFormat def) throws IOException {
         startElement(name);
         doWriteIdentifiedTypeAttributes(def);
+        doWriteAttribute("allowAutoWiredFory", def.getAllowAutoWiredFory(), "true");
         doWriteAttribute("unmarshalType", def.getUnmarshalTypeName(), null);
         doWriteAttribute("threadSafe", def.getThreadSafe(), "true");
         doWriteAttribute("requireClassRegistration", def.getRequireClassRegistration(), "true");
-        doWriteAttribute("allowAutoWiredFury", def.getAllowAutoWiredFury(), "true");
         endElement(name);
     }
     protected void doWriteGrokDataFormat(String name, GrokDataFormat def) throws IOException {
@@ -3457,6 +3459,7 @@ public class ModelWriter extends BaseWriter {
         doWriteAttribute("code", def.getCode(), "200");
         doWriteAttribute("responseModel", def.getResponseModel(), null);
         doWriteAttribute("message", def.getMessage(), null);
+        doWriteAttribute("contentType", def.getContentType(), null);
         doWriteList(null, "header", def.getHeaders(), this::doWriteResponseHeaderDefinition);
         doWriteList(null, "examples", def.getExamples(), this::doWriteRestPropertyDefinition);
         endElement(name);
@@ -3467,6 +3470,7 @@ public class ModelWriter extends BaseWriter {
         doWriteAttribute("enableCORS", def.getEnableCORS(), "false");
         doWriteAttribute("type", def.getType(), null);
         doWriteAttribute("outType", def.getOutType(), null);
+        doWriteAttribute("clientResponseValidation", def.getClientResponseValidation(), "false");
         doWriteAttribute("component", def.getComponent(), null);
         doWriteAttribute("bindingMode", def.getBindingMode(), "off");
         doWriteAttribute("enableNoContentResponse", def.getEnableNoContentResponse(), "false");
@@ -3493,6 +3497,7 @@ public class ModelWriter extends BaseWriter {
         doWriteAttribute("apiHost", def.getApiHost(), null);
         doWriteAttribute("contextPath", def.getContextPath(), null);
         doWriteAttribute("apiContextRouteId", def.getApiContextRouteId(), null);
+        doWriteAttribute("clientResponseValidation", def.getClientResponseValidation(), "false");
         doWriteAttribute("component", def.getComponent(), null);
         doWriteAttribute("bindingMode", toString(def.getBindingMode()), "off");
         doWriteAttribute("port", def.getPort(), null);
@@ -3504,6 +3509,7 @@ public class ModelWriter extends BaseWriter {
         doWriteList(null, "consumerProperty", def.getConsumerProperties(), this::doWriteRestPropertyDefinition);
         doWriteList(null, "corsHeaders", def.getCorsHeaders(), this::doWriteRestPropertyDefinition);
         doWriteList(null, "componentProperty", def.getComponentProperties(), this::doWriteRestPropertyDefinition);
+        doWriteList(null, "validationLevels", def.getValidationLevels(), this::doWriteRestPropertyDefinition);
         doWriteList(null, "apiProperty", def.getApiProperties(), this::doWriteRestPropertyDefinition);
         doWriteList(null, "endpointProperty", def.getEndpointProperties(), this::doWriteRestPropertyDefinition);
         doWriteList(null, "dataFormatProperty", def.getDataFormatProperties(), this::doWriteRestPropertyDefinition);
@@ -3513,6 +3519,7 @@ public class ModelWriter extends BaseWriter {
         startElement(name);
         doWriteOptionalIdentifiedDefinitionAttributes(def);
         doWriteAttribute("enableCORS", def.getEnableCORS(), "false");
+        doWriteAttribute("clientResponseValidation", def.getClientResponseValidation(), "false");
         doWriteAttribute("path", def.getPath(), null);
         doWriteAttribute("bindingMode", def.getBindingMode(), "off");
         doWriteAttribute("apiDocs", def.getApiDocs(), "true");
@@ -3577,6 +3584,7 @@ public class ModelWriter extends BaseWriter {
         doWriteAttribute("streamCache", def.getStreamCache(), null);
         doWriteAttribute("type", def.getType(), null);
         doWriteAttribute("outType", def.getOutType(), null);
+        doWriteAttribute("clientResponseValidation", def.getClientResponseValidation(), "false");
         doWriteAttribute("path", def.getPath(), null);
         doWriteAttribute("routeId", def.getRouteId(), null);
         doWriteAttribute("bindingMode", def.getBindingMode(), "off");
@@ -3622,6 +3630,7 @@ public class ModelWriter extends BaseWriter {
     }
     protected void doWriteLangChain4jTokenizerDefinitionAttributes(LangChain4jTokenizerDefinition def) throws IOException {
         doWriteIdentifiedTypeAttributes(def);
+        doWriteAttribute("modelName", def.getModelName(), null);
         doWriteAttribute("maxTokens", def.getMaxTokens(), null);
         doWriteAttribute("tokenizerType", def.getTokenizerType(), null);
         doWriteAttribute("maxOverlap", def.getMaxOverlap(), null);
@@ -3661,7 +3670,7 @@ public class ModelWriter extends BaseWriter {
                 case "FhirJsonDataFormat" -> doWriteFhirJsonDataFormat("fhirJson", (FhirJsonDataFormat) v);
                 case "FhirXmlDataFormat" -> doWriteFhirXmlDataFormat("fhirXml", (FhirXmlDataFormat) v);
                 case "FlatpackDataFormat" -> doWriteFlatpackDataFormat("flatpack", (FlatpackDataFormat) v);
-                case "FuryDataFormat" -> doWriteFuryDataFormat("fury", (FuryDataFormat) v);
+                case "ForyDataFormat" -> doWriteForyDataFormat("fory", (ForyDataFormat) v);
                 case "GrokDataFormat" -> doWriteGrokDataFormat("grok", (GrokDataFormat) v);
                 case "GzipDeflaterDataFormat" -> doWriteGzipDeflaterDataFormat("gzipDeflater", (GzipDeflaterDataFormat) v);
                 case "HL7DataFormat" -> doWriteHL7DataFormat("hl7", (HL7DataFormat) v);

@@ -236,6 +236,11 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     }
 
     @Override
+    public void removeModelLifecycleStrategy(ModelLifecycleStrategy modelLifecycleStrategy) {
+        model.removeModelLifecycleStrategy(modelLifecycleStrategy);
+    }
+
+    @Override
     public List<ModelLifecycleStrategy> getModelLifecycleStrategies() {
         return model.getModelLifecycleStrategies();
     }
@@ -354,14 +359,28 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     @Override
     public String addRouteFromTemplate(String routeId, String routeTemplateId, String prefixId, Map<String, Object> parameters)
             throws Exception {
-        return model.addRouteFromTemplate(routeId, routeTemplateId, prefixId, parameters);
+        return model.addRouteFromTemplate(routeId, routeTemplateId, prefixId, null, parameters);
+    }
+
+    @Override
+    public String addRouteFromTemplate(
+            String routeId, String routeTemplateId, String prefixId, String group, Map<String, Object> parameters)
+            throws Exception {
+        return model.addRouteFromTemplate(routeId, routeTemplateId, prefixId, group, parameters);
     }
 
     @Override
     public String addRouteFromTemplate(
             String routeId, String routeTemplateId, String prefixId, RouteTemplateContext routeTemplateContext)
             throws Exception {
-        return model.addRouteFromTemplate(routeId, routeTemplateId, prefixId, routeTemplateContext);
+        return model.addRouteFromTemplate(routeId, routeTemplateId, prefixId, null, routeTemplateContext);
+    }
+
+    @Override
+    public String addRouteFromTemplate(
+            String routeId, String routeTemplateId, String prefixId, String group, RouteTemplateContext routeTemplateContext)
+            throws Exception {
+        return model.addRouteFromTemplate(routeId, routeTemplateId, prefixId, group, routeTemplateContext);
     }
 
     @Override
@@ -369,7 +388,17 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
             String routeId, String routeTemplateId, String prefixId,
             String parentRouteId, String parentProcessorId, Map<String, Object> parameters)
             throws Exception {
-        return model.addRouteFromKamelet(routeId, routeTemplateId, prefixId, parentRouteId, parentProcessorId, parameters);
+        return model.addRouteFromKamelet(routeId, routeTemplateId, prefixId, null, parentRouteId, parentProcessorId,
+                parameters);
+    }
+
+    @Override
+    public String addRouteFromKamelet(
+            String routeId, String routeTemplateId, String prefixId, String group, String parentRouteId,
+            String parentProcessorId, Map<String, Object> parameters)
+            throws Exception {
+        return model.addRouteFromKamelet(routeId, routeTemplateId, prefixId, group, parentRouteId, parentProcessorId,
+                parameters);
     }
 
     @Override
@@ -636,7 +665,7 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
                     if (duplicate != null) {
                         throw new FailedToStartRouteException(
                                 routeDefinition.getId(),
-                                "duplicate id detected: " + duplicate
+                                "Duplicate id detected: " + duplicate
                                                          + ". Please correct ids to be unique among all your routes.");
                     }
 

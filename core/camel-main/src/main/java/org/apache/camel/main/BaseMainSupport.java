@@ -102,6 +102,7 @@ import org.apache.camel.support.jsse.TrustAllTrustManager;
 import org.apache.camel.support.jsse.TrustManagersParameters;
 import org.apache.camel.support.scan.PackageScanHelper;
 import org.apache.camel.support.service.BaseService;
+import org.apache.camel.support.service.ServiceHelper;
 import org.apache.camel.support.startup.BacklogStartupStepRecorder;
 import org.apache.camel.support.startup.EnvStartupCondition;
 import org.apache.camel.support.startup.FileStartupCondition;
@@ -456,9 +457,8 @@ public abstract class BaseMainSupport extends BaseService {
 
         Optional<String> cloudLocations = pc.resolveProperty(MainConstants.CLOUD_PROPERTIES_LOCATION);
         if (cloudLocations.isPresent()) {
-            LOG.info("Cloud properties location: {}", cloudLocations);
             final Properties kp = tryLoadCloudProperties(op, cloudLocations.get());
-            if (kp != null) {
+            if (!kp.isEmpty()) {
                 pc.setOverrideProperties(kp);
             }
         }
@@ -481,8 +481,7 @@ public abstract class BaseMainSupport extends BaseService {
     }
 
     private static Properties tryLoadCloudProperties(
-            Properties overridProperties, String cloudPropertiesLocations)
-            throws IOException {
+            Properties overridProperties, String cloudPropertiesLocations) {
         final OrderedLocationProperties cp = new OrderedLocationProperties();
         try {
             String[] locations = cloudPropertiesLocations.split(",");
@@ -836,12 +835,17 @@ public abstract class BaseMainSupport extends BaseService {
 
     protected void configureRoutes(CamelContext camelContext) throws Exception {
         RoutesConfigurer configurer = doCommonRouteConfiguration(camelContext);
-        configurer.configureRoutes(camelContext);
+        ServiceHelper.startService(configurer);
+        try {
+            configurer.configureRoutes(camelContext);
+        } finally {
+            ServiceHelper.stopService(configurer);
+        }
     }
 
     private RoutesConfigurer doCommonRouteConfiguration(CamelContext camelContext) {
         // then configure and add the routes
-        RoutesConfigurer configurer = new RoutesConfigurer();
+        RoutesConfigurer configurer = new RoutesConfigurer(camelContext);
 
         routesCollector.setIgnoreLoadingError(mainConfigurationProperties.isRoutesCollectorIgnoreLoadingError());
         if (mainConfigurationProperties.isRoutesCollectorEnabled()) {

@@ -108,6 +108,7 @@ public class CamelJBangMain implements Callable<Integer> {
                         .addSubcommand("event", new CommandLine(new ListEvent(main)))
                         .addSubcommand("inflight", new CommandLine(new ListInflight(main)))
                         .addSubcommand("blocked", new CommandLine(new ListBlocked(main)))
+                        .addSubcommand("internal-task", new CommandLine(new ListInternalTask(main)))
                         .addSubcommand("bean", new CommandLine(new CamelBeanDump(main)))
                         .addSubcommand("route-controller", new CommandLine(new RouteControllerAction(main)))
                         .addSubcommand("transformer", new CommandLine(new ListTransformer(main)))

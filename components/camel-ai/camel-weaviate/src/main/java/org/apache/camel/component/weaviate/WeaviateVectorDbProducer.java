@@ -16,13 +16,13 @@
  */
 package org.apache.camel.component.weaviate;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 import io.weaviate.client.WeaviateClient;
 import io.weaviate.client.base.Result;
+import io.weaviate.client.v1.data.api.ObjectUpdater;
 import io.weaviate.client.v1.data.model.WeaviateObject;
 import io.weaviate.client.v1.graphql.model.GraphQLResponse;
 import io.weaviate.client.v1.graphql.query.argument.NearVectorArgument;
@@ -163,12 +163,20 @@ public class WeaviateVectorDbProducer extends DefaultProducer {
         }
 
         Float[] vectors = (Float[]) elements.toArray(new Float[0]);
+        HashMap<String, Object> props = in.getHeader(WeaviateVectorDb.Headers.PROPERTIES, HashMap.class);
 
-        Result<Boolean> result = client.data().updater()
-                .withMerge()
+        ObjectUpdater ou = client.data().updater();
+
+        boolean updateWithMerge = in.getHeader(WeaviateVectorDb.Headers.UPDATE_WITH_MERGE, true, Boolean.class);
+        if (updateWithMerge) {
+            ou.withMerge();
+        }
+
+        Result<Boolean> result = ou
                 .withID(indexId)
                 .withClassName(collectionName)
                 .withVector(vectors)
+                .withProperties(props)
                 .run();
 
         populateResponse(result, exchange);
@@ -240,11 +248,8 @@ public class WeaviateVectorDbProducer extends DefaultProducer {
         if (in.getHeader(WeaviateVectorDb.Headers.FIELDS, HashMap.class) != null) {
             HashMap<String, Object> fieldToSearch = in.getHeader(WeaviateVectorDb.Headers.FIELDS, HashMap.class);
 
-            List<Field> fieldList = new ArrayList<>();
-            for (String key : fieldToSearch.keySet()) {
-                fieldList.add(Field.builder().name(key).build());
-            }
-            Field[] fieldArray = (Field[]) fieldList.toArray();
+            Field[] fieldArray
+                    = fieldToSearch.keySet().stream().map(k -> Field.builder().name(k).build()).toArray(Field[]::new);
             fields = Fields.builder().fields(fieldArray).build();
 
         } else {

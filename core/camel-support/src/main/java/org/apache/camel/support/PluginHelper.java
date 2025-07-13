@@ -25,6 +25,7 @@ import org.apache.camel.console.DevConsoleResolver;
 import org.apache.camel.health.HealthCheckResolver;
 import org.apache.camel.spi.AnnotationBasedProcessorFactory;
 import org.apache.camel.spi.AsyncProcessorAwaitManager;
+import org.apache.camel.spi.BackOffTimerFactory;
 import org.apache.camel.spi.BeanIntrospection;
 import org.apache.camel.spi.BeanProcessorFactory;
 import org.apache.camel.spi.BeanProxyFactory;
@@ -54,6 +55,7 @@ import org.apache.camel.spi.RouteFactory;
 import org.apache.camel.spi.RoutesLoader;
 import org.apache.camel.spi.UnitOfWorkFactory;
 import org.apache.camel.spi.UriFactoryResolver;
+import org.apache.camel.support.task.TaskManagerRegistry;
 
 /**
  * Convenient helper to get easy access to various extensions from {@link ExtendedCamelContext}.
@@ -575,4 +577,20 @@ public final class PluginHelper {
             ExtendedCamelContext extendedCamelContext) {
         return extendedCamelContext.getContextPlugin(AnnotationBasedProcessorFactory.class);
     }
+
+    /**
+     * Gets the {@link BackOffTimerFactory} to use.
+     */
+    public static BackOffTimerFactory getBackOffTimerFactory(
+            ExtendedCamelContext extendedCamelContext) {
+        return extendedCamelContext.getContextPlugin(BackOffTimerFactory.class);
+    }
+
+    /**
+     * Gets the {@link TaskManagerRegistry} to use.
+     */
+    public static TaskManagerRegistry getTaskManagerRegistry(ExtendedCamelContext extendedCamelContext) {
+        return extendedCamelContext.getContextPlugin(TaskManagerRegistry.class);
+    }
+
 }

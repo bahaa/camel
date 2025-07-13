@@ -327,4 +327,46 @@ public final class CamelOpenMBeanTypes {
         return new TabularType("variables", "Variables", ct, new String[] { "id", "key" });
     }
 
+    public static TabularType listBackoffTaskTabularType() throws OpenDataException {
+        CompositeType ct = listBackoffTaskCompositeType();
+        return new TabularType(
+                "listBackoff", "Lists all the backoff tasks", ct,
+                new String[] { "name" });
+    }
+
+    public static CompositeType listBackoffTaskCompositeType() throws OpenDataException {
+        return new CompositeType(
+                "tasks", "Tasks",
+                new String[] {
+                        "name", "kind", "status", "attempts", "delay", "elapsed", "firstTime", "lastTime", "nextTime",
+                        "failure" },
+                new String[] {
+                        "Name", "Kind", "Status", "Attempts", "Delay", "Elapsed", "FirstTime", "LastTime", "NextTime",
+                        "Failure" },
+                new OpenType[] {
+                        SimpleType.STRING, SimpleType.STRING, SimpleType.STRING, SimpleType.LONG, SimpleType.LONG,
+                        SimpleType.LONG, SimpleType.LONG, SimpleType.LONG, SimpleType.LONG, SimpleType.STRING });
+    }
+
+    public static TabularType listInternalTaskTabularType() throws OpenDataException {
+        CompositeType ct = listInternalTaskCompositeType();
+        return new TabularType(
+                "listTask", "Lists all the internal tasks", ct,
+                new String[] { "name" });
+    }
+
+    public static CompositeType listInternalTaskCompositeType() throws OpenDataException {
+        return new CompositeType(
+                "tasks", "Tasks",
+                new String[] {
+                        "name", "kind", "status", "attempts", "delay", "elapsed", "firstTime", "lastTime", "nextTime",
+                        "failure" },
+                new String[] {
+                        "Name", "Kind", "Status", "Attempts", "Delay", "Elapsed", "FirstTime", "LastTime", "NextTime",
+                        "Failure" },
+                new OpenType[] {
+                        SimpleType.STRING, SimpleType.STRING, SimpleType.STRING, SimpleType.LONG, SimpleType.LONG,
+                        SimpleType.LONG, SimpleType.LONG, SimpleType.LONG, SimpleType.LONG, SimpleType.STRING });
+    }
+
 }

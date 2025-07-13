@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-salesforce-parent</artifactId>
-        <version>4.12.0-SNAPSHOT</version>
+        <version>4.14.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-salesforce</artifactId>
@@ -140,7 +140,7 @@
         <dependency>
             <groupId>tech.allegro.schema.json2avro</groupId>
             <artifactId>converter</artifactId>
-            <version>0.2.15</version>
+            <version>${allegro-converter-version}</version>
         </dependency>
 
         <!-- logging -->

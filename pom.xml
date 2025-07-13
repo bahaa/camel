@@ -24,12 +24,12 @@
     <parent>
         <groupId>org.apache</groupId>
         <artifactId>apache</artifactId>
-        <version>34</version>
+        <version>35</version>
     </parent>
 
     <groupId>org.apache.camel</groupId>
     <artifactId>camel</artifactId>
-    <version>4.12.0-SNAPSHOT</version>
+    <version>4.14.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Camel</name>
@@ -118,17 +118,17 @@
         <minimalJavaBuildVersion>${jdk.version}</minimalJavaBuildVersion>
 
         <!-- reproduceable builds: https://maven.apache.org/guides/mini/guide-reproducible-builds.html -->
-        <project.build.outputTimestamp>2025-02-11T08:51:37Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2025-05-29T15:00:58Z</project.build.outputTimestamp>
 
         <cyclonedx-maven-plugin-version>2.9.1</cyclonedx-maven-plugin-version>
-        <flatten-maven-plugin-version>1.7.0</flatten-maven-plugin-version>
+        <flatten-maven-plugin-version>1.7.1</flatten-maven-plugin-version>
         <gmavenplus-plugin-version>2.1.0</gmavenplus-plugin-version>
         <license-maven-plugin-version>5.0.0</license-maven-plugin-version>
         <maven-assembly-plugin-version>3.7.1</maven-assembly-plugin-version>
         <maven-compiler-plugin-version>3.14.0</maven-compiler-plugin-version>
         <maven-dependency-plugin-version>3.8.1</maven-dependency-plugin-version>
-        <maven-enforcer-plugin-version>3.5.0</maven-enforcer-plugin-version>
-        <maven-invoker-plugin-version>3.9.0</maven-invoker-plugin-version>
+        <maven-enforcer-plugin-version>3.6.0</maven-enforcer-plugin-version>
+        <maven-invoker-plugin-version>3.9.1</maven-invoker-plugin-version>
         <maven-javadoc-plugin-version>3.11.2</maven-javadoc-plugin-version>
         <maven-release-plugin-version>3.1.1</maven-release-plugin-version>
         <maven-remote-resources-plugin-version>3.3.0</maven-remote-resources-plugin-version>
@@ -352,6 +352,7 @@
                                     <exclude>**/camel-jbang-run.properties</exclude>
                                     <exclude>**/javax.annotations.processing.Processor</exclude>
                                     <exclude>**/helm/etc/**</exclude>
+                                    <exclude>**/examples/*</exclude>
                                 </excludes>
                             </licenseSet>
                         </licenseSets>
@@ -547,6 +548,7 @@
                             <exclude>**/.camel-jbang-run/**/*</exclude>
                             <exclude>**/.camel-jbang/**/*</exclude>
                             <exclude>**/commands/edit/edit-help.txt</exclude>
+                            <exclude>**/examples/*</exclude>
                             <!-- Maven Wrapper -->
                             <exclude>.mvn/**/*</exclude>
                             <exclude>**/maven-wrapper/*</exclude>

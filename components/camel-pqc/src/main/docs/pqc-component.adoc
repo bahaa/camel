@@ -2,9 +2,9 @@
 :doctitle: PQC Algorithms
 :shortname: pqc
 :artifactid: camel-pqc
-:description: Post Quantum Computing Signature and Verification component.
+:description: Post Quantum Cryptography Signature and Verification component.
 :since: 4.12
-:supportlevel: Preview
+:supportlevel: Stable
 :tabs-sync-option:
 :component-header: Only producer is supported
 //Manually maintained attributes

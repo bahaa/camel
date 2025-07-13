@@ -18,17 +18,24 @@ package org.apache.camel.main;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.FailedToCreateRouteException;
+import org.apache.camel.NonManagedService;
 import org.apache.camel.RouteConfigurationsBuilder;
 import org.apache.camel.RoutesBuilder;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.StartupStep;
+import org.apache.camel.model.Model;
+import org.apache.camel.model.ModelLifecycleStrategySupport;
+import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.spi.CamelBeanPostProcessor;
 import org.apache.camel.spi.ExtendedRoutesBuilderLoader;
 import org.apache.camel.spi.ModelineFactory;
@@ -38,6 +45,7 @@ import org.apache.camel.spi.RoutesLoader;
 import org.apache.camel.spi.StartupStepRecorder;
 import org.apache.camel.support.OrderedComparator;
 import org.apache.camel.support.PluginHelper;
+import org.apache.camel.support.service.ServiceSupport;
 import org.apache.camel.util.AntPathMatcher;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.ObjectHelper;
@@ -49,9 +57,11 @@ import org.slf4j.LoggerFactory;
 /**
  * To configure routes using {@link RoutesCollector} which collects the routes from various sources.
  */
-public class RoutesConfigurer {
+public class RoutesConfigurer extends ServiceSupport implements NonManagedService {
     private static final Logger LOG = LoggerFactory.getLogger(RoutesConfigurer.class);
 
+    private final DuplicateRouteDetector detector = new DuplicateRouteDetector();
+    private final CamelContext camelContext;
     private RoutesCollector routesCollector;
     private boolean ignoreLoadingError;
     private CamelBeanPostProcessor beanPostProcessor;
@@ -63,6 +73,10 @@ public class RoutesConfigurer {
     private String routesExcludePattern;
     private String routesIncludePattern;
     private String routesSourceDir;
+
+    public RoutesConfigurer(CamelContext camelContext) {
+        this.camelContext = camelContext;
+    }
 
     public boolean isIgnoreLoadingError() {
         return ignoreLoadingError;
@@ -150,6 +164,17 @@ public class RoutesConfigurer {
 
     public void setBeanPostProcessor(CamelBeanPostProcessor beanPostProcessor) {
         this.beanPostProcessor = beanPostProcessor;
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        camelContext.getCamelContextExtension().getContextPlugin(Model.class).addModelLifecycleStrategy(detector);
+    }
+
+    @Override
+    protected void doStop() throws Exception {
+        detector.clear();
+        camelContext.getCamelContextExtension().getContextPlugin(Model.class).removeModelLifecycleStrategy(detector);
     }
 
     /**
@@ -305,6 +330,9 @@ public class RoutesConfigurer {
         // sort routes according to ordered
         routes.sort(OrderedComparator.get());
 
+        // prepare duplicate route id detector
+        detector.clear();
+
         // first add the routes configurations as they are globally for all routes
         for (RoutesBuilder builder : routes) {
             try {
@@ -345,6 +373,17 @@ public class RoutesConfigurer {
                     throw RuntimeCamelException.wrapRuntimeException(e);
                 }
             }
+        }
+
+        // check for duplicate route ids
+        var ids = detector.getRouteIds();
+        var dups = ids.stream()
+                .filter(i -> Collections.frequency(ids, i) > 1)
+                .collect(Collectors.toSet());
+        if (!dups.isEmpty()) {
+            String id = String.join(",", dups);
+            throw new FailedToCreateRouteException(
+                    "Duplicate route ids detected: " + id + ". Please correct ids to be unique among all your routes.");
         }
     }
 
@@ -511,4 +550,36 @@ public class RoutesConfigurer {
         return answer;
     }
 
+    private static class DuplicateRouteDetector extends ModelLifecycleStrategySupport {
+
+        private final List<String> ids = new ArrayList<>();
+
+        void clear() {
+            ids.clear();
+        }
+
+        public List<String> getRouteIds() {
+            return ids;
+        }
+
+        @Override
+        public void onAddRouteDefinition(RouteDefinition definition) {
+            String id = definition.getRouteId();
+            // only detect explicit assigned ids
+            if (id == null || id.isEmpty()) {
+                return;
+            }
+            // skip inlined
+            if (definition.isInlined()) {
+                return;
+            }
+            String prefix = definition.getNodePrefixId();
+
+            if (prefix == null) {
+                prefix = "";
+            }
+            String key = id + prefix;
+            ids.add(key);
+        }
+    }
 }

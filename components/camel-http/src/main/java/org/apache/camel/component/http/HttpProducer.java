@@ -25,6 +25,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -154,7 +155,7 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
         boolean cookies = !getEndpoint().getComponent().isCookieManagementDisabled();
         if (cookies && getEndpoint().isClearExpiredCookies() && !getEndpoint().isBridgeEndpoint()) {
             // create the cookies before the invocation
-            getEndpoint().getCookieStore().clearExpired(new Date());
+            getEndpoint().getCookieStore().clearExpired(Instant.now());
         }
 
         // if we bridge endpoint then we need to skip matching headers with the HTTP_QUERY to avoid sending
@@ -173,7 +174,10 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
         HttpHost httpHost = createHost(httpRequest);
 
         Message in = exchange.getIn();
-        String httpProtocolVersion = in.getHeader(HttpConstants.HTTP_PROTOCOL_VERSION, String.class);
+        String httpProtocolVersion = null;
+        if (!getEndpoint().isSkipControlHeaders()) {
+            httpProtocolVersion = in.getHeader(HttpConstants.HTTP_PROTOCOL_VERSION, String.class);
+        }
         if (httpProtocolVersion != null) {
             // set the HTTP protocol version
             int[] version = HttpHelper.parserHttpVersion(httpProtocolVersion);
@@ -181,7 +185,6 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
         }
 
         HeaderFilterStrategy strategy = getEndpoint().getHeaderFilterStrategy();
-
         if (!getEndpoint().isSkipRequestHeaders()) {
             // propagate headers as HTTP headers
             if (strategy != null) {
@@ -258,6 +261,7 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
                             if (LOG.isDebugEnabled()) {
                                 LOG.debug("Http responseCode: {}", responseCode);
                             }
+                            populateResponseCode(exchange.getOut(), httpResponse, responseCode);
 
                             if (!throwException) {
                                 // if we do not use failed exception then populate response for all response codes
@@ -352,7 +356,7 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
             throws IOException, ClassNotFoundException {
         // We just make the out message is not create when extractResponseBody throws exception
         Object response = extractResponseBody(httpResponse, exchange, getEndpoint().isIgnoreResponseBody());
-        final Message answer = createResponseMessage(exchange, httpResponse, responseCode);
+        Message answer = exchange.getOut();
         answer.setBody(response);
 
         if (!getEndpoint().isSkipResponseHeaders()) {
@@ -403,19 +407,16 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
         }
     }
 
-    private static Message createResponseMessage(Exchange exchange, ClassicHttpResponse httpResponse, int responseCode) {
-        Message answer = exchange.getOut();
-
+    private static void populateResponseCode(Message message, ClassicHttpResponse httpResponse, int responseCode) {
         // optimize for 200 response code as the boxing is outside the cached integers
         if (responseCode == 200) {
-            answer.setHeader(HttpConstants.HTTP_RESPONSE_CODE, OK_RESPONSE_CODE);
+            message.setHeader(HttpConstants.HTTP_RESPONSE_CODE, OK_RESPONSE_CODE);
         } else {
-            answer.setHeader(HttpConstants.HTTP_RESPONSE_CODE, responseCode);
+            message.setHeader(HttpConstants.HTTP_RESPONSE_CODE, responseCode);
         }
         if (httpResponse.getReasonPhrase() != null) {
-            answer.setHeader(HttpConstants.HTTP_RESPONSE_TEXT, httpResponse.getReasonPhrase());
+            message.setHeader(HttpConstants.HTTP_RESPONSE_TEXT, httpResponse.getReasonPhrase());
         }
-        return answer;
     }
 
     protected Exception populateHttpOperationFailedException(
@@ -635,7 +636,7 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
         // the exchange can have some headers that override the default url and forces to create
         // a new url that is dynamic based on header values
         // these checks are checks that is done in HttpHelper.createURL and HttpHelper.createURI methods
-        final boolean create = isCreateNewURL(exchange);
+        final boolean create = !getEndpoint().isSkipControlHeaders() && isCreateNewURL(exchange);
 
         if (create) {
             // creating the url to use takes 2-steps

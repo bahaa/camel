@@ -44,6 +44,7 @@ import org.apache.camel.component.kafka.consumer.support.subcription.SubscribeAd
 import org.apache.camel.component.kafka.consumer.support.subcription.TopicInfo;
 import org.apache.camel.support.BridgeExceptionHandlerToErrorHandler;
 import org.apache.camel.support.task.ForegroundTask;
+import org.apache.camel.support.task.TaskRunFailureException;
 import org.apache.camel.support.task.Tasks;
 import org.apache.camel.support.task.budget.Budgets;
 import org.apache.camel.util.IOHelper;
@@ -148,7 +149,7 @@ public class KafkaFetchRecords implements Runnable {
                                 .withInterval(Duration.ofMillis(currentBackoffInterval))
                                 .build())
                         .build();
-                boolean success = task.run(this::createConsumerTask);
+                boolean success = task.run(kafkaConsumer.getEndpoint().getCamelContext(), this::createConsumerTask);
                 if (!success) {
                     int max = kafkaConsumer.getEndpoint().getComponent().getCreateConsumerBackoffMaxAttempts();
                     setupCreateConsumerException(task, max);
@@ -168,7 +169,7 @@ public class KafkaFetchRecords implements Runnable {
                                 .withInterval(Duration.ofMillis(currentBackoffInterval))
                                 .build())
                         .build();
-                success = task.run(this::initializeConsumerTask);
+                success = task.run(kafkaConsumer.getEndpoint().getCamelContext(), this::initializeConsumerTask);
                 if (!success) {
                     int max = kafkaConsumer.getEndpoint().getComponent().getSubscribeConsumerBackoffMaxAttempts();
                     setupInitializeErrorException(task, max);
@@ -228,7 +229,8 @@ public class KafkaFetchRecords implements Runnable {
                 kafkaConsumer.getExceptionHandler().handleException(e);
             }
 
-            return false;
+            // make the task runner aware of the exception (will retry)
+            throw new TaskRunFailureException(e);
         }
 
         return true;
@@ -265,7 +267,8 @@ public class KafkaFetchRecords implements Runnable {
                 kafkaConsumer.getExceptionHandler().handleException(e);
             }
 
-            return false;
+            // make the task runner aware of the exception (will retry)
+            throw new TaskRunFailureException(e);
         }
 
         return true;

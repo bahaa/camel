@@ -9688,10 +9688,10 @@ public class StaticEndpointBuilders {
      * 
      * Path parameter: languageName (required)
      * Sets the name of the language to use
-     * There are 23 enums and the value can be one of: bean, constant, csimple,
+     * There are 26 enums and the value can be one of: bean, constant, csimple,
      * datasonnet, exchangeProperty, file, groovy, header, hl7terser, java,
-     * joor, jq, jsonpath, mvel, ognl, ref, simple, spel, sql, tokenize, xpath,
-     * xquery, xtokenize
+     * joor, jq, js, jsonpath, mvel, ognl, python, ref, simple, spel, tokenize,
+     * variable, wasm, xpath, xquery, xtokenize
      * 
      * Path parameter: resourceUri
      * Path to the resource, or a reference to lookup a bean in the Registry to
@@ -9717,10 +9717,10 @@ public class StaticEndpointBuilders {
      * 
      * Path parameter: languageName (required)
      * Sets the name of the language to use
-     * There are 23 enums and the value can be one of: bean, constant, csimple,
+     * There are 26 enums and the value can be one of: bean, constant, csimple,
      * datasonnet, exchangeProperty, file, groovy, header, hl7terser, java,
-     * joor, jq, jsonpath, mvel, ognl, ref, simple, spel, sql, tokenize, xpath,
-     * xquery, xtokenize
+     * joor, jq, js, jsonpath, mvel, ognl, python, ref, simple, spel, tokenize,
+     * variable, wasm, xpath, xquery, xtokenize
      * 
      * Path parameter: resourceUri
      * Path to the resource, or a reference to lookup a bean in the Registry to
@@ -10809,12 +10809,12 @@ public class StaticEndpointBuilders {
      * Syntax: <code>netty:protocol://host:port</code>
      * 
      * Path parameter: protocol (required)
-     * The protocol to use which can be tcp or udp.
+     * The protocol to use which can be tcp or udp
      * There are 2 enums and the value can be one of: tcp, udp
      * 
      * Path parameter: host (required)
      * The hostname. For the consumer the hostname is localhost or 0.0.0.0. For
-     * the producer the hostname is the remote host to connect to
+     * the producer the hostname is the remote host to connect to.
      * 
      * Path parameter: port (required)
      * The host port number
@@ -10836,12 +10836,12 @@ public class StaticEndpointBuilders {
      * Syntax: <code>netty:protocol://host:port</code>
      * 
      * Path parameter: protocol (required)
-     * The protocol to use which can be tcp or udp.
+     * The protocol to use which can be tcp or udp
      * There are 2 enums and the value can be one of: tcp, udp
      * 
      * Path parameter: host (required)
      * The hostname. For the consumer the hostname is localhost or 0.0.0.0. For
-     * the producer the hostname is the remote host to connect to
+     * the producer the hostname is the remote host to connect to.
      * 
      * Path parameter: port (required)
      * The host port number
@@ -12002,7 +12002,7 @@ public class StaticEndpointBuilders {
     }
     /**
      * PQC Algorithms (camel-pqc)
-     * Post Quantum Computing Signature and Verification component.
+     * Post Quantum Cryptography Signature and Verification component.
      * 
      * Category: security
      * Since: 4.12
@@ -12021,7 +12021,7 @@ public class StaticEndpointBuilders {
     }
     /**
      * PQC Algorithms (camel-pqc)
-     * Post Quantum Computing Signature and Verification component.
+     * Post Quantum Cryptography Signature and Verification component.
      * 
      * Category: security
      * Since: 4.12

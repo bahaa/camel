@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.camel.support.task.budget;
 
 import java.time.Duration;
@@ -23,6 +22,7 @@ import java.time.Duration;
  * A budget defines how much a task can execute
  */
 public interface Budget {
+
     /**
      * Defines an initial delay before running the task
      *
@@ -31,7 +31,8 @@ public interface Budget {
     long initialDelay();
 
     /**
-     * The interval between each task execution
+     * The interval between each task execution (delay between the termination of one execution and the commencement of
+     * the next).
      *
      * @return the interval, in milliseconds, for each task execution
      */
@@ -50,6 +51,13 @@ public interface Budget {
      * @return true if the task can continue or false otherwise
      */
     boolean next();
+
+    /**
+     * The current number of iterations
+     *
+     * @return the current number of iterations
+     */
+    int iteration();
 
     /**
      * The amount of time that has elapsed since the budget was created. This can be used to account for the amount of

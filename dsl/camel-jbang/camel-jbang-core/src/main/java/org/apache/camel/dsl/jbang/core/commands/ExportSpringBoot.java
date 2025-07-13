@@ -118,7 +118,7 @@ class ExportSpringBoot extends Export {
             // ensure spring-boot keeps running if no HTTP server included
             boolean http = deps.stream().anyMatch(s -> s.contains("mvn:org.apache.camel:camel-platform-http"));
             if (!http) {
-                prop.put("camel.springboot.main-run-controller", "true");
+                prop.put("camel.main.run-controller", "true");
             }
             // are we using http then enable embedded HTTP server (if not explicit configured already)
             int port = httpServerPort(settings);
@@ -175,7 +175,7 @@ class ExportSpringBoot extends Export {
         RuntimeUtil.loadProperties(prop, settings);
         String repos = getMavenRepositories(settings, prop, camelSpringBootVersion);
 
-        CamelCatalog catalog = CatalogLoader.loadSpringBootCatalog(repos, camelSpringBootVersion);
+        CamelCatalog catalog = CatalogLoader.loadSpringBootCatalog(repos, camelSpringBootVersion, download);
         if (ObjectHelper.isEmpty(camelVersion)) {
             camelVersion = catalog.getLoadedVersion();
         }
@@ -279,7 +279,7 @@ class ExportSpringBoot extends Export {
         RuntimeUtil.loadProperties(prop, settings);
         String repos = getMavenRepositories(settings, prop, camelSpringBootVersion);
 
-        CamelCatalog catalog = CatalogLoader.loadSpringBootCatalog(repos, camelSpringBootVersion);
+        CamelCatalog catalog = CatalogLoader.loadSpringBootCatalog(repos, camelSpringBootVersion, download);
         String camelVersion = catalog.getLoadedVersion();
 
         context = context.replaceFirst("\\{\\{ \\.GroupId }}", ids[0]);

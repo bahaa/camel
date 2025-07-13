@@ -571,6 +571,12 @@ public class SimpleFunctionExpression extends LiteralExpression {
                     || exp.startsWith("variable:")) {
                 String input = StringHelper.before(exp, ",");
                 exp = StringHelper.after(exp, ",");
+                if (input != null) {
+                    input = input.trim();
+                }
+                if (exp != null) {
+                    exp = exp.trim();
+                }
                 return ExpressionBuilder.singleInputLanguageExpression("jq", exp, input);
             }
             return ExpressionBuilder.languageExpression("jq", exp);
@@ -587,7 +593,13 @@ public class SimpleFunctionExpression extends LiteralExpression {
                     || exp.startsWith("variable:")) {
                 String input = StringHelper.before(exp, ",");
                 exp = StringHelper.after(exp, ",");
-                return ExpressionBuilder.singleInputLanguageExpression("jq", exp, input);
+                if (input != null) {
+                    input = input.trim();
+                }
+                if (exp != null) {
+                    exp = exp.trim();
+                }
+                return ExpressionBuilder.singleInputLanguageExpression("jsonpath", exp, input);
             }
             return ExpressionBuilder.languageExpression("jsonpath", exp);
         }
@@ -602,7 +614,13 @@ public class SimpleFunctionExpression extends LiteralExpression {
                     || exp.startsWith("variable:")) {
                 String input = StringHelper.before(exp, ",");
                 exp = StringHelper.after(exp, ",");
-                return ExpressionBuilder.singleInputLanguageExpression("jq", exp, input);
+                if (input != null) {
+                    input = input.trim();
+                }
+                if (exp != null) {
+                    exp = exp.trim();
+                }
+                return ExpressionBuilder.singleInputLanguageExpression("xpath", exp, input);
             }
             return ExpressionBuilder.languageExpression("xpath", exp);
         }
@@ -884,7 +902,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
                 throw new SimpleParserException(
                         "Valid syntax: ${iif(predicate,trueExpression,falseExpression)} was: " + function, token.getIndex());
             }
-            String[] tokens = StringQuoteHelper.splitSafeQuote(values, ',');
+            String[] tokens = StringQuoteHelper.splitSafeQuote(values, ',', true, true);
             if (tokens.length > 3) {
                 throw new SimpleParserException(
                         "Valid syntax: ${iif(predicate,trueExpression,falseExpression)} was: " + function, token.getIndex());
@@ -898,7 +916,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
             String values = StringHelper.beforeLast(remainder, ")");
             String[] tokens = null;
             if (ObjectHelper.isNotEmpty(values)) {
-                tokens = StringQuoteHelper.splitSafeQuote(values, ',');
+                tokens = StringQuoteHelper.splitSafeQuote(values, ',', true, false);
             }
             return SimpleExpressionBuilder.listExpression(tokens);
         }
@@ -908,7 +926,7 @@ public class SimpleFunctionExpression extends LiteralExpression {
             String values = StringHelper.beforeLast(remainder, ")");
             String[] tokens = null;
             if (ObjectHelper.isNotEmpty(values)) {
-                tokens = StringQuoteHelper.splitSafeQuote(values, ',');
+                tokens = StringQuoteHelper.splitSafeQuote(values, ',', true, false);
             }
             // there must be an even number of tokens as each map element is a pair
             if (tokens != null && tokens.length % 2 == 1) {
@@ -1951,7 +1969,13 @@ public class SimpleFunctionExpression extends LiteralExpression {
             }
             StringJoiner sj = new StringJoiner(", ");
             for (int i = 0; tokens != null && i < tokens.length; i++) {
-                sj.add(tokens[i]);
+                String s = tokens[i];
+                // single quotes should be double quotes
+                if (StringHelper.isSingleQuoted(s)) {
+                    s = StringHelper.removeLeadingAndEndingQuotes(s);
+                    s = StringQuoteHelper.doubleQuote(s);
+                }
+                sj.add(s);
             }
             String p = sj.length() > 0 ? sj.toString() : "null";
             return "list(exchange, " + p + ")";
@@ -1967,7 +1991,13 @@ public class SimpleFunctionExpression extends LiteralExpression {
             }
             StringJoiner sj = new StringJoiner(", ");
             for (int i = 0; tokens != null && i < tokens.length; i++) {
-                sj.add(tokens[i]);
+                String s = tokens[i];
+                // single quotes should be double quotes
+                if (StringHelper.isSingleQuoted(s)) {
+                    s = StringHelper.removeLeadingAndEndingQuotes(s);
+                    s = StringQuoteHelper.doubleQuote(s);
+                }
+                sj.add(s);
             }
             String p = sj.length() > 0 ? sj.toString() : "null";
             return "map(exchange, " + p + ")";
@@ -2027,6 +2057,9 @@ public class SimpleFunctionExpression extends LiteralExpression {
                 sb.append("return uuid.generateUuid();");
             } else if ("default".equals(generator)) {
                 sb.append("    UuidGenerator uuid = new org.apache.camel.support.DefaultUuidGenerator();\n");
+                sb.append("return uuid.generateUuid();");
+            } else if ("random".equals(generator)) {
+                sb.append("    UuidGenerator uuid = new org.apache.camel.support.RandomUuidGenerator();\n");
                 sb.append("return uuid.generateUuid();");
             } else {
                 generator = StringQuoteHelper.doubleQuote(generator);

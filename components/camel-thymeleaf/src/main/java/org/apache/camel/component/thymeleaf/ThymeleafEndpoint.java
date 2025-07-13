@@ -24,9 +24,12 @@ import org.apache.camel.Exchange;
 import org.apache.camel.ExchangePattern;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.component.ResourceEndpoint;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.support.ExchangeHelper;
+import org.apache.camel.support.ResourceHelper;
+import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -45,6 +48,7 @@ import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 @UriEndpoint(firstVersion = "4.1.0", scheme = "thymeleaf", title = "Thymeleaf", syntax = "thymeleaf:resourceUri",
              remote = false, producerOnly = true, category = { Category.TRANSFORMATION },
              headersClass = ThymeleafConstants.class)
+@Metadata(excludeProperties = "contentCache")
 public class ThymeleafEndpoint extends ResourceEndpoint {
 
     private TemplateEngine templateEngine;
@@ -75,6 +79,8 @@ public class ThymeleafEndpoint extends ResourceEndpoint {
     private Long cacheTimeToLive;
     @UriParam(description = "Whether templates have to be considered cacheable or not.")
     private Boolean cacheable;
+    @UriParam
+    private boolean allowTemplateFromHeader;
 
     public ThymeleafEndpoint() {
     }
@@ -241,6 +247,20 @@ public class ThymeleafEndpoint extends ResourceEndpoint {
         this.cacheable = cacheable;
     }
 
+    public boolean isAllowTemplateFromHeader() {
+        return allowTemplateFromHeader;
+    }
+
+    /**
+     * Whether to allow to use resource template from header or not (default false).
+     *
+     * Enabling this allows to specify dynamic templates via message header. However this can be seen as a potential
+     * security vulnerability if the header is coming from a malicious user, so use this with care.
+     */
+    public void setAllowTemplateFromHeader(boolean allowTemplateFromHeader) {
+        this.allowTemplateFromHeader = allowTemplateFromHeader;
+    }
+
     protected TemplateEngine getTemplateEngine() {
         getInternalLock().lock();
         try {
@@ -314,27 +334,28 @@ public class ThymeleafEndpoint extends ResourceEndpoint {
         String path = getResourceUri();
         ObjectHelper.notNull(path, "resourceUri");
 
-        String newResourceUri = exchange.getIn().getHeader(ThymeleafConstants.THYMELEAF_RESOURCE_URI, String.class);
-        if (newResourceUri != null) {
-            // remove the header so that it is not propagated in the exchange
-            exchange.getIn().removeHeader(ThymeleafConstants.THYMELEAF_RESOURCE_URI);
-
-            log.debug("{} set to {}, creating new endpoint to handle exchange",
-                    ThymeleafConstants.THYMELEAF_RESOURCE_URI, newResourceUri);
-            try (ThymeleafEndpoint newEndpoint = findOrCreateEndpoint(getEndpointUri(), newResourceUri)) {
-                newEndpoint.onExchange(exchange);
+        if (allowTemplateFromHeader) {
+            String newResourceUri = exchange.getIn().getHeader(ThymeleafConstants.THYMELEAF_RESOURCE_URI, String.class);
+            if (newResourceUri != null) {
+                // remove the header so that it is not propagated in the exchange
+                exchange.getIn().removeHeader(ThymeleafConstants.THYMELEAF_RESOURCE_URI);
+                log.debug("{} set to {}, creating new endpoint to handle exchange",
+                        ThymeleafConstants.THYMELEAF_RESOURCE_URI, newResourceUri);
+                try (ThymeleafEndpoint newEndpoint = findOrCreateEndpoint(getEndpointUri(), newResourceUri)) {
+                    newEndpoint.onExchange(exchange);
+                }
+                return;
             }
-
-            return;
         }
 
-        String template = exchange.getIn().getHeader(ThymeleafConstants.THYMELEAF_TEMPLATE, String.class);
-        if (template != null) {
-            this.template = template;
+        String template = null;
+        if (allowTemplateFromHeader) {
+            template = exchange.getIn().getHeader(ThymeleafConstants.THYMELEAF_TEMPLATE, String.class);
             // remove the header so that it is not propagated in the exchange
             exchange.getIn().removeHeader(ThymeleafConstants.THYMELEAF_TEMPLATE);
-        } else {
-            this.template = path;
+        }
+        if (template == null) {
+            template = path;
         }
 
         @SuppressWarnings("unchecked")
@@ -343,16 +364,21 @@ public class ThymeleafEndpoint extends ResourceEndpoint {
             dataModel = ExchangeHelper.createVariableMap(exchange, isAllowContextMapAll());
         } else {
             ExchangeHelper.populateVariableMap(exchange, dataModel, isAllowContextMapAll());
-
             // remove the header so that it is not propagated in the exchange
             exchange.getIn().removeHeader(ThymeleafConstants.THYMELEAF_VARIABLE_MAP);
         }
+
+        if (!resolver.equals(ThymeleafResolverType.URL) && ResourceHelper.hasScheme(template)) {
+            // favour to use Camel to load via resource loader
+            template = IOHelper.loadText(getResourceAsInputStream());
+        }
+        this.template = template;
 
         // let thymeleaf parse and generate the result
         TemplateEngine templateEngine = getTemplateEngine();
         Context context = new Context();
         context.setVariables(dataModel);
-        String buffer = templateEngine.process(this.template, context);
+        String buffer = templateEngine.process(template, context);
 
         // store the result in the exchange body
         ExchangeHelper.setInOutBodyPatternAware(exchange, buffer);

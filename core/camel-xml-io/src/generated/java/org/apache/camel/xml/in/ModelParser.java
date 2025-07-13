@@ -176,6 +176,7 @@ public class ModelParser extends BaseParser {
                 case "initMethod": def.setInitMethod(val); yield true;
                 case "name": def.setName(val); yield true;
                 case "scriptLanguage": def.setScriptLanguage(val); yield true;
+                case "scriptPropertyPlaceholders": def.setScriptPropertyPlaceholders(val); yield true;
                 case "type": def.setType(val); yield true;
                 default: yield false;
             }, (def, key) -> switch (key) {
@@ -931,6 +932,7 @@ public class ModelParser extends BaseParser {
                 case "apiDocs": def.setApiDocs(val); yield true;
                 case "bindingMode": def.setBindingMode(val); yield true;
                 case "clientRequestValidation": def.setClientRequestValidation(val); yield true;
+                case "clientResponseValidation": def.setClientResponseValidation(val); yield true;
                 case "consumes": def.setConsumes(val); yield true;
                 case "disabled": def.setDisabled(val); yield true;
                 case "enableCORS": def.setEnableCORS(val); yield true;
@@ -957,6 +959,7 @@ public class ModelParser extends BaseParser {
         return doParse(new RestBindingDefinition(), (def, key, val) -> switch (key) {
                 case "bindingMode": def.setBindingMode(val); yield true;
                 case "clientRequestValidation": def.setClientRequestValidation(val); yield true;
+                case "clientResponseValidation": def.setClientResponseValidation(val); yield true;
                 case "component": def.setComponent(val); yield true;
                 case "consumes": def.setConsumes(val); yield true;
                 case "enableCORS": def.setEnableCORS(val); yield true;
@@ -1151,6 +1154,7 @@ public class ModelParser extends BaseParser {
     }
     protected TemplatedRouteDefinition doParseTemplatedRouteDefinition() throws IOException, XmlPullParserException {
         return doParse(new TemplatedRouteDefinition(), (def, key, val) -> switch (key) {
+                case "group": def.setGroup(val); yield true;
                 case "prefixId": def.setPrefixId(val); yield true;
                 case "routeId": def.setRouteId(val); yield true;
                 case "routeTemplateRef": def.setRouteTemplateRef(val); yield true;
@@ -1431,6 +1435,7 @@ public class ModelParser extends BaseParser {
                 case "bindingMode": def.setBindingMode(RestBindingMode.valueOf(val)); yield true;
                 case "bindingPackageScan": def.setBindingPackageScan(val); yield true;
                 case "clientRequestValidation": def.setClientRequestValidation(val); yield true;
+                case "clientResponseValidation": def.setClientResponseValidation(val); yield true;
                 case "component": def.setComponent(val); yield true;
                 case "contextPath": def.setContextPath(val); yield true;
                 case "enableCORS": def.setEnableCORS(val); yield true;
@@ -1454,6 +1459,7 @@ public class ModelParser extends BaseParser {
                 case "corsHeaders": doAdd(doParseRestPropertyDefinition(), def.getCorsHeaders(), def::setCorsHeaders); yield true;
                 case "dataFormatProperty": doAdd(doParseRestPropertyDefinition(), def.getDataFormatProperties(), def::setDataFormatProperties); yield true;
                 case "endpointProperty": doAdd(doParseRestPropertyDefinition(), def.getEndpointProperties(), def::setEndpointProperties); yield true;
+                case "validationLevels": doAdd(doParseRestPropertyDefinition(), def.getValidationLevels(), def::setValidationLevels); yield true;
                 default: yield false;
             }, noValueHandler());
     }
@@ -1929,9 +1935,9 @@ public class ModelParser extends BaseParser {
                 default: yield identifiedTypeAttributeHandler().accept(def, key, val);
             }, noElementHandler(), noValueHandler());
     }
-    protected FuryDataFormat doParseFuryDataFormat() throws IOException, XmlPullParserException {
-        return doParse(new FuryDataFormat(), (def, key, val) -> switch (key) {
-                case "allowAutoWiredFury": def.setAllowAutoWiredFury(val); yield true;
+    protected ForyDataFormat doParseForyDataFormat() throws IOException, XmlPullParserException {
+        return doParse(new ForyDataFormat(), (def, key, val) -> switch (key) {
+                case "allowAutoWiredFory": def.setAllowAutoWiredFory(val); yield true;
                 case "requireClassRegistration": def.setRequireClassRegistration(val); yield true;
                 case "threadSafe": def.setThreadSafe(val); yield true;
                 case "unmarshalType": def.setUnmarshalTypeName(val); yield true;
@@ -2570,6 +2576,7 @@ public class ModelParser extends BaseParser {
             case "apiDocs": def.setApiDocs(val); yield true;
             case "bindingMode": def.setBindingMode(val); yield true;
             case "clientRequestValidation": def.setClientRequestValidation(val); yield true;
+            case "clientResponseValidation": def.setClientResponseValidation(val); yield true;
             case "consumes": def.setConsumes(val); yield true;
             case "deprecated": def.setDeprecated(val); yield true;
             case "disabled": def.setDisabled(val); yield true;
@@ -2615,6 +2622,7 @@ public class ModelParser extends BaseParser {
     protected ResponseMessageDefinition doParseResponseMessageDefinition() throws IOException, XmlPullParserException {
         return doParse(new ResponseMessageDefinition(), (def, key, val) -> switch (key) {
                 case "code": def.setCode(val); yield true;
+                case "contentType": def.setContentType(val); yield true;
                 case "message": def.setMessage(val); yield true;
                 case "responseModel": def.setResponseModel(val); yield true;
                 default: yield false;
@@ -2745,6 +2753,7 @@ public class ModelParser extends BaseParser {
         return (def, key, val) -> switch (key) {
             case "maxOverlap": def.setMaxOverlap(val); yield true;
             case "maxTokens": def.setMaxTokens(val); yield true;
+            case "modelName": def.setModelName(val); yield true;
             case "tokenizerType": def.setTokenizerType(val); yield true;
             default: yield identifiedTypeAttributeHandler().accept(def, key, val);
         };
@@ -2942,7 +2951,7 @@ public class ModelParser extends BaseParser {
             case "fhirJson": return doParseFhirJsonDataFormat();
             case "fhirXml": return doParseFhirXmlDataFormat();
             case "flatpack": return doParseFlatpackDataFormat();
-            case "fury": return doParseFuryDataFormat();
+            case "fory": return doParseForyDataFormat();
             case "grok": return doParseGrokDataFormat();
             case "gzipDeflater": return doParseGzipDeflaterDataFormat();
             case "hl7": return doParseHL7DataFormat();

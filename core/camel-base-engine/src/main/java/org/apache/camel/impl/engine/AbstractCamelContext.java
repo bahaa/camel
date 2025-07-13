@@ -87,6 +87,7 @@ import org.apache.camel.impl.debugger.DefaultBacklogDebugger;
 import org.apache.camel.spi.AnnotationBasedProcessorFactory;
 import org.apache.camel.spi.AnnotationScanTypeConverters;
 import org.apache.camel.spi.AsyncProcessorAwaitManager;
+import org.apache.camel.spi.BackOffTimerFactory;
 import org.apache.camel.spi.BacklogDebugger;
 import org.apache.camel.spi.BeanIntrospection;
 import org.apache.camel.spi.BeanProcessorFactory;
@@ -189,6 +190,7 @@ import org.apache.camel.support.ResolverHelper;
 import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.camel.support.service.BaseService;
 import org.apache.camel.support.service.ServiceHelper;
+import org.apache.camel.support.task.TaskManagerRegistry;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StopWatch;
@@ -384,6 +386,7 @@ public abstract class AbstractCamelContext extends BaseService
         camelContextExtension.lazyAddContextPlugin(AnnotationBasedProcessorFactory.class,
                 this::createAnnotationBasedProcessorFactory);
         camelContextExtension.lazyAddContextPlugin(DumpRoutesStrategy.class, this::createDumpRoutesStrategy);
+        camelContextExtension.lazyAddContextPlugin(BackOffTimerFactory.class, this::createBackOffTimerFactory);
     }
 
     protected static <T> T lookup(CamelContext context, String ref, Class<T> type) {
@@ -961,6 +964,27 @@ public abstract class AbstractCamelContext extends BaseService
                 routesLock.unlock();
             }
         }
+    }
+
+    @Override
+    public List<Route> getRoutes(Predicate<Route> filter) {
+        routesLock.lock();
+        try {
+            List<Route> answer = new ArrayList<>();
+            for (Route route : getRoutes()) {
+                if (filter.test(route)) {
+                    answer.add(route);
+                }
+            }
+            return answer;
+        } finally {
+            routesLock.unlock();
+        }
+    }
+
+    @Override
+    public List<Route> getRoutesByGroup(String groupId) {
+        return getRoutes(f -> groupId.equals(f.getGroup()));
     }
 
     @Override
@@ -2221,6 +2245,9 @@ public abstract class AbstractCamelContext extends BaseService
             startupStepRecorder.endStep(step4);
         }
 
+        // setup internal task registry
+        getCamelContextExtension().addContextPlugin(TaskManagerRegistry.class, createTaskManagerRegistry());
+
         // setup dev-console registry as its needed this early phase for 3rd party to register custom consoles
         DevConsoleRegistry dcr = getCamelContextExtension().getContextPlugin(DevConsoleRegistry.class);
         if (dcr == null) {
@@ -2606,7 +2633,8 @@ public abstract class AbstractCamelContext extends BaseService
                 if (!counters.containsKey(source)) {
                     for (String targetName : cnames) {
                         Class<?> target = getComponent(targetName).getClass();
-                        if (source == target) {
+                        boolean skip = "StubComponent".equals(target.getSimpleName());
+                        if (!skip && source == target) {
                             Set<String> names = counters.computeIfAbsent(source, k -> new TreeSet<>());
                             names.add(targetName);
                         }
@@ -4319,6 +4347,10 @@ public abstract class AbstractCamelContext extends BaseService
     protected abstract EndpointServiceRegistry createEndpointServiceRegistry();
 
     protected abstract StartupConditionStrategy createStartupConditionStrategy();
+
+    protected abstract BackOffTimerFactory createBackOffTimerFactory();
+
+    protected abstract TaskManagerRegistry createTaskManagerRegistry();
 
     protected RestConfiguration createRestConfiguration() {
         // lookup a global which may have been on a container such spring-boot / CDI / etc.

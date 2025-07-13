@@ -124,8 +124,21 @@ public class UpdateList extends CamelCommand {
                                     l[0], "Camel", "",
                                     "Migrates Apache Camel 4 application to Apache Camel " + l[0])));
             recipesVersions.camelSpringBootRecipesVersion().forEach(l -> {
+
                 String[] runtimeVersion
-                        = recipesVersions.sbVersions().stream().filter(v -> v[0].equals(l[0])).findFirst().orElseThrow();
+                        = recipesVersions.sbVersions().stream().filter(v -> v[0].equals(l[0])).findFirst().orElse(null);
+
+                // There may be Camel recipes releases that do not follow Camel Spring Boot micro version, for example
+                // upgrade recipes 4.12.1 was released, but only Camel 4.12.0 is released, in this case,
+                // consider the major.minor only
+                if (runtimeVersion == null) {
+                    String majorMinorVersion = l[0].substring(0, l[0].lastIndexOf("."));
+                    runtimeVersion
+                            = recipesVersions.sbVersions().stream()
+                                    .filter(v -> v[0].substring(0, v[0].lastIndexOf(".")).equals(majorMinorVersion)).findFirst()
+                                    .orElseThrow(
+                                            () -> new IllegalStateException("No version found for " + l[0]));
+                }
 
                 rows.add(new Row(
                         l[0], "Camel Spring Boot", runtimeVersion[1],
@@ -136,13 +149,15 @@ public class UpdateList extends CamelCommand {
             recipesVersions.quarkusUpdateRecipes().forEach(l -> {
                 List<String[]> runtimeVersions = recipesVersions.qVersions().stream().filter(v -> v[1].startsWith(l.version()))
                         .collect(Collectors.toList());
-                runtimeVersions.sort(Comparator.comparing(o -> o[1]));
-                String[] runtimeVersion = runtimeVersions.get(runtimeVersions.size() - 1);
-                // Quarkus may release patches independently, therefore, we do not know the real micro version
-                String quarkusVersion = runtimeVersion[1];
-                quarkusVersion = quarkusVersion.substring(0, quarkusVersion.lastIndexOf('.')) + ".x";
+                if (!runtimeVersions.isEmpty()) {
+                    runtimeVersions.sort(Comparator.comparing(o -> o[1]));
+                    String[] runtimeVersion = runtimeVersions.get(runtimeVersions.size() - 1);
+                    // Quarkus may release patches independently, therefore, we do not know the real micro version
+                    String quarkusVersion = runtimeVersion[1];
+                    quarkusVersion = quarkusVersion.substring(0, quarkusVersion.lastIndexOf('.')) + ".x";
 
-                rows.add(new Row(runtimeVersion[0], "Camel Quarkus", quarkusVersion, l.description()));
+                    rows.add(new Row(runtimeVersion[0], "Camel Quarkus", quarkusVersion, l.description()));
+                }
             });
         }
 

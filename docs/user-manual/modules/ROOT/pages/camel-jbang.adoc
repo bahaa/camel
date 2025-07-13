@@ -2300,10 +2300,10 @@ You can use the following Spring Boot annotations:
 
 You can use the following Quarkus annotations:
 
-- `@javax.enterprise.context.ApplicationScoped` or `@javax.inject.Singleton` on class level to create an instance of the class and register in the xref:registry.adoc[Registry]. `@javax.inject.Named` can be used to specify the bean id.
-- `@javax.inject.Inject` to dependency inject a bean on a class field. `@javax.inject.Named` can be used to specify the bean id.
+- `@jakarta.enterprise.context.ApplicationScoped` or `@jakarta.inject.Singleton` on class level to create an instance of the class and register in the xref:registry.adoc[Registry]. `@jakarta.inject.Named` can be used to specify the bean id.
+- `@jakarta.inject.Inject` to dependency inject a bean on a class field. `@jakarta.inject.Named` can be used to specify the bean id.
 - `@org.eclipse.microprofile.config.inject.ConfigProperty` to inject a xref:using-propertyplaceholder.adoc[property placeholder]. Such as a property defined in `application.properties`.
-- `@javax.enterprise.inject.Produces` on a method to create a bean by invoking the method. `@javax.inject.Named` can be used to specify the bean id.
+- `@jakarta.enterprise.inject.Produces` on a method to create a bean by invoking the method. `@jakarta.inject.Named` can be used to specify the bean id.
 
 ==== Using beans in Camel XML DSL
 
@@ -3890,10 +3890,10 @@ The follow options related to _exporting_, can be configured in `application.pro
 |Whether downloading JARs from ASF Maven Snapshot repository is enabled
 
 |`camel.jbang.download`
-Whether to allow automatic downloading JAR dependencies (over the internet)
+|Whether to allow automatic downloading JAR dependencies (over the internet)
 
 |`camel.jbang.packageScanJars`
-Whether to automatic package scan JARs for custom Spring or Quarkus beans making them available for Camel JBang
+|Whether to automatic package scan JARs for custom Spring or Quarkus beans making them available for Camel JBang
 
 |`camel.jbang.exportDir`
 |Directory where the project will be exported
@@ -4160,7 +4160,7 @@ $ camel infra run arangodb
 $ camel infra ps
  ALIAS             IMPLEMENTATION  DESCRIPTION
  arangodb                          ArangoDB is a multi-model database for high-performance applications.
----
+----
 
 === Get running service
 
@@ -4177,7 +4177,7 @@ $ camel infra get openldap
   "getSslPort" : 32775,
   "getHost" : "localhost"
 }
----
+----
 
 === Get running services logs
 
@@ -4197,7 +4197,7 @@ $ camel infra log
 [service1] ...
 [service1] ...
 [service1] ...
----
+----
 
 In order to retrieve the log of a specific service the service alias can be provided
 
@@ -4207,7 +4207,7 @@ $ camel infra log service
 [service] ...
 [service] ...
 [service] ...
----
+----
 
 == Update
 
@@ -4289,3 +4289,32 @@ Update a Spring Boot application with and extra Spring Boot 3.3 upgrade recipe
 ----
 $ camel update run 4.9.0 --runtime=spring-boot --extraActiveRecipes=org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_3 --extraRecipeArtifactCoordinates=org.openrewrite.recipe:rewrite-spring:6.0.2
 ----
+
+=== Generate JSON schema plugin
+
+The *generate schema* plugin automatically creates JSON Schema definitions for Java objects, enabling seamless integration with low-code/no-code platforms and visual development tools.
+
+==== Key Benefits
+
+===== Low-Code Platform Integration
+
+- *Visual Development*: Integrates with low-code platforms like Kaoto and Karavan
+- *Drag-and-Drop Compatibility*: Generated schemas enable intuitive component configuration in visual builders
+
+===== Alternative to Custom Processors
+
+- *Eliminates Custom Code*: Replaces the need for custom processors with declarative schema definitions
+- *Standardized Approach*: Uses industry-standard JSON Schema format for consistent data modeling
+- *Reduced Development Time*: Accelerates integration development by providing ready-to-use object definitions
+
+==== Examples
+
+[source,bash]
+----
+# Generate schema for FHIR Patient object
+$ camel generate schema fhir org.hl7.fhir.r4.model.Patient
+
+Schema saved to: ./org.hl7.fhir.r4.model.Patient-schema.json
+----
+
+The generated schemas can then be imported into visual development tools, enabling drag-and-drop integration development without requiring deep knowledge of the underlying Java objects.

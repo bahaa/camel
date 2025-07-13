@@ -86,9 +86,17 @@ public class PQCComponent extends HealthCheckComponent {
                         configuration.setSigner(PQCDefaultPicnicMaterial.signer);
                         configuration.setKeyPair(PQCDefaultPicnicMaterial.keyPair);
                         break;
-                    case "RAINBOW":
-                        configuration.setSigner(PQCDefaultRainbowMaterial.signer);
-                        configuration.setKeyPair(PQCDefaultRainbowMaterial.keyPair);
+                    case "SNOVA":
+                        configuration.setSigner(PQCDefaultSNOVAMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultSNOVAMaterial.keyPair);
+                        break;
+                    case "MAYO":
+                        configuration.setSigner(PQCDefaultMAYOMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultMAYOMaterial.keyPair);
+                        break;
+                    case "DILITHIUM":
+                        configuration.setSigner(PQCDefaultDILITHIUMMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultDILITHIUMMaterial.keyPair);
                         break;
                     default:
                         break;

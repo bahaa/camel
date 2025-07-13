@@ -39,6 +39,7 @@ import org.apache.camel.dsl.jbang.core.common.VersionHelper;
 import org.apache.camel.tooling.maven.MavenGav;
 import org.apache.camel.tooling.model.ArtifactModel;
 import org.apache.camel.util.CamelCaseOrderedProperties;
+import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.StringHelper;
 
@@ -167,7 +168,7 @@ class ExportQuarkus extends Export {
             if ("camel.main.routesIncludePattern".equals(k)) {
                 v = Arrays.stream(v.split(","))
                         .filter(d -> !d.endsWith(".java")) // skip .java as they are in the src/main/java folder
-                        .map(ExportQuarkus::removeScheme) // remove scheme and routes are in camel sub-folder
+                        .map(ExportQuarkus::stripPath) // remove scheme and routes are in camel sub-folder
                         .map(s -> {
                             if (s.endsWith("kamelet.yaml")) {
                                 return "kamelets/" + s;
@@ -182,7 +183,7 @@ class ExportQuarkus extends Export {
             if ("camel.jbang.classpathFiles".equals(k)) {
                 v = Arrays.stream(v.split(","))
                         .filter(d -> !d.endsWith(".jar")) // skip local lib JARs
-                        .map(ExportQuarkus::removeScheme) // remove scheme
+                        .map(ExportQuarkus::stripPath) // remove scheme
                         .collect(Collectors.joining(","));
                 sj2.add(v);
             }
@@ -219,15 +220,13 @@ class ExportQuarkus extends Export {
         }
     }
 
-    private static String removeScheme(String s) {
-        if (s.contains(":")) {
-            s = StringHelper.after(s, ":");
+    private static String stripPath(String fileName) {
+        if (fileName.contains(":")) {
+            fileName = StringHelper.after(fileName, ":");
         }
-        if (s.contains(File.separator)) {
-            s = StringHelper.afterLast(s, File.separator);
-        }
-        s = s.replace(CommandLineHelper.CAMEL_JBANG_WORK_DIR + "/", "");
-        return s;
+        fileName = FileUtil.stripPath(fileName);
+        fileName = fileName.replace(CommandLineHelper.CAMEL_JBANG_WORK_DIR + "/", "");
+        return fileName;
     }
 
     private void createGradleProperties(Path output) throws Exception {
@@ -268,7 +267,7 @@ class ExportQuarkus extends Export {
         // quarkus controls the camel version
         String repos = getMavenRepositories(settings, prop, quarkusVersion);
 
-        CamelCatalog catalog = CatalogLoader.loadQuarkusCatalog(repos, quarkusVersion, quarkusGroupId);
+        CamelCatalog catalog = CatalogLoader.loadQuarkusCatalog(repos, quarkusVersion, quarkusGroupId, download);
         if (camelVersion == null) {
             camelVersion = catalog.getCatalogVersion();
         }
@@ -385,8 +384,9 @@ class ExportQuarkus extends Export {
             // skip "camel.server." as this is for camel-main only
             return null;
         }
-        // quarkus use dash cased properties and lets turn camel into dash as well
-        if (key.startsWith("quarkus.") || key.startsWith("camel.")) {
+        // quarkus use dash cased properties and lets turn camel into dash as well (skip hawtio)
+        boolean dash = key.startsWith("camel.") || (key.startsWith("quarkus.") && !key.startsWith("quarkus.hawtio."));
+        if (dash) {
             key = StringHelper.camelCaseToDash(key);
         }
         return super.applicationPropertyLine(key, value);
@@ -424,7 +424,7 @@ class ExportQuarkus extends Export {
         // quarkus controls the camel version
         String repos = getMavenRepositories(settings, prop, quarkusVersion);
 
-        CamelCatalog catalog = CatalogLoader.loadQuarkusCatalog(repos, quarkusVersion, quarkusGroupId);
+        CamelCatalog catalog = CatalogLoader.loadQuarkusCatalog(repos, quarkusVersion, quarkusGroupId, download);
         if (camelVersion == null) {
             camelVersion = catalog.getCatalogVersion();
         }

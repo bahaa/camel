@@ -56,7 +56,7 @@ public interface KafkaComponentBuilderFactory {
          * configurations (e.g.: new Kafka properties that are not reflected yet
          * in Camel configurations), the properties have to be prefixed with
          * additionalProperties.., e.g.:
-         * additionalProperties.transactional.id=12345&amp;additionalProperties.schema.registry.url=http://localhost:8811/avro. If the properties are set in the application.properties file, they must be prefixed with camel.component.kafka.additional-properties and the property enclosed in square brackets, like this example: camel.component.kafka.additional-propertiesdelivery.timeout.ms=15000.
+         * additionalProperties.transactional.id=12345&amp;additionalProperties.schema.registry.url=http://localhost:8811/avro. If the properties are set in the application.properties file, they must be prefixed with camel.component.kafka.additional-properties and the property enclosed in square brackets, like this example: camel.component.kafka.additional-propertiesdelivery.timeout.ms=15000. This is a multi-value option with prefix: additionalProperties.
          * 
          * The option is a: &lt;code&gt;java.util.Map&amp;lt;java.lang.String,
          * java.lang.Object&amp;gt;&lt;/code&gt; type.
@@ -1699,6 +1699,42 @@ public interface KafkaComponentBuilderFactory {
     
         
         /**
+         * Indicates to create a transactional.id kafka property by using the
+         * endpoint id and route id. This property is ignored in case there is
+         * transactional.id kafka property or the transactionalId parameter.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param transacted the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder transacted(boolean transacted) {
+            doSetProperty("transacted", transacted);
+            return this;
+        }
+    
+        /**
+         * Enable the kafka producer to be a transactional one by setting the
+         * transactional.id property. In case this property is used, the
+         * transacted parameter is ignored.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param transactionalId the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder transactionalId(java.lang.String transactionalId) {
+            doSetProperty("transactionalId", transactionalId);
+            return this;
+        }
+    
+        
+        /**
          * Sets whether sending to kafka should send the message body as a
          * single record, or use a java.util.Iterator to send multiple records
          * to kafka (if the message body can be iterated).
@@ -2519,6 +2555,8 @@ public interface KafkaComponentBuilderFactory {
             case "requestTimeoutMs": getOrCreateConfiguration((KafkaComponent) component).setRequestTimeoutMs((java.lang.Integer) value); return true;
             case "retries": getOrCreateConfiguration((KafkaComponent) component).setRetries((java.lang.Integer) value); return true;
             case "sendBufferBytes": getOrCreateConfiguration((KafkaComponent) component).setSendBufferBytes((java.lang.Integer) value); return true;
+            case "transacted": getOrCreateConfiguration((KafkaComponent) component).setTransacted((boolean) value); return true;
+            case "transactionalId": getOrCreateConfiguration((KafkaComponent) component).setTransactionalId((java.lang.String) value); return true;
             case "useIterator": getOrCreateConfiguration((KafkaComponent) component).setUseIterator((boolean) value); return true;
             case "valueSerializer": getOrCreateConfiguration((KafkaComponent) component).setValueSerializer((java.lang.String) value); return true;
             case "workerPool": getOrCreateConfiguration((KafkaComponent) component).setWorkerPool((java.util.concurrent.ExecutorService) value); return true;

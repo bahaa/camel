@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -572,7 +573,7 @@ public class Run extends CamelCommand {
         final KameletMain main = createMainInstance();
         main.setProfile(profile);
         if (repositories != null && !repositories.isBlank()) {
-            main.setRepositories(String.join(",", repositories));
+            main.setRepositories(repositories);
         }
         main.setDownload(download);
         main.setPackageScanJars(packageScanJars);
@@ -637,7 +638,7 @@ public class Run extends CamelCommand {
         }
         writeSetting(main, profileProperties, "camel.jbang.open-api", openapi);
         if (repositories != null) {
-            writeSetting(main, profileProperties, "camel.jbang.repos", String.join(",", repositories));
+            writeSetting(main, profileProperties, "camel.jbang.repos", repositories);
         }
         writeSetting(main, profileProperties, "camel.jbang.health", health ? "true" : "false");
         writeSetting(main, profileProperties, "camel.jbang.metrics", metrics ? "true" : "false");
@@ -733,7 +734,7 @@ public class Run extends CamelCommand {
             // find source files
             files = RunHelper.scanMavenOrGradleProject();
             // include extra dependencies from pom.xml
-            var pomDependencies = RunHelper.scanMavenDependenciesFromPom();
+            var pomDependencies = RunHelper.scanMavenDependenciesFromPom(Paths.get("pom.xml"));
             addDependencies(pomDependencies.toArray(new String[0]));
         }
 
@@ -1005,12 +1006,32 @@ public class Run extends CamelCommand {
             return 1;
         }
 
+        AtomicReference<Process> processRef = new AtomicReference<>();
+
         // create temp run dir
         Path runDirPath = Paths.get(RUN_PLATFORM_DIR, Long.toString(System.currentTimeMillis()));
         if (!this.background) {
             // Mark for deletion on exit
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
+                    // We need to wait for the process to exit before doing any cleanup
+                    Process process = processRef.get();
+                    if (process != null) {
+                        process.destroy();
+
+                        for (int i = 0; i < 30; i++) {
+                            if (!process.isAlive()) {
+                                break;
+                            }
+
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        }
+                    }
+
                     removeDir(runDirPath);
                 } catch (Exception e) {
                     // Ignore
@@ -1078,6 +1099,7 @@ public class Run extends CamelCommand {
 
         pb.inheritIO(); // run in foreground (with IO so logs are visible)
         Process p = pb.start();
+        processRef.set(p);
         this.spawnPid = p.pid();
         // wait for that process to exit as we run in foreground
         return p.waitFor();
@@ -1089,12 +1111,32 @@ public class Run extends CamelCommand {
             return 1;
         }
 
+        AtomicReference<Process> processRef = new AtomicReference<>();
+
         // create temp run dir
         Path runDirPath = Paths.get(RUN_PLATFORM_DIR, Long.toString(System.currentTimeMillis()));
         if (!this.background) {
             // Mark for deletion on exit
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
+                    // We need to wait for the process to exit before doing any cleanup
+                    Process process = processRef.get();
+                    if (process != null) {
+                        process.destroy();
+
+                        for (int i = 0; i < 30; i++) {
+                            if (!process.isAlive()) {
+                                break;
+                            }
+
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        }
+                    }
+
                     removeDir(runDirPath);
                 } catch (Exception e) {
                     // Ignore
@@ -1174,6 +1216,7 @@ public class Run extends CamelCommand {
 
         pb.inheritIO(); // run in foreground (with IO so logs are visible)
         Process p = pb.start();
+        processRef.set(p);
         this.spawnPid = p.pid();
         // wait for that process to exit as we run in foreground
         return p.waitFor();
@@ -1571,7 +1614,7 @@ public class Run extends CamelCommand {
 
         // cleanup and delete log file
         if (logFile != null) {
-            Files.deleteIfExists(logFile);
+            FileUtil.deleteFile(logFile);
         }
 
         return main.getExitCode();
@@ -1871,9 +1914,11 @@ public class Run extends CamelCommand {
         }
 
         // skip dirs
-        Path path = Paths.get(name);
-        if (Files.exists(path) && Files.isDirectory(path)) {
-            return true;
+        if (!name.startsWith("classpath:")) {
+            Path path = Path.of(name);
+            if (Files.exists(path) && Files.isDirectory(path)) {
+                return true;
+            }
         }
 
         if (FileUtil.onlyExt(name) == null) {
