@@ -40,10 +40,18 @@ public class ContainerLocalKafkaInfraService implements KafkaInfraService, Conta
 
     public ContainerLocalKafkaInfraService() {
         kafka = initContainer();
+        String name = ContainerEnvironmentUtil.containerName(this.getClass());
+        if (name != null) {
+            kafka.withCreateContainerCmdModifier(cmd -> cmd.withName(name));
+        }
     }
 
     public ContainerLocalKafkaInfraService(KafkaContainer kafka) {
         this.kafka = kafka;
+        String name = ContainerEnvironmentUtil.containerName(this.getClass());
+        if (name != null) {
+            kafka.withCreateContainerCmdModifier(cmd -> cmd.withName(name));
+        }
     }
 
     protected KafkaContainer initContainer() {
@@ -55,6 +63,7 @@ public class ContainerLocalKafkaInfraService implements KafkaInfraService, Conta
                 if (fixedPort) {
                     addFixedExposedPort(9092, 9092);
                 }
+                // For random ports, testcontainers will handle port mapping automatically
             }
         }
 

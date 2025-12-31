@@ -30,6 +30,8 @@ import org.apache.camel.tooling.model.ComponentModel.EndpointHeaderModel;
 import org.apache.camel.tooling.model.ComponentModel.EndpointOptionModel;
 import org.apache.camel.tooling.model.DataFormatModel.DataFormatOptionModel;
 import org.apache.camel.tooling.model.EipModel.EipOptionModel;
+import org.apache.camel.tooling.model.JBangModel.JBangGroupModel;
+import org.apache.camel.tooling.model.JBangModel.JBangOptionModel;
 import org.apache.camel.tooling.model.LanguageModel.LanguageOptionModel;
 import org.apache.camel.tooling.model.MainModel.MainGroupModel;
 import org.apache.camel.tooling.model.MainModel.MainOptionModel;
@@ -397,6 +399,15 @@ public final class JsonMapper {
             parseOption(mp, option, entry.getKey());
             model.addOption(option);
         }
+        JsonObject mprf = (JsonObject) obj.get("functions");
+        if (mprf != null) {
+            for (Map.Entry<String, Object> entry : mprf.entrySet()) {
+                JsonObject mp = (JsonObject) entry.getValue();
+                LanguageModel.LanguageFunctionModel func = new LanguageModel.LanguageFunctionModel();
+                parseFunction(mp, func, entry.getKey());
+                model.addFunction(func);
+            }
+        }
         return model;
     }
 
@@ -587,12 +598,40 @@ public final class JsonMapper {
         option.setSupportFileReference(mp.getBooleanOrDefault("supportFileReference", false));
         option.setLargeInput(mp.getBooleanOrDefault("largeInput", false));
         option.setInputLanguage(mp.getString("inputLanguage"));
+        option.setImportant(mp.getBooleanOrDefault("important", false));
     }
 
     private static void parseGroup(JsonObject mp, MainGroupModel option) {
         option.setName(mp.getString("name"));
         option.setDescription(mp.getString("description"));
         option.setSourceType(mp.getString("sourceType"));
+    }
+
+    private static void parseGroup(JsonObject mp, JBangGroupModel option) {
+        option.setName(mp.getString("name"));
+        option.setDescription(mp.getString("description"));
+        option.setSourceType(mp.getString("sourceType"));
+    }
+
+    private static void parseFunction(JsonObject mp, LanguageModel.LanguageFunctionModel func, String name) {
+        func.setName(name);
+        func.setConstantName(name);
+        Integer idx = mp.getInteger("index");
+        if (idx != null) {
+            func.setIndex(idx);
+        }
+        func.setKind(mp.getString("kind"));
+        func.setDisplayName(mp.getString("displayName"));
+        func.setGroup(mp.getString("group"));
+        func.setLabel(mp.getString("label"));
+        func.setRequired(mp.getBooleanOrDefault("required", false));
+        func.setJavaType(mp.getString("javaType"));
+        func.setPrefix(mp.getString("prefix"));
+        func.setDeprecated(mp.getBooleanOrDefault("deprecated", false));
+        func.setDeprecationNote(mp.getString("deprecationNote"));
+        func.setDescription(mp.getString("description"));
+        func.setOgnl(mp.getBoolean("ognl"));
+        func.setSuffix(mp.getString("suffix"));
     }
 
     public static JsonObject asJsonObject(List<? extends BaseOptionModel> options) {
@@ -680,7 +719,9 @@ public final class JsonMapper {
         prop.put("deprecationNote", option.getDeprecationNote());
         prop.put("autowired", option.isAutowired());
         prop.put("secret", option.isSecret());
-        prop.put("defaultValue", option.getDefaultValue());
+        if (option.getDefaultValue() != null) {
+            prop.put("defaultValue", option.resolveDefaultValue());
+        }
         if (option.isSupportFileReference()) {
             // only include if supported to not regen all files
             prop.put("supportFileReference", option.isSupportFileReference());
@@ -692,6 +733,10 @@ public final class JsonMapper {
         if (!Strings.isNullOrEmpty(option.getInputLanguage())) {
             // only include if supported to not regen all files
             prop.put("inputLanguage", option.getInputLanguage());
+        }
+        if (option.isImportant()) {
+            // only include if supported to not regen all files
+            prop.put("important", option.isImportant());
         }
         prop.put("asPredicate", option.isAsPredicate());
         prop.put("configurationClass", option.getConfigurationClass());
@@ -738,14 +783,43 @@ public final class JsonMapper {
         return model;
     }
 
+    public static JBangModel generateJBangModel(String json) {
+        JsonObject obj = deserialize(json);
+        return generateJBangModel(obj);
+    }
+
+    public static JBangModel generateJBangModel(JsonObject obj) {
+        JBangModel model = new JBangModel();
+        JsonArray mgrp = (JsonArray) obj.get("groups");
+        for (Object entry : mgrp) {
+            JsonObject mg = (JsonObject) entry;
+            JBangGroupModel group = new JBangGroupModel();
+            parseGroup(mg, group);
+            model.addGroup(group);
+        }
+        JsonArray mprp = (JsonArray) obj.get("properties");
+        for (Object entry : mprp) {
+            JsonObject mp = (JsonObject) entry;
+            JBangOptionModel option = new JBangOptionModel();
+            parseOption(mp, option, mp.getString("name"));
+            option.setSourceType(mp.getString("sourceType"));
+            model.addOption(option);
+        }
+        return model;
+    }
+
     public static JsonObject asJsonObject(MainModel model) {
         JsonObject json = new JsonObject();
         JsonArray groups = new JsonArray();
         for (MainGroupModel group : model.getGroups()) {
             JsonObject j = new JsonObject();
             j.put("name", group.getName());
-            j.put("description", group.getDescription());
-            j.put("sourceType", group.getSourceType());
+            if (group.getDescription() != null) {
+                j.put("description", group.getDescription());
+            }
+            if (group.getSourceType() != null) {
+                j.put("sourceType", group.getSourceType());
+            }
             groups.add(j);
         }
         json.put("groups", groups);
@@ -753,13 +827,78 @@ public final class JsonMapper {
         for (MainOptionModel prop : model.getOptions()) {
             JsonObject j = new JsonObject();
             j.put("name", prop.getName());
-            j.put("description", prop.getDescription());
-            j.put("sourceType", prop.getSourceType());
+            j.put("required", prop.isRequired());
+            if (prop.getDescription() != null) {
+                j.put("description", prop.getDescription());
+            }
+            if (prop.getGroup() != null) {
+                j.put("group", prop.getGroup());
+            }
+            if (prop.getLabel() != null) {
+                j.put("label", prop.getLabel());
+            }
+            if (prop.getSourceType() != null) {
+                j.put("sourceType", prop.getSourceType());
+            }
             j.put("type", prop.getType());
             j.put("javaType", prop.getJavaType());
             if (prop.getDefaultValue() != null) {
-                j.put("defaultValue", prop.getDefaultValue());
+                j.put("defaultValue", prop.resolveDefaultValue());
             }
+            j.put("secret", prop.isSecret());
+            if (prop.getEnums() != null) {
+                j.put("enum", prop.getEnums());
+            }
+            if (prop.isDeprecated()) {
+                j.put("deprecated", prop.isDeprecated());
+            }
+            if (prop.isAutowired()) {
+                j.put("autowired", prop.isAutowired());
+            }
+            props.add(j);
+        }
+        json.put("properties", props);
+        return json;
+    }
+
+    public static JsonObject asJsonObject(JBangModel model) {
+        JsonObject json = new JsonObject();
+        JsonArray groups = new JsonArray();
+        for (JBangGroupModel group : model.getGroups()) {
+            JsonObject j = new JsonObject();
+            j.put("name", group.getName());
+            if (group.getDescription() != null) {
+                j.put("description", group.getDescription());
+            }
+            if (group.getSourceType() != null) {
+                j.put("sourceType", group.getSourceType());
+            }
+            groups.add(j);
+        }
+        json.put("groups", groups);
+        JsonArray props = new JsonArray();
+        for (JBangOptionModel prop : model.getOptions()) {
+            JsonObject j = new JsonObject();
+            j.put("name", prop.getName());
+            j.put("required", prop.isRequired());
+            if (prop.getDescription() != null) {
+                j.put("description", prop.getDescription());
+            }
+            if (prop.getGroup() != null) {
+                j.put("group", prop.getGroup());
+            }
+            if (prop.getLabel() != null) {
+                j.put("label", prop.getLabel());
+            }
+            if (prop.getSourceType() != null) {
+                j.put("sourceType", prop.getSourceType());
+            }
+            j.put("type", prop.getType());
+            j.put("javaType", prop.getJavaType());
+            if (prop.getDefaultValue() != null) {
+                j.put("defaultValue", prop.resolveDefaultValue());
+            }
+            j.put("secret", prop.isSecret());
             if (prop.getEnums() != null) {
                 j.put("enum", prop.getEnums());
             }
@@ -802,6 +941,11 @@ public final class JsonMapper {
     }
 
     public static String createJsonSchema(MainModel model) {
+        JsonObject wrapper = asJsonObject(model);
+        return serialize(wrapper);
+    }
+
+    public static String createJsonSchema(JBangModel model) {
         JsonObject wrapper = asJsonObject(model);
         return serialize(wrapper);
     }

@@ -22,5 +22,17 @@ public enum BedrockOperations {
 
     invokeImageModel,
 
-    invokeEmbeddingsModel
+    invokeEmbeddingsModel,
+
+    invokeTextModelStreaming,
+
+    invokeImageModelStreaming,
+
+    invokeEmbeddingsModelStreaming,
+
+    converse,
+
+    converseStream,
+
+    applyGuardrail
 }

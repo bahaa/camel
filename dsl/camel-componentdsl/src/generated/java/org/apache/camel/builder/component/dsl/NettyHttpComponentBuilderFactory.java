@@ -179,6 +179,22 @@ public interface NettyHttpComponentBuilderFactory {
             return this;
         }
     
+        /**
+         * When using UDP then this option can be used to specify a network
+         * interface by its name, such as eth0 to join a multicast group.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: common (advanced)
+         * 
+         * @param networkInterface the value to set
+         * @return the dsl builder
+         */
+        default NettyHttpComponentBuilder networkInterface(java.lang.String networkInterface) {
+            doSetProperty("networkInterface", networkInterface);
+            return this;
+        }
+    
         
         /**
          * Allows for bridging the consumer to the Camel routing Error Handler,
@@ -422,22 +438,6 @@ public interface NettyHttpComponentBuilderFactory {
          */
         default NettyHttpComponentBuilder nettyServerBootstrapFactory(org.apache.camel.component.netty.NettyServerBootstrapFactory nettyServerBootstrapFactory) {
             doSetProperty("nettyServerBootstrapFactory", nettyServerBootstrapFactory);
-            return this;
-        }
-    
-        /**
-         * When using UDP then this option can be used to specify a network
-         * interface by its name, such as eth0 to join a multicast group.
-         * 
-         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
-         * 
-         * Group: consumer (advanced)
-         * 
-         * @param networkInterface the value to set
-         * @return the dsl builder
-         */
-        default NettyHttpComponentBuilder networkInterface(java.lang.String networkInterface) {
-            doSetProperty("networkInterface", networkInterface);
             return this;
         }
     
@@ -1316,22 +1316,6 @@ public interface NettyHttpComponentBuilderFactory {
         }
     
         /**
-         * Client side certificate keystore to be used for encryption.
-         * 
-         * The option is a: &lt;code&gt;java.io.File&lt;/code&gt; type.
-         * 
-         * Group: security
-         * 
-         * @param keyStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyHttpComponentBuilder keyStoreFile(java.io.File keyStoreFile) {
-            doSetProperty("keyStoreFile", keyStoreFile);
-            return this;
-        }
-    
-        /**
          * Keystore format to be used for payload encryption. Defaults to JKS if
          * not set.
          * 
@@ -1386,8 +1370,8 @@ public interface NettyHttpComponentBuilderFactory {
         }
     
         /**
-         * Password setting to use in order to encrypt/decrypt payloads sent
-         * using SSH.
+         * Password to use for the keyStore and trustStore. The same password
+         * must be configured for both resources.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -1506,22 +1490,6 @@ public interface NettyHttpComponentBuilderFactory {
         }
     
         /**
-         * Server side certificate keystore to be used for encryption.
-         * 
-         * The option is a: &lt;code&gt;java.io.File&lt;/code&gt; type.
-         * 
-         * Group: security
-         * 
-         * @param trustStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyHttpComponentBuilder trustStoreFile(java.io.File trustStoreFile) {
-            doSetProperty("trustStoreFile", trustStoreFile);
-            return this;
-        }
-    
-        /**
          * Server side certificate keystore to be used for encryption. Is loaded
          * by default from classpath, but you can prefix with classpath:, file:,
          * or http: to load the resource from different systems.
@@ -1585,6 +1553,7 @@ public interface NettyHttpComponentBuilderFactory {
             case "reuseChannel": getOrCreateConfiguration((NettyHttpComponent) component).setReuseChannel((boolean) value); return true;
             case "sync": getOrCreateConfiguration((NettyHttpComponent) component).setSync((boolean) value); return true;
             case "tcpNoDelay": getOrCreateConfiguration((NettyHttpComponent) component).setTcpNoDelay((boolean) value); return true;
+            case "networkInterface": getOrCreateConfiguration((NettyHttpComponent) component).setNetworkInterface((java.lang.String) value); return true;
             case "bridgeErrorHandler": ((NettyHttpComponent) component).setBridgeErrorHandler((boolean) value); return true;
             case "clientMode": getOrCreateConfiguration((NettyHttpComponent) component).setClientMode((boolean) value); return true;
             case "muteException": ((NettyHttpComponent) component).setMuteException((boolean) value); return true;
@@ -1598,7 +1567,6 @@ public interface NettyHttpComponentBuilderFactory {
             case "executorService": ((NettyHttpComponent) component).setExecutorService((io.netty.util.concurrent.EventExecutorGroup) value); return true;
             case "maximumPoolSize": ((NettyHttpComponent) component).setMaximumPoolSize((int) value); return true;
             case "nettyServerBootstrapFactory": getOrCreateConfiguration((NettyHttpComponent) component).setNettyServerBootstrapFactory((org.apache.camel.component.netty.NettyServerBootstrapFactory) value); return true;
-            case "networkInterface": getOrCreateConfiguration((NettyHttpComponent) component).setNetworkInterface((java.lang.String) value); return true;
             case "noReplyLogLevel": getOrCreateConfiguration((NettyHttpComponent) component).setNoReplyLogLevel((org.apache.camel.LoggingLevel) value); return true;
             case "serverClosedChannelExceptionCaughtLogLevel": getOrCreateConfiguration((NettyHttpComponent) component).setServerClosedChannelExceptionCaughtLogLevel((org.apache.camel.LoggingLevel) value); return true;
             case "serverExceptionCaughtLogLevel": getOrCreateConfiguration((NettyHttpComponent) component).setServerExceptionCaughtLogLevel((org.apache.camel.LoggingLevel) value); return true;
@@ -1645,7 +1613,6 @@ public interface NettyHttpComponentBuilderFactory {
             case "textline": getOrCreateConfiguration((NettyHttpComponent) component).setTextline((boolean) value); return true;
             case "enabledProtocols": getOrCreateConfiguration((NettyHttpComponent) component).setEnabledProtocols((java.lang.String) value); return true;
             case "hostnameVerification": getOrCreateConfiguration((NettyHttpComponent) component).setHostnameVerification((boolean) value); return true;
-            case "keyStoreFile": getOrCreateConfiguration((NettyHttpComponent) component).setKeyStoreFile((java.io.File) value); return true;
             case "keyStoreFormat": getOrCreateConfiguration((NettyHttpComponent) component).setKeyStoreFormat((java.lang.String) value); return true;
             case "keyStoreResource": getOrCreateConfiguration((NettyHttpComponent) component).setKeyStoreResource((java.lang.String) value); return true;
             case "needClientAuth": getOrCreateConfiguration((NettyHttpComponent) component).setNeedClientAuth((boolean) value); return true;
@@ -1656,7 +1623,6 @@ public interface NettyHttpComponentBuilderFactory {
             case "sslClientCertHeaders": getOrCreateConfiguration((NettyHttpComponent) component).setSslClientCertHeaders((boolean) value); return true;
             case "sslContextParameters": getOrCreateConfiguration((NettyHttpComponent) component).setSslContextParameters((org.apache.camel.support.jsse.SSLContextParameters) value); return true;
             case "sslHandler": getOrCreateConfiguration((NettyHttpComponent) component).setSslHandler((io.netty.handler.ssl.SslHandler) value); return true;
-            case "trustStoreFile": getOrCreateConfiguration((NettyHttpComponent) component).setTrustStoreFile((java.io.File) value); return true;
             case "trustStoreResource": getOrCreateConfiguration((NettyHttpComponent) component).setTrustStoreResource((java.lang.String) value); return true;
             case "useGlobalSslContextParameters": ((NettyHttpComponent) component).setUseGlobalSslContextParameters((boolean) value); return true;
             default: return false;

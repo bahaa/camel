@@ -19,11 +19,12 @@ The following tables lists all the options:
 
 // main options: START
 === Camel Main configurations
-The camel.main supports 122 options, which are listed below.
+The camel.main supports 125 options, which are listed below.
 
 [width="100%",cols="2,5,^1,2",options="header"]
 |===
 | Name | Description | Default | Type
+| *camel.main.additionalSensitive{zwsp}Keywords* | Camel comes with a default set of sensitive keywords which are automatically masked. This option allows to add additional custom keywords to be masked as well. Multiple keywords can be separated by comma. |  | String
 | *camel.main.allowUseOriginal{zwsp}Message* | Sets whether to allow access to the original message from Camel's error handler, or from org.apache.camel.spi.UnitOfWork.getOriginalInMessage(). Turning this off can optimize performance, as defensive copy of the original message is not needed. Default is false. | false | boolean
 | *camel.main.autoConfiguration{zwsp}Enabled* | Whether auto configuration of components, dataformats, languages is enabled or not. When enabled the configuration parameters are loaded from the properties component. You can prefix the parameters in the properties file with: - camel.component.name.option1=value1 - camel.component.name.option2=value2 - camel.dataformat.name.option1=value1 - camel.dataformat.name.option2=value2 - camel.language.name.option1=value1 - camel.language.name.option2=value2 Where name is the name of the component, dataformat or language such as seda,direct,jaxb. The auto configuration also works for any options on components that is a complex type (not standard Java type) and there has been an explicit single bean instance registered to the Camel registry via the org.apache.camel.spi.Registry#bind(String,Object) method or by using the org.apache.camel.BindToRegistry annotation style. This option is default enabled. | true | boolean
 | *camel.main.autoConfiguration{zwsp}EnvironmentVariablesEnabled* | Whether auto configuration should include OS environment variables as well. When enabled this allows to overrule any configuration using an OS environment variable. For example to set a shutdown timeout of 5 seconds: CAMEL_MAIN_SHUTDOWNTIMEOUT=5. This option is default enabled. | true | boolean
@@ -67,8 +68,10 @@ The camel.main supports 122 options, which are listed below.
 | *camel.main.exchangeFactory{zwsp}Capacity* | The capacity the pool (for each consumer) uses for storing exchanges. The default capacity is 100. | 100 | int
 | *camel.main.exchangeFactory{zwsp}StatisticsEnabled* | Configures whether statistics is enabled on exchange factory. | false | boolean
 | *camel.main.extraShutdown{zwsp}Timeout* | Extra timeout in seconds to graceful shutdown Camel. When Camel is shutting down then Camel first shutdown all the routes (shutdownTimeout). Then additional services is shutdown (extraShutdownTimeout). | 15 | int
-| *camel.main.fileConfigurations* | Directory to load additional configuration files that contains configuration values that takes precedence over any other configuration. This can be used to refer to files that may have secret configuration that has been mounted on the file system for containers. You can specify a pattern to load from sub directories and a name pattern such as /var/app/secret/.properties, multiple directories can be separated by comma. |  | String
+| *camel.main.fileConfigurations* | Directory to load additional properties files that contains configurations that takes precedence (except for camel.main.xxx configurations). This can be used to refer to files that may have secret configuration that has been mounted on the file system for containers. You can specify a pattern to load from file-system (not classpath) and a name pattern such as /var/app/secret/.properties, multiple directories can be separated by comma. |  | String
 | *camel.main.globalOptions* | Sets global options that can be referenced in the camel context Important: This has nothing to do with property placeholders, and is just a plain set of key/value pairs which are used to configure global options on CamelContext, such as a maximum debug logging length etc. |  | Map
+| *camel.main.groovyPreload{zwsp}Compiled* | Whether to preload existing compiled Groovy sources from the compileWorkDir option on startup. This can be enabled to avoid compiling sources that already has been compiled during a build phase. | false | boolean
+| *camel.main.groovyScriptPattern* | Directories to scan for groovy source to be pre-compiled. For example: scripts/.groovy will scan inside the classpath folder scripts for all groovy source files. By default, sources are scanned from the classpath, but you can prefix with file: to use file system. The directories are using Ant-path style pattern, and multiple directories can be specified separated by comma. This requires having camel-groovy JAR on the classpath. | classpath:camel-groovy/*,classpath:camel-groovy-compiled/* | String
 | *camel.main.inflightRepository{zwsp}BrowseEnabled* | Sets whether the inflight repository should allow browsing each inflight exchange. This is by default disabled as there is a very slight performance overhead when enabled. | false | boolean
 | *camel.main.javaRoutesExclude{zwsp}Pattern* | Used for exclusive filtering RouteBuilder classes which are collected from the registry or via classpath scanning. The exclusive filtering takes precedence over inclusive filtering. The pattern is using Ant-path style pattern. Multiple patterns can be specified separated by comma. For example to exclude all classes starting with Bar use: &#42;&#42;/Bar&#42; To exclude all routes form a specific package use: com/mycompany/bar/&#42; To exclude all routes form a specific package and its sub-packages use double wildcards: com/mycompany/bar/&#42;&#42; And to exclude all routes from two specific packages use: com/mycompany/bar/&#42;,com/mycompany/stuff/&#42; |  | String
 | *camel.main.javaRoutesInclude{zwsp}Pattern* | Used for inclusive filtering RouteBuilder classes which are collected from the registry or via classpath scanning. The exclusive filtering takes precedence over inclusive filtering. The pattern is using Ant-path style pattern. Multiple patterns can be specified separated by comma. Multiple patterns can be specified separated by comma. For example to include all classes starting with Foo use: &#42;&#42;/Foo To include all routes form a specific package use: com/mycompany/foo/&#42; To include all routes form a specific package and its sub-packages use double wildcards: com/mycompany/foo/&#42;&#42; And to include all routes from two specific packages use: com/mycompany/foo/&#42;,com/mycompany/stuff/&#42; |  | String
@@ -187,67 +190,61 @@ The camel.routecontroller supports 12 options, which are listed below.
 
 
 === Camel Embedded HTTP Server (only for standalone; not Spring Boot or Quarkus) configurations
-The camel.server supports 28 options, which are listed below.
+The camel.server supports 18 options, which are listed below.
 
 [width="100%",cols="2,5,^1,2",options="header"]
 |===
 | Name | Description | Default | Type
 | *camel.server.authentication{zwsp}Enabled* | Whether to enable HTTP authentication for embedded server (for standalone applications; not Spring Boot or Quarkus). | false | boolean
 | *camel.server.authentication{zwsp}Path* | Set HTTP url path of embedded server that is protected by authentication configuration. |  | String
+| *camel.server.authentication{zwsp}Realm* | Sets the authentication realm |  | String
 | *camel.server.basicProperties{zwsp}File* | Name of the file that contains basic authentication info for Vert.x file auth provider. |  | String
-| *camel.server.devConsoleEnabled* | Whether to enable developer console (not intended for production use). Dev console must also be enabled on CamelContext. For example by setting camel.context.dev-console=true in application.properties, or via code camelContext.setDevConsole(true); If enabled then you can access a basic developer console on context-path: /q/dev. Deprecated since 4.12.0, use HTTP management server instead. | false | boolean
-| *camel.server.downloadEnabled* | Whether to enable file download via HTTP. This makes it possible to browse and download resource source files such as Camel XML or YAML routes. Only enable this for development, troubleshooting or special situations for management and monitoring. | false | boolean
 | *camel.server.enabled* | Whether embedded HTTP server is enabled. By default, the server is not enabled. | false | boolean
 | *camel.server.fileUpload{zwsp}Directory* | Directory to temporary store file uploads while Camel routes the incoming request. If no directory has been explicit configured, then a temporary directory is created in the java.io.tmpdir directory. |  | String
 | *camel.server.fileUploadEnabled* | Whether to enable file uploads being supported (such as POST multipart/form-data) and stored into a temporary directory. | true | boolean
-| *camel.server.healthCheck{zwsp}Enabled* | Whether to enable health-check console. If enabled then you can access health-check status on context-path: /q/health (default). Deprecated since 4.12.0, use HTTP management server instead. | false | boolean
-| *camel.server.healthPath* | The path endpoint used to expose the health status. Deprecated since 4.12.0, use HTTP management server instead. | /q/health | String
 | *camel.server.host* | Hostname to use for binding embedded HTTP server | 0.0.0.0 | String
-| *camel.server.infoEnabled* | Whether to enable info console. If enabled then you can see some basic Camel information at /q/info. Deprecated since 4.12.0, use HTTP management server instead. | false | boolean
-| *camel.server.jolokiaEnabled* | Whether to enable jolokia. If enabled then you can access jolokia api on context-path: /q/jolokia. Deprecated since 4.12.0, use HTTP management server instead. | false | boolean
-| *camel.server.jolokiaPath* | The path endpoint used to expose the jolokia data. Deprecated since 4.12.0, use HTTP management server instead. | /q/jolokia | String
 | *camel.server.jwtKeystore{zwsp}Password* | Password from the keystore used for JWT tokens validation. |  | String
 | *camel.server.jwtKeystorePath* | Path to the keystore file used for JWT tokens validation. |  | String
 | *camel.server.jwtKeystoreType* | Type of the keystore used for JWT tokens validation (jks, pkcs12, etc.). |  | String
 | *camel.server.maxBodySize* | Maximum HTTP body size the embedded HTTP server can accept. |  | Long
-| *camel.server.metricsEnabled* | Whether to enable metrics. If enabled then you can access metrics on context-path: /q/metrics (default). Deprecated since 4.12.0, use HTTP management server instead. | false | boolean
 | *camel.server.path* | Context-path to use for embedded HTTP server | / | String
-| *camel.server.port* | Port to use for binding embedded HTTP server | 8080 | int
-| *camel.server.sendEnabled* | Whether to enable sending messages to Camel via HTTP. This makes it possible to use Camel to send messages to Camel endpoint URIs via HTTP. | false | boolean
+| *camel.server.port* | Port to use for binding embedded HTTP server. Use 0 to dynamic assign a free random port number. | 8080 | int
 | *camel.server.staticContextPath* | The context-path to use for serving static content. By default, the root path is used. And if there is an index.html page then this is automatically loaded. | / | String
 | *camel.server.staticEnabled* | Whether serving static files is enabled. If enabled then Camel can host html/js and other web files that makes it possible to include small web applications. | false | boolean
 | *camel.server.staticSourceDir* | Additional directory that holds static content when static is enabled. |  | String
-| *camel.server.uploadEnabled* | Whether to enable file upload via HTTP (not intended for production use). This functionality is for development to be able to reload Camel routes and code with source changes (if reload is enabled). If enabled then you can upload/delete files via HTTP PUT/DELETE on context-path: /q/upload/\{name}. You must also configure the uploadSourceDir option. | false | boolean
-| *camel.server.uploadSourceDir* | Source directory when upload is enabled. |  | String
 | *camel.server.useGlobalSsl{zwsp}ContextParameters* | Whether to use global SSL configuration for securing the embedded HTTP server. | false | boolean
 |===
 
 
 === Camel Embedded HTTP management Server (only for standalone; not Spring Boot or Quarkus) configurations
-The camel.management supports 20 options, which are listed below.
+The camel.management supports 24 options, which are listed below.
 
 [width="100%",cols="2,5,^1,2",options="header"]
 |===
 | Name | Description | Default | Type
 | *camel.management.authentication{zwsp}Enabled* | Whether to enable HTTP authentication for embedded server (for standalone applications; not Spring Boot or Quarkus). | false | boolean
 | *camel.management.authentication{zwsp}Path* | Set HTTP url path of embedded server that is protected by authentication configuration. |  | String
+| *camel.management.authentication{zwsp}Realm* | Sets the authentication realm |  | String
 | *camel.management.basic{zwsp}PropertiesFile* | Name of the file that contains basic authentication info for Vert.x file auth provider. |  | String
 | *camel.management.devConsole{zwsp}Enabled* | Whether to enable developer console (not intended for production use). Dev console must also be enabled on CamelContext. For example by setting camel.context.dev-console=true in application.properties, or via code camelContext.setDevConsole(true); If enabled then you can access a basic developer console on context-path: /q/dev. | false | boolean
+| *camel.management.download{zwsp}Enabled* | Whether to enable file download via HTTP. This makes it possible to browse and download resource source files such as Camel XML or YAML routes. Only enable this for development, troubleshooting or special situations for management and monitoring. | false | boolean
 | *camel.management.enabled* | Whether embedded HTTP server is enabled. By default, the server is not enabled. | false | boolean
-| *camel.management.healthCheck{zwsp}Enabled* | Whether to enable health-check console. If enabled then you can access health-check status on context-path: /q/health (default) | false | boolean
+| *camel.management.healthCheck{zwsp}Enabled* | Whether to enable health-check console. If enabled then you can access health-check status on context-path: /observe/health | false | boolean
 | *camel.management.healthPath* | The path endpoint used to expose the health status | /observe/health | String
 | *camel.management.host* | Hostname to use for binding embedded HTTP server | 0.0.0.0 | String
-| *camel.management.infoEnabled* | Whether to enable info console. If enabled then you can see some basic Camel information at /q/info | false | boolean
-| *camel.management.jolokia{zwsp}Enabled* | Whether to enable jolokia. If enabled then you can access jolokia api on context-path: /q/jolokia | false | boolean
+| *camel.management.infoEnabled* | Whether to enable info console. If enabled then you can see some basic Camel information at /observe/info | false | boolean
+| *camel.management.infoPath* | The path endpoint used to expose the info status | /observe/info | String
+| *camel.management.jolokia{zwsp}Enabled* | Whether to enable jolokia. If enabled then you can access jolokia api on context-path: /observe/jolokia | false | boolean
 | *camel.management.jolokiaPath* | The path endpoint used to expose the jolokia data. | /observe/jolokia | String
 | *camel.management.jwtKeystore{zwsp}Password* | Password from the keystore used for JWT tokens validation. |  | String
 | *camel.management.jwtKeystore{zwsp}Path* | Path to the keystore file used for JWT tokens validation. |  | String
 | *camel.management.jwtKeystore{zwsp}Type* | Type of the keystore used for JWT tokens validation (jks, pkcs12, etc.). |  | String
-| *camel.management.maxBodySize* | Maximum HTTP body size the embedded HTTP server can accept. |  | Long
-| *camel.management.metrics{zwsp}Enabled* | Whether to enable metrics. If enabled then you can access metrics on context-path: /q/metrics (default) | false | boolean
+| *camel.management.metrics{zwsp}Enabled* | Whether to enable metrics. If enabled then you can access metrics on context-path: /observe/metrics | false | boolean
 | *camel.management.path* | Context-path to use for embedded HTTP server | / | String
-| *camel.management.port* | Port to use for binding embedded HTTP server | 9876 | int
+| *camel.management.port* | Port to use for binding embedded HTTP management server. Use 0 to dynamic assign a free random port number. | 8080 | int
 | *camel.management.sendEnabled* | Whether to enable sending messages to Camel via HTTP. This makes it possible to use Camel to send messages to Camel endpoint URIs via HTTP. | false | boolean
+| *camel.management.uploadEnabled* | Whether to enable file upload via HTTP (not intended for production use). This functionality is for development to be able to reload Camel routes and code with source changes (if reload is enabled). If enabled then you can upload/delete files via HTTP PUT/DELETE on context-path: /q/upload/\{name}. You must also configure the uploadSourceDir option. | false | boolean
+| *camel.management.uploadSource{zwsp}Dir* | Source directory when upload is enabled. |  | String
 | *camel.management.useGlobalSsl{zwsp}ContextParameters* | Whether to use global SSL configuration for securing the embedded HTTP server. | false | boolean
 |===
 
@@ -486,7 +483,7 @@ The camel.vault.kubernetescm supports 2 options, which are listed below.
 
 
 === Camel Hashicorp Vault configurations
-The camel.vault.hashicorp supports 6 options, which are listed below.
+The camel.vault.hashicorp supports 9 options, which are listed below.
 
 [width="100%",cols="2,5,^1,2",options="header"]
 |===
@@ -495,7 +492,10 @@ The camel.vault.hashicorp supports 6 options, which are listed below.
 | *camel.vault.hashicorp.host* | Host to access hashicorp vault |  | String
 | *camel.vault.hashicorp.namespace* | If the Hashicorp Vault instance is deployed on Hashicorp Cloud, this field will determine the namespace |  | String
 | *camel.vault.hashicorp.port* | Port to access hashicorp vault |  | String
+| *camel.vault.hashicorp.refresh{zwsp}Enabled* | Whether to automatically reload Camel upon secrets being updated in Hashicorp Vault. | false | boolean
+| *camel.vault.hashicorp.refresh{zwsp}Period* | The period (millis) between checking Hashicorp Vault for updated secrets. | 60000 | long
 | *camel.vault.hashicorp.scheme* | Scheme to access hashicorp vault |  | String
+| *camel.vault.hashicorp.secrets* | Specify the secret names (or pattern) to check for updates. Multiple secrets can be separated by comma. |  | String
 | *camel.vault.hashicorp.token* | Token to access hashicorp vault |  | String
 |===
 
@@ -516,6 +516,24 @@ The camel.vault.ibm supports 10 options, which are listed below.
 | *camel.vault.ibm.secrets* | Specify the secret names (or pattern) to check for updates. Multiple secrets can be separated by comma. |  | String
 | *camel.vault.ibm.serviceUrl* | Service URL to access IBM Secrets Manager vault |  | String
 | *camel.vault.ibm.token* | Token to access IBM Secrets Manager vault |  | String
+|===
+
+
+=== Camel CyberArk Conjur Vault configurations
+The camel.vault.cyberark supports 9 options, which are listed below.
+
+[width="100%",cols="2,5,^1,2",options="header"]
+|===
+| Name | Description | Default | Type
+| *camel.vault.cyberark.account* | The CyberArk Conjur account name |  | String
+| *camel.vault.cyberark.apiKey* | The API key for authentication |  | String
+| *camel.vault.cyberark.authToken* | Pre-authenticated token to use |  | String
+| *camel.vault.cyberark.certificate{zwsp}Path* | Path to the SSL certificate for verification |  | String
+| *camel.vault.cyberark.password* | The password for authentication |  | String
+| *camel.vault.cyberark.secrets* | Specify the secret names (or pattern) to check for updates. Multiple secrets can be separated by comma. |  | String
+| *camel.vault.cyberark.url* | The CyberArk Conjur instance URL |  | String
+| *camel.vault.cyberark.username* | The username for authentication |  | String
+| *camel.vault.cyberark.verifySsl* | Whether to verify SSL certificates | false | boolean
 |===
 
 
@@ -565,6 +583,18 @@ The camel.telemetryDev supports 4 options, which are listed below.
 |===
 
 
+=== Camel MDC configurations
+The camel.mdc supports 3 options, which are listed below.
+
+[width="100%",cols="2,5,^1,2",options="header"]
+|===
+| Name | Description | Default | Type
+| *camel.mdc.customExchange{zwsp}Headers* | Provide the headers you would like to use in the logging. Use &#42; value to include all available headers |  | String
+| *camel.mdc.customExchange{zwsp}Properties* | Provide the properties you would like to use in the logging. Use &#42; value to include all available properties |  | String
+| *camel.mdc.enabled* | To enable MDC service | false | boolean
+|===
+
+
 === Camel Micrometer Metrics configurations
 The camel.metrics supports 14 options, which are listed below.
 
@@ -581,7 +611,7 @@ The camel.metrics supports 14 options, which are listed below.
 | *camel.metrics.enableRouteEvent{zwsp}Notifier* | Set whether to enable the MicrometerRouteEventNotifier for capturing metrics on the total number of routes and total number of routes running. | true | boolean
 | *camel.metrics.enableRoute{zwsp}Policy* | Set whether to enable the MicrometerRoutePolicyFactory for capturing metrics on route processing times. | true | boolean
 | *camel.metrics.namingStrategy* | Controls the name style to use for metrics. Default = uses micrometer naming convention. Legacy = uses the classic naming style (camelCase) | default | String
-| *camel.metrics.path* | The path endpoint used to expose the metrics. | /q/metrics | String
+| *camel.metrics.path* | The path endpoint used to expose the metrics. | /observe/metrics | String
 | *camel.metrics.routePolicyLevel* | Sets the level of information to capture. all = both context and routes. | all | String
 | *camel.metrics.skipCamelInfo* | Skip the evaluation of app.info metric which contains runtime provider information (default, false). | false | boolean
 | *camel.metrics.textFormat{zwsp}Version* | The text-format version to use with Prometheus scraping. 0.0.4 = text/plain; version=0.0.4; charset=utf-8 1.0.0 = application/openmetrics-text; version=1.0.0; charset=utf-8 | 0.0.4 | String
@@ -610,7 +640,7 @@ The camel.faulttolerance supports 12 options, which are listed below.
 
 
 === Resilience4j EIP Circuit Breaker configurations
-The camel.resilience4j supports 20 options, which are listed below.
+The camel.resilience4j supports 21 options, which are listed below.
 
 [width="100%",cols="2,5,^1,2",options="header"]
 |===
@@ -622,6 +652,7 @@ The camel.resilience4j supports 20 options, which are listed below.
 | *camel.resilience4j.circuit{zwsp}Breaker* | Refers to an existing io.github.resilience4j.circuitbreaker.CircuitBreaker instance to lookup and use from the registry. When using this, then any other circuit breaker options are not in use. |  | String
 | *camel.resilience4j.config* | Refers to an existing io.github.resilience4j.circuitbreaker.CircuitBreakerConfig instance to lookup and use from the registry. |  | String
 | *camel.resilience4j.failureRate{zwsp}Threshold* | Configures the failure rate threshold in percentage. If the failure rate is equal or greater than the threshold the CircuitBreaker transitions to open and starts short-circuiting calls. The threshold must be greater than 0 and not greater than 100. Default value is 50 percentage. | 50 | Float
+| *camel.resilience4j.micrometer{zwsp}Enabled* | Whether to enable collecting statistics using Micrometer. This requires adding camel-resilience4j-micrometer JAR to the classpath. | false | Boolean
 | *camel.resilience4j.minimum{zwsp}NumberOfCalls* | Configures configures the minimum number of calls which are required (per sliding window period) before the CircuitBreaker can calculate the error rate. For example, if minimumNumberOfCalls is 10, then at least 10 calls must be recorded, before the failure rate can be calculated. If only 9 calls have been recorded the CircuitBreaker will not transition to open even if all 9 calls have failed. Default minimumNumberOfCalls is 100 | 100 | Integer
 | *camel.resilience4j.permitted{zwsp}NumberOfCallsInHalfOpenState* | Configures the number of permitted calls when the CircuitBreaker is half open. The size must be greater than 0. Default size is 10. | 10 | Integer
 | *camel.resilience4j.sliding{zwsp}WindowSize* | Configures the size of the sliding window which is used to record the outcome of calls when the CircuitBreaker is closed. slidingWindowSize configures the size of the sliding window. Sliding window can either be count-based or time-based. If slidingWindowType is COUNT_BASED, the last slidingWindowSize calls are recorded and aggregated. If slidingWindowType is TIME_BASED, the calls of the last slidingWindowSize seconds are recorded and aggregated. The slidingWindowSize must be greater than 0. The minimumNumberOfCalls must be greater than 0. If the slidingWindowType is COUNT_BASED, the minimumNumberOfCalls cannot be greater than slidingWindowSize . If the slidingWindowType is TIME_BASED, you can pick whatever you want. Default slidingWindowSize is 100. | 100 | Integer

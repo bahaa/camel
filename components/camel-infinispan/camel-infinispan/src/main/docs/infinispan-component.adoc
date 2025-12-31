@@ -38,22 +38,11 @@ infinispan://cacheName?[options]
 The producer allows sending messages to a remote cache using the HotRod protocol.
 The consumer allows listening for events from a remote cache using the HotRod protocol.
 
-// component-configure options: START
-
-// component-configure options: END
-
 // component options: START
 include::partial$component-configure-options.adoc[]
 include::partial$component-endpoint-options.adoc[]
-// component options: END
-
-// endpoint options: START
-
-// endpoint options: END
-
-// component headers: START
 include::partial$component-endpoint-headers.adoc[]
-// component headers: END
+// component options: END
 
 == Usage
 
@@ -430,7 +419,7 @@ from("direct:put")
     .to("langchain4j-embeddings:create")
     .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.PUT)
     // Transform the embedding to a format usable by Infinispan
-    .transform(new DataType("infinispan:embeddings"))
+    .transformDataType(new DataType("infinispan:embeddings"))
     // Store the embedding
     .to("infinispan:myCache?embeddingStoreDimension=384");
 ----
@@ -446,7 +435,7 @@ from("direct:query")
     .to("langchain4j-embeddings:create")
     .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.QUERY)
     // Transforms the embedding to a vector kNN search
-    .transform(new DataType("infinispan:embeddings"))
+    .transformDataType(new DataType("infinispan:embeddings"))
     // Query embeddings
     .to("infinispan:myCache?embeddingStoreDimension=384");
 ----

@@ -77,6 +77,10 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
                         description = "Filter processors that must be slower than the given time (ms)")
     long mean;
 
+    @CommandLine.Option(names = { "--running" },
+                        description = "Only include running processors")
+    boolean running;
+
     @CommandLine.Option(names = { "--filter" },
                         description = "Filter processors by id")
     String[] filter;
@@ -88,6 +92,10 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
     @CommandLine.Option(names = { "--description" },
                         description = "Include description in the ID column (if available)")
     boolean description;
+
+    @CommandLine.Option(names = { "--note" },
+                        description = "Include note in the ID column (if available)")
+    boolean note;
 
     @CommandLine.Option(names = { "--show-group" },
                         description = "Include group column")
@@ -123,6 +131,7 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
                             row.routeId = o.getString("routeId");
                             row.group = o.getString("group");
                             row.description = o.getString("description");
+                            row.note = o.getString("note");
                             row.nodePrefixId = o.getString("nodePrefixId");
                             row.processor = o.getString("from");
                             row.source = o.getString("source");
@@ -194,7 +203,7 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
                 });
 
         // filter rows
-        if (filter != null || group != null) {
+        if (running || filter != null || group != null) {
             rows.removeIf(r -> {
                 boolean keep = true;
                 if (filter != null) {
@@ -211,6 +220,9 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
                 // group take precedence
                 if (keep && group != null) {
                     keep = PatternHelper.matchPatterns(r.group, group);
+                }
+                if (keep && running) {
+                    keep = "Started".equals(r.state);
                 }
                 return !keep;
             });
@@ -240,6 +252,8 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
             row.description = o.getString("description");
             row.level = o.getIntegerOrDefault("level", 0);
             row.source = o.getString("source");
+            row.state = o.getString("state");
+            row.disabled = o.getBooleanOrDefault("disabled", false);
             Map<String, ?> stats = o.getMap("statistics");
             if (stats != null) {
                 row.total = stats.get("exchangesTotal").toString();
@@ -295,15 +309,17 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
                 new Column().header("GROUP").visible(showGroup).dataAlign(HorizontalAlign.LEFT)
                         .maxWidth(20, OverflowBehaviour.ELLIPSIS_RIGHT)
                         .with(this::getGroup),
-                new Column().header("ID").visible(!description).dataAlign(HorizontalAlign.LEFT)
+                new Column().header("ID").visible(!description && !note).dataAlign(HorizontalAlign.LEFT)
                         .maxWidth(40, OverflowBehaviour.ELLIPSIS_RIGHT)
                         .with(this::getId),
-                new Column().header("ID").visible(description).dataAlign(HorizontalAlign.LEFT)
+                new Column().header("ID").visible(description || note).dataAlign(HorizontalAlign.LEFT)
                         .maxWidth(60, OverflowBehaviour.NEWLINE)
-                        .with(this::getIdAndDescription),
+                        .with(this::getIdAndNoteDescription),
                 new Column().header("PROCESSOR").dataAlign(HorizontalAlign.LEFT).minWidth(25)
                         .maxWidth(45, OverflowBehaviour.ELLIPSIS_RIGHT)
                         .with(this::getProcessor),
+                new Column().header("STATUS").dataAlign(HorizontalAlign.LEFT).headerAlign(HorizontalAlign.CENTER)
+                        .with(this::getStatus),
                 new Column().header("TOTAL").with(this::getTotal),
                 new Column().header("FAIL").with(this::getFailed),
                 new Column().header("INFLIGHT").with(this::getInflight),
@@ -398,13 +414,20 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
         return answer;
     }
 
-    protected String getIdAndDescription(Row r) {
+    protected String getIdAndNoteDescription(Row r) {
         String id = getId(r);
         if (description && r.description != null) {
             if (id != null) {
                 id = id + "\n  " + Strings.wrapWords(r.description, " ", "\n  ", 55, true);
             } else {
                 id = r.description;
+            }
+        }
+        if (note && r.note != null) {
+            if (id != null) {
+                id = id + "\n  " + Strings.wrapWords(r.note, " ", "\n  ", 55, true);
+            } else {
+                id = r.note;
             }
         }
         return id;
@@ -416,6 +439,13 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
         } else {
             return "";
         }
+    }
+
+    protected String getStatus(Row r) {
+        if (r.disabled) {
+            return "Disabled";
+        }
+        return r.state;
     }
 
     protected String getProcessor(Row r) {
@@ -441,9 +471,11 @@ public class CamelProcessorStatus extends ProcessWatchCommand {
         String processorId;
         String processor;
         String description;
+        String note;
         int level;
         String source;
         String state;
+        boolean disabled;
         String total;
         String totalRemote;
         String failed;

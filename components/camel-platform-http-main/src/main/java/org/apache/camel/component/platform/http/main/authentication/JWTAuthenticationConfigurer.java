@@ -28,7 +28,7 @@ import org.apache.camel.component.platform.http.vertx.auth.AuthenticationConfig.
 import org.apache.camel.main.HttpManagementServerConfigurationProperties;
 import org.apache.camel.main.HttpServerConfigurationProperties;
 
-import static org.apache.camel.util.ObjectHelper.isEmpty;
+import static org.apache.camel.util.ObjectHelper.isNotEmpty;
 
 public class JWTAuthenticationConfigurer implements MainAuthenticationConfigurer {
 
@@ -37,7 +37,13 @@ public class JWTAuthenticationConfigurer implements MainAuthenticationConfigurer
             AuthenticationConfig authenticationConfig,
             HttpServerConfigurationProperties properties) {
 
-        String path = isEmpty(properties.getAuthenticationPath()) ? properties.getAuthenticationPath() : "/*";
+        String path
+                = isNotEmpty(properties.getAuthenticationPath()) ? properties.getAuthenticationPath() : properties.getPath();
+        // root means to authenticate everything
+        if ("/".equals(path)) {
+            path = "/*";
+        }
+        String realm = properties.getAuthenticationRealm() != null ? properties.getAuthenticationRealm() : null;
 
         AuthenticationConfigEntry entry = new AuthenticationConfigEntry();
         entry.setPath(path);
@@ -46,7 +52,7 @@ public class JWTAuthenticationConfigurer implements MainAuthenticationConfigurer
             public <T extends AuthenticationProvider> AuthenticationHandler createAuthenticationHandler(
                     T authenticationProvider) {
                 JWTAuth authProvider = (JWTAuth) authenticationProvider;
-                return JWTAuthHandler.create(authProvider);
+                return JWTAuthHandler.create(authProvider, realm);
             }
         });
         entry.setAuthenticationProviderFactory(vertx -> JWTAuth.create(
@@ -66,7 +72,13 @@ public class JWTAuthenticationConfigurer implements MainAuthenticationConfigurer
             AuthenticationConfig authenticationConfig,
             HttpManagementServerConfigurationProperties properties) {
 
-        String path = isEmpty(properties.getAuthenticationPath()) ? properties.getAuthenticationPath() : "/*";
+        String path
+                = isNotEmpty(properties.getAuthenticationPath()) ? properties.getAuthenticationPath() : properties.getPath();
+        // root means to authenticate everything
+        if ("/".equals(path)) {
+            path = "/*";
+        }
+        String realm = properties.getAuthenticationRealm() != null ? properties.getAuthenticationRealm() : null;
 
         AuthenticationConfigEntry entry = new AuthenticationConfigEntry();
         entry.setPath(path);
@@ -75,7 +87,7 @@ public class JWTAuthenticationConfigurer implements MainAuthenticationConfigurer
             public <T extends AuthenticationProvider> AuthenticationHandler createAuthenticationHandler(
                     T authenticationProvider) {
                 JWTAuth authProvider = (JWTAuth) authenticationProvider;
-                return JWTAuthHandler.create(authProvider);
+                return JWTAuthHandler.create(authProvider, realm);
             }
         });
         entry.setAuthenticationProviderFactory(vertx -> JWTAuth.create(

@@ -21,9 +21,9 @@ public class DebeziumDb2EndpointUriFactory extends org.apache.camel.support.comp
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(81);
+        Set<String> props = new HashSet<>(94);
         props.add("additionalProperties");
         props.add("bridgeErrorHandler");
         props.add("cdcChangeTablesSchema");
@@ -31,8 +31,10 @@ public class DebeziumDb2EndpointUriFactory extends org.apache.camel.support.comp
         props.add("columnExcludeList");
         props.add("columnIncludeList");
         props.add("columnPropagateSourceType");
+        props.add("connectionValidationTimeoutMs");
         props.add("converters");
         props.add("customMetricTags");
+        props.add("customSanitizePattern");
         props.add("databaseDbname");
         props.add("databaseHostname");
         props.add("databasePassword");
@@ -45,6 +47,10 @@ public class DebeziumDb2EndpointUriFactory extends org.apache.camel.support.comp
         props.add("eventProcessingFailureHandlingMode");
         props.add("exceptionHandler");
         props.add("exchangePattern");
+        props.add("executorShutdownTimeoutMs");
+        props.add("extendedHeadersEnabled");
+        props.add("guardrailCollectionsLimitAction");
+        props.add("guardrailCollectionsMax");
         props.add("heartbeatIntervalMs");
         props.add("heartbeatTopicsPrefix");
         props.add("includeSchemaChanges");
@@ -67,6 +73,13 @@ public class DebeziumDb2EndpointUriFactory extends org.apache.camel.support.comp
         props.add("offsetStoragePartitions");
         props.add("offsetStorageReplicationFactor");
         props.add("offsetStorageTopic");
+        props.add("openlineageIntegrationConfigFilePath");
+        props.add("openlineageIntegrationDatasetKafkaBootstrapServers");
+        props.add("openlineageIntegrationEnabled");
+        props.add("openlineageIntegrationJobDescription");
+        props.add("openlineageIntegrationJobNamespace");
+        props.add("openlineageIntegrationJobOwners");
+        props.add("openlineageIntegrationJobTags");
         props.add("pollIntervalMs");
         props.add("postProcessors");
         props.add("provideTransactionMetadata");
@@ -107,9 +120,9 @@ public class DebeziumDb2EndpointUriFactory extends org.apache.camel.support.comp
         props.add("transactionMetadataFactory");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         SECRET_PROPERTY_NAMES = Collections.emptySet();
-        Set<String> prefixes = new HashSet<>(1);
-        prefixes.add("additionalProperties.");
-        MULTI_VALUE_PREFIXES = Collections.unmodifiableSet(prefixes);
+        Map<String, String> prefixes = new HashMap<>(1);
+        prefixes.put("additionalProperties", "additionalProperties.");
+        MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
     }
 
     @Override
@@ -140,7 +153,7 @@ public class DebeziumDb2EndpointUriFactory extends org.apache.camel.support.comp
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

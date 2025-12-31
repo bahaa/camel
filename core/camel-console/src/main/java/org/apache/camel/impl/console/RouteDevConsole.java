@@ -41,7 +41,6 @@ import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.TimeUtils;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
-import org.apache.camel.util.json.Jsoner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +50,7 @@ public class RouteDevConsole extends AbstractDevConsole {
     private static final Logger LOG = LoggerFactory.getLogger(RouteDevConsole.class);
 
     /**
-     * Filters the routes matching by route id, route uri, and source location
+     * Filters the routes matching by route id, route uri, or route group, and source location
      */
     public static final String FILTER = "filter";
 
@@ -91,10 +90,22 @@ public class RouteDevConsole extends AbstractDevConsole {
             }
             sb.append(String.format("    Id: %s", mrb.getRouteId()));
             if (mrb.getNodePrefixId() != null) {
-                sb.append(String.format("    Node Prefix Id: %s", mrb.getNodePrefixId()));
+                sb.append(String.format("\n    Node Prefix Id: %s", mrb.getNodePrefixId()));
+            }
+            if (mrb.getRouteGroup() != null) {
+                sb.append(String.format("\n    Group: %s", mrb.getRouteGroup()));
             }
             if (mrb.getDescription() != null) {
-                sb.append(String.format("    Description: %s", mrb.getDescription()));
+                sb.append(String.format("\n    Description: %s", mrb.getDescription()));
+            }
+            if (mrb.getNote() != null) {
+                sb.append(String.format("\n    Note: %s", mrb.getNote()));
+            }
+            if (mrb.isCreatedByKamelet()) {
+                sb.append(String.format("\n    Created By Kamelet: %s", true));
+            }
+            if (mrb.isCreatedByRouteTemplate()) {
+                sb.append(String.format("\n    Created By Route Template: %s", true));
             }
             sb.append(String.format("\n    From: %s", mrb.getEndpointUri()));
             sb.append(String.format("\n    Remote: %s", mrb.isRemoteEndpoint()));
@@ -125,7 +136,7 @@ public class RouteDevConsole extends AbstractDevConsole {
             String load5 = getLoad5(mrb);
             String load15 = getLoad15(mrb);
             if (!load1.isEmpty() || !load5.isEmpty() || !load15.isEmpty()) {
-                sb.append(String.format("\n    Load Average: %s %s %s\n", load1, load5, load15));
+                sb.append(String.format("\n    Load Average: %s %s %s", load1, load5, load15));
             }
             String thp = getThroughput(mrb);
             if (!thp.isEmpty()) {
@@ -193,52 +204,7 @@ public class RouteDevConsole extends AbstractDevConsole {
         // sort processors by index
         mps.sort(Comparator.comparingInt(ManagedProcessorMBean::getIndex));
 
-        for (ManagedProcessorMBean mp : mps) {
-            sb.append("\n");
-            sb.append(String.format("\n        Id: %s", mp.getProcessorId()));
-            if (mp.getNodePrefixId() != null) {
-                sb.append(String.format("\n        Node Prefix Id: %s", mp.getNodePrefixId()));
-            }
-            if (mp.getDescription() != null) {
-                sb.append(String.format("\n        Description: %s", mp.getDescription()));
-            }
-            sb.append(String.format("\n        Processor: %s", mp.getProcessorName()));
-            sb.append(String.format("\n        Level: %d", mp.getLevel()));
-            if (mp.getSourceLocation() != null) {
-                String loc = mp.getSourceLocation();
-                if (mp.getSourceLineNumber() != null) {
-                    loc += ":" + mp.getSourceLineNumber();
-                }
-                sb.append(String.format("\n        Source: %s", loc));
-            }
-            sb.append(String.format("\n        Total: %s", mp.getExchangesTotal()));
-            sb.append(String.format("\n        Failed: %s", mp.getExchangesFailed()));
-            sb.append(String.format("\n        Inflight: %s", mp.getExchangesInflight()));
-            long idle = mp.getIdleSince();
-            if (idle > 0) {
-                sb.append(String.format("\n        Idle Since: %s", TimeUtils.printDuration(idle)));
-            } else {
-                sb.append(String.format("\n        Idle Since: %s", ""));
-            }
-            sb.append(String.format("\n        Mean Time: %s", TimeUtils.printDuration(mp.getMeanProcessingTime(), true)));
-            sb.append(String.format("\n        Max Time: %s", TimeUtils.printDuration(mp.getMaxProcessingTime(), true)));
-            sb.append(String.format("\n        Min Time: %s", TimeUtils.printDuration(mp.getMinProcessingTime(), true)));
-            if (mp.getExchangesTotal() > 0) {
-                sb.append(String.format("\n        Last Time: %s", TimeUtils.printDuration(mp.getLastProcessingTime(), true)));
-                sb.append(
-                        String.format("\n        Delta Time: %s", TimeUtils.printDuration(mp.getDeltaProcessingTime(), true)));
-            }
-            Date last = mp.getLastExchangeCompletedTimestamp();
-            if (last != null) {
-                String ago = TimeUtils.printSince(last.getTime());
-                sb.append(String.format("\n        Since Last Completed: %s", ago));
-            }
-            last = mp.getLastExchangeFailureTimestamp();
-            if (last != null) {
-                String ago = TimeUtils.printSince(last.getTime());
-                sb.append(String.format("\n        Since Last Failed: %s", ago));
-            }
-        }
+        ProcessorDevConsole.includeProcessorsText(getCamelContext(), sb, 0, null, mps);
     }
 
     @Override
@@ -266,6 +232,11 @@ public class RouteDevConsole extends AbstractDevConsole {
             if (mrb.getDescription() != null) {
                 jo.put("description", mrb.getDescription());
             }
+            if (mrb.getNote() != null) {
+                jo.put("note", mrb.getNote());
+            }
+            jo.put("createdByKamelet", mrb.isCreatedByKamelet());
+            jo.put("createdByRouteTemplate", mrb.isCreatedByRouteTemplate());
             jo.put("from", mrb.getEndpointUri());
             jo.put("remote", mrb.isRemoteEndpoint());
             if (mrb.getSourceLocation() != null) {
@@ -357,69 +328,7 @@ public class RouteDevConsole extends AbstractDevConsole {
                 .sorted(Comparator.comparingInt(ManagedProcessorMBean::getIndex))
                 .toList();
 
-        for (ManagedProcessorMBean mp : mps) {
-            JsonObject jo = new JsonObject();
-            arr.add(jo);
-
-            jo.put("id", mp.getProcessorId());
-            if (mp.getNodePrefixId() != null) {
-                jo.put("nodePrefixId", mp.getNodePrefixId());
-            }
-            if (mp.getDescription() != null) {
-                jo.put("description", mp.getDescription());
-            }
-            if (mp.getSourceLocation() != null) {
-                String loc = mp.getSourceLocation();
-                if (mp.getSourceLineNumber() != null) {
-                    loc += ":" + mp.getSourceLineNumber();
-                }
-                jo.put("source", loc);
-            }
-            String line = ConsoleHelper.loadSourceLine(getCamelContext(), mp.getSourceLocation(), mp.getSourceLineNumber());
-            if (line != null) {
-                JsonArray ca = new JsonArray();
-                jo.put("code", ca);
-                JsonObject c = new JsonObject();
-                if (mp.getSourceLineNumber() != null) {
-                    c.put("line", mp.getSourceLineNumber());
-                }
-                c.put("code", Jsoner.escape(line));
-                c.put("match", true);
-                ca.add(c);
-            }
-            jo.put("processor", mp.getProcessorName());
-            jo.put("level", mp.getLevel());
-            final JsonObject stats = getStatsObject(mp);
-            jo.put("statistics", stats);
-        }
-    }
-
-    private static JsonObject getStatsObject(ManagedProcessorMBean mp) {
-        JsonObject stats = new JsonObject();
-        stats.put("idleSince", mp.getIdleSince());
-        stats.put("exchangesTotal", mp.getExchangesTotal());
-        stats.put("exchangesFailed", mp.getExchangesFailed());
-        stats.put("exchangesInflight", mp.getExchangesInflight());
-        stats.put("meanProcessingTime", mp.getMeanProcessingTime());
-        stats.put("maxProcessingTime", mp.getMaxProcessingTime());
-        stats.put("minProcessingTime", mp.getMinProcessingTime());
-        if (mp.getExchangesTotal() > 0) {
-            stats.put("lastProcessingTime", mp.getLastProcessingTime());
-            stats.put("deltaProcessingTime", mp.getDeltaProcessingTime());
-        }
-        Date last = mp.getLastExchangeCreatedTimestamp();
-        if (last != null) {
-            stats.put("lastCreatedExchangeTimestamp", last.getTime());
-        }
-        last = mp.getLastExchangeCompletedTimestamp();
-        if (last != null) {
-            stats.put("lastCompletedExchangeTimestamp", last.getTime());
-        }
-        last = mp.getLastExchangeFailureTimestamp();
-        if (last != null) {
-            stats.put("lastFailedExchangeTimestamp", last.getTime());
-        }
-        return stats;
+        ProcessorDevConsole.includeProcessorsJSon(getCamelContext(), arr, Integer.MAX_VALUE, mps);
     }
 
     protected void doCall(Map<String, Object> options, Function<ManagedRouteMBean, Object> task) {

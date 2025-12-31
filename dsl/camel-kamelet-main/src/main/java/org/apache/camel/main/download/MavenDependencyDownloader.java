@@ -20,6 +20,7 @@ import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -72,6 +73,7 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
     private final Set<ArtifactDownloadListener> artifactDownloadListeners = new LinkedHashSet<>();
     private final Map<String, DownloadRecord> downloadRecords = new HashMap<>();
     private KnownReposResolver knownReposResolver;
+    private VersionResolver versionResolver;
     private boolean download = true;
 
     // all maven-resolver work is delegated to camel-tooling-maven
@@ -129,6 +131,16 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
         } else {
             return null;
         }
+    }
+
+    @Override
+    public VersionResolver getVersionResolver() {
+        return versionResolver;
+    }
+
+    @Override
+    public void setVersionResolver(VersionResolver versionResolver) {
+        this.versionResolver = versionResolver;
     }
 
     @Override
@@ -247,6 +259,10 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
             String groupId, String artifactId, String version, boolean transitively,
             boolean hidden, String extraRepos) {
 
+        if (versionResolver != null && version != null) {
+            version = versionResolver.resolve(version);
+        }
+
         if (!hidden) {
             // trigger listener
             for (DownloadListener listener : downloadListeners) {
@@ -275,11 +291,12 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
         }
 
         String gav = groupId + ":" + artifactId + ":" + version;
+        String targetVersion = version;
         threadPool.download(LOG, () -> {
             List<String> deps = List.of(gav);
 
             // include Apache snapshot to make it easy to use upcoming releases
-            boolean useApacheSnapshots = "org.apache.camel".equals(groupId) && version.contains("SNAPSHOT");
+            boolean useApacheSnapshots = "org.apache.camel".equals(groupId) && targetVersion.contains("SNAPSHOT");
 
             // include extra repositories (if any) - these will be used in addition
             // to the ones detected from ~/.m2/settings.xml and configured in
@@ -326,7 +343,7 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
             }
             if (!artifacts.isEmpty()) {
                 for (DownloadListener listener : downloadListeners) {
-                    listener.onDownloadedDependency(groupId, artifactId, version);
+                    listener.onDownloadedDependency(groupId, artifactId, targetVersion);
                 }
             }
             if (!extraRepositories.isEmpty()) {
@@ -430,6 +447,10 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
             return true;
         }
 
+        if (versionResolver != null && version != null) {
+            version = versionResolver.resolve(version);
+        }
+
         String target = artifactId;
         if (version != null) {
             target = target + "-" + version;
@@ -497,7 +518,7 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
         if (repositoryList != null) {
             for (String repo : repositoryList.split("\\s*,\\s*")) {
                 try {
-                    URL url = new URL(repo);
+                    URL url = URI.create(repo).toURL();
                     if (url.getHost().equals("repo1.maven.org")) {
                         continue;
                     }
@@ -563,14 +584,17 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
         if (mb != null) {
             bootClasspath = mb.getClassPath().split("[:|;]");
         }
-        ServiceHelper.initService(threadPool);
-        ServiceHelper.initService(mavenDownloader);
+        ServiceHelper.initService(versionResolver, threadPool, mavenDownloader);
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        ServiceHelper.startService(threadPool, mavenDownloader, versionResolver);
     }
 
     @Override
     protected void doStop() {
-        ServiceHelper.stopAndShutdownService(mavenDownloader);
-        ServiceHelper.stopAndShutdownService(threadPool);
+        ServiceHelper.stopAndShutdownServices(versionResolver, mavenDownloader, threadPool);
     }
 
     public List<MavenArtifact> resolveDependenciesViaAether(
@@ -631,7 +655,12 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
 
     private String resolveSpringBootVersionByCamelVersion(String camelVersion, Set<String> extraRepos)
             throws Exception {
-        String gav = "org.apache.camel.springboot" + ":" + "spring-boot" + ":pom:" + camelVersion;
+        String gav;
+        if (VersionHelper.isGE(camelVersion, "4.15.0")) {
+            gav = "org.apache.camel:camel-parent:pom:" + camelVersion;
+        } else {
+            gav = "org.apache.camel.springboot:spring-boot:pom:" + camelVersion;
+        }
 
         List<MavenArtifact> artifacts = resolveDependenciesViaAether(List.of(gav), extraRepos, false, false);
         if (!artifacts.isEmpty()) {
@@ -647,7 +676,10 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
                     NodeList nl = dom.getElementsByTagName("properties");
                     if (nl.getLength() > 0) {
                         Element node = (Element) nl.item(0);
-                        return node.getElementsByTagName("spring-boot-version").item(0).getTextContent();
+                        NodeList springBootVersionNodeList = node.getElementsByTagName("spring-boot-version");
+                        if (springBootVersionNodeList.getLength() > 0) {
+                            return springBootVersionNodeList.item(0).getTextContent();
+                        }
                     }
                 }
             }

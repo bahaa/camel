@@ -87,7 +87,8 @@ public interface GraphqlEndpointBuilderFactory {
             return this;
         }
         /**
-         * The query file name located in the classpath.
+         * The query file name located in the classpath (or use file: to load
+         * from file system).
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -112,6 +113,40 @@ public interface GraphqlEndpointBuilderFactory {
          */
         default GraphqlEndpointBuilder queryHeader(String queryHeader) {
             doSetProperty("queryHeader", queryHeader);
+            return this;
+        }
+        /**
+         * Option to disable throwing the HttpOperationFailedException in case
+         * of failed responses from the remote server. This allows you to get
+         * all responses regardless of the HTTP status code.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: producer
+         * 
+         * @param throwExceptionOnFailure the value to set
+         * @return the dsl builder
+         */
+        default GraphqlEndpointBuilder throwExceptionOnFailure(boolean throwExceptionOnFailure) {
+            doSetProperty("throwExceptionOnFailure", throwExceptionOnFailure);
+            return this;
+        }
+        /**
+         * Option to disable throwing the HttpOperationFailedException in case
+         * of failed responses from the remote server. This allows you to get
+         * all responses regardless of the HTTP status code.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: producer
+         * 
+         * @param throwExceptionOnFailure the value to set
+         * @return the dsl builder
+         */
+        default GraphqlEndpointBuilder throwExceptionOnFailure(String throwExceptionOnFailure) {
+            doSetProperty("throwExceptionOnFailure", throwExceptionOnFailure);
             return this;
         }
         /**
@@ -229,6 +264,38 @@ public interface GraphqlEndpointBuilderFactory {
         }
 
         /**
+         * To use a custom HeaderFilterStrategy to filter header to and from
+         * Camel message.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.spi.HeaderFilterStrategy</code> type.
+         * 
+         * Group: common (advanced)
+         * 
+         * @param headerFilterStrategy the value to set
+         * @return the dsl builder
+         */
+        default AdvancedGraphqlEndpointBuilder headerFilterStrategy(org.apache.camel.spi.HeaderFilterStrategy headerFilterStrategy) {
+            doSetProperty("headerFilterStrategy", headerFilterStrategy);
+            return this;
+        }
+        /**
+         * To use a custom HeaderFilterStrategy to filter header to and from
+         * Camel message.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.spi.HeaderFilterStrategy</code> type.
+         * 
+         * Group: common (advanced)
+         * 
+         * @param headerFilterStrategy the value to set
+         * @return the dsl builder
+         */
+        default AdvancedGraphqlEndpointBuilder headerFilterStrategy(String headerFilterStrategy) {
+            doSetProperty("headerFilterStrategy", headerFilterStrategy);
+            return this;
+        }
+        /**
          * Whether the producer should be started lazy (on the first message).
          * By starting lazy you can use this to allow CamelContext and routes to
          * startup in situations where a producer may otherwise fail during
@@ -272,6 +339,40 @@ public interface GraphqlEndpointBuilderFactory {
          */
         default AdvancedGraphqlEndpointBuilder lazyStartProducer(String lazyStartProducer) {
             doSetProperty("lazyStartProducer", lazyStartProducer);
+            return this;
+        }
+        /**
+         * To use a custom pre-existing Http Client. Beware that when using
+         * this, then other configurations such as proxy, access token, is not
+         * applied and all this must be pre-configured on the Http Client.
+         * 
+         * The option is a:
+         * <code>org.apache.hc.client5.http.classic.HttpClient</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param httpClient the value to set
+         * @return the dsl builder
+         */
+        default AdvancedGraphqlEndpointBuilder httpClient(org.apache.hc.client5.http.classic.HttpClient httpClient) {
+            doSetProperty("httpClient", httpClient);
+            return this;
+        }
+        /**
+         * To use a custom pre-existing Http Client. Beware that when using
+         * this, then other configurations such as proxy, access token, is not
+         * applied and all this must be pre-configured on the Http Client.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.hc.client5.http.classic.HttpClient</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param httpClient the value to set
+         * @return the dsl builder
+         */
+        default AdvancedGraphqlEndpointBuilder httpClient(String httpClient) {
+            doSetProperty("httpClient", httpClient);
             return this;
         }
     }

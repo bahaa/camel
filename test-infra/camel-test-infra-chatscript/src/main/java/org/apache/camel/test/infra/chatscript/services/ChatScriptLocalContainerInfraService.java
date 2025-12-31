@@ -19,6 +19,7 @@ package org.apache.camel.test.infra.chatscript.services;
 import org.apache.camel.spi.annotations.InfraService;
 import org.apache.camel.test.infra.chatscript.common.ChatScriptProperties;
 import org.apache.camel.test.infra.common.LocalPropertyResolver;
+import org.apache.camel.test.infra.common.services.ContainerEnvironmentUtil;
 import org.apache.camel.test.infra.common.services.ContainerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,19 +28,25 @@ import org.testcontainers.containers.GenericContainer;
 @InfraService(service = ChatScriptInfraService.class,
               description = "ChatBot Engine",
               serviceAlias = "chat-script")
-public class ChatScriptLocalContainerInfraService implements ChatScriptInfraService, ContainerService<GenericContainer> {
+public class ChatScriptLocalContainerInfraService implements ChatScriptInfraService, ContainerService<GenericContainer<?>> {
     private static final Logger LOG = LoggerFactory.getLogger(ChatScriptLocalContainerInfraService.class);
     private static final int SERVICE_PORT = 1024;
-    private GenericContainer container;
+    private final GenericContainer<?> container;
 
+    @SuppressWarnings("resource")
+    // NOTE: all resources will be closed by close().
     public ChatScriptLocalContainerInfraService() {
         String containerName = LocalPropertyResolver.getProperty(
                 ChatScriptLocalContainerInfraService.class,
                 ChatScriptProperties.CHATSCRIPT_CONTAINER);
 
-        container = new GenericContainer<>(containerName)
+        container = new GenericContainer<>(containerName) // NOSONAR
                 .withExposedPorts(SERVICE_PORT)
                 .withCreateContainerCmdModifier(createContainerCmd -> createContainerCmd.withTty(true));
+        String name = ContainerEnvironmentUtil.containerName(this.getClass());
+        if (name != null) {
+            container.withCreateContainerCmdModifier(cmd -> cmd.withName(name));
+        }
     }
 
     @Override
@@ -63,7 +70,7 @@ public class ChatScriptLocalContainerInfraService implements ChatScriptInfraServ
     }
 
     @Override
-    public GenericContainer getContainer() {
+    public GenericContainer<?> getContainer() {
         return container;
     }
 

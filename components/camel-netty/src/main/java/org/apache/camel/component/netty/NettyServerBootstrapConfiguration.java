@@ -16,10 +16,11 @@
  */
 package org.apache.camel.component.netty;
 
-import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.ssl.SslHandler;
@@ -97,12 +98,6 @@ public class NettyServerBootstrapConfiguration implements Cloneable {
     @UriParam(label = "consumer,security",
               description = "Configures whether the server needs client authentication when using SSL.")
     protected boolean needClientAuth;
-    @Deprecated
-    @UriParam(label = "security", description = "Client side certificate keystore to be used for encryption")
-    protected File keyStoreFile;
-    @Deprecated
-    @UriParam(label = "security", description = "Server side certificate keystore to be used for encryption")
-    protected File trustStoreFile;
     @UriParam(label = "security",
               description = "Client side certificate keystore to be used for encryption. Is loaded by default from classpath, but you can"
                             + " prefix with classpath:, file:, or http: to load the resource from different systems.")
@@ -122,7 +117,7 @@ public class NettyServerBootstrapConfiguration implements Cloneable {
               description = "Which protocols to enable when using SSL")
     protected String enabledProtocols = DEFAULT_ENABLED_PROTOCOLS;
     @UriParam(label = "security", secret = true,
-              description = "Password setting to use in order to encrypt/decrypt payloads sent using SSH")
+              description = "Password to use for the keyStore and trustStore. The same password must be configured for both resources.")
     protected String passphrase;
     @UriParam(label = "advanced",
               description = "Whether to use native transport instead of NIO. Native transport takes advantage of the host operating system and"
@@ -138,7 +133,7 @@ public class NettyServerBootstrapConfiguration implements Cloneable {
     protected EventLoopGroup workerGroup;
     @UriParam(label = "advanced", description = "To use an explicit ChannelGroup.")
     protected ChannelGroup channelGroup;
-    @UriParam(label = "consumer,advanced",
+    @UriParam(label = "common,advanced",
               description = "When using UDP then this option can be used to specify a network interface by its name, such as eth0 to join a multicast group.")
     protected String networkInterface;
     @UriParam(label = "consumer", defaultValue = "true",
@@ -163,6 +158,70 @@ public class NettyServerBootstrapConfiguration implements Cloneable {
 
     public boolean isTcp() {
         return protocol.equalsIgnoreCase("tcp");
+    }
+
+    public void addAdditionalOptions(Map<String, Object> extractedOptions) {
+        // additional netty options, we don't want to store an empty map, so set it as null if empty
+        if (extractedOptions.isEmpty()) {
+            options = null;
+        } else {
+            if (options == null) {
+                options = new HashMap<>();
+            }
+            extractedOptions.forEach((key, value) -> {
+                Object val = getOptionValue(key, (String) value);
+                if (val != null) {
+                    options.put(key, val);
+                }
+            });
+        }
+    }
+
+    public Object getOptionValue(String option, String value) {
+        if (option.contains(ChannelOption.CONNECT_TIMEOUT_MILLIS.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.MAX_MESSAGES_PER_WRITE.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.WRITE_SPIN_COUNT.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.ALLOW_HALF_CLOSURE.name())) {
+            return Boolean.valueOf(value);
+        } else if (option.contains(ChannelOption.AUTO_READ.name())) {
+            return Boolean.valueOf(value);
+        } else if (option.contains(ChannelOption.AUTO_CLOSE.name())) {
+            return Boolean.valueOf(value);
+        } else if (option.contains(ChannelOption.SO_BROADCAST.name())) {
+            return Boolean.valueOf(value);
+        } else if (option.contains(ChannelOption.SO_KEEPALIVE.name())) {
+            return Boolean.valueOf(value);
+        } else if (option.contains(ChannelOption.SO_SNDBUF.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.SO_RCVBUF.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.SO_REUSEADDR.name())) {
+            return Boolean.valueOf(value);
+        } else if (option.contains(ChannelOption.SO_LINGER.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.SO_BACKLOG.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.SO_TIMEOUT.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.IP_TOS.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.IP_MULTICAST_TTL.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.IP_MULTICAST_LOOP_DISABLED.name())) {
+            return Boolean.valueOf(value);
+        } else if (option.contains(ChannelOption.TCP_NODELAY.name())) {
+            return Boolean.valueOf(value);
+        } else if (option.contains(ChannelOption.TCP_FASTOPEN_CONNECT.name())) {
+            return Boolean.valueOf(value);
+        } else if (option.contains(ChannelOption.TCP_FASTOPEN.name())) {
+            return Integer.valueOf(value);
+        } else if (option.contains(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP.name())) {
+            return Boolean.valueOf(value);
+        }
+        return null;
     }
 
     public String getProtocol() {
@@ -383,32 +442,6 @@ public class NettyServerBootstrapConfiguration implements Cloneable {
         this.needClientAuth = needClientAuth;
     }
 
-    @Deprecated
-    public File getKeyStoreFile() {
-        return keyStoreFile;
-    }
-
-    /**
-     * Client side certificate keystore to be used for encryption
-     */
-    @Deprecated
-    public void setKeyStoreFile(File keyStoreFile) {
-        this.keyStoreFile = keyStoreFile;
-    }
-
-    @Deprecated
-    public File getTrustStoreFile() {
-        return trustStoreFile;
-    }
-
-    /**
-     * Server side certificate keystore to be used for encryption
-     */
-    @Deprecated
-    public void setTrustStoreFile(File trustStoreFile) {
-        this.trustStoreFile = trustStoreFile;
-    }
-
     public String getKeyStoreResource() {
         return keyStoreResource;
     }
@@ -460,26 +493,10 @@ public class NettyServerBootstrapConfiguration implements Cloneable {
     }
 
     /**
-     * Password setting to use in order to encrypt/decrypt payloads sent using SSH
+     * Password to use for the keyStore and trustStore. The same password must be configured for both resources.
      */
     public void setPassphrase(String passphrase) {
         this.passphrase = passphrase;
-    }
-
-    /**
-     * @deprecated use #getServerInitializerFactory
-     */
-    @Deprecated
-    public ServerInitializerFactory getServerPipelineFactory() {
-        return serverInitializerFactory;
-    }
-
-    /**
-     * @deprecated use #setServerInitializerFactory
-     */
-    @Deprecated
-    public void setServerPipelineFactory(ServerInitializerFactory serverPipelineFactory) {
-        this.serverInitializerFactory = serverPipelineFactory;
     }
 
     public ServerInitializerFactory getServerInitializerFactory() {
@@ -691,10 +708,6 @@ public class NettyServerBootstrapConfiguration implements Cloneable {
             isCompatible = false;
         } else if (needClientAuth != other.needClientAuth) {
             isCompatible = false;
-        } else if (keyStoreFile != other.keyStoreFile) {
-            isCompatible = false;
-        } else if (trustStoreFile != other.trustStoreFile) {
-            isCompatible = false;
         } else if (keyStoreResource != null && !keyStoreResource.equals(other.keyStoreResource)) {
             isCompatible = false;
         } else if (trustStoreResource != null && !trustStoreResource.equals(other.trustStoreResource)) {
@@ -746,8 +759,6 @@ public class NettyServerBootstrapConfiguration implements Cloneable {
                + ", sslContextParameters='" + sslContextParameters + '\''
                + ", needClientAuth=" + needClientAuth
                + ", enabledProtocols='" + enabledProtocols
-               + ", keyStoreFile=" + keyStoreFile
-               + ", trustStoreFile=" + trustStoreFile
                + ", keyStoreResource='" + keyStoreResource + '\''
                + ", trustStoreResource='" + trustStoreResource + '\''
                + ", keyStoreFormat='" + keyStoreFormat + '\''

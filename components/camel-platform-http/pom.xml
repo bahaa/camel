@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>components</artifactId>
-        <version>4.14.0-SNAPSHOT</version>
+        <version>4.17.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-platform-http</artifactId>
@@ -43,12 +43,6 @@
         </dependency>
 
         <!-- test infra -->
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-infra-jetty</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-       </dependency>
        <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-test-infra-jetty</artifactId>

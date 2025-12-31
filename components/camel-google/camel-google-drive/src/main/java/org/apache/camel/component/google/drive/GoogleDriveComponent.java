@@ -25,10 +25,14 @@ import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.Component;
 import org.apache.camel.support.component.AbstractApiComponent;
 import org.apache.camel.util.ObjectHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component("google-drive")
 public class GoogleDriveComponent
         extends AbstractApiComponent<GoogleDriveApiName, GoogleDriveConfiguration, GoogleDriveApiCollection> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GoogleDriveComponent.class);
 
     @Metadata
     GoogleDriveConfiguration configuration;
@@ -36,6 +40,10 @@ public class GoogleDriveComponent
     private Drive client;
     @Metadata(label = "advanced")
     private GoogleDriveClientFactory clientFactory;
+    @Metadata(label = "proxy", description = "Proxy server host")
+    private String proxyHost;
+    @Metadata(label = "proxy", description = "Proxy server port")
+    private Integer proxyPort;
 
     public GoogleDriveComponent() {
         super(GoogleDriveApiName.class, GoogleDriveApiCollection.getCollection());
@@ -55,11 +63,11 @@ public class GoogleDriveComponent
             if (config.getClientId() != null && !config.getClientId().isBlank()
                     && config.getClientSecret() != null && !config.getClientSecret().isBlank()) {
                 client = getClientFactory().makeClient(config.getClientId(),
-                        config.getClientSecret(), config.getScopes(),
+                        config.getClientSecret(), config.getScopesAsList(),
                         config.getApplicationName(), config.getRefreshToken(), config.getAccessToken());
             } else if (config.getServiceAccountKey() != null && !config.getServiceAccountKey().isBlank()) {
                 client = getClientFactory().makeClient(getCamelContext(), config.getServiceAccountKey(),
-                        config.getScopes(), config.getApplicationName(), config.getDelegate());
+                        config.getScopesAsList(), config.getApplicationName(), config.getDelegate());
             } else {
                 throw new IllegalArgumentException(
                         "(clientId and clientSecret) or serviceAccountKey are required to create Google Drive client");
@@ -75,7 +83,15 @@ public class GoogleDriveComponent
                     && ObjectHelper.isNotEmpty(getCamelContext().getGlobalOption("http.proxyPort"))) {
                 String host = getCamelContext().getGlobalOption("http.proxyHost");
                 int port = Integer.parseInt(getCamelContext().getGlobalOption("http.proxyPort"));
+                LOG.warn(
+                        "CamelContext global options [http.proxyHost,http.proxyPort] detected."
+                         + " Using global option configuration is deprecated. Instead configure this on the component."
+                         + " Using http proxy host: {} port: {}",
+                        host, port);
+
                 clientFactory = new BatchGoogleDriveClientFactory(host, port);
+            } else if (proxyHost != null && proxyPort != null) {
+                clientFactory = new BatchGoogleDriveClientFactory(proxyHost, proxyPort);
             } else {
                 clientFactory = new BatchGoogleDriveClientFactory();
             }
@@ -105,6 +121,22 @@ public class GoogleDriveComponent
      */
     public void setClientFactory(GoogleDriveClientFactory clientFactory) {
         this.clientFactory = clientFactory;
+    }
+
+    public String getProxyHost() {
+        return proxyHost;
+    }
+
+    public void setProxyHost(String proxyHost) {
+        this.proxyHost = proxyHost;
+    }
+
+    public Integer getProxyPort() {
+        return proxyPort;
+    }
+
+    public void setProxyPort(Integer proxyPort) {
+        this.proxyPort = proxyPort;
     }
 
     @Override

@@ -25,6 +25,11 @@ public class LangChain4jChat {
     private LangChain4jChat() {
     }
 
+    /**
+     * @deprecated As of Camel 4.15, this nested Headers class has been moved to its own class. Use
+     *             {@link org.apache.camel.component.langchain4j.chat.LangChain4jChatHeaders} instead.
+     */
+    @Deprecated(forRemoval = true)
     public static class Headers {
         @Metadata(description = "The prompt Template.", javaType = "String")
         public static final String PROMPT_TEMPLATE = "CamelLangChain4jChatPromptTemplate";

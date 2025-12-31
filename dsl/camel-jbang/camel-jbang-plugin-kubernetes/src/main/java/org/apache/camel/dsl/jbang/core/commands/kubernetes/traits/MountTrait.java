@@ -37,6 +37,7 @@ import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.KubernetesHelper;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.model.Mount;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.model.Traits;
+import org.apache.camel.tooling.model.Strings;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.ObjectHelper;
 
@@ -46,6 +47,10 @@ public class MountTrait extends BaseTrait {
             = Pattern.compile("^([\\w.\\-_:]+)(/([\\w.\\-_:]+))?(@([\\w.\\-_:/]+))?$");
 
     public static final int MOUNT_TRAIT_ORDER = ContainerTrait.CONTAINER_TRAIT_ORDER + 10;
+    public static final String CONF_DIR = "/etc/camel/conf.d";
+    public static final String RESOURCES_DIR = "/etc/camel/resources.d";
+    public static final String SECRETS = "/_secrets";
+    public static final String CONFIGMAPS = "/_configmaps";
 
     public MountTrait() {
         super("mount", MOUNT_TRAIT_ORDER);
@@ -123,24 +128,31 @@ public class MountTrait extends BaseTrait {
         String volumeName = KubernetesHelper.sanitize(mountResource.name);
         String dstDir = Optional.ofNullable(mountResource.destinationPath).orElse("");
         String dstFile;
+        boolean overrideFilePath = false;
         if (!dstDir.isEmpty() && !mountResource.key.isEmpty()) {
-            dstFile = FileUtil.onlyName(dstDir);
+            dstFile = FileUtil.stripPath(dstDir);
+            overrideFilePath = true;
         } else {
             dstFile = mountResource.key;
         }
 
         Volume vol = getVolume(volumeName, mountResource, dstFile);
         boolean readOnly = mountResource.storageType != MountResource.StorageType.PVC;
-        VolumeMount mnt = getMount(volumeName, getMountPath(mountResource, dstDir), dstFile, readOnly);
+        VolumeMount mnt = getMount(volumeName, getMountPath(mountResource, dstDir), dstFile, readOnly, overrideFilePath);
 
         volumes.add(vol);
         volumeMounts.add(mnt);
     }
 
-    private VolumeMount getMount(String volumeName, String mountPath, String subPath, boolean readOnly) {
+    private VolumeMount getMount(
+            String volumeName, String mountPath, String subPath, boolean readOnly, boolean overrideFilePath) {
+        String adjustedMountPath = mountPath + "/" + subPath;
+        if (ObjectHelper.isEmpty(subPath) || overrideFilePath) {
+            adjustedMountPath = mountPath;
+        }
         VolumeMountBuilder mount = new VolumeMountBuilder()
                 .withName(volumeName)
-                .withMountPath(mountPath)
+                .withMountPath(adjustedMountPath)
                 .withReadOnly(readOnly);
 
         if (ObjectHelper.isNotEmpty(subPath)) {
@@ -198,15 +210,15 @@ public class MountTrait extends BaseTrait {
 
         String baseMountPoint;
         if (mountResource.contentType == MountResource.ContentType.DATA) {
-            baseMountPoint = "/etc/camel/resources.d";
+            baseMountPoint = RESOURCES_DIR;
         } else {
-            baseMountPoint = "/etc/camel/conf.d";
+            baseMountPoint = CONF_DIR;
         }
 
         if (mountResource.storageType == MountResource.StorageType.SECRET) {
-            baseMountPoint += "/_secrets";
+            baseMountPoint += SECRETS;
         } else {
-            baseMountPoint += "/_configmaps";
+            baseMountPoint += CONFIGMAPS;
         }
 
         return Path.of(baseMountPoint, mountResource.name).toString();
@@ -232,14 +244,19 @@ public class MountTrait extends BaseTrait {
 
     private MountResource createConfig(
             String expression, MountResource.StorageType storageType, MountResource.ContentType contentType) {
+        String name = expression;
+        String key = "";
+        String destPath = "";
         Matcher resourceCoordinates = RESOURCE_VALUE_EXPRESSION.matcher(expression);
         if (resourceCoordinates.matches()) {
-            return new MountResource(
-                    storageType, contentType, resourceCoordinates.group(0), resourceCoordinates.group(2),
-                    resourceCoordinates.group(4));
-        } else {
-            return new MountResource(storageType, contentType, expression, "", "");
+            name = resourceCoordinates.group(1);
+            key = resourceCoordinates.group(3);
+            destPath = resourceCoordinates.group(4);
+            if (!Strings.isNullOrEmpty(destPath)) {
+                destPath = destPath.replace("@", "");
+            }
         }
+        return new MountResource(storageType, contentType, name, key, destPath);
     }
 
     private record MountResource(StorageType storageType, ContentType contentType, String name, String key,

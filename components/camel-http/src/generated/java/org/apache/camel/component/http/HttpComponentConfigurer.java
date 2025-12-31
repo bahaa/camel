@@ -34,9 +34,9 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "clientconnectionmanager":
         case "clientConnectionManager": target.setClientConnectionManager(property(camelContext, org.apache.hc.client5.http.io.HttpClientConnectionManager.class, value)); return true;
         case "connecttimeout":
-        case "connectTimeout": target.setConnectTimeout(property(camelContext, org.apache.hc.core5.util.Timeout.class, value)); return true;
+        case "connectTimeout": target.setConnectTimeout(property(camelContext, long.class, value)); return true;
         case "connectionrequesttimeout":
-        case "connectionRequestTimeout": target.setConnectionRequestTimeout(property(camelContext, org.apache.hc.core5.util.Timeout.class, value)); return true;
+        case "connectionRequestTimeout": target.setConnectionRequestTimeout(property(camelContext, long.class, value)); return true;
         case "connectionstatedisabled":
         case "connectionStateDisabled": target.setConnectionStateDisabled(property(camelContext, boolean.class, value)); return true;
         case "connectiontimetolive":
@@ -45,6 +45,8 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "connectionsPerRoute": target.setConnectionsPerRoute(property(camelContext, int.class, value)); return true;
         case "contentcompressiondisabled":
         case "contentCompressionDisabled": target.setContentCompressionDisabled(property(camelContext, boolean.class, value)); return true;
+        case "contenttypecharsetenabled":
+        case "contentTypeCharsetEnabled": target.setContentTypeCharsetEnabled(property(camelContext, boolean.class, value)); return true;
         case "cookiemanagementdisabled":
         case "cookieManagementDisabled": target.setCookieManagementDisabled(property(camelContext, boolean.class, value)); return true;
         case "cookiestore":
@@ -73,6 +75,8 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "logHttpActivity": target.setLogHttpActivity(property(camelContext, boolean.class, value)); return true;
         case "maxtotalconnections":
         case "maxTotalConnections": target.setMaxTotalConnections(property(camelContext, int.class, value)); return true;
+        case "nonproxyhosts":
+        case "nonProxyHosts": target.setNonProxyHosts(property(camelContext, java.lang.String.class, value)); return true;
         case "proxyauthdomain":
         case "proxyAuthDomain": target.setProxyAuthDomain(property(camelContext, java.lang.String.class, value)); return true;
         case "proxyauthhost":
@@ -89,12 +93,16 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "proxyAuthScheme": target.setProxyAuthScheme(property(camelContext, java.lang.String.class, value)); return true;
         case "proxyauthusername":
         case "proxyAuthUsername": target.setProxyAuthUsername(property(camelContext, java.lang.String.class, value)); return true;
+        case "proxyhost":
+        case "proxyHost": target.setProxyHost(property(camelContext, java.lang.String.class, value)); return true;
+        case "proxyport":
+        case "proxyPort": target.setProxyPort(property(camelContext, java.lang.Integer.class, value)); return true;
         case "redirecthandlingdisabled":
         case "redirectHandlingDisabled": target.setRedirectHandlingDisabled(property(camelContext, boolean.class, value)); return true;
         case "responsepayloadstreamingthreshold":
         case "responsePayloadStreamingThreshold": target.setResponsePayloadStreamingThreshold(property(camelContext, int.class, value)); return true;
         case "responsetimeout":
-        case "responseTimeout": target.setResponseTimeout(property(camelContext, org.apache.hc.core5.util.Timeout.class, value)); return true;
+        case "responseTimeout": target.setResponseTimeout(property(camelContext, long.class, value)); return true;
         case "skipcontrolheaders":
         case "skipControlHeaders": target.setSkipControlHeaders(property(camelContext, boolean.class, value)); return true;
         case "skiprequestheaders":
@@ -102,7 +110,7 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "skipresponseheaders":
         case "skipResponseHeaders": target.setSkipResponseHeaders(property(camelContext, boolean.class, value)); return true;
         case "sotimeout":
-        case "soTimeout": target.setSoTimeout(property(camelContext, org.apache.hc.core5.util.Timeout.class, value)); return true;
+        case "soTimeout": target.setSoTimeout(property(camelContext, long.class, value)); return true;
         case "sslcontextparameters":
         case "sslContextParameters": target.setSslContextParameters(property(camelContext, org.apache.camel.support.jsse.SSLContextParameters.class, value)); return true;
         case "useglobalsslcontextparameters":
@@ -136,9 +144,9 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "clientconnectionmanager":
         case "clientConnectionManager": return org.apache.hc.client5.http.io.HttpClientConnectionManager.class;
         case "connecttimeout":
-        case "connectTimeout": return org.apache.hc.core5.util.Timeout.class;
+        case "connectTimeout": return long.class;
         case "connectionrequesttimeout":
-        case "connectionRequestTimeout": return org.apache.hc.core5.util.Timeout.class;
+        case "connectionRequestTimeout": return long.class;
         case "connectionstatedisabled":
         case "connectionStateDisabled": return boolean.class;
         case "connectiontimetolive":
@@ -147,6 +155,8 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "connectionsPerRoute": return int.class;
         case "contentcompressiondisabled":
         case "contentCompressionDisabled": return boolean.class;
+        case "contenttypecharsetenabled":
+        case "contentTypeCharsetEnabled": return boolean.class;
         case "cookiemanagementdisabled":
         case "cookieManagementDisabled": return boolean.class;
         case "cookiestore":
@@ -175,6 +185,8 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "logHttpActivity": return boolean.class;
         case "maxtotalconnections":
         case "maxTotalConnections": return int.class;
+        case "nonproxyhosts":
+        case "nonProxyHosts": return java.lang.String.class;
         case "proxyauthdomain":
         case "proxyAuthDomain": return java.lang.String.class;
         case "proxyauthhost":
@@ -191,12 +203,16 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "proxyAuthScheme": return java.lang.String.class;
         case "proxyauthusername":
         case "proxyAuthUsername": return java.lang.String.class;
+        case "proxyhost":
+        case "proxyHost": return java.lang.String.class;
+        case "proxyport":
+        case "proxyPort": return java.lang.Integer.class;
         case "redirecthandlingdisabled":
         case "redirectHandlingDisabled": return boolean.class;
         case "responsepayloadstreamingthreshold":
         case "responsePayloadStreamingThreshold": return int.class;
         case "responsetimeout":
-        case "responseTimeout": return org.apache.hc.core5.util.Timeout.class;
+        case "responseTimeout": return long.class;
         case "skipcontrolheaders":
         case "skipControlHeaders": return boolean.class;
         case "skiprequestheaders":
@@ -204,7 +220,7 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "skipresponseheaders":
         case "skipResponseHeaders": return boolean.class;
         case "sotimeout":
-        case "soTimeout": return org.apache.hc.core5.util.Timeout.class;
+        case "soTimeout": return long.class;
         case "sslcontextparameters":
         case "sslContextParameters": return org.apache.camel.support.jsse.SSLContextParameters.class;
         case "useglobalsslcontextparameters":
@@ -245,6 +261,8 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "connectionsPerRoute": return target.getConnectionsPerRoute();
         case "contentcompressiondisabled":
         case "contentCompressionDisabled": return target.isContentCompressionDisabled();
+        case "contenttypecharsetenabled":
+        case "contentTypeCharsetEnabled": return target.isContentTypeCharsetEnabled();
         case "cookiemanagementdisabled":
         case "cookieManagementDisabled": return target.isCookieManagementDisabled();
         case "cookiestore":
@@ -273,6 +291,8 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "logHttpActivity": return target.isLogHttpActivity();
         case "maxtotalconnections":
         case "maxTotalConnections": return target.getMaxTotalConnections();
+        case "nonproxyhosts":
+        case "nonProxyHosts": return target.getNonProxyHosts();
         case "proxyauthdomain":
         case "proxyAuthDomain": return target.getProxyAuthDomain();
         case "proxyauthhost":
@@ -289,6 +309,10 @@ public class HttpComponentConfigurer extends PropertyConfigurerSupport implement
         case "proxyAuthScheme": return target.getProxyAuthScheme();
         case "proxyauthusername":
         case "proxyAuthUsername": return target.getProxyAuthUsername();
+        case "proxyhost":
+        case "proxyHost": return target.getProxyHost();
+        case "proxyport":
+        case "proxyPort": return target.getProxyPort();
         case "redirecthandlingdisabled":
         case "redirectHandlingDisabled": return target.isRedirectHandlingDisabled();
         case "responsepayloadstreamingthreshold":

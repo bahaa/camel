@@ -33,6 +33,7 @@ import org.apache.camel.spi.DataType;
 import org.apache.camel.test.infra.qdrant.services.QdrantService;
 import org.apache.camel.test.infra.qdrant.services.QdrantServiceFactory;
 import org.apache.camel.test.junit5.CamelTestSupport;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,6 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -117,7 +117,7 @@ public class LangChain4jEmbeddingsComponentQdrantTargetIT extends CamelTestSuppo
         assertThat(result.getException()).isNull();
 
         assertThat(result.getIn().getBody()).isInstanceOfSatisfying(Collection.class, c -> assertThat(c).hasSize(1));
-        assertTrue(result.getIn().getBody(List.class).contains("hi"));
+        Assertions.assertTrue(result.getIn().getBody(List.class).contains("hi"));
     }
 
     @Override
@@ -129,21 +129,21 @@ public class LangChain4jEmbeddingsComponentQdrantTargetIT extends CamelTestSuppo
                         .setHeader(Qdrant.Headers.ACTION).constant(QdrantAction.UPSERT)
                         .setHeader(Qdrant.Headers.POINT_ID).constant(POINT_ID)
                         // transform data to embed to a vecto embeddings
-                        .transform(
+                        .transformDataType(
                                 new DataType("qdrant:embeddings"))
                         .to(QDRANT_URI);
 
                 from("direct:search")
                         .to("langchain4j-embeddings:test")
                         // transform prompt into embeddings for search
-                        .transform(
+                        .transformDataType(
                                 new DataType("qdrant:embeddings"))
                         .setHeader(Qdrant.Headers.ACTION, constant(QdrantAction.SIMILARITY_SEARCH))
                         .setHeader(Qdrant.Headers.INCLUDE_VECTORS, constant(true))
                         .setHeader(Qdrant.Headers.INCLUDE_PAYLOAD, constant(true))
                         .to(QDRANT_URI)
                         // decode retrieved embeddings for RAG
-                        .transform(
+                        .transformDataType(
                                 new DataType("qdrant:rag"));
             }
         };

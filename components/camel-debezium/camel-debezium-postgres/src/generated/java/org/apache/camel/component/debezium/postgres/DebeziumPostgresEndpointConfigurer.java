@@ -35,9 +35,13 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "columnIncludeList": target.getConfiguration().setColumnIncludeList(property(camelContext, java.lang.String.class, value)); return true;
         case "columnpropagatesourcetype":
         case "columnPropagateSourceType": target.getConfiguration().setColumnPropagateSourceType(property(camelContext, java.lang.String.class, value)); return true;
+        case "connectionvalidationtimeoutms":
+        case "connectionValidationTimeoutMs": target.getConfiguration().setConnectionValidationTimeoutMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "converters": target.getConfiguration().setConverters(property(camelContext, java.lang.String.class, value)); return true;
         case "custommetrictags":
         case "customMetricTags": target.getConfiguration().setCustomMetricTags(property(camelContext, java.lang.String.class, value)); return true;
+        case "customsanitizepattern":
+        case "customSanitizePattern": target.getConfiguration().setCustomSanitizePattern(property(camelContext, java.lang.String.class, value)); return true;
         case "databasedbname":
         case "databaseDbname": target.getConfiguration().setDatabaseDbname(property(camelContext, java.lang.String.class, value)); return true;
         case "databasehostname":
@@ -78,8 +82,14 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "exceptionHandler": target.setExceptionHandler(property(camelContext, org.apache.camel.spi.ExceptionHandler.class, value)); return true;
         case "exchangepattern":
         case "exchangePattern": target.setExchangePattern(property(camelContext, org.apache.camel.ExchangePattern.class, value)); return true;
-        case "flushlsnsource":
-        case "flushLsnSource": target.getConfiguration().setFlushLsnSource(property(camelContext, boolean.class, value)); return true;
+        case "executorshutdowntimeoutms":
+        case "executorShutdownTimeoutMs": target.getConfiguration().setExecutorShutdownTimeoutMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
+        case "extendedheadersenabled":
+        case "extendedHeadersEnabled": target.getConfiguration().setExtendedHeadersEnabled(property(camelContext, boolean.class, value)); return true;
+        case "guardrailcollectionslimitaction":
+        case "guardrailCollectionsLimitAction": target.getConfiguration().setGuardrailCollectionsLimitAction(property(camelContext, java.lang.String.class, value)); return true;
+        case "guardrailcollectionsmax":
+        case "guardrailCollectionsMax": target.getConfiguration().setGuardrailCollectionsMax(property(camelContext, int.class, value)); return true;
         case "heartbeatactionquery":
         case "heartbeatActionQuery": target.getConfiguration().setHeartbeatActionQuery(property(camelContext, java.lang.String.class, value)); return true;
         case "heartbeatintervalms":
@@ -102,6 +112,12 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "internalValueConverter": target.getConfiguration().setInternalValueConverter(property(camelContext, java.lang.String.class, value)); return true;
         case "intervalhandlingmode":
         case "intervalHandlingMode": target.getConfiguration().setIntervalHandlingMode(property(camelContext, java.lang.String.class, value)); return true;
+        case "lsnflushmode":
+        case "lsnFlushMode": target.getConfiguration().setLsnFlushMode(property(camelContext, java.lang.String.class, value)); return true;
+        case "lsnflushtimeoutaction":
+        case "lsnFlushTimeoutAction": target.getConfiguration().setLsnFlushTimeoutAction(property(camelContext, java.lang.String.class, value)); return true;
+        case "lsnflushtimeoutms":
+        case "lsnFlushTimeoutMs": target.getConfiguration().setLsnFlushTimeoutMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "maxbatchsize":
         case "maxBatchSize": target.getConfiguration().setMaxBatchSize(property(camelContext, int.class, value)); return true;
         case "maxqueuesize":
@@ -134,6 +150,20 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "offsetStorageReplicationFactor": target.getConfiguration().setOffsetStorageReplicationFactor(property(camelContext, int.class, value)); return true;
         case "offsetstoragetopic":
         case "offsetStorageTopic": target.getConfiguration().setOffsetStorageTopic(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationconfigfilepath":
+        case "openlineageIntegrationConfigFilePath": target.getConfiguration().setOpenlineageIntegrationConfigFilePath(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationdatasetkafkabootstrapservers":
+        case "openlineageIntegrationDatasetKafkaBootstrapServers": target.getConfiguration().setOpenlineageIntegrationDatasetKafkaBootstrapServers(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationenabled":
+        case "openlineageIntegrationEnabled": target.getConfiguration().setOpenlineageIntegrationEnabled(property(camelContext, boolean.class, value)); return true;
+        case "openlineageintegrationjobdescription":
+        case "openlineageIntegrationJobDescription": target.getConfiguration().setOpenlineageIntegrationJobDescription(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationjobnamespace":
+        case "openlineageIntegrationJobNamespace": target.getConfiguration().setOpenlineageIntegrationJobNamespace(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationjobowners":
+        case "openlineageIntegrationJobOwners": target.getConfiguration().setOpenlineageIntegrationJobOwners(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationjobtags":
+        case "openlineageIntegrationJobTags": target.getConfiguration().setOpenlineageIntegrationJobTags(property(camelContext, java.lang.String.class, value)); return true;
         case "pluginname":
         case "pluginName": target.getConfiguration().setPluginName(property(camelContext, java.lang.String.class, value)); return true;
         case "pollintervalms":
@@ -146,6 +176,8 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "publicationAutocreateMode": target.getConfiguration().setPublicationAutocreateMode(property(camelContext, java.lang.String.class, value)); return true;
         case "publicationname":
         case "publicationName": target.getConfiguration().setPublicationName(property(camelContext, java.lang.String.class, value)); return true;
+        case "publishviapartitionroot":
+        case "publishViaPartitionRoot": target.getConfiguration().setPublishViaPartitionRoot(property(camelContext, boolean.class, value)); return true;
         case "queryfetchsize":
         case "queryFetchSize": target.getConfiguration().setQueryFetchSize(property(camelContext, int.class, value)); return true;
         case "replicaidentityautosetvalues":
@@ -265,9 +297,13 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "columnIncludeList": return java.lang.String.class;
         case "columnpropagatesourcetype":
         case "columnPropagateSourceType": return java.lang.String.class;
+        case "connectionvalidationtimeoutms":
+        case "connectionValidationTimeoutMs": return long.class;
         case "converters": return java.lang.String.class;
         case "custommetrictags":
         case "customMetricTags": return java.lang.String.class;
+        case "customsanitizepattern":
+        case "customSanitizePattern": return java.lang.String.class;
         case "databasedbname":
         case "databaseDbname": return java.lang.String.class;
         case "databasehostname":
@@ -308,8 +344,14 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "exceptionHandler": return org.apache.camel.spi.ExceptionHandler.class;
         case "exchangepattern":
         case "exchangePattern": return org.apache.camel.ExchangePattern.class;
-        case "flushlsnsource":
-        case "flushLsnSource": return boolean.class;
+        case "executorshutdowntimeoutms":
+        case "executorShutdownTimeoutMs": return long.class;
+        case "extendedheadersenabled":
+        case "extendedHeadersEnabled": return boolean.class;
+        case "guardrailcollectionslimitaction":
+        case "guardrailCollectionsLimitAction": return java.lang.String.class;
+        case "guardrailcollectionsmax":
+        case "guardrailCollectionsMax": return int.class;
         case "heartbeatactionquery":
         case "heartbeatActionQuery": return java.lang.String.class;
         case "heartbeatintervalms":
@@ -332,6 +374,12 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "internalValueConverter": return java.lang.String.class;
         case "intervalhandlingmode":
         case "intervalHandlingMode": return java.lang.String.class;
+        case "lsnflushmode":
+        case "lsnFlushMode": return java.lang.String.class;
+        case "lsnflushtimeoutaction":
+        case "lsnFlushTimeoutAction": return java.lang.String.class;
+        case "lsnflushtimeoutms":
+        case "lsnFlushTimeoutMs": return long.class;
         case "maxbatchsize":
         case "maxBatchSize": return int.class;
         case "maxqueuesize":
@@ -364,6 +412,20 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "offsetStorageReplicationFactor": return int.class;
         case "offsetstoragetopic":
         case "offsetStorageTopic": return java.lang.String.class;
+        case "openlineageintegrationconfigfilepath":
+        case "openlineageIntegrationConfigFilePath": return java.lang.String.class;
+        case "openlineageintegrationdatasetkafkabootstrapservers":
+        case "openlineageIntegrationDatasetKafkaBootstrapServers": return java.lang.String.class;
+        case "openlineageintegrationenabled":
+        case "openlineageIntegrationEnabled": return boolean.class;
+        case "openlineageintegrationjobdescription":
+        case "openlineageIntegrationJobDescription": return java.lang.String.class;
+        case "openlineageintegrationjobnamespace":
+        case "openlineageIntegrationJobNamespace": return java.lang.String.class;
+        case "openlineageintegrationjobowners":
+        case "openlineageIntegrationJobOwners": return java.lang.String.class;
+        case "openlineageintegrationjobtags":
+        case "openlineageIntegrationJobTags": return java.lang.String.class;
         case "pluginname":
         case "pluginName": return java.lang.String.class;
         case "pollintervalms":
@@ -376,6 +438,8 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "publicationAutocreateMode": return java.lang.String.class;
         case "publicationname":
         case "publicationName": return java.lang.String.class;
+        case "publishviapartitionroot":
+        case "publishViaPartitionRoot": return boolean.class;
         case "queryfetchsize":
         case "queryFetchSize": return int.class;
         case "replicaidentityautosetvalues":
@@ -496,9 +560,13 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "columnIncludeList": return target.getConfiguration().getColumnIncludeList();
         case "columnpropagatesourcetype":
         case "columnPropagateSourceType": return target.getConfiguration().getColumnPropagateSourceType();
+        case "connectionvalidationtimeoutms":
+        case "connectionValidationTimeoutMs": return target.getConfiguration().getConnectionValidationTimeoutMs();
         case "converters": return target.getConfiguration().getConverters();
         case "custommetrictags":
         case "customMetricTags": return target.getConfiguration().getCustomMetricTags();
+        case "customsanitizepattern":
+        case "customSanitizePattern": return target.getConfiguration().getCustomSanitizePattern();
         case "databasedbname":
         case "databaseDbname": return target.getConfiguration().getDatabaseDbname();
         case "databasehostname":
@@ -539,8 +607,14 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "exceptionHandler": return target.getExceptionHandler();
         case "exchangepattern":
         case "exchangePattern": return target.getExchangePattern();
-        case "flushlsnsource":
-        case "flushLsnSource": return target.getConfiguration().isFlushLsnSource();
+        case "executorshutdowntimeoutms":
+        case "executorShutdownTimeoutMs": return target.getConfiguration().getExecutorShutdownTimeoutMs();
+        case "extendedheadersenabled":
+        case "extendedHeadersEnabled": return target.getConfiguration().isExtendedHeadersEnabled();
+        case "guardrailcollectionslimitaction":
+        case "guardrailCollectionsLimitAction": return target.getConfiguration().getGuardrailCollectionsLimitAction();
+        case "guardrailcollectionsmax":
+        case "guardrailCollectionsMax": return target.getConfiguration().getGuardrailCollectionsMax();
         case "heartbeatactionquery":
         case "heartbeatActionQuery": return target.getConfiguration().getHeartbeatActionQuery();
         case "heartbeatintervalms":
@@ -563,6 +637,12 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "internalValueConverter": return target.getConfiguration().getInternalValueConverter();
         case "intervalhandlingmode":
         case "intervalHandlingMode": return target.getConfiguration().getIntervalHandlingMode();
+        case "lsnflushmode":
+        case "lsnFlushMode": return target.getConfiguration().getLsnFlushMode();
+        case "lsnflushtimeoutaction":
+        case "lsnFlushTimeoutAction": return target.getConfiguration().getLsnFlushTimeoutAction();
+        case "lsnflushtimeoutms":
+        case "lsnFlushTimeoutMs": return target.getConfiguration().getLsnFlushTimeoutMs();
         case "maxbatchsize":
         case "maxBatchSize": return target.getConfiguration().getMaxBatchSize();
         case "maxqueuesize":
@@ -595,6 +675,20 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "offsetStorageReplicationFactor": return target.getConfiguration().getOffsetStorageReplicationFactor();
         case "offsetstoragetopic":
         case "offsetStorageTopic": return target.getConfiguration().getOffsetStorageTopic();
+        case "openlineageintegrationconfigfilepath":
+        case "openlineageIntegrationConfigFilePath": return target.getConfiguration().getOpenlineageIntegrationConfigFilePath();
+        case "openlineageintegrationdatasetkafkabootstrapservers":
+        case "openlineageIntegrationDatasetKafkaBootstrapServers": return target.getConfiguration().getOpenlineageIntegrationDatasetKafkaBootstrapServers();
+        case "openlineageintegrationenabled":
+        case "openlineageIntegrationEnabled": return target.getConfiguration().isOpenlineageIntegrationEnabled();
+        case "openlineageintegrationjobdescription":
+        case "openlineageIntegrationJobDescription": return target.getConfiguration().getOpenlineageIntegrationJobDescription();
+        case "openlineageintegrationjobnamespace":
+        case "openlineageIntegrationJobNamespace": return target.getConfiguration().getOpenlineageIntegrationJobNamespace();
+        case "openlineageintegrationjobowners":
+        case "openlineageIntegrationJobOwners": return target.getConfiguration().getOpenlineageIntegrationJobOwners();
+        case "openlineageintegrationjobtags":
+        case "openlineageIntegrationJobTags": return target.getConfiguration().getOpenlineageIntegrationJobTags();
         case "pluginname":
         case "pluginName": return target.getConfiguration().getPluginName();
         case "pollintervalms":
@@ -607,6 +701,8 @@ public class DebeziumPostgresEndpointConfigurer extends PropertyConfigurerSuppor
         case "publicationAutocreateMode": return target.getConfiguration().getPublicationAutocreateMode();
         case "publicationname":
         case "publicationName": return target.getConfiguration().getPublicationName();
+        case "publishviapartitionroot":
+        case "publishViaPartitionRoot": return target.getConfiguration().isPublishViaPartitionRoot();
         case "queryfetchsize":
         case "queryFetchSize": return target.getConfiguration().getQueryFetchSize();
         case "replicaidentityautosetvalues":

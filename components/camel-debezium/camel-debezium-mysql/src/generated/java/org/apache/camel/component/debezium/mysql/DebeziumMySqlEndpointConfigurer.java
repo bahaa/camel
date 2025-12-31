@@ -43,9 +43,13 @@ public class DebeziumMySqlEndpointConfigurer extends PropertyConfigurerSupport i
         case "connectKeepAliveIntervalMs": target.getConfiguration().setConnectKeepAliveIntervalMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "connecttimeoutms":
         case "connectTimeoutMs": target.getConfiguration().setConnectTimeoutMs(property(camelContext, int.class, value)); return true;
+        case "connectionvalidationtimeoutms":
+        case "connectionValidationTimeoutMs": target.getConfiguration().setConnectionValidationTimeoutMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "converters": target.getConfiguration().setConverters(property(camelContext, java.lang.String.class, value)); return true;
         case "custommetrictags":
         case "customMetricTags": target.getConfiguration().setCustomMetricTags(property(camelContext, java.lang.String.class, value)); return true;
+        case "customsanitizepattern":
+        case "customSanitizePattern": target.getConfiguration().setCustomSanitizePattern(property(camelContext, java.lang.String.class, value)); return true;
         case "databaseexcludelist":
         case "databaseExcludeList": target.getConfiguration().setDatabaseExcludeList(property(camelContext, java.lang.String.class, value)); return true;
         case "databasehostname":
@@ -96,12 +100,20 @@ public class DebeziumMySqlEndpointConfigurer extends PropertyConfigurerSupport i
         case "exceptionHandler": target.setExceptionHandler(property(camelContext, org.apache.camel.spi.ExceptionHandler.class, value)); return true;
         case "exchangepattern":
         case "exchangePattern": target.setExchangePattern(property(camelContext, org.apache.camel.ExchangePattern.class, value)); return true;
+        case "executorshutdowntimeoutms":
+        case "executorShutdownTimeoutMs": target.getConfiguration().setExecutorShutdownTimeoutMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
+        case "extendedheadersenabled":
+        case "extendedHeadersEnabled": target.getConfiguration().setExtendedHeadersEnabled(property(camelContext, boolean.class, value)); return true;
         case "gtidsourceexcludes":
         case "gtidSourceExcludes": target.getConfiguration().setGtidSourceExcludes(property(camelContext, java.lang.String.class, value)); return true;
         case "gtidsourcefilterdmlevents":
         case "gtidSourceFilterDmlEvents": target.getConfiguration().setGtidSourceFilterDmlEvents(property(camelContext, boolean.class, value)); return true;
         case "gtidsourceincludes":
         case "gtidSourceIncludes": target.getConfiguration().setGtidSourceIncludes(property(camelContext, java.lang.String.class, value)); return true;
+        case "guardrailcollectionslimitaction":
+        case "guardrailCollectionsLimitAction": target.getConfiguration().setGuardrailCollectionsLimitAction(property(camelContext, java.lang.String.class, value)); return true;
+        case "guardrailcollectionsmax":
+        case "guardrailCollectionsMax": target.getConfiguration().setGuardrailCollectionsMax(property(camelContext, int.class, value)); return true;
         case "heartbeatactionquery":
         case "heartbeatActionQuery": target.getConfiguration().setHeartbeatActionQuery(property(camelContext, java.lang.String.class, value)); return true;
         case "heartbeatintervalms":
@@ -156,6 +168,20 @@ public class DebeziumMySqlEndpointConfigurer extends PropertyConfigurerSupport i
         case "offsetStorageReplicationFactor": target.getConfiguration().setOffsetStorageReplicationFactor(property(camelContext, int.class, value)); return true;
         case "offsetstoragetopic":
         case "offsetStorageTopic": target.getConfiguration().setOffsetStorageTopic(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationconfigfilepath":
+        case "openlineageIntegrationConfigFilePath": target.getConfiguration().setOpenlineageIntegrationConfigFilePath(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationdatasetkafkabootstrapservers":
+        case "openlineageIntegrationDatasetKafkaBootstrapServers": target.getConfiguration().setOpenlineageIntegrationDatasetKafkaBootstrapServers(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationenabled":
+        case "openlineageIntegrationEnabled": target.getConfiguration().setOpenlineageIntegrationEnabled(property(camelContext, boolean.class, value)); return true;
+        case "openlineageintegrationjobdescription":
+        case "openlineageIntegrationJobDescription": target.getConfiguration().setOpenlineageIntegrationJobDescription(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationjobnamespace":
+        case "openlineageIntegrationJobNamespace": target.getConfiguration().setOpenlineageIntegrationJobNamespace(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationjobowners":
+        case "openlineageIntegrationJobOwners": target.getConfiguration().setOpenlineageIntegrationJobOwners(property(camelContext, java.lang.String.class, value)); return true;
+        case "openlineageintegrationjobtags":
+        case "openlineageIntegrationJobTags": target.getConfiguration().setOpenlineageIntegrationJobTags(property(camelContext, java.lang.String.class, value)); return true;
         case "pollintervalms":
         case "pollIntervalMs": target.getConfiguration().setPollIntervalMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "postprocessors":
@@ -269,9 +295,13 @@ public class DebeziumMySqlEndpointConfigurer extends PropertyConfigurerSupport i
         case "connectKeepAliveIntervalMs": return long.class;
         case "connecttimeoutms":
         case "connectTimeoutMs": return int.class;
+        case "connectionvalidationtimeoutms":
+        case "connectionValidationTimeoutMs": return long.class;
         case "converters": return java.lang.String.class;
         case "custommetrictags":
         case "customMetricTags": return java.lang.String.class;
+        case "customsanitizepattern":
+        case "customSanitizePattern": return java.lang.String.class;
         case "databaseexcludelist":
         case "databaseExcludeList": return java.lang.String.class;
         case "databasehostname":
@@ -322,12 +352,20 @@ public class DebeziumMySqlEndpointConfigurer extends PropertyConfigurerSupport i
         case "exceptionHandler": return org.apache.camel.spi.ExceptionHandler.class;
         case "exchangepattern":
         case "exchangePattern": return org.apache.camel.ExchangePattern.class;
+        case "executorshutdowntimeoutms":
+        case "executorShutdownTimeoutMs": return long.class;
+        case "extendedheadersenabled":
+        case "extendedHeadersEnabled": return boolean.class;
         case "gtidsourceexcludes":
         case "gtidSourceExcludes": return java.lang.String.class;
         case "gtidsourcefilterdmlevents":
         case "gtidSourceFilterDmlEvents": return boolean.class;
         case "gtidsourceincludes":
         case "gtidSourceIncludes": return java.lang.String.class;
+        case "guardrailcollectionslimitaction":
+        case "guardrailCollectionsLimitAction": return java.lang.String.class;
+        case "guardrailcollectionsmax":
+        case "guardrailCollectionsMax": return int.class;
         case "heartbeatactionquery":
         case "heartbeatActionQuery": return java.lang.String.class;
         case "heartbeatintervalms":
@@ -382,6 +420,20 @@ public class DebeziumMySqlEndpointConfigurer extends PropertyConfigurerSupport i
         case "offsetStorageReplicationFactor": return int.class;
         case "offsetstoragetopic":
         case "offsetStorageTopic": return java.lang.String.class;
+        case "openlineageintegrationconfigfilepath":
+        case "openlineageIntegrationConfigFilePath": return java.lang.String.class;
+        case "openlineageintegrationdatasetkafkabootstrapservers":
+        case "openlineageIntegrationDatasetKafkaBootstrapServers": return java.lang.String.class;
+        case "openlineageintegrationenabled":
+        case "openlineageIntegrationEnabled": return boolean.class;
+        case "openlineageintegrationjobdescription":
+        case "openlineageIntegrationJobDescription": return java.lang.String.class;
+        case "openlineageintegrationjobnamespace":
+        case "openlineageIntegrationJobNamespace": return java.lang.String.class;
+        case "openlineageintegrationjobowners":
+        case "openlineageIntegrationJobOwners": return java.lang.String.class;
+        case "openlineageintegrationjobtags":
+        case "openlineageIntegrationJobTags": return java.lang.String.class;
         case "pollintervalms":
         case "pollIntervalMs": return long.class;
         case "postprocessors":
@@ -496,9 +548,13 @@ public class DebeziumMySqlEndpointConfigurer extends PropertyConfigurerSupport i
         case "connectKeepAliveIntervalMs": return target.getConfiguration().getConnectKeepAliveIntervalMs();
         case "connecttimeoutms":
         case "connectTimeoutMs": return target.getConfiguration().getConnectTimeoutMs();
+        case "connectionvalidationtimeoutms":
+        case "connectionValidationTimeoutMs": return target.getConfiguration().getConnectionValidationTimeoutMs();
         case "converters": return target.getConfiguration().getConverters();
         case "custommetrictags":
         case "customMetricTags": return target.getConfiguration().getCustomMetricTags();
+        case "customsanitizepattern":
+        case "customSanitizePattern": return target.getConfiguration().getCustomSanitizePattern();
         case "databaseexcludelist":
         case "databaseExcludeList": return target.getConfiguration().getDatabaseExcludeList();
         case "databasehostname":
@@ -549,12 +605,20 @@ public class DebeziumMySqlEndpointConfigurer extends PropertyConfigurerSupport i
         case "exceptionHandler": return target.getExceptionHandler();
         case "exchangepattern":
         case "exchangePattern": return target.getExchangePattern();
+        case "executorshutdowntimeoutms":
+        case "executorShutdownTimeoutMs": return target.getConfiguration().getExecutorShutdownTimeoutMs();
+        case "extendedheadersenabled":
+        case "extendedHeadersEnabled": return target.getConfiguration().isExtendedHeadersEnabled();
         case "gtidsourceexcludes":
         case "gtidSourceExcludes": return target.getConfiguration().getGtidSourceExcludes();
         case "gtidsourcefilterdmlevents":
         case "gtidSourceFilterDmlEvents": return target.getConfiguration().isGtidSourceFilterDmlEvents();
         case "gtidsourceincludes":
         case "gtidSourceIncludes": return target.getConfiguration().getGtidSourceIncludes();
+        case "guardrailcollectionslimitaction":
+        case "guardrailCollectionsLimitAction": return target.getConfiguration().getGuardrailCollectionsLimitAction();
+        case "guardrailcollectionsmax":
+        case "guardrailCollectionsMax": return target.getConfiguration().getGuardrailCollectionsMax();
         case "heartbeatactionquery":
         case "heartbeatActionQuery": return target.getConfiguration().getHeartbeatActionQuery();
         case "heartbeatintervalms":
@@ -609,6 +673,20 @@ public class DebeziumMySqlEndpointConfigurer extends PropertyConfigurerSupport i
         case "offsetStorageReplicationFactor": return target.getConfiguration().getOffsetStorageReplicationFactor();
         case "offsetstoragetopic":
         case "offsetStorageTopic": return target.getConfiguration().getOffsetStorageTopic();
+        case "openlineageintegrationconfigfilepath":
+        case "openlineageIntegrationConfigFilePath": return target.getConfiguration().getOpenlineageIntegrationConfigFilePath();
+        case "openlineageintegrationdatasetkafkabootstrapservers":
+        case "openlineageIntegrationDatasetKafkaBootstrapServers": return target.getConfiguration().getOpenlineageIntegrationDatasetKafkaBootstrapServers();
+        case "openlineageintegrationenabled":
+        case "openlineageIntegrationEnabled": return target.getConfiguration().isOpenlineageIntegrationEnabled();
+        case "openlineageintegrationjobdescription":
+        case "openlineageIntegrationJobDescription": return target.getConfiguration().getOpenlineageIntegrationJobDescription();
+        case "openlineageintegrationjobnamespace":
+        case "openlineageIntegrationJobNamespace": return target.getConfiguration().getOpenlineageIntegrationJobNamespace();
+        case "openlineageintegrationjobowners":
+        case "openlineageIntegrationJobOwners": return target.getConfiguration().getOpenlineageIntegrationJobOwners();
+        case "openlineageintegrationjobtags":
+        case "openlineageIntegrationJobTags": return target.getConfiguration().getOpenlineageIntegrationJobTags();
         case "pollintervalms":
         case "pollIntervalMs": return target.getConfiguration().getPollIntervalMs();
         case "postprocessors":

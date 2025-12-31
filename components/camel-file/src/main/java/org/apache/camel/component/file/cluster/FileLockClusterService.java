@@ -16,6 +16,7 @@
  */
 package org.apache.camel.component.file.cluster;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -31,12 +32,21 @@ public class FileLockClusterService extends AbstractCamelClusterService<FileLock
     private long acquireLockInterval;
     private TimeUnit acquireLockIntervalUnit;
     private ScheduledExecutorService executor;
+    private int heartbeatTimeoutMultiplier;
+    private int clusterDataTaskMaxAttempts;
+    private long clusterDataTaskTimeout;
+    private TimeUnit clusterDataTaskTimeoutUnit;
+    private ExecutorService clusterDataTaskExecutor;
 
     public FileLockClusterService() {
         this.acquireLockDelay = 1;
         this.acquireLockDelayUnit = TimeUnit.SECONDS;
         this.acquireLockInterval = 10;
         this.acquireLockIntervalUnit = TimeUnit.SECONDS;
+        this.heartbeatTimeoutMultiplier = 5;
+        this.clusterDataTaskMaxAttempts = 5;
+        this.clusterDataTaskTimeout = 10;
+        this.clusterDataTaskTimeoutUnit = TimeUnit.SECONDS;
     }
 
     @Override
@@ -76,7 +86,7 @@ public class FileLockClusterService extends AbstractCamelClusterService<FileLock
     }
 
     /**
-     * The time unit fo the acquireLockDelay, default to TimeUnit.SECONDS.
+     * The time unit for the acquireLockDelay, default to TimeUnit.SECONDS.
      */
     public void setAcquireLockDelayUnit(TimeUnit acquireLockDelayUnit) {
         this.acquireLockDelayUnit = acquireLockDelayUnit;
@@ -103,10 +113,87 @@ public class FileLockClusterService extends AbstractCamelClusterService<FileLock
     }
 
     /**
-     * The time unit fo the acquireLockInterva, default to TimeUnit.SECONDS.
+     * The time unit for the acquireLockInterval, default to TimeUnit.SECONDS.
      */
     public void setAcquireLockIntervalUnit(TimeUnit acquireLockIntervalUnit) {
         this.acquireLockIntervalUnit = acquireLockIntervalUnit;
+    }
+
+    /**
+     * Multiplier applied to the cluster leader {@code acquireLockInterval} to determine how long followers should wait
+     * before considering the leader "stale".
+     * <p>
+     * For example, if the leader updates its heartbeat every 2 seconds and the {@code heartbeatTimeoutMultiplier} is 3,
+     * followers will tolerate up to {@code 2s * 3 = 6s} of silence before declaring the leader unavailable.
+     * <p>
+     */
+    public void setHeartbeatTimeoutMultiplier(int heartbeatTimeoutMultiplier) {
+        if (heartbeatTimeoutMultiplier <= 0) {
+            throw new IllegalArgumentException("HeartbeatTimeoutMultiplier must be greater than 0");
+        }
+        this.heartbeatTimeoutMultiplier = heartbeatTimeoutMultiplier;
+    }
+
+    public int getHeartbeatTimeoutMultiplier() {
+        return heartbeatTimeoutMultiplier;
+    }
+
+    /**
+     * Sets how many times a cluster data task will run, counting both the first execution and subsequent retries in
+     * case of failure or timeout. The default is 5 attempts.
+     * <p>
+     * This can be useful when the cluster data root is on network based file storage, where I/O operations may
+     * occasionally block for long or unpredictable periods.
+     */
+    public void setClusterDataTaskMaxAttempts(int clusterDataTaskMaxAttempts) {
+        if (clusterDataTaskMaxAttempts <= 0) {
+            throw new IllegalArgumentException("clusterDataTaskMaxRetries must be greater than 0");
+        }
+        this.clusterDataTaskMaxAttempts = clusterDataTaskMaxAttempts;
+    }
+
+    public int getClusterDataTaskMaxAttempts() {
+        return clusterDataTaskMaxAttempts;
+    }
+
+    /**
+     * Sets the timeout for a cluster data task (reading or writing cluster data). The default is 10 seconds.
+     * <p>
+     * Timeouts are useful when the cluster data root is on network storage, where I/O operations may occasionally block
+     * for long or unpredictable periods.
+     */
+    public void setClusterDataTaskTimeout(long clusterDataTaskTimeout) {
+        if (clusterDataTaskTimeout <= 0) {
+            throw new IllegalArgumentException("clusterDataTaskMaxRetries must be greater than 0");
+        }
+        this.clusterDataTaskTimeout = clusterDataTaskTimeout;
+    }
+
+    public long getClusterDataTaskTimeout() {
+        return clusterDataTaskTimeout;
+    }
+
+    /**
+     * The time unit for the clusterDataTaskTimeoutUnit, default to TimeUnit.SECONDS.
+     */
+    public void setClusterDataTaskTimeoutUnit(TimeUnit clusterDataTaskTimeoutUnit) {
+        this.clusterDataTaskTimeoutUnit = clusterDataTaskTimeoutUnit;
+    }
+
+    public TimeUnit getClusterDataTaskTimeoutUnit() {
+        return clusterDataTaskTimeoutUnit;
+    }
+
+    /**
+     * Sets the timeout for a cluster data task (reading or writing cluster data). The default is 10 seconds.
+     * <p>
+     * Timeouts are useful when the cluster data root is on network storage, where I/O operations may occasionally block
+     * for long or unpredictable periods.
+     * <p>
+     */
+    public void setClusterDataTaskTimeout(long clusterDataTaskTimeout, TimeUnit clusterDataTaskTimeoutUnit) {
+        setClusterDataTaskTimeout(clusterDataTaskTimeout);
+        setClusterDataTaskTimeoutUnit(clusterDataTaskTimeoutUnit);
     }
 
     @Override
@@ -124,6 +211,14 @@ public class FileLockClusterService extends AbstractCamelClusterService<FileLock
 
             executor = null;
         }
+
+        if (clusterDataTaskExecutor != null) {
+            if (context != null) {
+                context.getExecutorServiceManager().shutdown(clusterDataTaskExecutor);
+            } else {
+                clusterDataTaskExecutor.shutdown();
+            }
+        }
     }
 
     ScheduledExecutorService getExecutor() {
@@ -139,6 +234,21 @@ public class FileLockClusterService extends AbstractCamelClusterService<FileLock
             }
 
             return executor;
+        } finally {
+            internalLock.unlock();
+        }
+    }
+
+    ExecutorService getClusterDataTaskExecutor() {
+        Lock internalLock = getInternalLock();
+        internalLock.lock();
+        try {
+            if (clusterDataTaskExecutor == null) {
+                final CamelContext context = ObjectHelper.notNull(getCamelContext(), "CamelContext");
+                clusterDataTaskExecutor = context.getExecutorServiceManager().newFixedThreadPool(this,
+                        "FileLockClusterDataTask-" + getId(), 5);
+            }
+            return clusterDataTaskExecutor;
         } finally {
             internalLock.unlock();
         }

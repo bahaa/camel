@@ -527,6 +527,7 @@ public final class EntityParser {
         }
     }
 
+    // MultipartSignedEntity returned must be closed by the client after using it.
     public static MultipartSignedEntity parseMultipartSignedEntityBody(
             AS2SessionInputBuffer inbuffer,
             InputStream is,
@@ -552,8 +553,10 @@ public final class EntityParser {
                     new BasicNameValuePair("boundary", boundary), new BasicNameValuePair("micalg", micalg),
                     new BasicNameValuePair("charset", charsetName) };
             ContentType contentType = ContentType.create(AS2MimeType.MULTIPART_SIGNED, parameters);
+            // NOTE: this object is returned by the factory method.
+            // Client must make sure to close it.
             MultipartSignedEntity multipartSignedEntity
-                    = new MultipartSignedEntity(contentType, contentTransferEncoding, boundary, false);
+                    = new MultipartSignedEntity(contentType, contentTransferEncoding, boundary, false); // NOSONAR
 
             // Skip Preamble and Start Boundary line
             skipPreambleAndStartBoundary(inbuffer, is, boundary);
@@ -635,6 +638,7 @@ public final class EntityParser {
         }
     }
 
+    // DispositionNotificationMultipartReportEntity must be closed by the client after using it.
     public static DispositionNotificationMultipartReportEntity parseMultipartReportEntityBody(
             AS2SessionInputBuffer inbuffer,
             InputStream is,
@@ -654,8 +658,9 @@ public final class EntityParser {
 
             inbuffer.setCharsetDecoder(charsetDecoder);
 
+            // NOTE: the client must close the resource created by this factory method.
             DispositionNotificationMultipartReportEntity dispositionNotificationMultipartReportEntity
-                    = new DispositionNotificationMultipartReportEntity(boundary, contentTransferEncoding, false);
+                    = new DispositionNotificationMultipartReportEntity(boundary, contentTransferEncoding, false); // NOSONAR
 
             // Skip Preamble and Start Boundary line
             skipPreambleAndStartBoundary(inbuffer, is, boundary);
@@ -678,9 +683,12 @@ public final class EntityParser {
                     textReportContentTransferEncoding = header.getValue();
                 }
             }
+
+            // If Content-Type is not defined, should be considered as "text/plain; charset=us-ascii" (RFC 2045 - 5.2)
             if (textReportContentType == null) {
-                throw new HttpException("Failed to find Content-Type header in EDI message body part");
+                textReportContentType = ContentType.parse("text/plain").withCharset(StandardCharsets.US_ASCII.name());
             }
+
             if (!textReportContentType.getMimeType().equalsIgnoreCase(AS2MimeType.TEXT_PLAIN)) {
                 throw new HttpException(
                         "Invalid content type '" + textReportContentType.getMimeType()
@@ -880,7 +888,7 @@ public final class EntityParser {
                     }
                     break;
                 default:
-                    break;
+                    throw new AS2DecryptionException("Unsupported entity content type: " + entityContentType);
             }
 
             return entity;

@@ -21,11 +21,16 @@ public class BedrockEndpointUriFactory extends org.apache.camel.support.componen
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(20);
+        Set<String> props = new HashSet<>(26);
         props.add("accessKey");
+        props.add("bedrockRuntimeAsyncClient");
         props.add("bedrockRuntimeClient");
+        props.add("guardrailIdentifier");
+        props.add("guardrailTrace");
+        props.add("guardrailVersion");
+        props.add("includeStreamingMetadata");
         props.add("label");
         props.add("lazyStartProducer");
         props.add("modelId");
@@ -39,6 +44,7 @@ public class BedrockEndpointUriFactory extends org.apache.camel.support.componen
         props.add("region");
         props.add("secretKey");
         props.add("sessionToken");
+        props.add("streamOutputMode");
         props.add("trustAllCertificates");
         props.add("uriEndpointOverride");
         props.add("useDefaultCredentialsProvider");
@@ -50,7 +56,7 @@ public class BedrockEndpointUriFactory extends org.apache.camel.support.componen
         secretProps.add("secretKey");
         secretProps.add("sessionToken");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
-        MULTI_VALUE_PREFIXES = Collections.emptySet();
+        MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
     @Override
@@ -81,7 +87,7 @@ public class BedrockEndpointUriFactory extends org.apache.camel.support.componen
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

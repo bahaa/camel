@@ -21,7 +21,7 @@ public class PgReplicationSlotEndpointUriFactory extends org.apache.camel.suppor
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
         Set<String> props = new HashSet<>(29);
         props.add("autoCreateSlot");
@@ -57,10 +57,10 @@ public class PgReplicationSlotEndpointUriFactory extends org.apache.camel.suppor
         Set<String> secretProps = new HashSet<>(1);
         secretProps.add("password");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
-        Set<String> prefixes = new HashSet<>(2);
-        prefixes.add("scheduler.");
-        prefixes.add("slotOptions.");
-        MULTI_VALUE_PREFIXES = Collections.unmodifiableSet(prefixes);
+        Map<String, String> prefixes = new HashMap<>(2);
+        prefixes.put("schedulerProperties", "scheduler.");
+        prefixes.put("slotOptions", "slotOptions.");
+        MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class PgReplicationSlotEndpointUriFactory extends org.apache.camel.suppor
 
         uri = buildPathParameter(syntax, uri, "slot", null, true, copy);
         uri = buildPathParameter(syntax, uri, "host", "localhost", false, copy);
-        uri = buildPathParameter(syntax, uri, "port", "5432", false, copy);
+        uri = buildPathParameter(syntax, uri, "port", 5432, false, copy);
         uri = buildPathParameter(syntax, uri, "database", null, true, copy);
         uri = buildPathParameter(syntax, uri, "outputPlugin", null, true, copy);
         uri = buildQueryParameters(uri, copy, encode);
@@ -95,7 +95,7 @@ public class PgReplicationSlotEndpointUriFactory extends org.apache.camel.suppor
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

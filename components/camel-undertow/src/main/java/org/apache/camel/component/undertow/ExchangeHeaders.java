@@ -25,6 +25,9 @@ public final class ExchangeHeaders {
 
     public static final HttpString AUTHENTICATION = new HttpString("CamelAuthentication");
     public static final HttpString AUTHENTICATION_FAILURE_POLICY_ID = new HttpString("CamelAuthenticationFailurePolicyId");
+    @Deprecated(since = "4.17.0")
+    // No longer in use in Camel code, we can safely remove it after deprecation period stands just in case any
+    // user is making use of the constant for their scope.
     public static final HttpString ACCEPT_CONTENT_TYPE = new HttpString("CamelAcceptContentType");
     public static final HttpString AGGREGATED_SIZE = new HttpString("CamelAggregatedSize");
     public static final HttpString AGGREGATED_TIMEOUT = new HttpString("CamelAggregatedTimeout");
@@ -118,6 +121,7 @@ public final class ExchangeHeaders {
     public static final HttpString ON_COMPLETION = new HttpString("CamelOnCompletion");
     public static final HttpString OVERRULE_FILE_NAME = new HttpString("CamelOverruleFileName");
 
+    @Deprecated
     public static final HttpString PARENT_UNIT_OF_WORK = new HttpString("CamelParentUnitOfWork");
 
     public static final HttpString RECIPIENT_LIST_ENDPOINT = new HttpString("CamelRecipientListEndpoint");

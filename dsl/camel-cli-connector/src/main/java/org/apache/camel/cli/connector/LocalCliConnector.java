@@ -27,6 +27,7 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -34,10 +35,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -51,6 +54,8 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.Route;
 import org.apache.camel.RoutesBuilder;
 import org.apache.camel.api.management.ManagedCamelContext;
+import org.apache.camel.api.management.mbean.ManagedProcessorMBean;
+import org.apache.camel.api.management.mbean.ManagedRouteMBean;
 import org.apache.camel.builder.ModelRoutesBuilder;
 import org.apache.camel.console.DevConsole;
 import org.apache.camel.console.DevConsoleRegistry;
@@ -59,6 +64,7 @@ import org.apache.camel.model.ProcessorDefinition;
 import org.apache.camel.model.ProcessorDefinitionHelper;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.model.language.ExpressionDefinition;
+import org.apache.camel.spi.BacklogDebugger;
 import org.apache.camel.spi.CliConnector;
 import org.apache.camel.spi.CliConnectorFactory;
 import org.apache.camel.spi.ContextReloadStrategy;
@@ -68,6 +74,8 @@ import org.apache.camel.spi.Resource;
 import org.apache.camel.spi.ResourceLoader;
 import org.apache.camel.spi.ResourceReloadStrategy;
 import org.apache.camel.spi.RoutesLoader;
+import org.apache.camel.spi.ShutdownPrepared;
+import org.apache.camel.support.LoadOnDemandReloadStrategy;
 import org.apache.camel.support.MessageHelper;
 import org.apache.camel.support.PatternHelper;
 import org.apache.camel.support.PluginHelper;
@@ -96,6 +104,7 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
 
     private final CliConnectorFactory cliConnectorFactory;
     private CamelContext camelContext;
+    private ScheduledFuture scheduledFuture;
     private int delay = 1000;
     private long counter;
     private String platform;
@@ -112,6 +121,7 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
     private File outputFile;
     private File traceFile;
     private long traceFilePos;   // keep track of trace offset
+    private File messageHistoryFile;
     private File debugFile;
     private File receiveFile;
     private long receiveFilePos; // keep track of receive offset
@@ -172,18 +182,43 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
             return new Thread(r, threadName);
         });
 
+        // make it go faster in debug mode
+        if (camelContext.isDebugging()) {
+            delay = 100;
+        }
+
         lockFile = createLockFile(getPid());
         if (lockFile != null) {
             statusFile = createLockFile(lockFile.getName() + "-status.json");
             actionFile = createLockFile(lockFile.getName() + "-action.json");
             outputFile = createLockFile(lockFile.getName() + "-output.json");
             traceFile = createLockFile(lockFile.getName() + "-trace.json");
+            messageHistoryFile = createLockFile(lockFile.getName() + "-history.json");
             debugFile = createLockFile(lockFile.getName() + "-debug.json");
             receiveFile = createLockFile(lockFile.getName() + "-receive.json");
-            executor.scheduleWithFixedDelay(this::task, 0, delay, TimeUnit.MILLISECONDS);
+            scheduledFuture = executor.scheduleWithFixedDelay(this::task, 0, delay, TimeUnit.MILLISECONDS);
             LOG.info("Camel JBang CLI enabled");
         } else {
             LOG.warn("Cannot create PID file: {}. This integration cannot be managed by Camel JBang CLI.", getPid());
+        }
+    }
+
+    @Override
+    public void updateDelay(int delay) {
+        if (this.delay == delay) {
+            return;
+        }
+        if (scheduledFuture != null) {
+            try {
+                scheduledFuture.cancel(true);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        boolean done = scheduledFuture == null || scheduledFuture.isDone();
+        if (done) {
+            this.delay = delay;
+            scheduledFuture = executor.scheduleWithFixedDelay(this::task, 0, delay, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -202,6 +237,12 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
             public void run() {
                 LOG.info("Camel JBang terminating JVM");
                 try {
+                    // if we are debugging then detach before stopping camel
+                    BacklogDebugger debugger = camelContext.hasService(BacklogDebugger.class);
+                    if (debugger instanceof ShutdownPrepared sp) {
+                        sp.prepareShutdown(false, true);
+                    }
+                    ServiceHelper.stopAndShutdownServices(debugger);
                     camelContext.stop();
                 } finally {
                     ServiceHelper.stopAndShutdownService(this);
@@ -244,10 +285,14 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
             action = root.getString("action");
             if ("route".equals(action)) {
                 doActionRouteTask(root);
+            } else if ("processor".equals(action)) {
+                doActionProcessorTask(root);
             } else if ("logger".equals(action)) {
                 doActionLoggerTask(root);
             } else if ("gc".equals(action)) {
                 System.gc();
+            } else if ("load".equals(action)) {
+                doActionLoadTask(root);
             } else if ("reload".equals(action)) {
                 doActionReloadTask();
             } else if ("debug".equals(action)) {
@@ -262,6 +307,8 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
                 doActionSourceTask(root);
             } else if ("route-dump".equals(action)) {
                 doActionRouteDumpTask(root);
+            } else if ("route-structure".equals(action)) {
+                doActionRouteStructureTask(root);
             } else if ("route-controller".equals(action)) {
                 doActionRouteControllerTask(root);
             } else if ("startup-recorder".equals(action)) {
@@ -282,6 +329,8 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
                 doActionBrowseTask(root);
             } else if ("receive".equals(action)) {
                 doActionReceiveTask(root);
+            } else if ("cli-debug".equals(action)) {
+                doActionCliDebug(root);
             }
         } catch (Exception e) {
             // ignore
@@ -291,6 +340,23 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
         } finally {
             // action done so delete file
             FileUtil.deleteFile(actionFile);
+        }
+    }
+
+    private void doActionCliDebug(JsonObject root) {
+        String command = root.getString("command");
+        String breakpoint = root.getString("breakpoint");
+        BacklogDebugger debugger = camelContext.hasService(BacklogDebugger.class);
+        if (debugger != null) {
+            if ("attach".equals(command)) {
+                if (breakpoint != null) {
+                    debugger.setInitialBreakpoints(breakpoint);
+                }
+                debugger.enableDebugger();
+                debugger.attach();
+            } else if ("detach".equals(command)) {
+                debugger.detach();
+            }
         }
     }
 
@@ -608,6 +674,22 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
         }
     }
 
+    private void doActionRouteStructureTask(JsonObject root) throws Exception {
+        DevConsole dc = camelContext.getCamelContextExtension().getContextPlugin(DevConsoleRegistry.class)
+                .resolveById("route-structure");
+        if (dc != null) {
+            String filter = root.getString("filter");
+            String brief = root.getString("brief");
+            JsonObject json
+                    = (JsonObject) dc.call(DevConsole.MediaType.JSON,
+                            Map.of("filter", filter, "brief", brief));
+            LOG.trace("Updating output file: {}", outputFile);
+            IOHelper.writeText(json.toJson(), outputFile);
+        } else {
+            IOHelper.writeText("{}", outputFile);
+        }
+    }
+
     private void doActionSourceTask(JsonObject root) throws Exception {
         DevConsole dc = camelContext.getCamelContextExtension().getContextPlugin(DevConsoleRegistry.class)
                 .resolveById("source");
@@ -763,10 +845,37 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
             String cmd = root.getStringOrDefault("command", "");
             String bp = root.getStringOrDefault("breakpoint", "");
             String history = root.getStringOrDefault("history", "false");
+            String position = root.getStringOrDefault("position", "");
             JsonObject json = (JsonObject) dc.call(DevConsole.MediaType.JSON,
-                    Map.of("command", cmd, "breakpoint", bp, "history", history));
+                    Map.of("command", cmd, "breakpoint", bp, "history", history, "position", position));
             LOG.trace("Updating output file: {}", outputFile);
             IOHelper.writeText(json.toJson(), outputFile);
+        } else {
+            IOHelper.writeText("{}", outputFile);
+        }
+    }
+
+    private void doActionLoadTask(JsonObject root) throws Exception {
+        List<String> files = root.getCollection("source");
+        boolean restart = root.getBooleanOrDefault("restart", false);
+        if (files != null) {
+            LoadOnDemandReloadStrategy cr = camelContext.hasService(LoadOnDemandReloadStrategy.class);
+            if (cr == null) {
+                cr = new LoadOnDemandReloadStrategy();
+                cr.setCamelContext(camelContext);
+                camelContext.addService(cr);
+            }
+            cr.load("Camel JBang", files, restart);
+            JsonObject jo = new JsonObject();
+            Exception error = cr.getLastError();
+            if (error != null) {
+                jo.put("status", "failed");
+                jo.put("exception",
+                        MessageHelper.dumpExceptionAsJSonObject(error).getMap("exception"));
+            } else {
+                jo.put("status", "success");
+            }
+            IOHelper.writeText(jo.toJson(), outputFile);
         } else {
             IOHelper.writeText("{}", outputFile);
         }
@@ -801,21 +910,24 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
         // id is a pattern
         String[] patterns = root.getString("id").split(",");
         boolean all = patterns.length == 1 && "*".equals(patterns[0]);
+        boolean group = root.getBooleanOrDefault("group", false);
         List<String> ids;
         if (all) {
             ids = List.of("*");
         } else {
             // find matching IDs
             ids = camelContext.getRoutes()
-                    .stream().map(Route::getRouteId)
-                    .filter(routeId -> {
+                    .stream().map(r -> group ? r.getGroup() : r.getRouteId())
+                    .filter(Objects::nonNull)
+                    .filter(name -> {
                         for (String p : patterns) {
-                            if (PatternHelper.matchPattern(routeId, p)) {
+                            if (PatternHelper.matchPattern(name, p)) {
                                 return true;
                             }
                         }
                         return false;
                     })
+                    .distinct()
                     .toList();
         }
         for (String id : ids) {
@@ -824,12 +936,16 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
                 if ("start".equals(command)) {
                     if ("*".equals(id)) {
                         camelContext.getRouteController().startAllRoutes();
+                    } else if (group) {
+                        camelContext.getRouteController().startRouteGroup(id);
                     } else {
                         camelContext.getRouteController().startRoute(id);
                     }
                 } else if ("stop".equals(command)) {
                     if ("*".equals(id)) {
                         camelContext.getRouteController().stopAllRoutes();
+                    } else if (group) {
+                        camelContext.getRouteController().stopRouteGroup(id);
                     } else {
                         camelContext.getRouteController().stopRoute(id);
                     }
@@ -838,6 +954,9 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
                         for (Route r : camelContext.getRoutes()) {
                             camelContext.getRouteController().suspendRoute(r.getRouteId());
                         }
+                    } else if (group) {
+                        // we do not have suspend for a group
+                        camelContext.getRouteController().stopRouteGroup(id);
                     } else {
                         camelContext.getRouteController().suspendRoute(id);
                     }
@@ -846,12 +965,68 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
                         for (Route r : camelContext.getRoutes()) {
                             camelContext.getRouteController().resumeRoute(r.getRouteId());
                         }
+                    } else if (group) {
+                        // we do not have resume for a group
+                        camelContext.getRouteController().startRouteGroup(id);
                     } else {
                         camelContext.getRouteController().resumeRoute(id);
                     }
                 }
             } catch (Exception e) {
                 LOG.warn("Error {} route: {} due to: {}. This exception is ignored.", command, id, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void doActionProcessorTask(JsonObject root) {
+        String command = root.getString("command");
+
+        // id is a pattern
+        String[] patterns = root.getString("id").split(",");
+        boolean all = patterns.length == 1 && "*".equals(patterns[0]);
+
+        List<ManagedProcessorMBean> mps = new ArrayList<>();
+        ManagedCamelContext mcc = getCamelContext().getCamelContextExtension().getContextPlugin(ManagedCamelContext.class);
+        for (Route r : getCamelContext().getRoutes()) {
+            ManagedRouteMBean mrb = mcc.getManagedRoute(r.getRouteId());
+            try {
+                for (String id : mrb.processorIds()) {
+                    mps.add(mcc.getManagedProcessor(id));
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+        // find matching IDs
+        if (!all) {
+            mps = mps.stream()
+                    .filter(mp -> {
+                        for (String p : patterns) {
+                            if (PatternHelper.matchPattern(mp.getProcessorId(), p)
+                                    || PatternHelper.matchPattern(mp.getRouteId(), p)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    })
+                    .toList();
+        }
+
+        for (ManagedProcessorMBean mp : mps) {
+            try {
+                if ("start".equals(command)) {
+                    mp.start();
+                } else if ("stop".equals(command)) {
+                    mp.stop();
+                } else if ("disable".equals(command)) {
+                    mp.disable();
+                } else if ("enable".equals(command)) {
+                    mp.enable();
+                }
+            } catch (Exception e) {
+                LOG.warn("Error {} processor: {} due to: {}. This exception is ignored.", command, mp.getProcessorId(),
+                        e.getMessage(), e);
             }
         }
     }
@@ -908,6 +1083,13 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
                     if (json != null && json2 != null) {
                         root.put("context", json);
                         root.put("routes", json2.get("routes"));
+                    }
+                }
+                DevConsole dc2b = dcr.resolveById("route-group");
+                if (dc2b != null) {
+                    JsonObject json = (JsonObject) dc2b.call(DevConsole.MediaType.JSON);
+                    if (json != null) {
+                        root.put("routeGroups", json.get("routeGroups"));
                     }
                 }
                 DevConsole dc3 = dcr.resolveById("endpoint");
@@ -995,6 +1177,13 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
                         root.put("consumers", json);
                     }
                 }
+                DevConsole dc14b = dcr.resolveById("producer");
+                if (dc14b != null) {
+                    JsonObject json = (JsonObject) dc14b.call(DevConsole.MediaType.JSON);
+                    if (json != null && !json.isEmpty()) {
+                        root.put("producers", json);
+                    }
+                }
                 DevConsole dc15 = dcr.resolveById("variables");
                 if (dc15 != null) {
                     JsonObject json = (JsonObject) dc15.call(DevConsole.MediaType.JSON);
@@ -1063,6 +1252,13 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
                     JsonObject json = (JsonObject) dc24.call(DevConsole.MediaType.JSON);
                     if (json != null && !json.isEmpty()) {
                         root.put("internal-tasks", json);
+                    }
+                }
+                DevConsole dc25 = dcr.resolveById("groovy");
+                if (dc25 != null) {
+                    JsonObject json = (JsonObject) dc25.call(DevConsole.MediaType.JSON);
+                    if (json != null && !json.isEmpty()) {
+                        root.put("groovy", json);
                     }
                 }
             }
@@ -1138,6 +1334,21 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
             // ignore
             LOG.trace("Error updating debug file: {} due to: {}. This exception is ignored.",
                     debugFile, e.getMessage(), e);
+        }
+        try {
+            DevConsole dc13b = camelContext.getCamelContextExtension().getContextPlugin(DevConsoleRegistry.class)
+                    .resolveById("message-history");
+            if (dc13b != null) {
+                JsonObject json = (JsonObject) dc13b.call(DevConsole.MediaType.JSON);
+                // store replays in a special file
+                LOG.trace("Updating message-history file: {}", messageHistoryFile);
+                String data = json.toJson() + System.lineSeparator();
+                IOHelper.writeText(data, messageHistoryFile);
+            }
+        } catch (Exception e) {
+            // ignore
+            LOG.trace("Error updating message-history file: {} due to: {}. This exception is ignored.",
+                    messageHistoryFile, e.getMessage(), e);
         }
         try {
             DevConsole dc14 = camelContext.getCamelContextExtension().getContextPlugin(DevConsoleRegistry.class)
@@ -1297,6 +1508,9 @@ public class LocalCliConnector extends ServiceSupport implements CliConnector, C
         }
         if (traceFile != null) {
             FileUtil.deleteFile(traceFile);
+        }
+        if (messageHistoryFile != null) {
+            FileUtil.deleteFile(messageHistoryFile);
         }
         if (debugFile != null) {
             FileUtil.deleteFile(debugFile);

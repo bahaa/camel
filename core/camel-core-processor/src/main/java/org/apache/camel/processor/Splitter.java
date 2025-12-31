@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.camel.AggregationStrategy;
 import org.apache.camel.AsyncCallback;
-import org.apache.camel.AsyncProcessor;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.ExchangePropertyKey;
@@ -38,7 +37,6 @@ import org.apache.camel.Message;
 import org.apache.camel.Processor;
 import org.apache.camel.Route;
 import org.apache.camel.RuntimeCamelException;
-import org.apache.camel.Traceable;
 import org.apache.camel.processor.aggregate.ShareUnitOfWorkAggregationStrategy;
 import org.apache.camel.processor.aggregate.UseOriginalAggregationStrategy;
 import org.apache.camel.support.ExchangeHelper;
@@ -52,7 +50,7 @@ import static org.apache.camel.util.ObjectHelper.notNull;
  * Implements a dynamic <a href="http://camel.apache.org/splitter.html">Splitter</a> pattern where an expression is
  * evaluated to iterate through each of the parts of a message and then each part is then send to some endpoint.
  */
-public class Splitter extends MulticastProcessor implements AsyncProcessor, Traceable {
+public class Splitter extends MulticastProcessor {
 
     private static final String IGNORE_DELIMITER_MARKER = "false";
     private static final String SINGLE_DELIMITER_MARKER = "single";
@@ -63,20 +61,20 @@ public class Splitter extends MulticastProcessor implements AsyncProcessor, Trac
                     AggregationStrategy aggregationStrategy, boolean parallelProcessing,
                     ExecutorService executorService, boolean shutdownExecutorService, boolean streaming,
                     boolean stopOnException, long timeout, Processor onPrepare,
-                    boolean useSubUnitOfWork, boolean parallelAggregate) {
+                    boolean shareUnitOfWork, boolean parallelAggregate) {
         this(camelContext, route, expression, destination, aggregationStrategy, parallelProcessing, executorService,
              shutdownExecutorService, streaming, stopOnException, timeout,
-             onPrepare, useSubUnitOfWork, parallelAggregate, ",");
+             onPrepare, shareUnitOfWork, parallelAggregate, ",");
     }
 
     public Splitter(CamelContext camelContext, Route route, Expression expression, Processor destination,
                     AggregationStrategy aggregationStrategy, boolean parallelProcessing,
                     ExecutorService executorService, boolean shutdownExecutorService, boolean streaming,
                     boolean stopOnException, long timeout, Processor onPrepare,
-                    boolean useSubUnitOfWork, boolean parallelAggregate, String delimiter) {
+                    boolean shareUnitOfWork, boolean parallelAggregate, String delimiter) {
         super(camelContext, route, Collections.singleton(destination), aggregationStrategy, parallelProcessing, executorService,
               shutdownExecutorService, streaming, stopOnException,
-              timeout, onPrepare, useSubUnitOfWork, parallelAggregate, 0);
+              timeout, onPrepare, shareUnitOfWork, parallelAggregate, 0);
         this.expression = expression;
         StringHelper.notEmpty(delimiter, "delimiter");
         this.delimiter = delimiter;
@@ -319,6 +317,12 @@ public class Splitter extends MulticastProcessor implements AsyncProcessor, Trac
         if (exchange.getContext().isMessageHistory()) {
             // we do not want to copy the message history for split sub-messages
             answer.removeProperty(ExchangePropertyKey.MESSAGE_HISTORY);
+        }
+
+        if (isParallelProcessing()) {
+            //we do not want to copy JPA entityManager (which is not meant for concurrent use) in parallel mode
+            //jpa component takes care of the entityManager if property is removed
+            answer.removeProperty(Exchange.JPA_ENTITY_MANAGER);
         }
         return answer;
     }

@@ -313,11 +313,13 @@ public interface AmqpComponentBuilderFactory {
             return this;
         }
     
+        
         /**
          * Whether to enable SSL when connecting to the AMQP Broker.
          * 
          * The option is a: &lt;code&gt;java.lang.Boolean&lt;/code&gt; type.
          * 
+         * Default: false
          * Group: common
          * 
          * @param useSsl the value to set
@@ -328,11 +330,13 @@ public interface AmqpComponentBuilderFactory {
             return this;
         }
     
+        
         /**
          * Whether to configure topics with a topic:// prefix.
          * 
          * The option is a: &lt;code&gt;java.lang.Boolean&lt;/code&gt; type.
          * 
+         * Default: false
          * Group: common
          * 
          * @param useTopicPrefix the value to set
@@ -1274,6 +1278,30 @@ public interface AmqpComponentBuilderFactory {
          */
         default AmqpComponentBuilder includeSentJMSMessageID(boolean includeSentJMSMessageID) {
             doSetProperty("includeSentJMSMessageID", includeSentJMSMessageID);
+            return this;
+        }
+    
+        /**
+         * When using InOut exchange pattern use this JMS property instead of
+         * JMSCorrelationID JMS property to correlate reply message. Difference
+         * between this and 'correlationProperty' is that 'correlationProperty'
+         * tells which request property holds the correlation id value and it
+         * does not affect the selector for the reply
+         * (JMSCorrelationID=&amp;lt;correlation id&amp;gt;), while
+         * 'replyCorrelationProperty' tells which reply property will hold the
+         * correlation id value and it does affect the selector for the reply
+         * (&amp;lt;replyCorrelationProperty&amp;gt;=&amp;lt;correlation
+         * id&amp;gt;).
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer (advanced)
+         * 
+         * @param replyCorrelationProperty the value to set
+         * @return the dsl builder
+         */
+        default AmqpComponentBuilder replyCorrelationProperty(java.lang.String replyCorrelationProperty) {
+            doSetProperty("replyCorrelationProperty", replyCorrelationProperty);
             return this;
         }
     
@@ -2463,6 +2491,7 @@ public interface AmqpComponentBuilderFactory {
             case "disableTimeToLive": getOrCreateConfiguration((AMQPComponent) component).setDisableTimeToLive((boolean) value); return true;
             case "forceSendOriginalMessage": getOrCreateConfiguration((AMQPComponent) component).setForceSendOriginalMessage((boolean) value); return true;
             case "includeSentJMSMessageID": getOrCreateConfiguration((AMQPComponent) component).setIncludeSentJMSMessageID((boolean) value); return true;
+            case "replyCorrelationProperty": getOrCreateConfiguration((AMQPComponent) component).setReplyCorrelationProperty((java.lang.String) value); return true;
             case "replyToCacheLevelName": getOrCreateConfiguration((AMQPComponent) component).setReplyToCacheLevelName((java.lang.String) value); return true;
             case "replyToDestinationSelectorName": getOrCreateConfiguration((AMQPComponent) component).setReplyToDestinationSelectorName((java.lang.String) value); return true;
             case "streamMessageTypeEnabled": getOrCreateConfiguration((AMQPComponent) component).setStreamMessageTypeEnabled((boolean) value); return true;

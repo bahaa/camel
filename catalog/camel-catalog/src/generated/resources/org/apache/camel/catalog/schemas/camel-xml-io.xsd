@@ -638,6 +638,15 @@ Evaluates a Groovy script.
       </xs:documentation>
     </xs:annotation>
   </xs:element>
+  <xs:element name="groovyXml" type="tns:groovyXmlDataFormat">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+<![CDATA[
+Transform between XML and Groovy Node (Map structure) objects.
+]]>
+      </xs:documentation>
+    </xs:annotation>
+  </xs:element>
   <xs:element name="gzipDeflater" type="tns:gzipDeflaterDataFormat">
     <xs:annotation>
       <xs:documentation xml:lang="en">
@@ -751,6 +760,15 @@ Intercepts messages being sent to an endpoint
       </xs:documentation>
     </xs:annotation>
   </xs:element>
+  <xs:element name="iso8583" type="tns:iso8583DataFormat">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+<![CDATA[
+Create, edit and read ISO-8583 messages.
+]]>
+      </xs:documentation>
+    </xs:annotation>
+  </xs:element>
   <xs:element name="jacksonXml" type="tns:jacksonXMLDataFormat">
     <xs:annotation>
       <xs:documentation xml:lang="en">
@@ -845,7 +863,11 @@ JTA based transactional error handler (requires camel-jta).
     <xs:annotation>
       <xs:documentation xml:lang="en">
 <![CDATA[
-To call Kamelets in special situations
+To call Kamelets in special situations. By default, calling kamelets should be done as endpoints with the kamelet
+component, such as to(kamelet:mykamelet). When a Kamelet is designed for a special use-case such as aggregating
+messages, and returning a response message only when a group of aggregated messages is completed. In other words,
+kamelet does not return a response message for every incoming message. In special situations like these, then you must
+use this Kamelet EIP instead of using the kamelet component.
 ]]>
       </xs:documentation>
     </xs:annotation>
@@ -1043,7 +1065,7 @@ Rest security OAuth2 definition
     <xs:annotation>
       <xs:documentation xml:lang="en">
 <![CDATA[
-Evaluates an OGNL expression (Apache Commons OGNL).
+Deprecated: Evaluates an OGNL expression (Apache Commons OGNL).
 ]]>
       </xs:documentation>
     </xs:annotation>
@@ -1238,6 +1260,15 @@ Enriches messages with data polled from a secondary resource
       <xs:documentation xml:lang="en">
 <![CDATA[
 Rest POST command
+]]>
+      </xs:documentation>
+    </xs:annotation>
+  </xs:element>
+  <xs:element name="pqc" type="tns:pqcDataFormat">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+<![CDATA[
+Encrypt and decrypt messages using Post-Quantum Cryptography Key Encapsulation Mechanisms (KEM).
 ]]>
       </xs:documentation>
     </xs:annotation>
@@ -2008,15 +2039,6 @@ Throws an exception
       </xs:documentation>
     </xs:annotation>
   </xs:element>
-  <xs:element name="tidyMarkup" type="tns:tidyMarkupDataFormat">
-    <xs:annotation>
-      <xs:documentation xml:lang="en">
-<![CDATA[
-Parse (potentially invalid) HTML into valid HTML or DOM.
-]]>
-      </xs:documentation>
-    </xs:annotation>
-  </xs:element>
   <xs:element name="to" type="tns:toDefinition">
     <xs:annotation>
       <xs:documentation xml:lang="en">
@@ -2080,20 +2102,20 @@ Transforms the message body based on an expression
       </xs:documentation>
     </xs:annotation>
   </xs:element>
+  <xs:element name="transformDataType" type="tns:transformDataTypeDefinition">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+<![CDATA[
+Transforms the message body based on known data type transformers.
+]]>
+      </xs:documentation>
+    </xs:annotation>
+  </xs:element>
   <xs:element name="transformers" type="tns:transformersDefinition">
     <xs:annotation>
       <xs:documentation xml:lang="en">
 <![CDATA[
 To configure transformers.
-]]>
-      </xs:documentation>
-    </xs:annotation>
-  </xs:element>
-  <xs:element name="typeFilter" type="tns:yamlTypeFilterDefinition">
-    <xs:annotation>
-      <xs:documentation xml:lang="en">
-<![CDATA[
-null
 ]]>
       </xs:documentation>
     </xs:annotation>
@@ -2303,8 +2325,7 @@ Deprecated: null
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled
-later at runtime. Default value: false
+Disables this EIP from the route. Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -2329,6 +2350,15 @@ Sets the description of this node.
         <xs:documentation xml:lang="en">
 <![CDATA[
 Sets the id of this node.
+]]>
+        </xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="note" type="xs:string">
+      <xs:annotation>
+        <xs:documentation xml:lang="en">
+<![CDATA[
+Sets the note of this node.
 ]]>
         </xs:documentation>
       </xs:annotation>
@@ -2451,6 +2481,7 @@ will fallback to use the fixed value if the Expression result was null or 0.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -2608,7 +2639,9 @@ intervals. Default value: 1000
 Enables the batch completion mode where we aggregate from a org.apache.camel.BatchConsumer and aggregate the total
 number of exchanges the org.apache.camel.BatchConsumer has reported as total by checking the exchange property
 org.apache.camel.Exchange#BATCH_COMPLETE when its complete. This option cannot be used together with
-discardOnAggregationFailure. Default value: false
+discardOnAggregationFailure. Important: When using this option, you should also enable eagerCheckCompletion() to ensure
+the aggregator checks for batch completion on each incoming exchange. Without eager checking, the batch completion
+signal may not be properly detected. Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -3091,6 +3124,7 @@ The exception(s) to catch.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -3255,6 +3289,7 @@ during startup to keep at runtime only the branch that matched. Default value: f
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -3267,8 +3302,7 @@ during startup to keep at runtime only the branch that matched. Default value: f
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Disables this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled late at
-runtime. Default value: false
+Disables this EIP from the route. Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -3345,6 +3379,7 @@ runtime. Default value: false
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -3357,8 +3392,7 @@ runtime. Default value: false
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Disables this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled late at
-runtime. Default value: false
+Disables this EIP from the route. Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -3437,6 +3471,7 @@ runtime. Default value: false
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -3718,6 +3753,16 @@ Configures whether cancel is called on the running future. Defaults to true. Def
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
+        <xs:attribute name="micrometerEnabled" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Whether to enable collecting statistics using Micrometer. This requires adding camel-resilience4j-micrometer JAR to the
+classpath. Default value: false
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -3927,6 +3972,7 @@ References a custom thread pool to use when offloading a guarded action to anoth
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -5096,6 +5142,7 @@ Sets the logging level to use for logging transactional rollback. This option is
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -5186,6 +5233,7 @@ predicate evaluated as true or false.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -5347,6 +5395,7 @@ Global option value.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -5508,6 +5557,7 @@ Whether if validation is required for this input type. Default value: false
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -5606,6 +5656,7 @@ intercepted.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -5714,6 +5765,7 @@ After sending to the endpoint then send the message to this uri which allows to 
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -5813,6 +5865,7 @@ mynamecount=4&type=gold.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -6153,6 +6206,7 @@ such as groovy.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -6225,9 +6279,11 @@ messages, or any custom logic needed before the looping executes.
             <xs:element ref="tns:flatpack"/>
             <xs:element ref="tns:fory"/>
             <xs:element ref="tns:grok"/>
+            <xs:element ref="tns:groovyXml"/>
             <xs:element ref="tns:gzipDeflater"/>
             <xs:element ref="tns:hl7"/>
             <xs:element ref="tns:ical"/>
+            <xs:element ref="tns:iso8583"/>
             <xs:element ref="tns:jacksonXml"/>
             <xs:element ref="tns:jaxb"/>
             <xs:element ref="tns:json"/>
@@ -6244,7 +6300,6 @@ messages, or any custom logic needed before the looping executes.
             <xs:element ref="tns:syslog"/>
             <xs:element ref="tns:tarFile"/>
             <xs:element ref="tns:thrift"/>
-            <xs:element ref="tns:tidyMarkup"/>
             <xs:element ref="tns:univocityCsv"/>
             <xs:element ref="tns:univocityFixed"/>
             <xs:element ref="tns:univocityTsv"/>
@@ -6516,7 +6571,7 @@ When not disabled, the SchemaResolver will be looked up into the registry. Defau
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Barcode format such as QR-Code.
+Barcode format such as QR-Code. Default value: QR_CODE
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -6525,7 +6580,7 @@ Barcode format such as QR-Code.
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Image type of the barcode such as png.
+Image type of the barcode such as png. Default value: PNG
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -6534,7 +6589,7 @@ Image type of the barcode such as png.
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Width of the barcode.
+Width of the barcode. Default value: 100
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -6543,7 +6598,7 @@ Width of the barcode.
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Height of the barcode.
+Height of the barcode. Default value: 100
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -6688,6 +6743,15 @@ Whether to use Csv, Fixed, or KeyValue.
             <xs:documentation xml:lang="en">
 <![CDATA[
 Name of model class to use.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="defaultValueStringAsNull" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+To change the default value for string types to be null instead of an empty string. Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -6844,7 +6908,7 @@ The JCE algorithm name indicating the cryptographic algorithm that will be used.
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="keyRef" type="xs:string">
+        <xs:attribute name="key" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
@@ -6862,7 +6926,7 @@ The name of the JCE Security Provider that should be used.
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="initVectorRef" type="xs:string">
+        <xs:attribute name="initVector" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
@@ -6871,7 +6935,7 @@ Refers to a byte array containing the Initialization Vector that will be used to
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="algorithmParameterRef" type="xs:string">
+        <xs:attribute name="algorithmParameterSpec" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
@@ -6925,31 +6989,12 @@ value: false
   <xs:complexType name="csvDataFormat">
     <xs:complexContent>
       <xs:extension base="tns:dataFormat">
-        <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="header" type="xs:string">
-            <xs:annotation>
-              <xs:documentation xml:lang="en">
-<![CDATA[
-To configure the CSV headers.
-]]>
-              </xs:documentation>
-            </xs:annotation>
-          </xs:element>
-        </xs:sequence>
-        <xs:attribute name="formatRef" type="xs:string">
+        <xs:sequence/>
+        <xs:attribute name="format" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-The reference format to use, it will be updated with the other format options, the default value is CSVFormat.DEFAULT.
-]]>
-            </xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="formatName" type="xs:string">
-          <xs:annotation>
-            <xs:documentation xml:lang="en">
-<![CDATA[
-The name of the format to use, the default value is CSVFormat.DEFAULT. Default value: DEFAULT
+The format to use. Default value: DEFAULT
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -7004,6 +7049,15 @@ Sets the escape character to use.
             <xs:documentation xml:lang="en">
 <![CDATA[
 Use for disabling headers. Default value: false
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="header" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+To configure the CSV headers. Multiple headers can be separated by comma.
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -7531,7 +7585,7 @@ If the text is qualified with a character. Uses quote character by default.
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="parserFactoryRef" type="xs:string">
+        <xs:attribute name="parserFactory" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
@@ -7631,6 +7685,23 @@ Whether to capture named expressions only or not (i.e. %{IP:ip} but not ${IP}). 
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
+  <xs:complexType name="groovyXmlDataFormat">
+    <xs:complexContent>
+      <xs:extension base="tns:dataFormat">
+        <xs:sequence/>
+        <xs:attribute name="attributeMapping" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+To turn on or off attribute mapping. When enabled then keys that start with _ or character will be mapped to an XML
+attribute, and vise versa. This rule is what Jackson and other XML or JSon libraries uses. Default value: true
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
   <xs:complexType name="gzipDeflaterDataFormat">
     <xs:complexContent>
       <xs:extension base="tns:dataFormat">
@@ -7642,6 +7713,15 @@ Whether to capture named expressions only or not (i.e. %{IP:ip} but not ${IP}). 
     <xs:complexContent>
       <xs:extension base="tns:dataFormat">
         <xs:sequence/>
+        <xs:attribute name="parser" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+To use a custom HL7 parser.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
         <xs:attribute name="validate" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
@@ -7663,6 +7743,40 @@ Whether to validate the HL7 message Is by default true. Default value: true
             <xs:documentation xml:lang="en">
 <![CDATA[
 Whether to validate. Default value: false
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="iso8583DataFormat">
+    <xs:complexContent>
+      <xs:extension base="tns:dataFormat">
+        <xs:sequence/>
+        <xs:attribute name="configFile" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+The j8583 configuration file to load from classpath. Default value: j8583-config.xml
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="isoType" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+The default ISO-Type to use.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="allowAutoWiredMessageFormat" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Whether to auto-discover com.solab.iso8583.MessageFactory from the registry. Default value: true
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -7833,6 +7947,18 @@ value: true
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
+        <xs:attribute name="maxStringLength" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Sets the maximum string length (in chars or bytes, depending on input context). The default is 20,000,000. This limit is
+not exact, the limit is applied when we increase internal buffer sizes and an exception will happen at sizes greater
+than this limit. Some text values that are a little bigger than the limit may be treated as valid but no text values
+with sizes less than or equal to this limit will be treated as invalid.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -7967,12 +8093,12 @@ XML namespace to use for fragment parsing. See more details at the fragment opti
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="namespacePrefixRef" type="xs:string">
+        <xs:attribute name="namespacePrefix" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-When marshalling using JAXB or SOAP then the JAXB implementation will automatic assign namespace prefixes, such as ns2,
-ns3, ns4 etc. To control this mapping, Camel allows you to refer to a map which contains the desired mapping.
+When marshalling using JAXB or SOAP then the JAXB implementation will automatically assign namespace prefixes, such as
+ns2, ns3, ns4 etc. To control this mapping, Camel allows you to refer to a map which contains the desired mapping.
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -8030,9 +8156,9 @@ value: true
             <xs:documentation xml:lang="en">
 <![CDATA[
 Only in use if schema validation has been enabled. Restrict access to the protocols specified for external reference set
-by the schemaLocation attribute, Import and Include element. Examples of protocols are file, http, jar:file. false or
-none to deny all access to external references; a specific protocol, such as file, to give permission to only the
-protocol; the keyword all to grant permission to all protocols. Default value: false
+by the schemaLocation attribute, Import and Include element. Examples of protocols are file, http, jar:file. empty,
+false or none to deny all access to external references; a specific protocol, such as file, to give permission to only
+the protocol; the keyword all to grant permission to all protocols.
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -8264,6 +8390,18 @@ value: true
             <xs:documentation xml:lang="en">
 <![CDATA[
 To configure the date format while marshall or unmarshall Date fields in JSON using Gson.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="maxStringLength" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Jackson. Sets the maximum string length (in chars or bytes, depending on input context). The default is 20,000,000. This
+limit is not exact, the limit is applied when we increase internal buffer sizes and an exception will happen at sizes
+greater than this limit. Some text values that are a little bigger than the limit may be treated as valid but no text
+values with sizes less than or equal to this limit will be treated as invalid.
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -8660,7 +8798,7 @@ To overrule and use a specific encoding.
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="elementNameStrategyRef" type="xs:string">
+        <xs:attribute name="elementNameStrategy" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
@@ -8687,7 +8825,7 @@ SOAP version should either be 1.1 or 1.2. Is by default 1.1. Default value: 1.1
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="namespacePrefixRef" type="xs:string">
+        <xs:attribute name="namespacePrefix" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
@@ -8703,6 +8841,17 @@ ns3, ns4 etc. To control this mapping, Camel allows you to refer to a map which 
 <![CDATA[
 To validate against an existing schema. Your can use the prefix classpath:, file: or http: to specify how the resource
 should be resolved. You can separate multiple schema files by using the ',' character.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="ignoreUnmarshalledHeaders" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Whether to ignore headers that was not unmarshalled. By default, headers which could not be unmarshalled is recorded in
+the org.apache.camel.dataformat.soap.UNMARSHALLED_HEADER_LIST header which allows to inspect any problematic header.
+Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -8730,15 +8879,6 @@ The flag indicating that messages must be marshalled in a JSON format. Default v
     <xs:complexContent>
       <xs:extension base="tns:dataFormat">
         <xs:sequence/>
-        <xs:attribute name="writeConfigRef" type="xs:string">
-          <xs:annotation>
-            <xs:documentation xml:lang="en">
-<![CDATA[
-Refers to a specific configuration to use when marshalling a message to lookup from the registry.
-]]>
-            </xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
         <xs:attribute name="writeInJson" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
@@ -8758,11 +8898,20 @@ the namespace used.
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="readConfigRef" type="xs:string">
+        <xs:attribute name="readConfig" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
 Refers to a specific configuration to use when unmarshalling an input stream to lookup from the registry.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="writeConfig" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Refers to a specific configuration to use when marshalling a message to lookup from the registry.
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -8856,32 +9005,6 @@ value is binary. Default value: binary
 Whether the data format should set the Content-Type header with the type from the data format. For example
 application/xml for data formats marshalling to XML, or application/json for data formats marshalling to JSON. Default
 value: true
-]]>
-            </xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-      </xs:extension>
-    </xs:complexContent>
-  </xs:complexType>
-  <xs:complexType name="tidyMarkupDataFormat">
-    <xs:complexContent>
-      <xs:extension base="tns:dataFormat">
-        <xs:sequence/>
-        <xs:attribute name="dataObjectType" type="xs:string">
-          <xs:annotation>
-            <xs:documentation xml:lang="en">
-<![CDATA[
-What data type to unmarshal as, can either be org.w3c.dom.Node or java.lang.String. Is by default org.w3c.dom.Node.
-Default value: org.w3c.dom.Node
-]]>
-            </xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="omitXmlDeclaration" type="xs:string">
-          <xs:annotation>
-            <xs:documentation xml:lang="en">
-<![CDATA[
-When returning a String, do we omit the XML declaration in the top. Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -9206,7 +9329,7 @@ asymmetric key encryption or decryption.
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="keyOrTrustStoreParametersRef" type="xs:string">
+        <xs:attribute name="keyOrTrustStoreParameters" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
@@ -9252,6 +9375,15 @@ Default value: MGF1_SHA1
 <![CDATA[
 Whether to add the public key used to encrypt the session key as a KeyValue in the EncryptedKey structure or not.
 Default value: true
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="namespace" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Refers to a Map XML Namespaces of prefix - uri mappings.
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -9414,9 +9546,7 @@ verification is executed. no_signature_allowed: The PGP message must not contain
   <xs:complexType name="yamlDataFormat">
     <xs:complexContent>
       <xs:extension base="tns:dataFormat">
-        <xs:sequence>
-          <xs:element maxOccurs="unbounded" minOccurs="0" ref="tns:typeFilter"/>
-        </xs:sequence>
+        <xs:sequence/>
         <xs:attribute name="library" type="tns:yamlLibrary">
           <xs:annotation>
             <xs:documentation xml:lang="en">
@@ -9498,6 +9628,15 @@ Allow any class to be un-marshaled. Default value: false
             </xs:documentation>
           </xs:annotation>
         </xs:attribute>
+        <xs:attribute name="typeFilter" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Set the types SnakeYAML is allowed to un-marshall. Multiple types can be separated by comma.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
         <xs:attribute name="maxAliasesForCollections" type="xs:string">
           <xs:annotation>
             <xs:documentation xml:lang="en">
@@ -9518,27 +9657,6 @@ Set whether recursive keys are allowed. Default value: false
         </xs:attribute>
       </xs:extension>
     </xs:complexContent>
-  </xs:complexType>
-  <xs:complexType name="yamlTypeFilterDefinition">
-    <xs:sequence/>
-    <xs:attribute name="value" type="xs:string">
-      <xs:annotation>
-        <xs:documentation xml:lang="en">
-<![CDATA[
-Value of type such as class name or regular expression.
-]]>
-        </xs:documentation>
-      </xs:annotation>
-    </xs:attribute>
-    <xs:attribute name="type" type="xs:string">
-      <xs:annotation>
-        <xs:documentation xml:lang="en">
-<![CDATA[
-Whether to filter by class type or regular expression.
-]]>
-        </xs:documentation>
-      </xs:annotation>
-    </xs:attribute>
   </xs:complexType>
   <xs:complexType name="zipDeflaterDataFormat">
     <xs:complexContent>
@@ -9677,6 +9795,7 @@ maximum decompressed size. Default value: 1073741824
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -9784,9 +9903,9 @@ behavior is to not stop but continue processing till the end. Default value: fal
 <![CDATA[
 Sets a total timeout specified in millis, when using parallel processing. If the Multicast hasn't been able to send and
 process all replies within the given timeframe, then the timeout triggers and the Multicast breaks out and continues.
-Notice if you provide a TimeoutAwareAggregationStrategy then the timeout method is invoked before breaking out. If the
-timeout is reached with running tasks still remaining, certain tasks for which it is difficult for Camel to shut down in
-a graceful manner may continue to run. So use this option with a bit of care. Default value: 0
+The timeout method is invoked before breaking out. If the timeout is reached with running tasks still remaining, certain
+tasks for which it is difficult for Camel to shut down in a graceful manner may continue to run. So use this option with
+a bit of care. Default value: 0
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -9895,6 +10014,7 @@ individual unit of work. Default value: false
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -10084,6 +10204,7 @@ its considered handled as well.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -10342,6 +10463,7 @@ one of the available events. Implementations should not assume the predicate to 
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -10422,6 +10544,7 @@ one of the available events. Implementations should not assume the predicate to 
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -10835,9 +10958,9 @@ routing after the recipient list is complete, even if parallel processing is ena
 <![CDATA[
 Sets a total timeout specified in millis, when using parallel processing. If the Recipient List hasn't been able to send
 and process all replies within the given timeframe, then the timeout triggers and the Recipient List breaks out and
-continues. Notice if you provide a TimeoutAwareAggregationStrategy then the timeout method is invoked before breaking
-out. If the timeout is reached with running tasks still remaining, certain tasks for which it is difficult for Camel to
-shut down in a graceful manner may continue to run. So use this option with a bit of care. Default value: 0
+continues. The timeout method is invoked before breaking out. If the timeout is reached with running tasks still
+remaining, certain tasks for which it is difficult for Camel to shut down in a graceful manner may continue to run. So
+use this option with a bit of care. Default value: 0
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -11129,6 +11252,7 @@ Name of variable to remove.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -11486,6 +11610,7 @@ Reference to the routes in the xml dsl.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -11544,7 +11669,7 @@ Whether security mask for Logging is enabled on this route. Default value: false
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Whether message history is enabled on this route.
+Whether message history is enabled on this route. Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -11620,7 +11745,7 @@ To configure the ordering of the routes being started.
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Whether stream caching is enabled on this route.
+Whether stream caching is enabled on this route. Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -11630,7 +11755,7 @@ Whether stream caching is enabled on this route.
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Whether tracing is enabled on this route.
+Whether tracing is enabled on this route. Default value: false
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -11922,6 +12047,7 @@ actions. Option values will be transformed into input headers of the compensatio
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -12379,6 +12505,7 @@ Sets the comparator to use for sorting.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -12500,11 +12627,11 @@ behavior is to not stop but continue processing till the end. Default value: fal
           <xs:annotation>
             <xs:documentation xml:lang="en">
 <![CDATA[
-Sets a total timeout specified in millis, when using parallel processing. If the Splitter hasn't been able to split and
-process all the sub messages within the given timeframe, then the timeout triggers and the Splitter breaks out and
-continues. Notice if you provide a TimeoutAwareAggregationStrategy then the timeout method is invoked before breaking
-out. If the timeout is reached with running tasks still remaining, certain tasks for which it is difficult for Camel to
-shut down in a graceful manner may continue to run. So use this option with a bit of care. Default value: 0
+Sets a total timeout specified in millis, when using parallel processing. If the Splitter hasn't been able to send and
+process all replies within the given timeframe, then the timeout triggers and the Splitter breaks out and continues. The
+timeout method is invoked before breaking out. If the timeout is reached with running tasks still remaining, certain
+tasks for which it is difficult for Camel to shut down in a graceful manner may continue to run. So use this option with
+a bit of care. Default value: 0
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -12612,6 +12739,7 @@ individual unit of work. Default value: false
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -13337,6 +13465,7 @@ Sets the model name.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -13350,6 +13479,31 @@ Sets the model name.
             <xs:documentation xml:lang="en">
 <![CDATA[
 Sets a reference to use for lookup the policy in the registry.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="transformDataTypeDefinition">
+    <xs:complexContent>
+      <xs:extension base="tns:noOutputDefinition">
+        <xs:sequence/>
+        <xs:attribute name="fromType" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+From type used in data type transformation.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="toType" type="xs:string" use="required">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+To type used as a target data type in the transformation.
 ]]>
             </xs:documentation>
           </xs:annotation>
@@ -13389,24 +13543,6 @@ Sets a reference to use for lookup the policy in the registry.
           <xs:element ref="tns:xpath"/>
           <xs:element ref="tns:xquery"/>
         </xs:choice>
-        <xs:attribute name="fromType" type="xs:string">
-          <xs:annotation>
-            <xs:documentation xml:lang="en">
-<![CDATA[
-From type used in data type transformation.
-]]>
-            </xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="toType" type="xs:string">
-          <xs:annotation>
-            <xs:documentation xml:lang="en">
-<![CDATA[
-To type used as a target data type in the transformation.
-]]>
-            </xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -13479,6 +13615,7 @@ To type used as a target data type in the transformation.
             <xs:element ref="tns:toD"/>
             <xs:element ref="tns:tokenizer"/>
             <xs:element ref="tns:transacted"/>
+            <xs:element ref="tns:transformDataType"/>
             <xs:element ref="tns:transform"/>
             <xs:element ref="tns:doTry"/>
             <xs:element ref="tns:unmarshal"/>
@@ -13511,9 +13648,11 @@ To type used as a target data type in the transformation.
             <xs:element ref="tns:flatpack"/>
             <xs:element ref="tns:fory"/>
             <xs:element ref="tns:grok"/>
+            <xs:element ref="tns:groovyXml"/>
             <xs:element ref="tns:gzipDeflater"/>
             <xs:element ref="tns:hl7"/>
             <xs:element ref="tns:ical"/>
+            <xs:element ref="tns:iso8583"/>
             <xs:element ref="tns:jacksonXml"/>
             <xs:element ref="tns:jaxb"/>
             <xs:element ref="tns:json"/>
@@ -13530,7 +13669,6 @@ To type used as a target data type in the transformation.
             <xs:element ref="tns:syslog"/>
             <xs:element ref="tns:tarFile"/>
             <xs:element ref="tns:thrift"/>
-            <xs:element ref="tns:tidyMarkup"/>
             <xs:element ref="tns:univocityCsv"/>
             <xs:element ref="tns:univocityFixed"/>
             <xs:element ref="tns:univocityTsv"/>
@@ -14043,8 +14181,8 @@ become an individual route. This option is default true. Default value: true
       <xs:annotation>
         <xs:documentation xml:lang="en">
 <![CDATA[
-Name of specific json data format to use. By default jackson will be used. Important: This option is only for setting a
-custom name of the data format, not to refer to an existing data format instance.
+Name of specific json data format to use. By default, jackson will be used. Important: This option is only for setting a
+custom name of the data format, not to refer to an existing data format instance. Default value: jackson
 ]]>
         </xs:documentation>
       </xs:annotation>
@@ -14053,8 +14191,9 @@ custom name of the data format, not to refer to an existing data format instance
       <xs:annotation>
         <xs:documentation xml:lang="en">
 <![CDATA[
-Name of specific XML data format to use. By default jaxb will be used. Important: This option is only for setting a
-custom name of the data format, not to refer to an existing data format instance.
+Name of specific XML data format to use. By default jaxb will be used, but jacksonXml is also supported. Important: This
+option is only for setting a custom name of the data format, not to refer to an existing data format instance. Default
+value: jaxb
 ]]>
         </xs:documentation>
       </xs:annotation>
@@ -15779,14 +15918,17 @@ Set a reference to a custom Expression to use.
         <xs:element ref="tns:crypto"/>
         <xs:element ref="tns:csv"/>
         <xs:element ref="tns:custom"/>
+        <xs:element ref="tns:dfdl"/>
         <xs:element ref="tns:fhirJson"/>
         <xs:element ref="tns:fhirXml"/>
         <xs:element ref="tns:flatpack"/>
         <xs:element ref="tns:fory"/>
         <xs:element ref="tns:grok"/>
+        <xs:element ref="tns:groovyXml"/>
         <xs:element ref="tns:gzipDeflater"/>
         <xs:element ref="tns:hl7"/>
         <xs:element ref="tns:ical"/>
+        <xs:element ref="tns:iso8583"/>
         <xs:element ref="tns:jacksonXml"/>
         <xs:element ref="tns:jaxb"/>
         <xs:element ref="tns:json"/>
@@ -15804,7 +15946,6 @@ Set a reference to a custom Expression to use.
         <xs:element ref="tns:syslog"/>
         <xs:element ref="tns:tarFile"/>
         <xs:element ref="tns:thrift"/>
-        <xs:element ref="tns:tidyMarkup"/>
         <xs:element ref="tns:univocityCsv"/>
         <xs:element ref="tns:univocityFixed"/>
         <xs:element ref="tns:univocityTsv"/>
@@ -15814,6 +15955,78 @@ Set a reference to a custom Expression to use.
         <xs:element ref="tns:zipFile"/>
       </xs:choice>
     </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="pqcDataFormat">
+    <xs:complexContent>
+      <xs:extension base="tns:dataFormat">
+        <xs:sequence/>
+        <xs:attribute name="keyEncapsulationAlgorithm" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+The Post-Quantum KEM algorithm to use for key encapsulation. Supported values: MLKEM, BIKE, HQC, CMCE, SABER, FRODO,
+NTRU, NTRULPRime, SNTRUPrime, KYBER. Default value: MLKEM
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="symmetricKeyAlgorithm" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+The symmetric encryption algorithm to use with the shared secret. Supported values: AES, ARIA, RC2, RC5, CAMELLIA,
+CAST5, CAST6, CHACHA7539, etc. Default value: AES
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="symmetricKeyLength" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+The length (in bits) of the symmetric key. Default value: 128
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="keyPair" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Refers to the KeyPair to lookup from the register to use for KEM operations.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="bufferSize" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+The size of the buffer used for streaming encryption/decryption. Default value: 4096
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="provider" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+The JCE security provider to use.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="keyGenerator" type="xs:string">
+          <xs:annotation>
+            <xs:documentation xml:lang="en">
+<![CDATA[
+Refers to a custom KeyGenerator to lookup from the register for KEM operations.
+]]>
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
   </xs:complexType>
   <xs:complexType name="cSimpleExpression">
     <xs:simpleContent>
@@ -16629,14 +16842,17 @@ Set the 'to' data type name. If you specify 'json:XYZ', the transformer will be 
             <xs:element ref="tns:crypto"/>
             <xs:element ref="tns:csv"/>
             <xs:element ref="tns:custom"/>
+            <xs:element ref="tns:dfdl"/>
             <xs:element ref="tns:fhirJson"/>
             <xs:element ref="tns:fhirXml"/>
             <xs:element ref="tns:flatpack"/>
             <xs:element ref="tns:fory"/>
             <xs:element ref="tns:grok"/>
+            <xs:element ref="tns:groovyXml"/>
             <xs:element ref="tns:gzipDeflater"/>
             <xs:element ref="tns:hl7"/>
             <xs:element ref="tns:ical"/>
+            <xs:element ref="tns:iso8583"/>
             <xs:element ref="tns:jacksonXml"/>
             <xs:element ref="tns:jaxb"/>
             <xs:element ref="tns:json"/>
@@ -16653,7 +16869,6 @@ Set the 'to' data type name. If you specify 'json:XYZ', the transformer will be 
             <xs:element ref="tns:syslog"/>
             <xs:element ref="tns:tarFile"/>
             <xs:element ref="tns:thrift"/>
-            <xs:element ref="tns:tidyMarkup"/>
             <xs:element ref="tns:univocityCsv"/>
             <xs:element ref="tns:univocityFixed"/>
             <xs:element ref="tns:univocityTsv"/>
@@ -17002,12 +17217,6 @@ Set the URI of the Endpoint.
       <xs:enumeration value="Csv"/>
       <xs:enumeration value="Fixed"/>
       <xs:enumeration value="KeyValue"/>
-    </xs:restriction>
-  </xs:simpleType>
-  <xs:simpleType name="yamlTypeFilterType">
-    <xs:restriction base="xs:string">
-      <xs:enumeration value="type"/>
-      <xs:enumeration value="regexp"/>
     </xs:restriction>
   </xs:simpleType>
   <xs:simpleType name="option">

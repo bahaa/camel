@@ -23,13 +23,15 @@ import org.apache.camel.test.infra.common.services.ContainerService;
 import org.apache.camel.test.infra.postgres.common.PostgresProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @InfraService(service = PostgresInfraService.class,
               description = "Postgres SQL Database",
               serviceAlias = { "postgres" })
 public class PostgresLocalContainerInfraService implements PostgresInfraService, ContainerService<PostgreSQLContainer> {
+
     public static final String DEFAULT_POSTGRES_CONTAINER
             = LocalPropertyResolver.getProperty(PostgresLocalContainerInfraService.class,
                     PostgresProperties.POSTGRES_CONTAINER);
@@ -42,6 +44,10 @@ public class PostgresLocalContainerInfraService implements PostgresInfraService,
 
     public PostgresLocalContainerInfraService(String imageName) {
         container = initContainer(imageName);
+        String name = ContainerEnvironmentUtil.containerName(this.getClass());
+        if (name != null) {
+            container.withCreateContainerCmdModifier(cmd -> cmd.withName(name));
+        }
     }
 
     public PostgresLocalContainerInfraService(PostgreSQLContainer container) {
@@ -57,6 +63,7 @@ public class PostgresLocalContainerInfraService implements PostgresInfraService,
                 if (fixedPort) {
                     addFixedExposedPort(5432, 5432);
                 }
+                withLogConsumer(new Slf4jLogConsumer(LOG));
             }
         }
 

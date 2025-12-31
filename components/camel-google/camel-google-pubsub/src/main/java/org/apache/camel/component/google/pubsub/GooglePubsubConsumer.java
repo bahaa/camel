@@ -44,6 +44,7 @@ import org.apache.camel.component.google.pubsub.consumer.AcknowledgeCompletion;
 import org.apache.camel.component.google.pubsub.consumer.AcknowledgeSync;
 import org.apache.camel.component.google.pubsub.consumer.CamelMessageReceiver;
 import org.apache.camel.component.google.pubsub.consumer.GooglePubsubAcknowledge;
+import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.support.DefaultConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +58,7 @@ public class GooglePubsubConsumer extends DefaultConsumer {
     private ExecutorService executor;
     private final List<Subscriber> subscribers;
     private final Set<ApiFuture<PullResponse>> pendingSynchronousPullResponses;
+    private final HeaderFilterStrategy headerFilterStrategy;
 
     GooglePubsubConsumer(GooglePubsubEndpoint endpoint, Processor processor) {
         super(endpoint, processor);
@@ -71,6 +73,7 @@ public class GooglePubsubConsumer extends DefaultConsumer {
         }
 
         localLog = LoggerFactory.getLogger(loggerId);
+        headerFilterStrategy = endpoint.getHeaderFilterStrategy();
     }
 
     @Override
@@ -78,7 +81,7 @@ public class GooglePubsubConsumer extends DefaultConsumer {
         super.doStart();
 
         localLog.info("Starting Google PubSub consumer for {}/{}", endpoint.getProjectId(), endpoint.getDestinationName());
-        executor = endpoint.createExecutor();
+        executor = endpoint.createExecutor(this);
         for (int i = 0; i < endpoint.getConcurrentConsumers(); i++) {
             executor.submit(new SubscriberWrapper());
         }
@@ -142,11 +145,16 @@ public class GooglePubsubConsumer extends DefaultConsumer {
                 }
 
                 localLog.debug("Exit run for subscription {}", subscriptionName);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                localLog.error("Failure getting messages from PubSub", e);
             } catch (Exception e) {
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
                 localLog.error("Failure getting messages from PubSub", e);
+
+                // allow camel error handler to be aware
+                if (endpoint.isBridgeErrorHandler()) {
+                    getExceptionHandler().handleException(e);
+                }
             }
         }
 
@@ -161,6 +169,11 @@ public class GooglePubsubConsumer extends DefaultConsumer {
                     subscriber.awaitTerminated();
                 } catch (Exception e) {
                     localLog.error("Failure getting messages from PubSub", e);
+
+                    // allow camel error handler to be aware
+                    if (endpoint.isBridgeErrorHandler()) {
+                        getExceptionHandler().handleException(e);
+                    }
                 } finally {
                     localLog.debug("Stopping async subscriber {}", subscriptionName);
                     subscriber.stopAsync();
@@ -187,9 +200,11 @@ public class GooglePubsubConsumer extends DefaultConsumer {
                         Exchange exchange = createExchange(true);
                         exchange.getIn().setBody(pubsubMessage.getData().toByteArray());
 
+                        // Standard headers
                         exchange.getIn().setHeader(GooglePubsubConstants.ACK_ID, message.getAckId());
                         exchange.getIn().setHeader(GooglePubsubConstants.MESSAGE_ID, pubsubMessage.getMessageId());
                         exchange.getIn().setHeader(GooglePubsubConstants.PUBLISH_TIME, pubsubMessage.getPublishTime());
+                        // Deprecated:  replaced by headerFilterStrategy
                         exchange.getIn().setHeader(GooglePubsubConstants.ATTRIBUTES, pubsubMessage.getAttributesMap());
 
                         //existing subscriber can not be propagated, because it will be closed at the end of this block
@@ -197,11 +212,20 @@ public class GooglePubsubConsumer extends DefaultConsumer {
                         // (see  https://issues.apache.org/jira/browse/CAMEL-18447)
                         GooglePubsubAcknowledge acknowledge = new AcknowledgeSync(
                                 () -> endpoint.getComponent().getSubscriberStub(endpoint), subscriptionName);
-
                         if (endpoint.getAckMode() != GooglePubsubConstants.AckMode.NONE) {
                             exchange.getExchangeExtension().addOnCompletion(new AcknowledgeCompletion(acknowledge));
                         } else {
                             exchange.getIn().setHeader(GooglePubsubConstants.GOOGLE_PUBSUB_ACKNOWLEDGE, acknowledge);
+                        }
+
+                        // Inherit the rest of headers
+                        for (String pubSubHeader : pubsubMessage.getAttributesMap().keySet()) {
+                            String value = pubsubMessage.getAttributesMap().get(pubSubHeader);
+                            if (headerFilterStrategy != null
+                                    && headerFilterStrategy.applyFilterToExternalHeaders(pubSubHeader, value, exchange)) {
+                                continue;
+                            }
+                            exchange.getIn().setHeader(pubSubHeader, value);
                         }
 
                         try {

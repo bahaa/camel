@@ -16,6 +16,8 @@
  */
 package org.apache.camel.dsl.jbang.core.common;
 
+import java.util.Optional;
+
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import picocli.CommandLine;
 
@@ -29,4 +31,15 @@ public interface Plugin {
      * @param main        the current JBang main.
      */
     void customize(CommandLine commandLine, CamelJBangMain main);
+
+    /**
+     * The plugin may provide an optional project exporter implementation that is able to participate in an export
+     * performed by Camel JBang. Project exporter implementations may add properties and dependencies to the generated
+     * export.
+     *
+     * @return the plugin specific exporter implementation, otherwise empty
+     */
+    default Optional<PluginExporter> getExporter() {
+        return Optional.empty();
+    }
 }

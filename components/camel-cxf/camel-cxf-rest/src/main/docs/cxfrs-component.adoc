@@ -50,22 +50,11 @@ cxfrs:bean:cxfEndpoint?resourceClasses=org.apache.camel.rs.Example
 ------------------------------------------------------------------
 
 
-// component-configure options: START
-
-// component-configure options: END
-
 // component options: START
 include::partial$component-configure-options.adoc[]
 include::partial$component-endpoint-options.adoc[]
-// component options: END
-
-// endpoint options: START
-
-// endpoint options: END
-
-// component headers: START
 include::partial$component-endpoint-headers.adoc[]
-// component headers: END
+// component options: END
 
 You can also configure the CXF REST endpoint through the spring
 configuration.
@@ -343,7 +332,7 @@ Exchange exchange = template.send("direct://proxy", new Processor() {
         // set a customer header
         inMessage.setHeader("key", "value");
         // set up the accepted content type
-        inMessage.setHeader(Exchange.ACCEPT_CONTENT_TYPE, "application/json");
+        inMessage.setHeader(CxfConstants.ACCEPT_CONTENT_TYPE, "application/json");
         // set the parameters, if you just have one parameter,
         // camel will put this object into an Object[] itself
         inMessage.setBody("123");

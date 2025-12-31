@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -43,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.camel.test.infra.cli.common.CliProperties;
 import org.apache.camel.test.infra.cli.services.CliService;
 import org.apache.camel.test.infra.cli.services.CliServiceFactory;
+import org.apache.commons.io.FileUtils;
 import org.assertj.core.api.Assertions;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
@@ -51,7 +53,6 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.shaded.org.apache.commons.io.FileUtils;
 
 public abstract class JBangTestSupport {
 
@@ -217,6 +218,13 @@ public abstract class JBangTestSupport {
                         .contains(contains)));
     }
 
+    protected void checkContainerLogContainsAllOf(int waitForSeconds, String... contains) {
+        Assertions.assertThatNoException().isThrownBy(() -> Awaitility.await()
+                .atMost(waitForSeconds, TimeUnit.SECONDS)
+                .untilAsserted(() -> Assertions.assertThat(getContainerLogs())
+                        .contains(contains)));
+    }
+
     protected void checkLogContains(String contains) {
         checkLogContains(contains, ASSERTION_WAIT_SECONDS);
     }
@@ -281,6 +289,10 @@ public abstract class JBangTestSupport {
         return getLogs(null);
     }
 
+    protected String getContainerLogs() {
+        return containerService.getContainerLogs();
+    }
+
     protected String getLogs(String route) {
         return execute(Optional.ofNullable(route)
                 .map(r -> String.format("log %s --follow=false", r))
@@ -300,6 +312,13 @@ public abstract class JBangTestSupport {
             Files.copy(is, Path.of(containerDataFolder, resource.getName()), StandardCopyOption.REPLACE_EXISTING);
         }
         assertFileInDataFolderExists(resource.getName());
+    }
+
+    protected void copyResourceInDataFolder(String filename) throws IOException {
+        try (InputStream is = JBangTestSupport.class.getResourceAsStream("/jbang/it/" + filename)) {
+            Files.copy(is, Path.of(containerDataFolder, filename), StandardCopyOption.REPLACE_EXISTING);
+        }
+        assertFileInDataFolderExists(filename);
     }
 
     protected void newFileInDataFolder(String fileName, String content) {
@@ -340,7 +359,7 @@ public abstract class JBangTestSupport {
 
     protected String downloadNewFileInDataFolder(String downloadUrl) {
         try {
-            return this.downloadNewFileInDataFolder(new URL(downloadUrl), null);
+            return this.downloadNewFileInDataFolder(URI.create(downloadUrl).toURL(), null);
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }

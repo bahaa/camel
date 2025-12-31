@@ -58,16 +58,16 @@ import org.apache.camel.console.DevConsoleRegistry;
 import org.apache.camel.health.HealthCheck;
 import org.apache.camel.health.HealthCheckRegistry;
 import org.apache.camel.health.HealthCheckRepository;
-import org.apache.camel.impl.debugger.DebuggerJmxConnectorService;
-import org.apache.camel.impl.debugger.DefaultBacklogDebugger;
 import org.apache.camel.impl.engine.DefaultCompileStrategy;
 import org.apache.camel.impl.engine.DefaultRoutesLoader;
+import org.apache.camel.model.ModelCamelContext;
+import org.apache.camel.model.Resilience4jConfigurationDefinition;
 import org.apache.camel.saga.CamelSagaService;
 import org.apache.camel.spi.AutowiredLifecycleStrategy;
-import org.apache.camel.spi.BacklogDebugger;
 import org.apache.camel.spi.BacklogTracer;
 import org.apache.camel.spi.CamelBeanPostProcessor;
 import org.apache.camel.spi.CamelEvent;
+import org.apache.camel.spi.CamelMDCService;
 import org.apache.camel.spi.CamelMetricsService;
 import org.apache.camel.spi.CamelTracingService;
 import org.apache.camel.spi.CompileStrategy;
@@ -79,6 +79,7 @@ import org.apache.camel.spi.LifecycleStrategy;
 import org.apache.camel.spi.PackageScanClassResolver;
 import org.apache.camel.spi.PropertiesComponent;
 import org.apache.camel.spi.Registry;
+import org.apache.camel.spi.Resilience4jMicrometerFactory;
 import org.apache.camel.spi.RouteTemplateParameterSource;
 import org.apache.camel.spi.RoutesLoader;
 import org.apache.camel.spi.StartupCondition;
@@ -108,10 +109,10 @@ import org.apache.camel.support.startup.EnvStartupCondition;
 import org.apache.camel.support.startup.FileStartupCondition;
 import org.apache.camel.support.startup.LoggingStartupStepRecorder;
 import org.apache.camel.util.FileUtil;
+import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.OrderedLocationProperties;
 import org.apache.camel.util.OrderedProperties;
-import org.apache.camel.util.SensitiveUtils;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.vault.VaultConfiguration;
 import org.slf4j.Logger;
@@ -137,7 +138,7 @@ public abstract class BaseMainSupport extends BaseService {
             "camel.context.", "camel.resilience4j.", "camel.faulttolerance.",
             "camel.rest.", "camel.vault.", "camel.threadpool.", "camel.health.",
             "camel.lra.", "camel.opentelemetry2.", "camel.opentelemetry.",
-            "camel.telemetryDev.", "camel.management.", "camel.metrics.", "camel.routeTemplate",
+            "camel.telemetryDev.", "camel.management.", "camel.mdc.", "camel.metrics.", "camel.routeTemplate",
             "camel.devConsole.", "camel.variable.", "camel.beans.", "camel.globalOptions.",
             "camel.server.", "camel.ssl.", "camel.debug.", "camel.trace.", "camel.routeController." };
 
@@ -147,9 +148,7 @@ public abstract class BaseMainSupport extends BaseService {
     protected final OrderedLocationProperties wildcardProperties = new OrderedLocationProperties();
     protected RoutesCollector routesCollector = new DefaultRoutesCollector();
     protected String propertyPlaceholderLocations;
-    protected String defaultPropertyPlaceholderLocation
-            = MainConstants.DEFAULT_PROPERTY_PLACEHOLDER_LOCATION + ","
-              + MainConstants.DEFAULT_OBSERVABILITY_SERVICES_PROPERTY_LOCATION;
+    protected String defaultPropertyPlaceholderLocation = MainConstants.DEFAULT_PROPERTY_PLACEHOLDER_LOCATION;
     protected Properties initialProperties;
     protected Properties overrideProperties;
     protected boolean standalone = true;
@@ -445,6 +444,17 @@ public abstract class BaseMainSupport extends BaseService {
             }
         }
 
+        // load optional observability configuration from inside JAR
+        final Properties osp = tryLoadObservabilityProperties(camelContext, "observability-services.properties");
+        if (!osp.isEmpty()) {
+            // only add observability properties if not already defined as initial
+            osp.forEach((k, v) -> {
+                if (!initialProperties.containsKey(k)) {
+                    initialProperties.setProperty(k.toString(), v.toString());
+                }
+            });
+        }
+
         final Properties ip = tryLoadProperties(initialProperties, MainConstants.INITIAL_PROPERTIES_LOCATION, camelContext);
         if (ip != null) {
             pc.setInitialProperties(ip);
@@ -480,6 +490,20 @@ public abstract class BaseMainSupport extends BaseService {
         return ip;
     }
 
+    private static Properties tryLoadObservabilityProperties(CamelContext camelContext, String location) {
+        Properties p = new Properties();
+        InputStream is = null;
+        try {
+            is = ResourceHelper.resolveResourceAsInputStream(camelContext, location);
+            p.load(is);
+        } catch (Exception e) {
+            // ignore
+        } finally {
+            IOHelper.close(is);
+        }
+        return p;
+    }
+
     private static Properties tryLoadCloudProperties(
             Properties overridProperties, String cloudPropertiesLocations) {
         final OrderedLocationProperties cp = new OrderedLocationProperties();
@@ -488,16 +512,28 @@ public abstract class BaseMainSupport extends BaseService {
             for (String loc : locations) {
                 Path confPath = Paths.get(loc);
                 if (Files.exists(confPath) && Files.isDirectory(confPath)) {
-                    Files.walkFileTree(confPath, new SimpleFileVisitor<Path>() {
+                    Files.walkFileTree(confPath, new SimpleFileVisitor<>() {
                         @Override
                         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                             if (!Files.isDirectory(file)) {
-                                try {
-                                    String val = new String(Files.readAllBytes(file));
-                                    cp.put(loc, file.getFileName().toString(), val);
-                                } catch (IOException e) {
-                                    LOG.warn("Some error happened while reading property from cloud configuration file {}",
-                                            file, e);
+                                if (file.getFileName().toString().endsWith(".properties")) {
+                                    try (InputStream is = Files.newInputStream(file)) {
+                                        Properties prop = new Properties();
+                                        prop.load(is);
+                                        cp.putAll(loc, prop);
+                                    } catch (IOException e) {
+                                        LOG.warn(
+                                                "Some error happened while reading properties file from cloud configuration file {}",
+                                                file, e);
+                                    }
+                                } else {
+                                    try {
+                                        String val = new String(Files.readAllBytes(file));
+                                        cp.put(loc, file.getFileName().toString(), val);
+                                    } catch (IOException e) {
+                                        LOG.warn("Some error happened while reading property from cloud configuration file {}",
+                                                file, e);
+                                    }
                                 }
                             }
                             return FileVisitResult.CONTINUE;
@@ -525,14 +561,8 @@ public abstract class BaseMainSupport extends BaseService {
         // gathers the properties (key=value) that was auto-configured
         final OrderedLocationProperties autoConfiguredProperties = new OrderedLocationProperties();
 
-        // configure the profile with pre-configured settings
-        StartupStep step = recorder.beginStep(BaseMainSupport.class, "configureMain", "Profile Configure");
-        doInitFileConfigurations(camelContext, mainConfigurationProperties);
-        ProfileConfigurer.configureMain(camelContext, mainConfigurationProperties.getProfile(), mainConfigurationProperties);
-        recorder.endStep(step);
-
         // need to pre-load vault configuration as they are used eager during property placeholder resolutions
-        step = recorder.beginStep(BaseMainSupport.class, "configureVault", "Configure Vault");
+        StartupStep step = recorder.beginStep(BaseMainSupport.class, "configureVault", "Configure Vault");
         doConfigureVaultFromMainConfiguration(camelContext, mainConfigurationProperties, autoConfiguredProperties);
         recorder.endStep(step);
 
@@ -565,6 +595,12 @@ public abstract class BaseMainSupport extends BaseService {
             autoConfigurationMainConfiguration(camelContext, mainConfigurationProperties, autoConfiguredProperties);
             recorder.endStep(step);
         }
+
+        // configure the profile with pre-configured settings
+        step = recorder.beginStep(BaseMainSupport.class, "configureMain", "Profile Configure");
+        doInitFileConfigurations(camelContext, mainConfigurationProperties);
+        ProfileConfigurer.configureMain(camelContext, mainConfigurationProperties.getProfile(), mainConfigurationProperties);
+        recorder.endStep(step);
 
         // configure main listener
         configureMainListener(camelContext);
@@ -616,19 +652,19 @@ public abstract class BaseMainSupport extends BaseService {
 
         // log summary of configurations
         if (mainConfigurationProperties.isAutoConfigurationLogSummary() && !autoConfiguredProperties.isEmpty()) {
-            logConfigurationSummary(autoConfiguredProperties);
+            logConfigurationSummary(camelContext, autoConfiguredProperties);
         }
 
         // we are now done with the main helper during bootstrap
         helper.bootstrapDone();
     }
 
-    private static void logConfigurationSummary(OrderedLocationProperties autoConfiguredProperties) {
+    private static void logConfigurationSummary(CamelContext camelContext, OrderedLocationProperties autoConfiguredProperties) {
         // first log variables
-        MainHelper.logConfigurationSummary(LOG, autoConfiguredProperties, "Variables summary",
+        MainHelper.logConfigurationSummary(camelContext, LOG, autoConfiguredProperties, "Variables summary",
                 (k) -> k.startsWith("camel.variable."));
         // then log standard options
-        MainHelper.logConfigurationSummary(LOG, autoConfiguredProperties, "Auto-configuration summary", null);
+        MainHelper.logConfigurationSummary(camelContext, LOG, autoConfiguredProperties, "Auto-configuration summary", null);
     }
 
     protected void configureStartupRecorder(CamelContext camelContext) {
@@ -929,6 +965,8 @@ public abstract class BaseMainSupport extends BaseService {
         if (standalone) {
             // detect if camel-debug JAR is on classpath as we need to know this before configuring routes
             detectCamelDebugJar(camelContext);
+            // detect micrometer for resilience4j circuit breakers
+            detectResilience4jMicrometer(camelContext);
             step = recorder.beginStep(BaseMainSupport.class, "configureRoutes", "Collect Routes");
             configureRoutes(camelContext);
             recorder.endStep(step);
@@ -951,7 +989,8 @@ public abstract class BaseMainSupport extends BaseService {
         // we want to log the property placeholder summary after routes has been started,
         // but before camel context logs that it has been started, so we need to use an event listener
         if (standalone && mainConfigurationProperties.isAutoConfigurationLogSummary()) {
-            camelContext.getManagementStrategy().addEventNotifier(new PlaceholderSummaryEventNotifier(propertyPlaceholders));
+            camelContext.getManagementStrategy()
+                    .addEventNotifier(new PlaceholderSummaryEventNotifier(camelContext, propertyPlaceholders));
         }
     }
 
@@ -961,6 +1000,27 @@ public abstract class BaseMainSupport extends BaseService {
         if (df != null) {
             // if camel-debug is on classpath then we need to eager to turn on source location which is needed for Java DSL
             camelContext.setSourceLocationEnabled(true);
+        }
+    }
+
+    protected void detectResilience4jMicrometer(CamelContext camelContext) throws Exception {
+        // optional discover camel-resilience4j-micrometer
+        Resilience4jMicrometerFactory mf = camelContext.getCamelContextExtension().getBootstrapFactoryFinder()
+                .newInstance(Resilience4jMicrometerFactory.FACTORY, Resilience4jMicrometerFactory.class).orElse(null);
+        if (mf == null) {
+            ModelCamelContext model = (ModelCamelContext) camelContext;
+            Resilience4jConfigurationDefinition config = model.getResilience4jConfiguration(null);
+            //enabled flag can be null (in Camel-Quarkus, which does not support resilience)
+            //see https://github.com/apache/camel-quarkus/issues/7682
+            boolean micrometer = config != null && config.getMicrometerEnabled() != null
+                    && CamelContextHelper.parseBoolean(camelContext, config.getMicrometerEnabled());
+            if (micrometer) {
+                throw new IllegalArgumentException(
+                        "Cannot find Resilience4jMicrometerFactory on classpath. Add camel-resilience4j-micrometer to classpath.");
+            }
+        }
+        if (mf != null) {
+            camelContext.addService(mf);
         }
     }
 
@@ -1175,6 +1235,7 @@ public abstract class BaseMainSupport extends BaseService {
                 String path = FileUtil.onlyPath(loc);
                 if (path != null) {
                     String pattern = loc.length() > path.length() ? loc.substring(path.length() + 1) : null;
+                    LOG.debug("Discovering file configurations from directory: {} (pattern: {})", path, pattern);
                     File[] files = new File(path).listFiles(f -> matches(pattern, f.getName()));
                     if (files != null) {
                         for (File file : files) {
@@ -1259,6 +1320,7 @@ public abstract class BaseMainSupport extends BaseService {
         OrderedLocationProperties lraProperties = new OrderedLocationProperties();
         OrderedLocationProperties otelProperties = new OrderedLocationProperties();
         OrderedLocationProperties otel2Properties = new OrderedLocationProperties();
+        OrderedLocationProperties mdcProperties = new OrderedLocationProperties();
         OrderedLocationProperties telemetryDevProperties = new OrderedLocationProperties();
         OrderedLocationProperties metricsProperties = new OrderedLocationProperties();
         OrderedLocationProperties routeTemplateProperties = new OrderedLocationProperties();
@@ -1335,6 +1397,12 @@ public abstract class BaseMainSupport extends BaseService {
                 String option = key.substring(19);
                 validateOptionAndValue(key, option, value);
                 telemetryDevProperties.put(loc, optionKey(option), value);
+            } else if (startsWithIgnoreCase(key, "camel.mdc.")) {
+                // grab the value
+                String value = prop.getProperty(key);
+                String option = key.substring(10);
+                validateOptionAndValue(key, option, value);
+                mdcProperties.put(loc, optionKey(option), value);
             } else if (startsWithIgnoreCase(key, "camel.metrics.")) {
                 // grab the value
                 String value = prop.getProperty(key);
@@ -1501,6 +1569,11 @@ public abstract class BaseMainSupport extends BaseService {
             setMetricsProperties(camelContext, metricsProperties, mainConfigurationProperties.isAutoConfigurationFailFast(),
                     autoConfiguredProperties);
         }
+        if (!mdcProperties.isEmpty() || mainConfigurationProperties.hasMdcConfiguration()) {
+            LOG.debug("Auto-configuring MDC from loaded properties: {}", mdcProperties.size());
+            setMdcProperties(camelContext, mdcProperties, mainConfigurationProperties.isAutoConfigurationFailFast(),
+                    autoConfiguredProperties);
+        }
         if (!devConsoleProperties.isEmpty()) {
             LOG.debug("Auto-configuring Dev Console from loaded properties: {}", devConsoleProperties.size());
             setDevConsoleProperties(camelContext, devConsoleProperties,
@@ -1630,6 +1703,11 @@ public abstract class BaseMainSupport extends BaseService {
         if (!httpManagementServerProperties.isEmpty()) {
             httpManagementServerProperties.forEach((k, v) -> {
                 LOG.warn("Property not auto-configured: camel.management.{}={}", k, v);
+            });
+        }
+        if (!mdcProperties.isEmpty()) {
+            mdcProperties.forEach((k, v) -> {
+                LOG.warn("Property not auto-configured: camel.mdc.{}={}", k, v);
             });
         }
 
@@ -1827,6 +1905,28 @@ public abstract class BaseMainSupport extends BaseService {
         }
     }
 
+    private void setMdcProperties(
+            CamelContext camelContext, OrderedLocationProperties mdcProperties,
+            boolean failIfNotSet, OrderedLocationProperties autoConfiguredProperties)
+            throws Exception {
+
+        String loc = mdcProperties.getLocation("enabled");
+        Object obj = mdcProperties.remove("enabled");
+        if (ObjectHelper.isNotEmpty(obj)) {
+            autoConfiguredProperties.put(loc, "camel.mdc.enabled", obj.toString());
+        }
+        boolean enabled = obj != null ? CamelContextHelper.parseBoolean(camelContext, obj.toString()) : true;
+        if (enabled) {
+            CamelMDCService mdc = resolveMDCService(camelContext);
+            setPropertiesOnTarget(camelContext, mdc, mdcProperties, "camel.mdc.", failIfNotSet, true,
+                    autoConfiguredProperties);
+            if (camelContext.hasService(CamelMDCService.class) == null) {
+                // add as service so tracing can be active
+                camelContext.addService(mdc, true, true);
+            }
+        }
+    }
+
     private void setTelemetryDevProperties(
             CamelContext camelContext, OrderedLocationProperties telemetryDevProperties,
             boolean failIfNotSet, OrderedLocationProperties autoConfiguredProperties)
@@ -1980,6 +2080,9 @@ public abstract class BaseMainSupport extends BaseService {
             if ("ibm".equalsIgnoreCase(name)) {
                 target = target.ibmSecretsManager();
             }
+            if ("cyberark".equalsIgnoreCase(name)) {
+                target = target.cyberark();
+            }
             // configure all the properties on the vault at once (to ensure they are configured in right order)
             OrderedLocationProperties config = MainHelper.extractProperties(properties, name + ".");
             setPropertiesOnTarget(camelContext, target, config, "camel.vault." + name + ".", failIfNotSet, true,
@@ -2099,58 +2202,8 @@ public abstract class BaseMainSupport extends BaseService {
         setPropertiesOnTarget(camelContext, config, properties, "camel.debug.",
                 failIfNotSet, true, autoConfiguredProperties);
 
-        if (!config.isEnabled() && !config.isStandby()) {
-            return;
-        }
-
-        // must enable source location and history
-        // so debugger tooling knows to map breakpoints to source code
-        camelContext.setSourceLocationEnabled(true);
-        camelContext.setMessageHistory(true);
-
-        // enable debugger on camel
-        camelContext.setDebugging(config.isEnabled());
-        camelContext.setDebugStandby(config.isStandby());
-
-        BacklogDebugger debugger = DefaultBacklogDebugger.createDebugger(camelContext);
-        debugger.setStandby(config.isStandby());
-        debugger.setInitialBreakpoints(config.getBreakpoints());
-        debugger.setSingleStepIncludeStartEnd(config.isSingleStepIncludeStartEnd());
-        debugger.setBodyMaxChars(config.getBodyMaxChars());
-        debugger.setBodyIncludeStreams(config.isBodyIncludeStreams());
-        debugger.setBodyIncludeFiles(config.isBodyIncludeFiles());
-        debugger.setIncludeExchangeProperties(config.isIncludeExchangeProperties());
-        debugger.setIncludeExchangeVariables(config.isIncludeExchangeVariables());
-        debugger.setIncludeException(config.isIncludeException());
-        debugger.setLoggingLevel(config.getLoggingLevel().name());
-        debugger.setSuspendMode(config.isWaitForAttach()); // this option is named wait-for-attach
-        debugger.setFallbackTimeout(config.getFallbackTimeout());
-
-        // enable jmx connector if port is set
-        if (config.isJmxConnectorEnabled()) {
-            DebuggerJmxConnectorService connector = new DebuggerJmxConnectorService();
-            connector.setCreateConnector(true);
-            connector.setRegistryPort(config.getJmxConnectorPort());
-            camelContext.addService(connector);
-        }
-
-        // start debugger after context is started
-        camelContext.addLifecycleStrategy(new LifecycleStrategySupport() {
-            @Override
-            public void onContextStarted(CamelContext context) {
-                // only enable debugger if not in standby mode
-                if (!debugger.isStandby()) {
-                    debugger.enableDebugger();
-                }
-            }
-
-            @Override
-            public void onContextStopping(CamelContext context) {
-                debugger.disableDebugger();
-            }
-        });
-
-        camelContext.addService(debugger);
+        // use common logic to configure debugger
+        DefaultConfigurationConfigurer.configureBacklogDebugger(camelContext, config);
     }
 
     private void setTracerProperties(
@@ -2528,7 +2581,7 @@ public abstract class BaseMainSupport extends BaseService {
 
         // log summary of configurations
         if (mainConfigurationProperties.isAutoConfigurationLogSummary() && !autoConfiguredProperties.isEmpty()) {
-            logConfigurationSummary(autoConfiguredProperties);
+            logConfigurationSummary(camelContext, autoConfiguredProperties);
         }
     }
 
@@ -2689,7 +2742,7 @@ public abstract class BaseMainSupport extends BaseService {
                         header = true;
                     }
 
-                    MainHelper.sensitiveAwareLogging(LOG, k, v, loc, debug);
+                    MainHelper.sensitiveAwareLogging(camelContext, LOG, k, v, loc, debug);
                 }
             }
         } catch (Exception e) {
@@ -2767,6 +2820,20 @@ public abstract class BaseMainSupport extends BaseService {
         return answer;
     }
 
+    private static CamelMDCService resolveMDCService(CamelContext camelContext) throws Exception {
+        CamelMDCService answer = camelContext.hasService(CamelMDCService.class);
+        if (answer == null) {
+            answer = camelContext.getRegistry().findSingleByType(CamelMDCService.class);
+        }
+        if (answer == null) {
+            answer = camelContext.getCamelContextExtension().getBootstrapFactoryFinder()
+                    .newInstance("mdc-service", CamelMDCService.class)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Cannot find CamelMDCService on classpath. Add camel-mdc to classpath."));
+        }
+        return answer;
+    }
+
     private static MainHttpServerFactory resolveMainHttpServerFactory(CamelContext camelContext) {
         // lookup in service registry first
         MainHttpServerFactory answer = camelContext.getRegistry().findSingleByType(MainHttpServerFactory.class);
@@ -2797,9 +2864,11 @@ public abstract class BaseMainSupport extends BaseService {
     }
 
     private static class PlaceholderSummaryEventNotifier extends SimpleEventNotifierSupport implements NonManagedService {
+        private final CamelContext camelContext;
         private final OrderedLocationProperties propertyPlaceholders;
 
-        public PlaceholderSummaryEventNotifier(OrderedLocationProperties propertyPlaceholders) {
+        public PlaceholderSummaryEventNotifier(CamelContext camelContext, OrderedLocationProperties propertyPlaceholders) {
+            this.camelContext = camelContext;
             this.propertyPlaceholders = propertyPlaceholders;
         }
 
@@ -2827,7 +2896,7 @@ public abstract class BaseMainSupport extends BaseService {
                             header = false;
                         }
                         String loc = locationSummary(propertyPlaceholders, k);
-                        if (SensitiveUtils.containsSensitive(k)) {
+                        if (MainHelper.containsSensitive(camelContext, k, v)) {
                             LOG.info("    {} {} = xxxxxx", loc, k);
                         } else {
                             LOG.info("    {} {} = {}", loc, k, v);
@@ -2837,4 +2906,5 @@ public abstract class BaseMainSupport extends BaseService {
             }
         }
     }
+
 }

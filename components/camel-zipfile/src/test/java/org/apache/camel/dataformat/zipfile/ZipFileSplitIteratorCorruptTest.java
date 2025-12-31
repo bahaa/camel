@@ -20,6 +20,7 @@ import java.util.Iterator;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.RoutesBuilder;
+import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.junit5.CamelTestSupport;
@@ -31,7 +32,7 @@ public class ZipFileSplitIteratorCorruptTest extends CamelTestSupport {
     public void testZipFileUnmarshal() throws Exception {
         getMockEndpoint("mock:dead").expectedMessageCount(1);
         getMockEndpoint("mock:dead").message(0).exchangeProperty(Exchange.EXCEPTION_CAUGHT)
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(RuntimeCamelException.class);
         getMockEndpoint("mock:end").expectedMessageCount(0);
 
         MockEndpoint.assertIsSatisfied(context);

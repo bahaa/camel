@@ -288,7 +288,7 @@ public final class HttpHelper {
      * This implementation supports HTTP multi value parameters which is based on the syntax of
      * <tt>[value1, value2, value3]</tt> by returning a {@link List} containing the values.
      * <p/>
-     * If the value is not a HTTP mulit value the value is returned as is.
+     * If the value is not a HTTP multi value the value is returned as is.
      *
      * @param  value the parameter value
      * @return       the extracted parameter value, see more details in javadoc.
@@ -363,16 +363,30 @@ public final class HttpHelper {
      * Sanitize log: it removes any new line and carriage return in order to avoid third party integrations with logging
      * system to suffer potential log injection.
      *
-     * @param  input the log trace
-     * @return       a sanitized log trace
+     * @param  input the log traces
+     * @return       sanitized log traces
      */
     public static String[] sanitizeLog(String[] input) {
         String[] sanitizedLog = new String[input.length];
         for (int i = 0; i < input.length; i++) {
-            sanitizedLog[i] = input[i].replaceAll("[\n\r]", "_");
+            sanitizedLog[i] = sanitizeLog(input[i]);
         }
 
         return sanitizedLog;
+    }
+
+    /**
+     * Sanitize log: it removes any new line and carriage return in order to avoid third party integrations with logging
+     * system to suffer potential log injection.
+     *
+     * @param  input the log trace
+     * @return       a sanitized log trace
+     */
+    public static String sanitizeLog(String input) {
+        if (input == null) {
+            return null;
+        }
+        return input.replaceAll("[\n\r]", "_");
     }
 
 }

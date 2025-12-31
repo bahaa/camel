@@ -105,16 +105,8 @@ public class OpenTelemetryTracer extends org.apache.camel.telemetry.Tracer {
                 builder = builder.setParent(Context.current().with(otelParentSpan.getSpan()));
                 baggage = otelParentSpan.getBaggage();
             } else {
-                /*
-                 * This part is a bit tricky in Opentelemetry. We need to verify if the extractor
-                 * (ie, the Camel Exchange) holds a propagated parent. If it doesn't, then, we must use a null Context.
-                 */
-                Context current = null;
-                if (extractor.get("traceparent") != null) {
-                    current = Context.current();
-                }
                 // Try to get parent from context propagation (upstream traces)
-                Context ctx = contextPropagators.getTextMapPropagator().extract(current, extractor,
+                Context ctx = contextPropagators.getTextMapPropagator().extract(Context.root(), extractor,
                         new TextMapGetter<SpanContextPropagationExtractor>() {
                             @Override
                             public Iterable<String> keys(SpanContextPropagationExtractor carrier) {
@@ -129,7 +121,9 @@ public class OpenTelemetryTracer extends org.apache.camel.telemetry.Tracer {
                                 return carrier.get(key).toString();
                             }
                         });
+
                 builder = builder.setParent(ctx);
+                baggage = Baggage.fromContext(ctx);
             }
 
             return new OpenTelemetrySpanAdapter(builder.startSpan(), baggage);
@@ -154,7 +148,7 @@ public class OpenTelemetryTracer extends org.apache.camel.telemetry.Tracer {
         }
 
         @Override
-        public void inject(Span span, SpanContextPropagationInjector injector) {
+        public void inject(Span span, SpanContextPropagationInjector injector, boolean includeTracing) {
             OpenTelemetrySpanAdapter otelSpan = (OpenTelemetrySpanAdapter) span;
             Context ctx = Context.current().with(otelSpan.getSpan());
             if (otelSpan.getBaggage() != null) {
@@ -162,6 +156,10 @@ public class OpenTelemetryTracer extends org.apache.camel.telemetry.Tracer {
             }
             contextPropagators.getTextMapPropagator().inject(ctx, injector,
                     (carrier, key, value) -> carrier.put(key, value));
+            if (includeTracing) {
+                injector.put(org.apache.camel.telemetry.Tracer.TRACE_HEADER, otelSpan.getSpan().getSpanContext().getTraceId());
+                injector.put(org.apache.camel.telemetry.Tracer.SPAN_HEADER, otelSpan.getSpan().getSpanContext().getSpanId());
+            }
         }
 
     }

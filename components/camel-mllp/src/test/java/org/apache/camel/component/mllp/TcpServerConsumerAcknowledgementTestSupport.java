@@ -38,7 +38,7 @@ public abstract class TcpServerConsumerAcknowledgementTestSupport extends CamelT
                                        + "PID|1||1100832^^^^PI||TEST^FIG||98765432|U||R|435 MAIN STREET^^LONGMONT^CO^80503||123-456-7890|||S"
                                        + '\r';
 
-    static final String EXPECTED_ACKNOWLEDGEMENT = "MSH|^~\\&|^org^sys||APP_A|FAC_A|||ACK^A04^ADT_A04|||2.6" + '\r'
+    static final String EXPECTED_ACKNOWLEDGEMENT = "MSH|^~\\&|^org^sys||APP_A|FAC_A|||ACK^A04^ACK|||2.6" + '\r'
                                                    + "MSA|AA|" + '\r';
 
     @RegisterExtension
@@ -61,8 +61,6 @@ public abstract class TcpServerConsumerAcknowledgementTestSupport extends CamelT
 
     @Override
     protected void doPostSetup() throws Exception {
-        super.doPostSetup();
-
         result.expectedMessageCount(0);
         complete.expectedMessageCount(0);
         failure.expectedMessageCount(0);

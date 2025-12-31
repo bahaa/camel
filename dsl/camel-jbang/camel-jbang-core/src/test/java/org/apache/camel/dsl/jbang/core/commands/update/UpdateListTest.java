@@ -19,12 +19,12 @@ package org.apache.camel.dsl.jbang.core.commands.update;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.camel.dsl.jbang.core.commands.CamelCommandBaseTest;
+import org.apache.camel.dsl.jbang.core.commands.CamelCommandBaseTestSupport;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class UpdateListTest extends CamelCommandBaseTest {
+public class UpdateListTest extends CamelCommandBaseTestSupport {
 
     @Test
     public void listUpdateVersions() throws Exception {
@@ -34,6 +34,6 @@ public class UpdateListTest extends CamelCommandBaseTest {
 
         List<String> lines = printer.getLines();
         Assertions.assertThat(lines.stream().collect(Collectors.joining("\n")))
-                .contains("Migrates Apache Camel 4 application to Apache Camel 4.9.0");
+                .contains("Migrates Camel 4 application to Camel 4.9.0");
     }
 }

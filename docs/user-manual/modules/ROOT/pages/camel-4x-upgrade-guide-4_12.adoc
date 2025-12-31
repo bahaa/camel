@@ -4,6 +4,13 @@ This document is for helping you upgrade your Apache Camel application
 from Camel 4.x to 4.y. For example, if you are upgrading Camel 4.0 to 4.2, then you should follow the guides
 from both 4.0 to 4.1 and 4.1 to 4.2.
 
+[NOTE]
+====
+https://github.com/apache/camel-upgrade-recipes/[The Camel Upgrade Recipes project] provides automated assistance for some common migration tasks.
+Note that manual migration is still required.
+See the xref:camel-upgrade-recipes-tool.adoc[documentation] page for details.
+====
+
 == Upgrading Camel 4.11 to 4.12
 
 === camel-core
@@ -226,7 +233,7 @@ There is one single exception for ServiceNow Metadata Extension since it is used
 
 More details could be found in CAMEL-22013.
 
-== camel-spring-boot
+=== camel-spring-boot
 
 Upgraded to Spring Boot 3.5.0.
 
@@ -236,14 +243,14 @@ The `camel-jetty-starter` has been deprecated in favor of `camel-platform-http-s
 
 The `camel-undertow-starter` has been deprecated in favor of `camel-platform-http-starter` to use the HTTP server from Spring Boot.
 
-== camel-langchain4j-tokenizer
+=== camel-langchain4j-tokenizer
 
 The code was upgraded to LangChain4j version 1.0.0, which brings a few breaking changes:
 
 - By default, tokenization now uses segment sizes
 - To tokenize by tokens, the model used in the system must be provided
 
-== Known regressions
+=== Known regressions
 
 On Windows, Camel Jbang export is no more working out of the box. A workaround consists in providing `--maven-wrapper=false`.
 

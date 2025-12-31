@@ -37,6 +37,7 @@ import org.apache.camel.util.StringHelper;
  * Default {@link ResourceLoader}.
  */
 public class DefaultResourceLoader extends ServiceSupport implements ResourceLoader, StaticService {
+
     /**
      * Prefix to use for looking up existing {@link ResourceLoader} from the {@link org.apache.camel.spi.Registry}.
      */
@@ -53,13 +54,14 @@ public class DefaultResourceLoader extends ServiceSupport implements ResourceLoa
     public DefaultResourceLoader(CamelContext camelContext) {
         this.camelContext = camelContext;
         this.resolvers = new ConcurrentHashMap<>();
-        this.fallbackResolver = new DefaultResourceResolvers.ClasspathResolver() {
-            @Override
-            public Resource resolve(String location) {
-                return super.resolve(DefaultResourceResolvers.ClasspathResolver.SCHEME + ":" + location);
-            }
-        };
-
+        this.fallbackResolver = null;
+        if (camelContext != null) {
+            this.fallbackResolver = camelContext.getRegistry().lookupByNameAndType(ResourceResolver.FALLBACK_RESOURCE_RESOLVER,
+                    ResourceResolver.class);
+        }
+        if (this.fallbackResolver == null) {
+            this.fallbackResolver = new DefaultFallbackResourceResolver(camelContext);
+        }
         this.fallbackResolver.setCamelContext(camelContext);
     }
 
@@ -72,9 +74,7 @@ public class DefaultResourceLoader extends ServiceSupport implements ResourceLoa
     @Override
     public void doStop() throws Exception {
         super.doStop();
-
-        ServiceHelper.stopService(resolvers.values());
-
+        ServiceHelper.stopService(resolvers.values(), this.fallbackResolver);
         resolvers.clear();
     }
 
@@ -141,7 +141,7 @@ public class DefaultResourceLoader extends ServiceSupport implements ResourceLoa
      * Looks up a {@link ResourceResolver} for the given scheme in the registry or fallback to a factory finder
      * mechanism if none found.
      *
-     * @param  scheme the file extension for which a loader should be find.
+     * @param  scheme the file extension for which a loader should be found.
      * @return        a {@link RoutesBuilderLoader} or <code>null</code> if none found.
      */
     private ResourceResolver getResourceResolver(final String scheme) {
@@ -159,7 +159,7 @@ public class DefaultResourceLoader extends ServiceSupport implements ResourceLoa
     /**
      * Looks up a {@link ResourceResolver} for the given scheme with factory finder.
      *
-     * @param  scheme the file extension for which a loader should be find.
+     * @param  scheme the file extension for which a loader should be found.
      * @return        a {@link RoutesBuilderLoader} or <code>null</code> if none found.
      */
     private ResourceResolver resolveService(String scheme) {

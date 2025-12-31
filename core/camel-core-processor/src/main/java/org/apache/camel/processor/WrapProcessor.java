@@ -27,7 +27,9 @@ import org.apache.camel.support.service.ServiceHelper;
  * A processor which ensures wrapping processors is having lifecycle handled.
  */
 public class WrapProcessor extends DelegateAsyncProcessor implements WrapAwareProcessor {
+
     private final Processor wrapped;
+    private boolean disabled;
 
     public WrapProcessor(Processor processor, Processor wrapped) {
         super(processor);
@@ -53,6 +55,16 @@ public class WrapProcessor extends DelegateAsyncProcessor implements WrapAwarePr
     }
 
     @Override
+    public boolean isDisabled() {
+        return disabled;
+    }
+
+    @Override
+    public void setDisabled(boolean disabled) {
+        this.disabled = disabled;
+    }
+
+    @Override
     protected void doBuild() throws Exception {
         super.doBuild();
         ServiceHelper.buildService(wrapped);
@@ -75,4 +87,5 @@ public class WrapProcessor extends DelegateAsyncProcessor implements WrapAwarePr
         super.doStop();
         ServiceHelper.stopService(wrapped);
     }
+
 }

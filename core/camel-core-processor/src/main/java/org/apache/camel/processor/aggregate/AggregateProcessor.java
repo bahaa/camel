@@ -50,6 +50,7 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.ShutdownRunningTask;
 import org.apache.camel.TimeoutMap;
 import org.apache.camel.Traceable;
+import org.apache.camel.processor.BaseProcessorSupport;
 import org.apache.camel.spi.AggregationRepository;
 import org.apache.camel.spi.ExceptionHandler;
 import org.apache.camel.spi.IdAware;
@@ -58,9 +59,7 @@ import org.apache.camel.spi.ReactiveExecutor;
 import org.apache.camel.spi.RecoverableAggregationRepository;
 import org.apache.camel.spi.RouteIdAware;
 import org.apache.camel.spi.ShutdownAware;
-import org.apache.camel.spi.ShutdownPrepared;
 import org.apache.camel.spi.Synchronization;
-import org.apache.camel.support.AsyncProcessorSupport;
 import org.apache.camel.support.DefaultTimeoutMap;
 import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.support.LRUCacheFactory;
@@ -84,8 +83,8 @@ import org.slf4j.LoggerFactory;
  * and older prices to be discarded). Another idea is to combine line item messages together into a single invoice
  * message.
  */
-public class AggregateProcessor extends AsyncProcessorSupport
-        implements Navigate<Processor>, Traceable, ShutdownPrepared, ShutdownAware, IdAware, RouteIdAware {
+public class AggregateProcessor extends BaseProcessorSupport
+        implements Navigate<Processor>, Traceable, ShutdownAware, IdAware, RouteIdAware {
 
     public static final String AGGREGATE_TIMEOUT_CHECKER = "AggregateTimeoutChecker";
     public static final String AGGREGATE_OPTIMISTIC_LOCKING_EXECUTOR = "AggregateOptimisticLockingExecutor";
@@ -1333,8 +1332,10 @@ public class AggregateProcessor extends AsyncProcessorSupport
 
         @Override
         public void run() {
-            // only run if CamelContext has been fully started
-            if (!camelContext.getStatus().isStarted()) {
+            // only run if CamelContext has been fully started or is stopping (when completeAllOnStop is enabled)
+            boolean allow = camelContext.getStatus().isStarted()
+                    || (completeAllOnStop && camelContext.getStatus().isStopping());
+            if (!allow) {
                 LOG.trace("Completion interval task cannot start due CamelContext({}) has not been started yet",
                         camelContext.getName());
                 return;
@@ -1519,7 +1520,7 @@ public class AggregateProcessor extends AsyncProcessorSupport
         CamelContextAware.trySetCamelContext(aggregationStrategy, camelContext);
         if (aggregationStrategy.canPreComplete()) {
             preCompletion = true;
-            LOG.info("PreCompletionAwareAggregationStrategy detected. Aggregator {} is in pre-completion mode.", getId());
+            LOG.info("Aggregator {} is in pre-completion mode.", getId());
         }
 
         if (!preCompletion) {

@@ -379,6 +379,38 @@ public interface DebeziumPostgresEndpointBuilderFactory {
             return this;
         }
         /**
+         * The maximum time in milliseconds to wait for connection validation to
+         * complete. Defaults to 60 seconds.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Default: 1m
+         * Group: postgres
+         * 
+         * @param connectionValidationTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder connectionValidationTimeoutMs(long connectionValidationTimeoutMs) {
+            doSetProperty("connectionValidationTimeoutMs", connectionValidationTimeoutMs);
+            return this;
+        }
+        /**
+         * The maximum time in milliseconds to wait for connection validation to
+         * complete. Defaults to 60 seconds.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Default: 1m
+         * Group: postgres
+         * 
+         * @param connectionValidationTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder connectionValidationTimeoutMs(String connectionValidationTimeoutMs) {
+            doSetProperty("connectionValidationTimeoutMs", connectionValidationTimeoutMs);
+            return this;
+        }
+        /**
          * Optional list of custom converters that would be used instead of
          * default ones. The converters are defined using '.type' config option
          * and configured using options '.'.
@@ -410,6 +442,24 @@ public interface DebeziumPostgresEndpointBuilderFactory {
          */
         default DebeziumPostgresEndpointBuilder customMetricTags(String customMetricTags) {
             doSetProperty("customMetricTags", customMetricTags);
+            return this;
+        }
+        /**
+         * Regular expression identifying configuration keys whose values should
+         * be masked. When set, this custom pattern replaces Debeziums default
+         * password masking pattern.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default:
+         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret
+         * Group: postgres
+         * 
+         * @param customSanitizePattern the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder customSanitizePattern(String customSanitizePattern) {
+            doSetProperty("customSanitizePattern", customSanitizePattern);
             return this;
         }
         /**
@@ -778,37 +828,122 @@ public interface DebeziumPostgresEndpointBuilderFactory {
             return this;
         }
         /**
-         * Boolean to determine if Debezium should flush LSN in the source
-         * postgres database. If set to false, user will have to flush the LSN
-         * manually outside Debezium.
+         * The maximum time in milliseconds to wait for task executor to shut
+         * down.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Default: 4s
+         * Group: postgres
+         * 
+         * @param executorShutdownTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder executorShutdownTimeoutMs(long executorShutdownTimeoutMs) {
+            doSetProperty("executorShutdownTimeoutMs", executorShutdownTimeoutMs);
+            return this;
+        }
+        /**
+         * The maximum time in milliseconds to wait for task executor to shut
+         * down.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Default: 4s
+         * Group: postgres
+         * 
+         * @param executorShutdownTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder executorShutdownTimeoutMs(String executorShutdownTimeoutMs) {
+            doSetProperty("executorShutdownTimeoutMs", executorShutdownTimeoutMs);
+            return this;
+        }
+        /**
+         * Enable/Disable Debezium context headers that provides essential
+         * metadata for tracking and identifying the source of CDC events in
+         * downstream processing systems.
          * 
          * The option is a: <code>boolean</code> type.
          * 
          * Default: true
          * Group: postgres
          * 
-         * @param flushLsnSource the value to set
+         * @param extendedHeadersEnabled the value to set
          * @return the dsl builder
          */
-        default DebeziumPostgresEndpointBuilder flushLsnSource(boolean flushLsnSource) {
-            doSetProperty("flushLsnSource", flushLsnSource);
+        default DebeziumPostgresEndpointBuilder extendedHeadersEnabled(boolean extendedHeadersEnabled) {
+            doSetProperty("extendedHeadersEnabled", extendedHeadersEnabled);
             return this;
         }
         /**
-         * Boolean to determine if Debezium should flush LSN in the source
-         * postgres database. If set to false, user will have to flush the LSN
-         * manually outside Debezium.
+         * Enable/Disable Debezium context headers that provides essential
+         * metadata for tracking and identifying the source of CDC events in
+         * downstream processing systems.
          * 
          * The option will be converted to a <code>boolean</code> type.
          * 
          * Default: true
          * Group: postgres
          * 
-         * @param flushLsnSource the value to set
+         * @param extendedHeadersEnabled the value to set
          * @return the dsl builder
          */
-        default DebeziumPostgresEndpointBuilder flushLsnSource(String flushLsnSource) {
-            doSetProperty("flushLsnSource", flushLsnSource);
+        default DebeziumPostgresEndpointBuilder extendedHeadersEnabled(String extendedHeadersEnabled) {
+            doSetProperty("extendedHeadersEnabled", extendedHeadersEnabled);
+            return this;
+        }
+        /**
+         * Specify the action to take when a guardrail collections limit is
+         * exceeded: 'warn' (the default) logs a warning message and continues
+         * processing; 'fail' stops the connector with an error.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: warn
+         * Group: postgres
+         * 
+         * @param guardrailCollectionsLimitAction the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder guardrailCollectionsLimitAction(String guardrailCollectionsLimitAction) {
+            doSetProperty("guardrailCollectionsLimitAction", guardrailCollectionsLimitAction);
+            return this;
+        }
+        /**
+         * The maximum number of collections or tables that can be captured by
+         * the connector. When this limit is exceeded, the action specified by
+         * 'guardrail.collections.limit.action' will be taken. Set to 0 to
+         * disable this guardrail.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 0
+         * Group: postgres
+         * 
+         * @param guardrailCollectionsMax the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder guardrailCollectionsMax(int guardrailCollectionsMax) {
+            doSetProperty("guardrailCollectionsMax", guardrailCollectionsMax);
+            return this;
+        }
+        /**
+         * The maximum number of collections or tables that can be captured by
+         * the connector. When this limit is exceeded, the action specified by
+         * 'guardrail.collections.limit.action' will be taken. Set to 0 to
+         * disable this guardrail.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 0
+         * Group: postgres
+         * 
+         * @param guardrailCollectionsMax the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder guardrailCollectionsMax(String guardrailCollectionsMax) {
+            doSetProperty("guardrailCollectionsMax", guardrailCollectionsMax);
             return this;
         }
         /**
@@ -1038,6 +1173,80 @@ public interface DebeziumPostgresEndpointBuilderFactory {
             return this;
         }
         /**
+         * Determines the LSN flushing strategy. Options include: 'connector'
+         * (default) for Debezium managed LSN flushing (replaces deprecated
+         * flush.lsn.source=true); 'manual' for externally managed LSN flushing
+         * (replaces deprecated flush.lsn.source=false); 'connector_and_driver'
+         * for Debezium managed LSN flushing with the pgjdbc driver flushing
+         * unmonitored LSNsusing server keepalive LSN, which prevents WAL growth
+         * on low-activity databases.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: postgres
+         * 
+         * @param lsnFlushMode the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder lsnFlushMode(String lsnFlushMode) {
+            doSetProperty("lsnFlushMode", lsnFlushMode);
+            return this;
+        }
+        /**
+         * Action to take when an LSN flush timeout occurs. Options include:
+         * 'fail' (default) to fail the connector; 'warn' to log a warning and
+         * continue processing; 'ignore' to continue processing and ignore the
+         * timeout.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: fail
+         * Group: postgres
+         * 
+         * @param lsnFlushTimeoutAction the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder lsnFlushTimeoutAction(String lsnFlushTimeoutAction) {
+            doSetProperty("lsnFlushTimeoutAction", lsnFlushTimeoutAction);
+            return this;
+        }
+        /**
+         * Maximum time in milliseconds to wait for LSN flush operation to
+         * complete. If the flush operation does not complete within this
+         * timeout, the action specified by lsn.flush.timeout.action will be
+         * taken. Defaults to 30 seconds.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Default: 30s
+         * Group: postgres
+         * 
+         * @param lsnFlushTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder lsnFlushTimeoutMs(long lsnFlushTimeoutMs) {
+            doSetProperty("lsnFlushTimeoutMs", lsnFlushTimeoutMs);
+            return this;
+        }
+        /**
+         * Maximum time in milliseconds to wait for LSN flush operation to
+         * complete. If the flush operation does not complete within this
+         * timeout, the action specified by lsn.flush.timeout.action will be
+         * taken. Defaults to 30 seconds.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Default: 30s
+         * Group: postgres
+         * 
+         * @param lsnFlushTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder lsnFlushTimeoutMs(String lsnFlushTimeoutMs) {
+            doSetProperty("lsnFlushTimeoutMs", lsnFlushTimeoutMs);
+            return this;
+        }
+        /**
          * Maximum size of each batch of source records. Defaults to 2048.
          * 
          * The option is a: <code>int</code> type.
@@ -1218,6 +1427,128 @@ public interface DebeziumPostgresEndpointBuilderFactory {
             return this;
         }
         /**
+         * Path to OpenLineage file configuration. See
+         * https://openlineage.io/docs/client/java/configuration.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: ./openlineage.yml
+         * Group: postgres
+         * 
+         * @param openlineageIntegrationConfigFilePath the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder openlineageIntegrationConfigFilePath(String openlineageIntegrationConfigFilePath) {
+            doSetProperty("openlineageIntegrationConfigFilePath", openlineageIntegrationConfigFilePath);
+            return this;
+        }
+        /**
+         * The Kafka bootstrap server address used as input/output namespace/.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: postgres
+         * 
+         * @param openlineageIntegrationDatasetKafkaBootstrapServers the value
+         * to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder openlineageIntegrationDatasetKafkaBootstrapServers(String openlineageIntegrationDatasetKafkaBootstrapServers) {
+            doSetProperty("openlineageIntegrationDatasetKafkaBootstrapServers", openlineageIntegrationDatasetKafkaBootstrapServers);
+            return this;
+        }
+        /**
+         * Enable Debezium to emit data lineage metadata through OpenLineage
+         * API.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: postgres
+         * 
+         * @param openlineageIntegrationEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder openlineageIntegrationEnabled(boolean openlineageIntegrationEnabled) {
+            doSetProperty("openlineageIntegrationEnabled", openlineageIntegrationEnabled);
+            return this;
+        }
+        /**
+         * Enable Debezium to emit data lineage metadata through OpenLineage
+         * API.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: postgres
+         * 
+         * @param openlineageIntegrationEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder openlineageIntegrationEnabled(String openlineageIntegrationEnabled) {
+            doSetProperty("openlineageIntegrationEnabled", openlineageIntegrationEnabled);
+            return this;
+        }
+        /**
+         * The job's description emitted by Debezium.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: Debezium change data capture job
+         * Group: postgres
+         * 
+         * @param openlineageIntegrationJobDescription the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder openlineageIntegrationJobDescription(String openlineageIntegrationJobDescription) {
+            doSetProperty("openlineageIntegrationJobDescription", openlineageIntegrationJobDescription);
+            return this;
+        }
+        /**
+         * The job's namespace emitted by Debezium.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: postgres
+         * 
+         * @param openlineageIntegrationJobNamespace the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder openlineageIntegrationJobNamespace(String openlineageIntegrationJobNamespace) {
+            doSetProperty("openlineageIntegrationJobNamespace", openlineageIntegrationJobNamespace);
+            return this;
+        }
+        /**
+         * The job's owners emitted by Debezium. A comma-separated list of
+         * key-value pairs.For example: k1=v1,k2=v2.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: postgres
+         * 
+         * @param openlineageIntegrationJobOwners the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder openlineageIntegrationJobOwners(String openlineageIntegrationJobOwners) {
+            doSetProperty("openlineageIntegrationJobOwners", openlineageIntegrationJobOwners);
+            return this;
+        }
+        /**
+         * The job's tags emitted by Debezium. A comma-separated list of
+         * key-value pairs.For example: k1=v1,k2=v2.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: postgres
+         * 
+         * @param openlineageIntegrationJobTags the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder openlineageIntegrationJobTags(String openlineageIntegrationJobTags) {
+            doSetProperty("openlineageIntegrationJobTags", openlineageIntegrationJobTags);
+            return this;
+        }
+        /**
          * The name of the Postgres logical decoding plugin installed on the
          * server. Supported values are 'decoderbufs' and 'pgoutput'. Defaults
          * to 'decoderbufs'.
@@ -1353,6 +1684,40 @@ public interface DebeziumPostgresEndpointBuilderFactory {
          */
         default DebeziumPostgresEndpointBuilder publicationName(String publicationName) {
             doSetProperty("publicationName", publicationName);
+            return this;
+        }
+        /**
+         * A boolean that determines whether the connector should publish
+         * changes via the partition root. When true, changes are published
+         * through partition root. When false, changes are published directly.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: postgres
+         * 
+         * @param publishViaPartitionRoot the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder publishViaPartitionRoot(boolean publishViaPartitionRoot) {
+            doSetProperty("publishViaPartitionRoot", publishViaPartitionRoot);
+            return this;
+        }
+        /**
+         * A boolean that determines whether the connector should publish
+         * changes via the partition root. When true, changes are published
+         * through partition root. When false, changes are published directly.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: postgres
+         * 
+         * @param publishViaPartitionRoot the value to set
+         * @return the dsl builder
+         */
+        default DebeziumPostgresEndpointBuilder publishViaPartitionRoot(String publishViaPartitionRoot) {
+            doSetProperty("publishViaPartitionRoot", publishViaPartitionRoot);
             return this;
         }
         /**
@@ -1539,7 +1904,9 @@ public interface DebeziumPostgresEndpointBuilderFactory {
         }
         /**
          * The name of the data collection that is used to send signals/commands
-         * to Debezium. Signaling is disabled when not set.
+         * to Debezium. For multi-partition mode connectors, multiple signal
+         * data collections can be specified as a comma-separated list.
+         * Signaling is disabled when not set.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 

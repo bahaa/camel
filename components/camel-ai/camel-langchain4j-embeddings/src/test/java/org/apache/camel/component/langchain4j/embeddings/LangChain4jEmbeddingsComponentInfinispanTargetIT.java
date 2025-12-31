@@ -43,6 +43,7 @@ import org.apache.camel.support.task.budget.IterationBoundedBudget;
 import org.apache.camel.test.infra.infinispan.services.InfinispanService;
 import org.apache.camel.test.infra.infinispan.services.InfinispanServiceFactory;
 import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.commons.lang3.SystemUtils;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.infinispan.commons.configuration.StringConfiguration;
@@ -53,7 +54,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.testcontainers.shaded.org.apache.commons.lang3.SystemUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -182,7 +182,7 @@ public class LangChain4jEmbeddingsComponentInfinispanTargetIT extends CamelTestS
             public void configure() {
                 from("direct:start")
                         .to("langchain4j-embeddings:test")
-                        .transform(new DataType("infinispan:embeddings"))
+                        .transformDataType(new DataType("infinispan:embeddings"))
                         .to(INFINISPAN_URI);
             }
         };

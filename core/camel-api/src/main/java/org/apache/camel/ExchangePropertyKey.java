@@ -44,6 +44,7 @@ public enum ExchangePropertyKey {
     CIRCUIT_BREAKER_RESPONSE_STATE(CircuitBreakerConstants.RESPONSE_STATE),
     CLAIM_CHECK_REPOSITORY(Exchange.CLAIM_CHECK_REPOSITORY),
     CORRELATION_ID(Exchange.CORRELATION_ID),
+    DEBUGGER_SELF_TIME(Exchange.DEBUGGER_SELF_TIME),
     DUPLICATE_MESSAGE(Exchange.DUPLICATE_MESSAGE),
     ERRORHANDLER_BRIDGE(Exchange.ERRORHANDLER_BRIDGE),
     ERRORHANDLER_CIRCUIT_DETECTED(Exchange.ERRORHANDLER_CIRCUIT_DETECTED),
@@ -71,6 +72,7 @@ public enum ExchangePropertyKey {
     PARENT_UNIT_OF_WORK(Exchange.PARENT_UNIT_OF_WORK),
     RECEIVED_TIMESTAMP(Exchange.RECEIVED_TIMESTAMP),
     RECIPIENT_LIST_ENDPOINT(Exchange.RECIPIENT_LIST_ENDPOINT),
+    SKIP_OVER(Exchange.SKIP_OVER),
     SLIP_ENDPOINT(Exchange.SLIP_ENDPOINT),
     SLIP_PRODUCER(Exchange.SLIP_PRODUCER),
     SPLIT_COMPLETE(Exchange.SPLIT_COMPLETE),
@@ -139,6 +141,8 @@ public enum ExchangePropertyKey {
                 return CLAIM_CHECK_REPOSITORY;
             case Exchange.CORRELATION_ID:
                 return CORRELATION_ID;
+            case Exchange.DEBUGGER_SELF_TIME:
+                return DEBUGGER_SELF_TIME;
             case Exchange.DUPLICATE_MESSAGE:
                 return DUPLICATE_MESSAGE;
             case Exchange.ERRORHANDLER_BRIDGE:
@@ -191,6 +195,8 @@ public enum ExchangePropertyKey {
                 return RECEIVED_TIMESTAMP;
             case Exchange.RECIPIENT_LIST_ENDPOINT:
                 return RECIPIENT_LIST_ENDPOINT;
+            case Exchange.SKIP_OVER:
+                return SKIP_OVER;
             case Exchange.SLIP_ENDPOINT:
                 return SLIP_ENDPOINT;
             case Exchange.SLIP_PRODUCER:

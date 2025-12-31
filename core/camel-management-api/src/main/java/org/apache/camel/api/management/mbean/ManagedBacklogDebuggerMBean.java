@@ -98,11 +98,17 @@ public interface ManagedBacklogDebuggerMBean {
     @ManagedOperation(description = "Steps over the next node in step mode")
     void stepOver();
 
+    @ManagedOperation(description = "Skips over the next node in step mode")
+    void skipOver();
+
     @ManagedOperation(description = "Return the node ids which has breakpoints")
     Set<String> breakpoints();
 
     @ManagedOperation(description = "Return the node ids which is currently suspended")
     Set<String> suspendedBreakpointNodeIds();
+
+    @ManagedOperation(description = "Return the exchange ids which is currently suspended")
+    Set<String> suspendedBreakpointExchangeIds();
 
     @ManagedOperation(description = "Disables a breakpoint")
     void disableBreakpoint(String nodeId);

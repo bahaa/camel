@@ -43,9 +43,6 @@ public interface InternalProcessorFactory {
 
     InternalProcessor addUnitOfWorkProcessorAdvice(CamelContext camelContext, Processor processor, Route route);
 
-    InternalProcessor addChildUnitOfWorkProcessorAdvice(
-            CamelContext camelContext, Processor processor, Route route, UnitOfWork parent);
-
     SharedInternalProcessor createSharedCamelInternalProcessor(CamelContext camelContext);
 
     Channel createChannel(CamelContext camelContext);
@@ -56,5 +53,9 @@ public interface InternalProcessorFactory {
     AsyncProcessor createWrapProcessor(Processor processor, Processor wrapped);
 
     AsyncProducer createUnitOfWorkProducer(Producer producer);
+
+    AsyncProducer createAsyncProducer(Endpoint endpoint) throws Exception;
+
+    Producer createProducer(Endpoint endpoint) throws Exception;
 
 }

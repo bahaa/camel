@@ -31,7 +31,6 @@ import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.commands.Run;
 import org.apache.camel.dsl.jbang.core.common.PathUtils;
 import org.apache.camel.main.KameletMain;
-import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.TimeUtils;
 import org.apache.camel.util.json.JsonArray;
@@ -49,6 +48,17 @@ public class CamelSendAction extends ActionBaseCommand {
     @CommandLine.Parameters(description = "To use an existing running Camel integration for sending the message (name or pid)",
                             arity = "0..1")
     String name;
+
+    @CommandLine.Option(names = { "--properties" },
+                        description = "comma separated list of properties file (only applicable when NOT using an existing running Camel)"
+                                      +
+                                      " (ex. /path/to/file.properties,/path/to/other.properties")
+    String propertiesFiles;
+
+    @CommandLine.Option(names = { "--prop", "--property" },
+                        description = "Additional properties; override existing (only applicable when NOT using an existing running Camel)",
+                        arity = "0")
+    String[] property;
 
     @CommandLine.Option(names = { "--endpoint", "--uri" },
                         description = "Endpoint where to send the message (can be uri, pattern, or refer to a route id)")
@@ -148,6 +158,14 @@ public class CamelSendAction extends ActionBaseCommand {
         String mep = (reply || replyFile != null) ? "InOut" : "InOnly";
         root.put("exchangePattern", mep);
         if (body != null) {
+            // favour using absolute path to file as the send command can be called from another
+            // folder than where camel is running
+            if (body.startsWith("file:")) {
+                File f = new File(body.substring(5));
+                if (f.exists() && f.isFile()) {
+                    body = "file:" + f.getAbsolutePath();
+                }
+            }
             root.put("body", body);
         }
         if (headers != null) {
@@ -189,7 +207,8 @@ public class CamelSendAction extends ActionBaseCommand {
 
     protected void showStatus(Path outputFile) throws Exception {
         try {
-            JsonObject jo = waitForOutputFile(outputFile);
+            // wait longer than timeout
+            JsonObject jo = getJsonObject(outputFile, timeout + 10000);
             if (jo != null) {
                 printStatusLine(jo);
                 String exchangeId = jo.getString("exchangeId");
@@ -230,7 +249,7 @@ public class CamelSendAction extends ActionBaseCommand {
                         tableHelper.setShowExchangeProperties(showExchangeProperties);
                         tableHelper.setShowExchangeVariables(showExchangeVariables);
                         String mep = (reply || replyFile != null) ? "InOut" : "InOnly";
-                        String table = tableHelper.getDataAsTable(exchangeId, mep, jo, null, message, cause);
+                        String table = tableHelper.getDataAsTable(exchangeId, mep, null, jo, null, message, cause);
                         printer().println(table);
                     }
                 }
@@ -253,6 +272,8 @@ public class CamelSendAction extends ActionBaseCommand {
             }
         };
         run.empty = true;
+        run.propertiesFiles = propertiesFiles;
+        run.property = property;
 
         // spawn thread that waits for response file
         final CountDownLatch latch = new CountDownLatch(1);
@@ -264,7 +285,6 @@ public class CamelSendAction extends ActionBaseCommand {
                 try {
                     showStatus(outputFile);
                 } catch (Exception e) {
-                    e.printStackTrace();
                     // ignore
                 } finally {
                     latch.countDown();
@@ -286,7 +306,7 @@ public class CamelSendAction extends ActionBaseCommand {
     }
 
     private void printStatusLine(JsonObject jo) {
-        // timstamp
+        // timestamp
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String ts = sdf.format(new Date(jo.getLong("timestamp")));
         if (loggingColor) {
@@ -364,28 +384,6 @@ public class CamelSendAction extends ActionBaseCommand {
         } else {
             return status;
         }
-    }
-
-    protected JsonObject waitForOutputFile(Path outputFile) {
-        StopWatch watch = new StopWatch();
-        long wait = timeout + 10000; // wait longer than timeout
-        while (watch.taken() < wait) {
-            File f = outputFile.toFile();
-            try {
-                // give time for response to be ready
-                Thread.sleep(20);
-
-                if (Files.exists(outputFile) && f.length() > 0) {
-                    String text = Files.readString(outputFile);
-                    return (JsonObject) Jsoner.deserialize(text);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                // ignore
-            }
-        }
-        return null;
     }
 
 }

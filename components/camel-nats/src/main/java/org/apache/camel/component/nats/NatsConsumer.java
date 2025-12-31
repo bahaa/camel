@@ -28,6 +28,7 @@ import io.nats.client.JetStreamManagement;
 import io.nats.client.JetStreamSubscription;
 import io.nats.client.Message;
 import io.nats.client.MessageHandler;
+import io.nats.client.PullSubscribeOptions;
 import io.nats.client.PushSubscribeOptions;
 import io.nats.client.api.ConsumerConfiguration;
 import io.nats.client.api.StreamConfiguration;
@@ -64,7 +65,7 @@ public class NatsConsumer extends DefaultConsumer {
     protected void doStart() throws Exception {
         super.doStart();
         LOG.debug("Starting Nats Consumer");
-        this.executor = this.getEndpoint().createExecutor();
+        this.executor = this.getEndpoint().createExecutor(this);
 
         LOG.debug("Getting Nats Connection");
         this.connection = this.getEndpoint().getConfiguration().getConnection() != null
@@ -153,42 +154,72 @@ public class NatsConsumer extends DefaultConsumer {
 
         private void setupJetStreamConsumer(String topic, String queueName) throws IOException, JetStreamApiException {
             String streamName = this.configuration.getJetstreamName();
-            String consumerName
-                    = ObjectHelper.isNotEmpty(queueName) ? queueName : "consumer-" + System.currentTimeMillis(); // Generate a default consumer name if queueName is not provided
-            LOG.debug("Setting up JetStream PUSH consumer for stream: '{}', durable: '{}', topic: {} ", streamName,
-                    consumerName, this.configuration.getTopic());
+            String durableName = this.configuration.getDurableName();
+
+            String subscriptionType = this.configuration.isPullSubscription() ? "PULL" : "PUSH";
+            LOG.debug("Setting up JetStream {}/{} consumer for stream: '{}', subject: {}",
+                    subscriptionType,
+                    ObjectHelper.isNotEmpty(durableName)
+                            ? String.format("DURABLE, durableName: '%s'", durableName) : "EPHEMERAL",
+                    streamName,
+                    this.configuration.getTopic());
 
             JetStreamManagement jsm = connection.jetStreamManagement();
-            StreamConfiguration streamConfig = StreamConfiguration.builder()
-                    .name(streamName)
-                    .subjects(topic)
-                    .build();
-            jsm.addStream(streamConfig);
+            if (streamExists(jsm, streamName)) {
+                LOG.debug("JetStream stream '{}' already exists. Skipping creation.", streamName);
+            } else {
+                LOG.debug("Creating JetStream {}", streamName);
+                StreamConfiguration streamConfig = StreamConfiguration.builder()
+                        .name(streamName)
+                        .subjects(topic)
+                        .build();
+                jsm.addStream(streamConfig);
+                LOG.info("JetStream stream '{}' created successfully.", streamName);
+            }
 
-            ConsumerConfiguration.Builder ccBuilder = ConsumerConfiguration.builder()
-                    .durable(consumerName);
-            ccBuilder.deliverSubject(null);
-            ConsumerConfiguration cc = ccBuilder.build();
+            ConsumerConfiguration cc = configuration.getConsumerConfiguration();
+            if (cc == null) {
+                ConsumerConfiguration.Builder ccBuilder = ConsumerConfiguration.builder();
+                ccBuilder.deliverSubject(null);
+                if (durableName != null) {
+                    ccBuilder.durable(durableName + "-durable");
+                }
+                cc = ccBuilder.build();
+            }
 
-            PushSubscribeOptions pushOptions = PushSubscribeOptions.builder()
-                    .configuration(cc)
-                    .build();
+            CamelNatsMessageHandler messageHandler = new CamelNatsMessageHandler();
+            NatsConsumer.this.dispatcher = this.connection.createDispatcher(messageHandler);
 
-            NatsConsumer.this.dispatcher = this.connection.createDispatcher(new CamelNatsMessageHandler());
+            if (this.configuration.isPullSubscription()) {
+                PullSubscribeOptions pullOptions = PullSubscribeOptions.builder()
+                        .configuration(cc)
+                        .build();
 
-            NatsConsumer.this.jetStreamSubscription = this.connection.jetStream().subscribe(
-                    NatsConsumer.this.getEndpoint().getConfiguration().getTopic(),
-                    queueName,
-                    dispatcher,
-                    new CamelNatsMessageHandler(),
-                    true,
-                    pushOptions);
+                NatsConsumer.this.jetStreamSubscription = this.connection.jetStream().subscribe(
+                        NatsConsumer.this.getEndpoint().getConfiguration().getTopic(),
+                        dispatcher,
+                        messageHandler,
+                        pullOptions);
+            } else {
+                PushSubscribeOptions pushOptions = PushSubscribeOptions.builder()
+                        .configuration(cc)
+                        .deliverGroup(queueName)
+                        .build();
+
+                NatsConsumer.this.jetStreamSubscription = this.connection.jetStream().subscribe(
+                        NatsConsumer.this.getEndpoint().getConfiguration().getTopic(),
+                        queueName,
+                        dispatcher,
+                        messageHandler,
+                        true,
+                        pushOptions);
+            }
 
             NatsConsumer.this.setActive(true);
         }
 
         private void setupStandardNatsConsumer(String topic, String queueName, Integer maxMessages) {
-            LOG.debug("Setting up standard NATS consumer for topic: {}", topic);
+            LOG.debug("Setting up standard NATS consumer for subject: {}", topic);
             NatsConsumer.this.dispatcher = connection.createDispatcher(new CamelNatsMessageHandler());
             if (ObjectHelper.isNotEmpty(queueName)) {
                 NatsConsumer.this.dispatcher = NatsConsumer.this.dispatcher.subscribe(topic, queueName);
@@ -256,6 +287,18 @@ public class NatsConsumer extends DefaultConsumer {
                     NatsConsumer.this.releaseExchange(exchange, false);
                 }
             }
+        }
+    }
+
+    private boolean streamExists(JetStreamManagement jsm, String streamName) throws IOException, JetStreamApiException {
+        try {
+            jsm.getStreamInfo(streamName);
+            return true;
+        } catch (JetStreamApiException jsae) {
+            if (jsae.getErrorCode() == 404) {
+                return false;
+            }
+            throw jsae;
         }
     }
 

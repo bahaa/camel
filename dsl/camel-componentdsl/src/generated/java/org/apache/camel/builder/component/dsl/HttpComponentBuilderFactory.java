@@ -151,6 +151,24 @@ public interface HttpComponentBuilderFactory {
             return this;
         }
     
+        
+        /**
+         * Whether the Content-Type header should automatic include charset for
+         * string based content.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: producer (advanced)
+         * 
+         * @param contentTypeCharsetEnabled the value to set
+         * @return the dsl builder
+         */
+        default HttpComponentBuilder contentTypeCharsetEnabled(boolean contentTypeCharsetEnabled) {
+            doSetProperty("contentTypeCharsetEnabled", contentTypeCharsetEnabled);
+            return this;
+        }
+    
         /**
          * To use a custom org.apache.hc.client5.http.cookie.CookieStore. By
          * default the org.apache.hc.client5.http.cookie.BasicCookieStore is
@@ -596,7 +614,23 @@ public interface HttpComponentBuilderFactory {
         }
     
         /**
-         * Proxy authentication domain to use.
+         * Comma-separated list of hosts that should bypass the proxy. Supports
+         * wildcards, e.g., localhost,.example.com,192.168..
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: proxy
+         * 
+         * @param nonProxyHosts the value to set
+         * @return the dsl builder
+         */
+        default HttpComponentBuilder nonProxyHosts(java.lang.String nonProxyHosts) {
+            doSetProperty("nonProxyHosts", nonProxyHosts);
+            return this;
+        }
+    
+        /**
+         * Proxy authentication domain to use with NTLM.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -611,7 +645,7 @@ public interface HttpComponentBuilderFactory {
         }
     
         /**
-         * Proxy authentication host.
+         * Proxy server host.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -620,6 +654,7 @@ public interface HttpComponentBuilderFactory {
          * @param proxyAuthHost the value to set
          * @return the dsl builder
          */
+        @Deprecated
         default HttpComponentBuilder proxyAuthHost(java.lang.String proxyAuthHost) {
             doSetProperty("proxyAuthHost", proxyAuthHost);
             return this;
@@ -641,7 +676,8 @@ public interface HttpComponentBuilderFactory {
         }
     
         /**
-         * Proxy authentication domain (workstation name) to use with NTML.
+         * Proxy authentication domain (workstation name) to use with NTLM (NTLM
+         * is deprecated).
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -656,7 +692,7 @@ public interface HttpComponentBuilderFactory {
         }
     
         /**
-         * Proxy authentication password.
+         * Proxy server password.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -671,7 +707,7 @@ public interface HttpComponentBuilderFactory {
         }
     
         /**
-         * Proxy authentication port.
+         * Proxy server port.
          * 
          * The option is a: &lt;code&gt;java.lang.Integer&lt;/code&gt; type.
          * 
@@ -680,13 +716,14 @@ public interface HttpComponentBuilderFactory {
          * @param proxyAuthPort the value to set
          * @return the dsl builder
          */
+        @Deprecated
         default HttpComponentBuilder proxyAuthPort(java.lang.Integer proxyAuthPort) {
             doSetProperty("proxyAuthPort", proxyAuthPort);
             return this;
         }
     
         /**
-         * Proxy authentication protocol scheme.
+         * Proxy server authentication protocol scheme to use.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -701,7 +738,7 @@ public interface HttpComponentBuilderFactory {
         }
     
         /**
-         * Proxy authentication username.
+         * Proxy server username.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -712,6 +749,36 @@ public interface HttpComponentBuilderFactory {
          */
         default HttpComponentBuilder proxyAuthUsername(java.lang.String proxyAuthUsername) {
             doSetProperty("proxyAuthUsername", proxyAuthUsername);
+            return this;
+        }
+    
+        /**
+         * Proxy server host.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: proxy
+         * 
+         * @param proxyHost the value to set
+         * @return the dsl builder
+         */
+        default HttpComponentBuilder proxyHost(java.lang.String proxyHost) {
+            doSetProperty("proxyHost", proxyHost);
+            return this;
+        }
+    
+        /**
+         * Proxy server port.
+         * 
+         * The option is a: &lt;code&gt;java.lang.Integer&lt;/code&gt; type.
+         * 
+         * Group: proxy
+         * 
+         * @param proxyPort the value to set
+         * @return the dsl builder
+         */
+        default HttpComponentBuilder proxyPort(java.lang.Integer proxyPort) {
+            doSetProperty("proxyPort", proxyPort);
             return this;
         }
     
@@ -771,79 +838,74 @@ public interface HttpComponentBuilderFactory {
     
         
         /**
-         * Returns the connection lease request timeout used when requesting a
-         * connection from the connection manager. A timeout value of zero is
-         * interpreted as a disabled timeout.
+         * Returns the connection lease request timeout (in millis) used when
+         * requesting a connection from the connection manager. A timeout value
+         * of zero is interpreted as a disabled timeout.
          * 
-         * The option is a:
-         * &lt;code&gt;org.apache.hc.core5.util.Timeout&lt;/code&gt; type.
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
          * 
-         * Default: 3 minutes
+         * Default: 180000
          * Group: timeout
          * 
          * @param connectionRequestTimeout the value to set
          * @return the dsl builder
          */
-        default HttpComponentBuilder connectionRequestTimeout(org.apache.hc.core5.util.Timeout connectionRequestTimeout) {
+        default HttpComponentBuilder connectionRequestTimeout(long connectionRequestTimeout) {
             doSetProperty("connectionRequestTimeout", connectionRequestTimeout);
             return this;
         }
     
         
         /**
-         * Determines the timeout until a new connection is fully established. A
-         * timeout value of zero is interpreted as an infinite timeout.
+         * Determines the timeout (in millis) until a new connection is fully
+         * established. A timeout value of zero is interpreted as an infinite
+         * timeout.
          * 
-         * The option is a:
-         * &lt;code&gt;org.apache.hc.core5.util.Timeout&lt;/code&gt; type.
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
          * 
-         * Default: 3 minutes
+         * Default: 180000
          * Group: timeout
          * 
          * @param connectTimeout the value to set
          * @return the dsl builder
          */
-        default HttpComponentBuilder connectTimeout(org.apache.hc.core5.util.Timeout connectTimeout) {
+        default HttpComponentBuilder connectTimeout(long connectTimeout) {
             doSetProperty("connectTimeout", connectTimeout);
             return this;
         }
     
-        
         /**
-         * Determines the timeout until arrival of a response from the opposite
-         * endpoint. A timeout value of zero is interpreted as an infinite
-         * timeout. Please note that response timeout may be unsupported by HTTP
-         * transports with message multiplexing.
+         * Determines the timeout (in millis) until arrival of a response from
+         * the opposite endpoint. A timeout value of zero is interpreted as an
+         * infinite timeout. Please note that response timeout may be
+         * unsupported by HTTP transports with message multiplexing.
          * 
-         * The option is a:
-         * &lt;code&gt;org.apache.hc.core5.util.Timeout&lt;/code&gt; type.
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
          * 
-         * Default: 0
          * Group: timeout
          * 
          * @param responseTimeout the value to set
          * @return the dsl builder
          */
-        default HttpComponentBuilder responseTimeout(org.apache.hc.core5.util.Timeout responseTimeout) {
+        default HttpComponentBuilder responseTimeout(long responseTimeout) {
             doSetProperty("responseTimeout", responseTimeout);
             return this;
         }
     
         
         /**
-         * Determines the default socket timeout value for blocking I/O
-         * operations.
+         * Determines the default socket timeout (in millis) value for blocking
+         * I/O operations.
          * 
-         * The option is a:
-         * &lt;code&gt;org.apache.hc.core5.util.Timeout&lt;/code&gt; type.
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
          * 
-         * Default: 3 minutes
+         * Default: 180000
          * Group: timeout
          * 
          * @param soTimeout the value to set
          * @return the dsl builder
          */
-        default HttpComponentBuilder soTimeout(org.apache.hc.core5.util.Timeout soTimeout) {
+        default HttpComponentBuilder soTimeout(long soTimeout) {
             doSetProperty("soTimeout", soTimeout);
             return this;
         }
@@ -867,6 +929,7 @@ public interface HttpComponentBuilderFactory {
             case "skipControlHeaders": ((HttpComponent) component).setSkipControlHeaders((boolean) value); return true;
             case "skipRequestHeaders": ((HttpComponent) component).setSkipRequestHeaders((boolean) value); return true;
             case "skipResponseHeaders": ((HttpComponent) component).setSkipResponseHeaders((boolean) value); return true;
+            case "contentTypeCharsetEnabled": ((HttpComponent) component).setContentTypeCharsetEnabled((boolean) value); return true;
             case "cookieStore": ((HttpComponent) component).setCookieStore((org.apache.hc.client5.http.cookie.CookieStore) value); return true;
             case "copyHeaders": ((HttpComponent) component).setCopyHeaders((boolean) value); return true;
             case "followRedirects": ((HttpComponent) component).setFollowRedirects((boolean) value); return true;
@@ -892,6 +955,7 @@ public interface HttpComponentBuilderFactory {
             case "redirectHandlingDisabled": ((HttpComponent) component).setRedirectHandlingDisabled((boolean) value); return true;
             case "useSystemProperties": ((HttpComponent) component).setUseSystemProperties((boolean) value); return true;
             case "headerFilterStrategy": ((HttpComponent) component).setHeaderFilterStrategy((org.apache.camel.spi.HeaderFilterStrategy) value); return true;
+            case "nonProxyHosts": ((HttpComponent) component).setNonProxyHosts((java.lang.String) value); return true;
             case "proxyAuthDomain": ((HttpComponent) component).setProxyAuthDomain((java.lang.String) value); return true;
             case "proxyAuthHost": ((HttpComponent) component).setProxyAuthHost((java.lang.String) value); return true;
             case "proxyAuthMethod": ((HttpComponent) component).setProxyAuthMethod((java.lang.String) value); return true;
@@ -900,13 +964,15 @@ public interface HttpComponentBuilderFactory {
             case "proxyAuthPort": ((HttpComponent) component).setProxyAuthPort((java.lang.Integer) value); return true;
             case "proxyAuthScheme": ((HttpComponent) component).setProxyAuthScheme((java.lang.String) value); return true;
             case "proxyAuthUsername": ((HttpComponent) component).setProxyAuthUsername((java.lang.String) value); return true;
+            case "proxyHost": ((HttpComponent) component).setProxyHost((java.lang.String) value); return true;
+            case "proxyPort": ((HttpComponent) component).setProxyPort((java.lang.Integer) value); return true;
             case "sslContextParameters": ((HttpComponent) component).setSslContextParameters((org.apache.camel.support.jsse.SSLContextParameters) value); return true;
             case "useGlobalSslContextParameters": ((HttpComponent) component).setUseGlobalSslContextParameters((boolean) value); return true;
             case "x509HostnameVerifier": ((HttpComponent) component).setX509HostnameVerifier((javax.net.ssl.HostnameVerifier) value); return true;
-            case "connectionRequestTimeout": ((HttpComponent) component).setConnectionRequestTimeout((org.apache.hc.core5.util.Timeout) value); return true;
-            case "connectTimeout": ((HttpComponent) component).setConnectTimeout((org.apache.hc.core5.util.Timeout) value); return true;
-            case "responseTimeout": ((HttpComponent) component).setResponseTimeout((org.apache.hc.core5.util.Timeout) value); return true;
-            case "soTimeout": ((HttpComponent) component).setSoTimeout((org.apache.hc.core5.util.Timeout) value); return true;
+            case "connectionRequestTimeout": ((HttpComponent) component).setConnectionRequestTimeout((long) value); return true;
+            case "connectTimeout": ((HttpComponent) component).setConnectTimeout((long) value); return true;
+            case "responseTimeout": ((HttpComponent) component).setResponseTimeout((long) value); return true;
+            case "soTimeout": ((HttpComponent) component).setSoTimeout((long) value); return true;
             default: return false;
             }
         }

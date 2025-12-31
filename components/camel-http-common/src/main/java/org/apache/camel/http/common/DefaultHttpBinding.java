@@ -241,14 +241,17 @@ public class DefaultHttpBinding implements HttpBinding {
             String name = (String) names.nextElement();
             // there may be multiple values for the same name
             String[] values = request.getParameterValues(name);
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("HTTP parameter {} = {}", name, HttpHelper.sanitizeLog(values));
-            }
-
-            if (values != null) {
-                for (String value : values) {
+            // Avoid potential injections
+            String[] sanitizedValues = HttpHelper.sanitizeLog(values);
+            if (sanitizedValues != null) {
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("HTTP parameter {} = {}", name, sanitizedValues);
+                }
+                for (String value : sanitizedValues) {
+                    // use http helper to extract parameter value as it may contain multiple values
+                    Object extracted = HttpHelper.extractHttpParameterValue(value);
                     if (headerFilterStrategy != null
-                            && !headerFilterStrategy.applyFilterToExternalHeaders(name, value, message.getExchange())) {
+                            && !headerFilterStrategy.applyFilterToExternalHeaders(name, extracted, message.getExchange())) {
                         HttpHelper.appendHeader(headers, name, value);
                     }
                 }

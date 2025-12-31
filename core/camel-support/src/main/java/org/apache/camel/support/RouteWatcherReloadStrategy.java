@@ -32,6 +32,7 @@ import org.apache.camel.Route;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.ServiceStatus;
 import org.apache.camel.StartupSummaryLevel;
+import org.apache.camel.spi.GroovyScriptCompiler;
 import org.apache.camel.spi.PropertiesComponent;
 import org.apache.camel.spi.PropertiesReload;
 import org.apache.camel.spi.PropertiesSource;
@@ -39,7 +40,6 @@ import org.apache.camel.spi.Resource;
 import org.apache.camel.util.AntPathMatcher;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.IOHelper;
-import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.OrderedLocationProperties;
 import org.apache.camel.util.OrderedProperties;
 import org.apache.camel.util.StringHelper;
@@ -110,8 +110,23 @@ public class RouteWatcherReloadStrategy extends FileWatcherResourceReloadStrateg
 
     @Override
     protected void doStart() throws Exception {
-        ObjectHelper.notNull(getFolder(), "folder", this);
+        if (getResourceReload() == null) {
+            // attach listener that triggers the route update
+            setResourceReload((name, resource) -> {
+                if (name.endsWith(".properties")) {
+                    onPropertiesReload(resource, true);
+                } else if (name.endsWith(".groovy")) {
+                    onGroovyReload(resource, true);
+                } else {
+                    onRouteReload(List.of(resource), false);
+                }
+            });
+        }
 
+        // the following is all related to watching files on disk
+        if (folder == null) {
+            return;
+        }
         if (pattern == null || pattern.isBlank()) {
             pattern = DEFAULT_PATTERN;
         } else if ("*".equals(pattern)) {
@@ -142,17 +157,6 @@ public class RouteWatcherReloadStrategy extends FileWatcherResourceReloadStrateg
                     }
                 }
                 return false;
-            });
-        }
-
-        if (getResourceReload() == null) {
-            // attach listener that triggers the route update
-            setResourceReload((name, resource) -> {
-                if (name.endsWith(".properties")) {
-                    onPropertiesReload(resource, true);
-                } else {
-                    onRouteReload(List.of(resource), false);
-                }
             });
         }
 
@@ -225,6 +229,20 @@ public class RouteWatcherReloadStrategy extends FileWatcherResourceReloadStrateg
             }
         }
         return null;
+    }
+
+    protected boolean onGroovyReload(Resource resource, boolean reloadRoutes) throws Exception {
+        GroovyScriptCompiler compiler
+                = getCamelContext().getCamelContextExtension().getContextPlugin(GroovyScriptCompiler.class);
+        if (compiler != null) {
+            compiler.recompile(resource);
+            // trigger all routes to be reloaded (which will also trigger reloading this resource)
+            if (reloadRoutes) {
+                onRouteReload(null, false);
+            }
+            return true;
+        }
+        return false;
     }
 
     @SuppressWarnings("unchecked")

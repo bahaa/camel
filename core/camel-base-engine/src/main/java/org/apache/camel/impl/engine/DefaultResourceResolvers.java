@@ -287,6 +287,53 @@ public final class DefaultResourceResolvers {
         }
     }
 
+    /**
+     * An implementation of the {@link ResourceResolver} that resolves a {@link Resource} from file system in
+     * src/main/java.
+     */
+    @ResourceResolver(SourceResolver.SCHEME)
+    public static class SourceResolver extends ResourceResolverSupport {
+        public static final String SCHEME = "source";
+
+        public SourceResolver() {
+            super(SCHEME);
+        }
+
+        @Override
+        public Resource createResource(String location, String remaining) {
+            String dir = "src/main/java/";
+            boolean test = remaining.endsWith("?test=true");
+            if (test) {
+                remaining = remaining.substring(0, remaining.length() - 10);
+                dir = "src/test/java/";
+            }
+            String name = remaining.replace('.', '/') + ".java";
+            final File path = new File(getPath(dir + name));
+            return new ResourceSupport(SCHEME, location) {
+                @Override
+                public boolean exists() {
+                    return path.exists();
+                }
+
+                @Override
+                public URI getURI() {
+                    return path.toURI();
+                }
+
+                @Override
+                public InputStream getInputStream() throws IOException {
+                    if (!exists()) {
+                        throw new FileNotFoundException(path + " does not exist");
+                    }
+                    if (path.isDirectory()) {
+                        throw new FileNotFoundException(path + " is a directory");
+                    }
+                    return new FileInputStream(path);
+                }
+            };
+        }
+    }
+
     static final class HttpResource extends ResourceSupport implements ContentTypeAware {
         private String contentType;
 
@@ -298,7 +345,7 @@ public final class DefaultResourceResolvers {
         public boolean exists() {
             URLConnection connection = null;
             try {
-                connection = new URL(getLocation()).openConnection();
+                connection = URI.create(getLocation()).toURL().openConnection();
                 if (connection instanceof HttpURLConnection httpURLConnection) {
                     return httpURLConnection.getResponseCode() == HttpURLConnection.HTTP_OK;
                 }
@@ -316,7 +363,7 @@ public final class DefaultResourceResolvers {
 
         @Override
         public InputStream getInputStream() throws IOException {
-            URLConnection con = new URL(getLocation()).openConnection();
+            URLConnection con = URI.create(getLocation()).toURL().openConnection();
             con.setUseCaches(false);
             try {
                 setContentType(con.getContentType());

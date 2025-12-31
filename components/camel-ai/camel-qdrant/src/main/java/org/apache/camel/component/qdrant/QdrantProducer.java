@@ -29,6 +29,7 @@ import io.qdrant.client.QdrantClient;
 import io.qdrant.client.WithPayloadSelectorFactory;
 import io.qdrant.client.WithVectorsSelectorFactory;
 import io.qdrant.client.grpc.Collections.VectorParams;
+import io.qdrant.client.grpc.Common;
 import io.qdrant.client.grpc.Points;
 import org.apache.camel.AsyncCallback;
 import org.apache.camel.CamelContext;
@@ -42,6 +43,7 @@ import static io.qdrant.client.QueryFactory.nearest;
 import static io.qdrant.client.WithPayloadSelectorFactory.enable;
 
 public class QdrantProducer extends DefaultAsyncProducer {
+
     private QdrantClient client;
     private ExecutorService executor;
 
@@ -78,11 +80,11 @@ public class QdrantProducer extends DefaultAsyncProducer {
     @Override
     public boolean process(Exchange exchange, AsyncCallback callback) {
         final Message in = exchange.getMessage();
-        final QdrantAction action = in.getHeader(Qdrant.Headers.ACTION, QdrantAction.class);
+        final QdrantAction action = in.getHeader(QdrantHeaders.ACTION, QdrantAction.class);
 
         try {
             if (action == null) {
-                throw new NoSuchHeaderException("The action is a required header", exchange, Qdrant.Headers.ACTION);
+                throw new NoSuchHeaderException("The action is a required header", exchange, QdrantHeaders.ACTION);
             }
 
             return switch (action) {
@@ -128,9 +130,9 @@ public class QdrantProducer extends DefaultAsyncProducer {
                     if (t != null) {
                         exchange.setException(new QdrantActionException(QdrantAction.UPSERT, t));
                     } else {
-                        in.setHeader(Qdrant.Headers.OPERATION_ID, r.getOperationId());
-                        in.setHeader(Qdrant.Headers.OPERATION_STATUS, r.getStatus().name());
-                        in.setHeader(Qdrant.Headers.OPERATION_STATUS_VALUE, r.getStatus().getNumber());
+                        in.setHeader(QdrantHeaders.OPERATION_ID, r.getOperationId());
+                        in.setHeader(QdrantHeaders.OPERATION_STATUS, r.getStatus().name());
+                        in.setHeader(QdrantHeaders.OPERATION_STATUS_VALUE, r.getStatus().getNumber());
                     }
 
                     callback.done(false);
@@ -143,29 +145,29 @@ public class QdrantProducer extends DefaultAsyncProducer {
     private boolean retrieve(Exchange exchange, AsyncCallback callback) throws Exception {
         final String collection = getEndpoint().getCollection();
         final Message in = exchange.getMessage();
-        final List<Points.PointId> ids = in.getMandatoryBody(List.class);
+        final List<Common.PointId> ids = in.getMandatoryBody(List.class);
 
         call(
                 this.client.retrieveAsync(
                         collection,
                         ids,
                         WithPayloadSelectorFactory.enable(in.getHeader(
-                                Qdrant.Headers.INCLUDE_PAYLOAD,
-                                Qdrant.Headers.DEFAULT_INCLUDE_PAYLOAD,
+                                QdrantHeaders.INCLUDE_PAYLOAD,
+                                QdrantHeaders.DEFAULT_INCLUDE_PAYLOAD,
                                 boolean.class)),
                         WithVectorsSelectorFactory.enable(in.getHeader(
-                                Qdrant.Headers.INCLUDE_VECTORS,
-                                Qdrant.Headers.DEFAULT_INCLUDE_VECTORS,
+                                QdrantHeaders.INCLUDE_VECTORS,
+                                QdrantHeaders.DEFAULT_INCLUDE_VECTORS,
                                 boolean.class)),
                         in.getHeader(
-                                Qdrant.Headers.READ_CONSISTENCY,
+                                QdrantHeaders.READ_CONSISTENCY,
                                 Points.ReadConsistency.class)),
                 (r, t) -> {
                     if (t != null) {
                         exchange.setException(new QdrantActionException(QdrantAction.RETRIEVE, t));
                     } else {
                         in.setBody(new ArrayList<>(r));
-                        in.setHeader(Qdrant.Headers.SIZE, r.size());
+                        in.setHeader(QdrantHeaders.SIZE, r.size());
                     }
 
                     callback.done(false);
@@ -211,9 +213,9 @@ public class QdrantProducer extends DefaultAsyncProducer {
                     if (t != null) {
                         exchange.setException(new QdrantActionException(QdrantAction.DELETE, t));
                     } else {
-                        in.setHeader(Qdrant.Headers.OPERATION_ID, r.getOperationId());
-                        in.setHeader(Qdrant.Headers.OPERATION_STATUS, r.getStatus().name());
-                        in.setHeader(Qdrant.Headers.OPERATION_STATUS_VALUE, r.getStatus().getNumber());
+                        in.setHeader(QdrantHeaders.OPERATION_ID, r.getOperationId());
+                        in.setHeader(QdrantHeaders.OPERATION_STATUS, r.getStatus().name());
+                        in.setHeader(QdrantHeaders.OPERATION_STATUS_VALUE, r.getStatus().getNumber());
                     }
 
                     callback.done(false);
@@ -265,14 +267,14 @@ public class QdrantProducer extends DefaultAsyncProducer {
         List<Float> vectors = null;
         if (body instanceof Points.PointStruct) {
             Points.Vectors resultVector = ((Points.PointStruct) body).getVectors();
-            vectors = resultVector.getVector().getDataList();
+            vectors = resultVector.getVector().getDense().getDataList();
         } else {
             vectors = in.getMandatoryBody(List.class);
         }
 
         ObjectHelper.notNull(vectors, "vectors");
         final int maxResults = getEndpoint().getConfiguration().getMaxResults();
-        final Points.Filter filter = getEndpoint().getConfiguration().getFilter();
+        final Common.Filter filter = getEndpoint().getConfiguration().getFilter();
         final Duration timeout = getEndpoint().getConfiguration().getTimeout();
 
         var queryRequestBuilder = Points.QueryPoints.newBuilder()
@@ -280,12 +282,12 @@ public class QdrantProducer extends DefaultAsyncProducer {
                 .setQuery(nearest(vectors))
                 .setLimit(maxResults)
                 .setWithVectors(WithVectorsSelectorFactory.enable(in.getHeader(
-                        Qdrant.Headers.INCLUDE_VECTORS,
-                        Qdrant.Headers.DEFAULT_INCLUDE_VECTORS,
+                        QdrantHeaders.INCLUDE_VECTORS,
+                        QdrantHeaders.DEFAULT_INCLUDE_VECTORS,
                         boolean.class)))
                 .setWithPayload(enable(in.getHeader(
-                        Qdrant.Headers.INCLUDE_PAYLOAD,
-                        Qdrant.Headers.DEFAULT_INCLUDE_PAYLOAD,
+                        QdrantHeaders.INCLUDE_PAYLOAD,
+                        QdrantHeaders.DEFAULT_INCLUDE_PAYLOAD,
                         boolean.class)));
 
         if (filter != null) {
@@ -299,7 +301,7 @@ public class QdrantProducer extends DefaultAsyncProducer {
                         exchange.setException(new QdrantActionException(QdrantAction.SIMILARITY_SEARCH, t));
                     } else {
                         in.setBody(new ArrayList<>(r));
-                        in.setHeader(Qdrant.Headers.SIZE, r.size());
+                        in.setHeader(QdrantHeaders.SIZE, r.size());
                     }
 
                     callback.done(false);

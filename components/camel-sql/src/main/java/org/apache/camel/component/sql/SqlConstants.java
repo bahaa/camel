@@ -23,20 +23,20 @@ import org.apache.camel.spi.Metadata;
  */
 public final class SqlConstants {
 
-    @Metadata(label = "producer", description = "Query to execute. This query takes precedence over the\n" +
-                                                "query specified in the endpoint URI. Note that query parameters in the\n" +
-                                                "header _are_ represented by a `?` instead of a `pass:[#]` symbol",
+    @Metadata(label = "producer", description = "Query to execute. This query takes precedence over the" +
+                                                " query specified in the endpoint URI. Note that query parameters in the" +
+                                                " header are represented by a `?` instead of a `pass:[#]` symbol",
               javaType = "String")
     public static final String SQL_QUERY = "CamelSqlQuery";
-    @Metadata(label = "producer", description = "The number of rows updated for `update` operations, returned as an\n" +
-                                                "`Integer` object. This header is not provided when using\n" +
-                                                "outputType=StreamList.",
-              javaType = "Integer")
+    @Metadata(label = "producer", description = "The number of rows updated for `update` operations, returned as an" +
+                                                " `Integer` object. This header is not provided when using" +
+                                                " outputType=StreamList.",
+              javaType = "Integer", important = true)
     public static final String SQL_UPDATE_COUNT = "CamelSqlUpdateCount";
-    @Metadata(label = "producer", description = "The number of rows returned for `select` operations, returned as an\n" +
-                                                "`Integer` object. This header is not provided when using\n" +
-                                                "outputType=StreamList.",
-              javaType = "Integer")
+    @Metadata(label = "producer", description = "The number of rows returned for `select` operations, returned as an" +
+                                                " `Integer` object. This header is not provided when using" +
+                                                " outputType=StreamList.",
+              javaType = "Integer", important = true)
     public static final String SQL_ROW_COUNT = "CamelSqlRowCount";
 
     /**
@@ -79,6 +79,11 @@ public final class SqlConstants {
      */
     @Metadata(label = "producer", javaType = "Iterator")
     public static final String SQL_PARAMETERS = "CamelSqlParameters";
+
+    @Metadata(label = "producer",
+              description = "To use a specific DataSource to operate on another database than the pre configured DataSource on the component",
+              javaType = "javax.sql.DataSource")
+    public static final String SQL_DATA_SOURCE = "CamelSqlDataSource";
 
     private SqlConstants() {
         // Utility class

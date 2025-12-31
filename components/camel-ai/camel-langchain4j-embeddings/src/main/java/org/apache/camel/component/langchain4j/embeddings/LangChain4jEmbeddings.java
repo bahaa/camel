@@ -25,6 +25,11 @@ public final class LangChain4jEmbeddings {
     private LangChain4jEmbeddings() {
     }
 
+    /**
+     * @deprecated As of Camel 4.15, this nested Headers class has been moved to its own class. Use
+     *             {@link org.apache.camel.component.langchain4j.embeddings.LangChain4jEmbeddingsHeaders} instead.
+     */
+    @Deprecated
     public static class Headers {
         @Metadata(description = "The Finish Reason.", javaType = "dev.langchain4j.model.output.FinishReason")
         public static final String FINISH_REASON = "CamelLangChain4jEmbeddingsFinishReason";
@@ -37,6 +42,9 @@ public final class LangChain4jEmbeddings {
 
         @Metadata(description = "The Total Token Count.", javaType = "int")
         public static final String TOTAL_TOKEN_COUNT = "CamelLangChain4jEmbeddingsTotalTokenCount";
+
+        @Metadata(description = "Embedding representation of a text", javaType = "dev.langchain4j.data.embedding.Embedding")
+        public static final String EMBEDDING = CamelLangchain4jAttributes.CAMEL_LANGCHAIN4J_EMBEDDING;
 
         @Metadata(description = "A dense vector embedding of a text", javaType = "float[]")
         public static final String VECTOR = CamelLangchain4jAttributes.CAMEL_LANGCHAIN4J_EMBEDDING_VECTOR;

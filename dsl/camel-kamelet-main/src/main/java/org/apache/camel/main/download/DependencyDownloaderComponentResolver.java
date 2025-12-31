@@ -16,6 +16,7 @@
  */
 package org.apache.camel.main.download;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.camel.CamelContext;
@@ -26,6 +27,7 @@ import org.apache.camel.component.platform.http.PlatformHttpComponent;
 import org.apache.camel.component.stub.StubComponent;
 import org.apache.camel.impl.engine.DefaultComponentResolver;
 import org.apache.camel.main.util.SuggestSimilarHelper;
+import org.apache.camel.support.PatternHelper;
 import org.apache.camel.tooling.model.ComponentModel;
 import org.apache.camel.tooling.model.OtherModel;
 
@@ -34,11 +36,13 @@ import org.apache.camel.tooling.model.OtherModel;
  */
 public final class DependencyDownloaderComponentResolver extends DefaultComponentResolver {
 
-    private static final String ACCEPTED_STUB_NAMES
-            = "stub,bean,class,direct,kamelet,log,platform-http,rest,seda,vertx-http";
+    private static final String[] ACCEPTED_STUB_NAMES = {
+            "stub", "bean", "class", "direct", "kamelet", "log", "platform-http", "rest", "seda"
+    };
 
-    private static final String ACCEPTED_TRANSFORM_NAMES
-            = "stub,direct,kamelet,log,seda";
+    private static final String[] ACCEPTED_TRANSFORM_NAMES = {
+            "stub", "direct", "kamelet", "log", "seda"
+    };
 
     private final CamelCatalog catalog = new DefaultCamelCatalog();
     private final CamelContext camelContext;
@@ -131,14 +135,25 @@ public final class DependencyDownloaderComponentResolver extends DefaultComponen
 
     private boolean accept(String name) {
         if (transform) {
-            return ACCEPTED_TRANSFORM_NAMES.contains(name);
+            return Arrays.asList(ACCEPTED_TRANSFORM_NAMES).contains(name);
         }
         if (stubPattern == null) {
             return true;
         }
 
         // we are stubbing but need to accept the following
-        return ACCEPTED_STUB_NAMES.contains(name);
+        if (Arrays.asList(ACCEPTED_STUB_NAMES).contains(name)) {
+            return true;
+        }
+
+        boolean stubbed = false;
+        for (String n : stubPattern.split(",")) {
+            if (n.startsWith("component:")) {
+                n = n.substring(10);
+            }
+            stubbed |= PatternHelper.matchPattern(name, n);
+        }
+        return !stubbed;
     }
 
 }

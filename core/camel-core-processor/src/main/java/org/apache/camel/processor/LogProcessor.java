@@ -27,14 +27,13 @@ import org.apache.camel.spi.IdAware;
 import org.apache.camel.spi.LogListener;
 import org.apache.camel.spi.MaskingFormatter;
 import org.apache.camel.spi.RouteIdAware;
-import org.apache.camel.support.AsyncProcessorSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A processor which evaluates an {@link Expression} and logs it.
  */
-public class LogProcessor extends AsyncProcessorSupport implements Traceable, IdAware, RouteIdAware {
+public class LogProcessor extends BaseProcessorSupport implements Traceable, IdAware, RouteIdAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogProcessor.class);
 
@@ -79,6 +78,9 @@ public class LogProcessor extends AsyncProcessorSupport implements Traceable, Id
                     msg = fireListeners(exchange, msg);
                 }
                 logger.doLog(msg);
+                if (listeners != null && !listeners.isEmpty()) {
+                    closeListeners(exchange, msg);
+                }
             } catch (Exception e) {
                 exchange.setException(e);
             }
@@ -104,6 +106,23 @@ public class LogProcessor extends AsyncProcessorSupport implements Traceable, Id
             }
         }
         return message;
+    }
+
+    private void closeListeners(Exchange exchange, String message) {
+        for (LogListener listener : listeners) {
+            if (listener == null) {
+                continue;
+            }
+            try {
+                listener.afterLog(exchange, logger, message);
+            } catch (Exception t) {
+                LOG.warn("Ignoring an exception: {} thrown by: {} caused by: {}", t.getClass().getName(),
+                        listener.getClass().getName(), t.getMessage());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("", t);
+                }
+            }
+        }
     }
 
     @Override

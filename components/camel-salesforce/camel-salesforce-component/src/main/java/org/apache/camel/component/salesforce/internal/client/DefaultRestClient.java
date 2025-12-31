@@ -16,16 +16,22 @@
  */
 package org.apache.camel.component.salesforce.internal.client;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.camel.component.salesforce.SalesforceHttpClient;
 import org.apache.camel.component.salesforce.SalesforceLoginConfig;
 import org.apache.camel.component.salesforce.api.SalesforceException;
@@ -34,9 +40,12 @@ import org.apache.camel.component.salesforce.internal.SalesforceSession;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.URISupport;
 import org.eclipse.jetty.client.InputStreamRequestContent;
+import org.eclipse.jetty.client.MultiPartRequestContent;
 import org.eclipse.jetty.client.Request;
+import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
+import org.eclipse.jetty.http.MultiPart;
 
 public class DefaultRestClient extends AbstractClientBase implements RestClient {
 
@@ -170,6 +179,105 @@ public class DefaultRestClient extends AbstractClientBase implements RestClient 
     }
 
     @Override
+    public void createSObjectMultipart(
+            String sObjectName, Object sObjectDto, InputStream sObject,
+            Map<String, List<String>> headers, ResponseCallback callback) {
+        try {
+            final Request post = getRequest(HttpMethod.POST, sobjectsUrl(sObjectName), headers);
+
+            setAccessToken(post);
+
+            try (MultiPartRequestContent multipartContent = new MultiPartRequestContent()) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                JsonNode jsonNode = objectMapper.readTree(sObject);
+
+                if (jsonNode.isObject()) {
+                    ObjectNode objectNode = (ObjectNode) jsonNode;
+                    ObjectNode cleanJson = objectNode.deepCopy();
+
+                    Map<String, InputStream> binaryFields = getBinaryFieldMap(sObjectDto);
+
+                    if (!binaryFields.isEmpty()) {
+
+                        // Remove binary field names from JSON first
+                        for (String fieldName : binaryFields.keySet()) {
+                            cleanJson.remove(fieldName);
+                        }
+
+                        // non-binary json data must be the first part of the multipart request
+                        String cleanJsonString = objectMapper.writeValueAsString(cleanJson);
+                        multipartContent.addPart(new MultiPart.ContentSourcePart(
+                                "entity", null,
+                                HttpFields.build().add(HttpHeader.CONTENT_TYPE, APPLICATION_JSON_UTF8),
+                                new InputStreamRequestContent(
+                                        new ByteArrayInputStream(cleanJsonString.getBytes(StandardCharsets.UTF_8)))));
+
+                        // Then add binary fields as subsequent parts
+                        for (Map.Entry<String, InputStream> entry : binaryFields.entrySet()) {
+                            String fieldName = entry.getKey();
+                            InputStream binaryData = entry.getValue();
+
+                            multipartContent.addPart(new MultiPart.ContentSourcePart(
+                                    fieldName, "temp-file-name.doc",
+                                    HttpFields.build().add(HttpHeader.CONTENT_TYPE, "application/octet-stream"),
+                                    new InputStreamRequestContent(binaryData)));
+                        }
+                    } else {
+                        // No multipart data found - this shouldn't happen as processor should handle this case
+                        callback.onResponse(null, Collections.emptyMap(),
+                                new SalesforceException("createSObjectMultipart called but no binary fields found", null));
+                        return;
+                    }
+                } else {
+                    // If not a JSON object, send as-is
+                    multipartContent.addPart(new MultiPart.ContentSourcePart(
+                            "entity", null,
+                            HttpFields.build().add(HttpHeader.CONTENT_TYPE, APPLICATION_JSON_UTF8),
+                            new InputStreamRequestContent(sObject)));
+                }
+
+                post.body(multipartContent);
+            }
+
+            doHttpRequest(post, new DelegatingClientCallback(callback));
+        } catch (Exception e) {
+            // If JSON parsing fails, fall back to regular processing
+            callback.onResponse(null, Collections.emptyMap(),
+                    new SalesforceException("Failed to process multipart request: " + e.getMessage(), e));
+        }
+    }
+
+    private Map<String, InputStream> getBinaryFieldMap(Object sObject) {
+        Map<String, InputStream> binaryFields = new HashMap<>();
+
+        if (sObject == null) {
+            return binaryFields;
+        }
+
+        Class<?> clazz = sObject.getClass();
+        java.lang.reflect.Field[] fields = clazz.getDeclaredFields();
+
+        for (java.lang.reflect.Field field : fields) {
+            String fieldName = field.getName();
+
+            if (fieldName.endsWith("Binary") && field.isAnnotationPresent(JsonIgnore.class)) {
+                try {
+                    field.setAccessible(true);
+                    Object value = field.get(sObject);
+                    if (value instanceof InputStream) {
+                        String originalFieldName = fieldName.replace("Binary", "");
+                        binaryFields.put(originalFieldName, (InputStream) value);
+                    }
+                } catch (Exception e) {
+                    // Skip inaccessible fields
+                }
+            }
+        }
+
+        return binaryFields;
+    }
+
+    @Override
     public void updateSObject(
             String sObjectName, String id, InputStream sObject, Map<String, List<String>> headers, ResponseCallback callback) {
         final Request patch = getRequest("PATCH", sobjectsUrl(sObjectName + "/" + id), headers);
@@ -181,6 +289,74 @@ public class DefaultRestClient extends AbstractClientBase implements RestClient 
         patch.headers(h -> h.add(HttpHeader.CONTENT_TYPE, APPLICATION_JSON_UTF8));
 
         doHttpRequest(patch, new DelegatingClientCallback(callback));
+    }
+
+    @Override
+    public void updateSObjectMultipart(
+            String sObjectName, String id, Object sObjectDto, InputStream sObject,
+            Map<String, List<String>> headers, ResponseCallback callback) {
+        try {
+            final Request patch = getRequest("PATCH", sobjectsUrl(sObjectName + "/" + id), headers);
+            setAccessToken(patch);
+
+            try (MultiPartRequestContent multipartContent = new MultiPartRequestContent()) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                JsonNode jsonNode = objectMapper.readTree(sObject);
+
+                if (jsonNode.isObject()) {
+                    ObjectNode objectNode = (ObjectNode) jsonNode;
+                    ObjectNode cleanJson = objectNode.deepCopy();
+
+                    Map<String, InputStream> binaryFields = getBinaryFieldMap(sObjectDto);
+
+                    if (!binaryFields.isEmpty()) {
+
+                        // Remove binary field names from JSON first
+                        for (String fieldName : binaryFields.keySet()) {
+                            cleanJson.remove(fieldName);
+                        }
+
+                        // non-binary json data must be the first part of the multipart request
+                        String cleanJsonString = objectMapper.writeValueAsString(cleanJson);
+                        multipartContent.addPart(new MultiPart.ContentSourcePart(
+                                "entity", null,
+                                HttpFields.build().add(HttpHeader.CONTENT_TYPE, APPLICATION_JSON_UTF8),
+                                new InputStreamRequestContent(
+                                        new ByteArrayInputStream(cleanJsonString.getBytes(StandardCharsets.UTF_8)))));
+
+                        // Then add binary fields as subsequent parts
+                        for (Map.Entry<String, InputStream> entry : binaryFields.entrySet()) {
+                            String fieldName = entry.getKey();
+                            InputStream binaryData = entry.getValue();
+
+                            multipartContent.addPart(new MultiPart.ContentSourcePart(
+                                    fieldName, "temp-file-name.doc",
+                                    HttpFields.build().add(HttpHeader.CONTENT_TYPE, "application/octet-stream"),
+                                    new InputStreamRequestContent(binaryData)));
+                        }
+                    } else {
+                        // No multipart data found - this shouldn't happen as processor should handle this case
+                        callback.onResponse(null, Collections.emptyMap(),
+                                new SalesforceException("updateSObjectMultipart called but no binary fields found", null));
+                        return;
+                    }
+                } else {
+                    // If not a JSON object, send as-is
+                    multipartContent.addPart(new MultiPart.ContentSourcePart(
+                            "entity", null,
+                            HttpFields.build().add(HttpHeader.CONTENT_TYPE, APPLICATION_JSON_UTF8),
+                            new InputStreamRequestContent(sObject)));
+                }
+
+                patch.body(multipartContent);
+            }
+
+            doHttpRequest(patch, new DelegatingClientCallback(callback));
+        } catch (Exception e) {
+            // If JSON parsing fails, fall back to regular processing
+            callback.onResponse(null, Collections.emptyMap(),
+                    new SalesforceException("Failed to process multipart update request: " + e.getMessage(), e));
+        }
     }
 
     @Override

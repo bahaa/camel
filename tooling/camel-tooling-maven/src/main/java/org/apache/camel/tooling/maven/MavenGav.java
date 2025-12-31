@@ -33,6 +33,7 @@ public final class MavenGav {
     private String version;
     private String packaging = "jar";
     private String classifier = "";
+    private String scope;
 
     public MavenGav() {
     }
@@ -96,7 +97,18 @@ public final class MavenGav {
                 answer.setArtifactId(parts[1]);
             }
             if (parts.length > 2) {
-                answer.setVersion(parts[2]);
+                String thirdpart = parts[2];
+                // here it handles a single specific case, would be better to handle all packaging types
+                if ("pom".equals(thirdpart)) {
+                    answer.setPackaging("pom");
+                    if (parts.length > 3) {
+                        answer.setVersion(parts[3]);
+                    } else if (defaultVersion != null) {
+                        answer.setVersion(defaultVersion);
+                    }
+                } else {
+                    answer.setVersion(parts[2]);
+                }
             } else if (defaultVersion != null) {
                 answer.setVersion(defaultVersion);
             }
@@ -106,7 +118,16 @@ public final class MavenGav {
             answer.setPackaging("agent");
         } else {
             // for those used to OSGi's pax-url-aether syntax
-            String[] parts = gav.startsWith("mvn:") ? gav.substring(4).split(":") : gav.split(":");
+            String[] parts;
+            if (gav.startsWith("mvn@")) {
+                answer.setScope(gav.substring("mvn@".length(), gav.indexOf(":")));
+                parts = gav.substring(gav.indexOf(":") + 1).split(":");
+            } else if (gav.startsWith("mvn:")) {
+                parts = gav.substring(4).split(":");
+            } else {
+                parts = gav.split(":");
+            }
+
             if (parts.length > 0) {
                 answer.setGroupId(parts[0]);
             }
@@ -157,6 +178,14 @@ public final class MavenGav {
         this.version = version;
     }
 
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
     public String getPackaging() {
         return packaging;
     }
@@ -180,7 +209,8 @@ public final class MavenGav {
         }
 
         return groupId.equals(mavenGav.groupId) && artifactId.equals(mavenGav.artifactId)
-                && Objects.equals(version, mavenGav.version) && Objects.equals(packaging, mavenGav.packaging)
+                && Objects.equals(version, mavenGav.version) && Objects.equals(scope, mavenGav.scope)
+                && Objects.equals(packaging, mavenGav.packaging)
                 && Objects.equals(classifier, mavenGav.classifier);
     }
 
@@ -189,6 +219,7 @@ public final class MavenGav {
         int result = groupId.hashCode();
         result = 31 * result + artifactId.hashCode();
         result = 31 * result + Objects.hashCode(version);
+        result = 31 * result + Objects.hashCode(scope);
         result = 31 * result + Objects.hashCode(packaging);
         result = 31 * result + Objects.hashCode(classifier);
         return result;

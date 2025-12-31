@@ -16,6 +16,8 @@
  */
 package org.apache.camel.component.dapr;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -137,8 +139,68 @@ public class DaprConfigurationOptionsProxy {
         return getOption(DaprExchangeHeaders::getBindingOperationFromHeaders, configuration::getBindingOperation, exchange);
     }
 
-    public List<String> getConfigKeys(final Exchange exchange) {
+    public String getConfigKeys(final Exchange exchange) {
         return getOption(DaprExchangeHeaders::getConfigKeysFromHeaders, configuration::getConfigKeys, exchange);
+    }
+
+    public List<String> getConfigKeysAsList(final Exchange exchange) {
+        return configuration.getConfigKeysAsList();
+    }
+
+    public LockOperation getLockOperation(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getLockOperationFromHeaders, configuration::getLockOperation, exchange);
+    }
+
+    public String getStoreName(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getStoreNameFromHeaders, configuration::getStoreName, exchange);
+    }
+
+    public String getResourceId(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getResourceIdFromHeaders, configuration::getResourceId, exchange);
+    }
+
+    public String getLockOwner(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getLockOwnerFromHeaders, configuration::getLockOwner, exchange);
+    }
+
+    public Integer getExpiryInSeconds(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getExpiryInSecondsFromHeaders, configuration::getExpiryInSeconds, exchange);
+    }
+
+    public WorkflowOperation getWorkflowOperation(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getWorkflowOperationFromHeaders, configuration::getWorkflowOperation, exchange);
+    }
+
+    public String getWorkflowClass(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getWorkflowClassFromHeaders, configuration::getWorkflowClass, exchange);
+    }
+
+    public String getWorkflowVersion(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getWorkflowVersionFromHeaders, configuration::getWorkflowVersion, exchange);
+    }
+
+    public String getWorkflowInstanceId(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getWorkflowInstanceIdFromHeaders, configuration::getWorkflowInstanceId, exchange);
+    }
+
+    public Instant getWorkflowStartTime(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getWorkflowStartTimeFromHeaders, configuration::getWorkflowStartTime, exchange);
+    }
+
+    public String getReason(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getReasonFromHeaders, configuration::getReason, exchange);
+    }
+
+    public boolean getWorkflowIO(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getWorkflowIOFromHeaders, configuration::isGetWorkflowIO, exchange);
+    }
+
+    public Duration getTimeout(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getTimeoutFromHeaders, configuration::getTimeout, exchange);
+    }
+
+    public String getEventName(final Exchange exchange) {
+        return getOption(DaprExchangeHeaders::getEventNameFromHeaders, configuration::getEventName, exchange);
     }
 
     private <R> R getOption(final Function<Exchange, R> exchangeFn, final Supplier<R> fallbackFn, final Exchange exchange) {

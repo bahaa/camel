@@ -25,6 +25,11 @@ public class PineconeVectorDb {
     private PineconeVectorDb() {
     }
 
+    /**
+     * @deprecated As of Camel 4.15, this nested Headers class has been moved to its own class. Use
+     *             {@link org.apache.camel.component.pinecone.PineconeVectorDbHeaders} instead.
+     */
+    @Deprecated
     public static class Headers {
         @Metadata(description = "The action to be performed.", javaType = "String",
                   enums = "CREATE_COLLECTION,CREATE_INDEX,UPSERT,INSERT,SEARCH,DELETE,UPDATE,QUERY,QUERY_BY_ID")

@@ -3,6 +3,8 @@
  */
 package org.apache.camel.component.google.drive;
 
+import javax.annotation.processing.Generated;
+
 import org.apache.camel.spi.ApiMethod;
 import org.apache.camel.spi.ApiParam;
 import org.apache.camel.spi.ApiParams;
@@ -18,6 +20,7 @@ import org.apache.camel.spi.UriParams;
            apiMethods = {@ApiMethod(methodName = "create", description="Creates a permission for a file or shared drive", signatures={"com.google.api.services.drive.Drive$Permissions$Create create(String fileId, com.google.api.services.drive.model.Permission content)"}), @ApiMethod(methodName = "delete", description="Deletes a permission", signatures={"com.google.api.services.drive.Drive$Permissions$Delete delete(String fileId, String permissionId)"}), @ApiMethod(methodName = "get", description="Gets a permission by ID", signatures={"com.google.api.services.drive.Drive$Permissions$Get get(String fileId, String permissionId)"}), @ApiMethod(methodName = "list", description="Lists a file's or shared drive's permissions", signatures={"com.google.api.services.drive.Drive$Permissions$List list(String fileId)"}), @ApiMethod(methodName = "update", description="Updates a permission with patch semantics", signatures={"com.google.api.services.drive.Drive$Permissions$Update update(String fileId, String permissionId, com.google.api.services.drive.model.Permission content)"})}, aliases = {})
 @UriParams
 @Configurer(extended = true)
+@Generated("org.apache.camel.maven.ApiComponentGeneratorMojo")
 public final class DrivePermissionsEndpointConfiguration extends GoogleDriveConfiguration {
     @UriParam
     @ApiParam(optional = false, apiMethods = {@ApiMethod(methodName = "create", description="The com.google.api.services.drive.model.Permission"), @ApiMethod(methodName = "update", description="The com.google.api.services.drive.model.Permission")})
@@ -39,7 +42,7 @@ public final class DrivePermissionsEndpointConfiguration extends GoogleDriveConf
     @ApiParam(optional = true, apiMethods = {@ApiMethod(methodName = "list", description="Specifies which additional view's permissions to include in the response")})
     private java.lang.String includePermissionsForView;
     @UriParam
-    @ApiParam(optional = true, apiMethods = {@ApiMethod(methodName = "create", description="This parameter will only take effect if the item is not in a shared drive and the request is attempting to transfer the ownership of the item")})
+    @ApiParam(optional = true, apiMethods = {@ApiMethod(methodName = "create", description="This parameter only takes effect if the item isn't in a shared drive and the request is attempting to transfer the ownership of the item")})
     private java.lang.Boolean moveToNewOwnersRoot;
     @UriParam
     @ApiParam(optional = true, apiMethods = {@ApiMethod(methodName = "list", description="The maximum number of permissions to return per page")})
@@ -67,7 +70,7 @@ public final class DrivePermissionsEndpointConfiguration extends GoogleDriveConf
     @ApiParam(optional = true, apiMethods = {@ApiMethod(methodName = "create", description="Whether to transfer ownership to the specified user and downgrade the current owner to a writer"), @ApiMethod(methodName = "update", description="Whether to transfer ownership to the specified user and downgrade the current owner to a writer")})
     private java.lang.Boolean transferOwnership;
     @UriParam
-    @ApiParam(optional = true, apiMethods = {@ApiMethod(methodName = "create", description="Issue the request as a domain administrator; if set to true, then the requester will be granted access if the file ID parameter refers to a shared drive and the requester is an administrator of the domain to which the shared drive belongs"), @ApiMethod(methodName = "delete", description="Issue the request as a domain administrator; if set to true, then the requester will be granted access if the file ID parameter refers to a shared drive and the requester is an administrator of the domain to which the shared drive belongs"), @ApiMethod(methodName = "get", description="Issue the request as a domain administrator; if set to true, then the requester will be granted access if the file ID parameter refers to a shared drive and the requester is an administrator of the domain to which the shared drive belongs"), @ApiMethod(methodName = "list", description="Issue the request as a domain administrator; if set to true, then the requester will be granted access if the file ID parameter refers to a shared drive and the requester is an administrator of the domain to which the shared drive belongs"), @ApiMethod(methodName = "update", description="Issue the request as a domain administrator; if set to true, then the requester will be granted access if the file ID parameter refers to a shared drive and the requester is an administrator of the domain to which the shared drive belongs")})
+    @ApiParam(optional = true, apiMethods = {@ApiMethod(methodName = "create", description="Issue the request as a domain administrator"), @ApiMethod(methodName = "delete", description="Issue the request as a domain administrator"), @ApiMethod(methodName = "get", description="Issue the request as a domain administrator"), @ApiMethod(methodName = "list", description="Issue the request as a domain administrator"), @ApiMethod(methodName = "update", description="Issue the request as a domain administrator")})
     private java.lang.Boolean useDomainAdminAccess;
 
     public com.google.api.services.drive.model.Permission getContent() {

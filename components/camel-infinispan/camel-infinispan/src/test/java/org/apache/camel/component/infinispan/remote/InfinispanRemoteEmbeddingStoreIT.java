@@ -18,6 +18,7 @@ package org.apache.camel.component.infinispan.remote;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 import dev.langchain4j.data.embedding.Embedding;
 import org.apache.camel.CamelContext;
@@ -28,23 +29,23 @@ import org.apache.camel.component.infinispan.InfinispanConstants;
 import org.apache.camel.component.infinispan.InfinispanOperation;
 import org.apache.camel.component.infinispan.remote.embeddingstore.EmbeddingStoreUtil;
 import org.apache.camel.spi.DataType;
+import org.apache.commons.lang3.SystemUtils;
 import org.awaitility.Awaitility;
 import org.infinispan.api.annotations.indexing.option.VectorSimilarity;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.infinispan.commons.api.BasicCache;
 import org.infinispan.commons.configuration.StringConfiguration;
-import org.infinispan.query.remote.client.ProtobufMetadataManagerConstants;
+import org.infinispan.protostream.schema.Schema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.testcontainers.shaded.org.apache.commons.lang3.SystemUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSupport {
     private static final String CACHE_NAME = "camel-infinispan-embeddings";
@@ -87,10 +88,9 @@ public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSuppor
         try {
             manager.start();
 
-            BasicCache<Object, Object> metadataCache
-                    = manager.getCache(ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME);
-            Object metadata = metadataCache.get(EmbeddingStoreUtil.getSchemeFileName(configuration));
-            assertNull(metadata);
+            Optional<Schema> metadata
+                    = cacheContainer.administration().schemas().get(EmbeddingStoreUtil.getSchemeFileName(configuration));
+            assertTrue(metadata.isEmpty());
         } finally {
             manager.stop();
         }
@@ -106,10 +106,9 @@ public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSuppor
         try {
             manager.start();
 
-            BasicCache<Object, Object> metadataCache
-                    = manager.getCache(ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME);
-            Object metadata = metadataCache.get(EmbeddingStoreUtil.getSchemeFileName(configuration));
-            assertNull(metadata);
+            Optional<Schema> metadata
+                    = cacheContainer.administration().schemas().get(EmbeddingStoreUtil.getSchemeFileName(configuration));
+            assertTrue(metadata.isEmpty());
         } finally {
             manager.stop();
         }
@@ -131,8 +130,9 @@ public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSuppor
         try {
             manager.start();
 
-            metadataCache = manager.getCache(ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME);
-            Object metadata = metadataCache.get(EmbeddingStoreUtil.getSchemeFileName(configuration));
+            Optional<Schema> metadata
+                    = cacheContainer.administration().schemas().get(EmbeddingStoreUtil.getSchemeFileName(configuration));
+            assertTrue(metadata.isPresent());
             assertNotNull(metadata);
         } finally {
             if (metadataCache != null) {
@@ -179,13 +179,13 @@ public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSuppor
             public void configure() throws Exception {
                 from("direct:put")
                         .setHeader(CamelLangchain4jAttributes.CAMEL_LANGCHAIN4J_EMBEDDING_VECTOR).body()
-                        .transform(new DataType("infinispan:embeddings"))
+                        .transformDataType(new DataType("infinispan:embeddings"))
                         .toF("infinispan://%s?embeddingStoreDimension=3", CACHE_NAME);
 
                 from("direct:query")
                         .setHeader(CamelLangchain4jAttributes.CAMEL_LANGCHAIN4J_EMBEDDING_VECTOR).body()
                         .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.QUERY)
-                        .transform(new DataType("infinispan:embeddings"))
+                        .transformDataType(new DataType("infinispan:embeddings"))
                         .toF("infinispan://%s?embeddingStoreDimension=3&embeddingStoreDistance=2", CACHE_NAME);
             }
         };

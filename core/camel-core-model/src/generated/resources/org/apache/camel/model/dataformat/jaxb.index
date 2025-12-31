@@ -18,9 +18,11 @@ FhirXmlDataFormat
 FlatpackDataFormat
 ForyDataFormat
 GrokDataFormat
+GroovyXmlDataFormat
 GzipDeflaterDataFormat
 HL7DataFormat
 IcalDataFormat
+Iso8583DataFormat
 JacksonXMLDataFormat
 JaxbDataFormat
 JsonApiDataFormat
@@ -29,6 +31,7 @@ JsonLibrary
 LZFDataFormat
 MimeMultipartDataFormat
 PGPDataFormat
+PQCDataFormat
 ParquetAvroDataFormat
 ProtobufDataFormat
 ProtobufLibrary
@@ -40,7 +43,6 @@ SwiftMxDataFormat
 SyslogDataFormat
 TarFileDataFormat
 ThriftDataFormat
-TidyMarkupDataFormat
 UniVocityCsvDataFormat
 UniVocityFixedDataFormat
 UniVocityHeader
@@ -48,7 +50,5 @@ UniVocityTsvDataFormat
 XMLSecurityDataFormat
 YAMLDataFormat
 YAMLLibrary
-YAMLTypeFilterDefinition
-YAMLTypeFilterType
 ZipDeflaterDataFormat
 ZipFileDataFormat

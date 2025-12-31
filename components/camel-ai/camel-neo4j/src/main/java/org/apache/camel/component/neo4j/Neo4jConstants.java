@@ -25,6 +25,11 @@ public class Neo4jConstants {
     private Neo4jConstants() {
     }
 
+    /**
+     * @deprecated As of Camel 4.15, this nested Headers class has been moved to its own class. Use
+     *             {@link org.apache.camel.component.neo4j.Neo4jHeaders} instead.
+     */
+    @Deprecated
     public static class Headers {
         @Metadata(description = "The operation to be performed.", javaType = "String",
                   enums = "CREATE_NODE,DELETE_NODE,RETRIEVE_NODES,RETRIEVE_NODES_AND_UPDATE_WITH_CYPHER_QUERY,ADD_OR_DELETE_NODE_WITH_CYPHER_QUERY,CREATE_VECTOR_INDEX,DROP_VECTOR_INDEX,CREATE_VECTOR,VECTOR_SIMILARITY_SEARCH")

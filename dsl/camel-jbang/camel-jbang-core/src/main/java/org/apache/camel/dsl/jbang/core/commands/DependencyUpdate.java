@@ -28,7 +28,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import org.apache.camel.dsl.jbang.core.common.RuntimeType;
 import org.apache.camel.tooling.maven.MavenGav;
+import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.xml.XmlLineNumberParser;
@@ -69,6 +71,20 @@ public class DependencyUpdate extends DependencyList {
         if (clean && !maven) {
             // remove DEPS in source file first
             updateJBangSource();
+        }
+
+        if (maven && this.runtime == null) {
+            // Basic heuristic to determine if the project is a Quarkus or Spring Boot one.
+            String pomContent = new String(Files.readAllBytes(file));
+            if (pomContent.contains("quarkus")) {
+                runtime = RuntimeType.quarkus;
+            } else if (pomContent.contains("spring-boot")) {
+                runtime = RuntimeType.springBoot;
+            } else if (pomContent.contains("camel-main")) {
+                runtime = RuntimeType.main;
+            } else {
+                // In case no specific word found, we keep the runtime type unset even if the fallback is currently on Main Runtime type
+            }
         }
 
         return super.doCall();
@@ -123,13 +139,18 @@ public class DependencyUpdate extends DependencyList {
             // find position of where the old DEPS was
             int pos = -1;
             for (int i = 0; i < lines.size(); i++) {
-                String l = lines.get(i);
-                if (l.trim().startsWith("//DEPS ")) {
+                String o = lines.get(i);
+                // remove leading comments
+                String l = o.trim();
+                while (l.startsWith("#")) {
+                    l = l.substring(1);
+                }
+                if (l.startsWith("//DEPS ")) {
                     if (pos == -1) {
                         pos = i;
                     }
                 } else {
-                    answer.add(l);
+                    answer.add(o);
                 }
             }
             // add after shebang in top
@@ -145,6 +166,11 @@ public class DependencyUpdate extends DependencyList {
             // reverse collection as we insert pos based
             Collections.reverse(deps);
             for (String dep : deps) {
+                // is this XML or YAML
+                String ext = FileUtil.onlyExt(file.getFileName().toString(), true);
+                if ("yaml".equals(ext)) {
+                    dep = "#" + dep;
+                }
                 answer.add(pos, dep);
             }
 
@@ -232,7 +258,10 @@ public class DependencyUpdate extends DependencyList {
             List<MavenGav> updates = new ArrayList<>();
             for (MavenGav gav : gavs) {
                 MavenGav target;
-                if (camelVersion != null) {
+                if ("org.apache.camel.kamelets".equals(gav.getGroupId())) {
+                    // special for kamelets (should be as-is)
+                    target = gav;
+                } else if (camelVersion != null) {
                     target = MavenGav.parseGav(gav.getGroupId() + ":" + gav.getArtifactId() + ":" + camelVersion);
                 } else {
                     target = MavenGav.parseGav(gav.getGroupId() + ":" + gav.getArtifactId());
@@ -269,6 +298,9 @@ public class DependencyUpdate extends DependencyList {
                     sj.add(pad2).add("<artifactId>" + gav.getArtifactId() + "</artifactId>\n");
                     if (gav.getVersion() != null) {
                         sj.add(pad2).add("<version>" + gav.getVersion() + "</version>\n");
+                    }
+                    if (gav.getScope() != null) {
+                        sj.add(pad2).add("<scope>" + gav.getScope() + "</scope>\n");
                     }
                     sj.add(pad).add("</dependency>");
                 }

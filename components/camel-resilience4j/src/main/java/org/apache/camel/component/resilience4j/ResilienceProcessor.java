@@ -30,11 +30,14 @@ import java.util.function.Supplier;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.timelimiter.TimeLimiter;
 import io.github.resilience4j.timelimiter.TimeLimiterConfig;
+import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import io.vavr.control.Try;
 import org.apache.camel.AsyncCallback;
 import org.apache.camel.CamelContext;
@@ -48,6 +51,7 @@ import org.apache.camel.RuntimeExchangeException;
 import org.apache.camel.api.management.ManagedAttribute;
 import org.apache.camel.api.management.ManagedOperation;
 import org.apache.camel.api.management.ManagedResource;
+import org.apache.camel.processor.BaseProcessorSupport;
 import org.apache.camel.processor.PooledExchangeTask;
 import org.apache.camel.processor.PooledExchangeTaskFactory;
 import org.apache.camel.processor.PooledTaskFactory;
@@ -56,7 +60,6 @@ import org.apache.camel.spi.IdAware;
 import org.apache.camel.spi.ProcessorExchangeFactory;
 import org.apache.camel.spi.RouteIdAware;
 import org.apache.camel.spi.UnitOfWork;
-import org.apache.camel.support.AsyncProcessorSupport;
 import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.support.PluginHelper;
 import org.apache.camel.support.UnitOfWorkHelper;
@@ -69,12 +72,16 @@ import org.slf4j.LoggerFactory;
  * Implementation of Circuit Breaker EIP using resilience4j.
  */
 @ManagedResource(description = "Managed Resilience Processor")
-public class ResilienceProcessor extends AsyncProcessorSupport
+public class ResilienceProcessor extends BaseProcessorSupport
         implements CamelContextAware, Navigate<Processor>, org.apache.camel.Traceable, IdAware, RouteIdAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(ResilienceProcessor.class);
 
-    private volatile CircuitBreaker circuitBreaker;
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+    private TimeLimiterRegistry timeLimiterRegistry;
+    private BulkheadRegistry bulkheadRegistry;
+    private CircuitBreaker circuitBreaker;
+    private boolean createCircuitBreaker = true;
     private CamelContext camelContext;
     private String id;
     private String routeId;
@@ -111,13 +118,6 @@ public class ResilienceProcessor extends AsyncProcessorSupport
     @Override
     protected void doBuild() throws Exception {
         ObjectHelper.notNull(camelContext, "CamelContext", this);
-
-        if (timeLimiterConfig != null) {
-            timeLimiter = TimeLimiter.of(id, timeLimiterConfig);
-        }
-        if (bulkheadConfig != null) {
-            bulkhead = Bulkhead.of(id, bulkheadConfig);
-        }
 
         boolean pooled = camelContext.getCamelContextExtension().getExchangeFactory().isPooled();
         if (pooled) {
@@ -162,10 +162,15 @@ public class ResilienceProcessor extends AsyncProcessorSupport
 
     @Override
     protected void doStart() throws Exception {
-        if (circuitBreaker == null) {
-            circuitBreaker = CircuitBreaker.of(id, circuitBreakerConfig);
+        if (createCircuitBreaker && circuitBreaker == null) {
+            circuitBreaker = circuitBreakerRegistry.circuitBreaker(id, circuitBreakerConfig);
         }
-
+        if (timeLimiterConfig != null) {
+            timeLimiter = timeLimiterRegistry.timeLimiter(id, timeLimiterConfig);
+        }
+        if (bulkheadConfig != null) {
+            bulkhead = bulkheadRegistry.bulkhead(id, bulkheadConfig);
+        }
         ServiceHelper.startService(processorExchangeFactory, taskFactory, fallbackTaskFactory, processor);
     }
 
@@ -176,6 +181,17 @@ public class ResilienceProcessor extends AsyncProcessorSupport
         }
 
         ServiceHelper.stopService(processorExchangeFactory, taskFactory, fallbackTaskFactory, processor);
+
+        if (createCircuitBreaker) {
+            circuitBreakerRegistry.remove(id);
+            circuitBreaker = null;
+        }
+        if (timeLimiter != null) {
+            timeLimiterRegistry.remove(id);
+        }
+        if (bulkhead != null) {
+            bulkheadRegistry.remove(id);
+        }
     }
 
     @Override
@@ -213,12 +229,37 @@ public class ResilienceProcessor extends AsyncProcessorSupport
         this.routeId = routeId;
     }
 
+    public CircuitBreakerRegistry getCircuitBreakerRegistry() {
+        return circuitBreakerRegistry;
+    }
+
+    public void setCircuitBreakerRegistry(CircuitBreakerRegistry circuitBreakerRegistry) {
+        this.circuitBreakerRegistry = circuitBreakerRegistry;
+    }
+
+    public TimeLimiterRegistry getTimeLimiterRegistry() {
+        return timeLimiterRegistry;
+    }
+
+    public void setTimeLimiterRegistry(TimeLimiterRegistry timeLimiterRegistry) {
+        this.timeLimiterRegistry = timeLimiterRegistry;
+    }
+
+    public BulkheadRegistry getBulkheadRegistry() {
+        return bulkheadRegistry;
+    }
+
+    public void setBulkheadRegistry(BulkheadRegistry bulkheadRegistry) {
+        this.bulkheadRegistry = bulkheadRegistry;
+    }
+
     public CircuitBreaker getCircuitBreaker() {
         return circuitBreaker;
     }
 
     public void setCircuitBreaker(CircuitBreaker circuitBreaker) {
         this.circuitBreaker = circuitBreaker;
+        this.createCircuitBreaker = false;
     }
 
     public boolean isShutdownExecutorService() {

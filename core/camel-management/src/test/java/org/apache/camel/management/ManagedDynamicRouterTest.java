@@ -79,6 +79,9 @@ public class ManagedDynamicRouterTest extends ManagementTestSupport {
         String uri = (String) mbeanServer.getAttribute(on, "Expression");
         assertEquals("whereTo", uri);
 
+        String destination = (String) mbeanServer.getAttribute(on, "Destination");
+        assertEquals("whereTo", destination);
+
         TabularData data = (TabularData) mbeanServer.invoke(on, "extendedInformation", null, null);
         assertNotNull(data);
         assertEquals(2, data.size());

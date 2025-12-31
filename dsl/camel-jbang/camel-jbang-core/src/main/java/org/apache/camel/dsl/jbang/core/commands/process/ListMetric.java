@@ -150,6 +150,9 @@ public class ListMetric extends ProcessWatchCommand {
                                     JsonObject jo = (JsonObject) arr.get(i);
                                     row.type = "gauge";
                                     row.metricName = jo.getString("name");
+                                    if ("app.info".equals(row.metricName)) {
+                                        continue; // special camel info that hides in the metrics
+                                    }
                                     row.metricDescription = jo.getString("description");
                                     row.metricId = extractId(jo);
                                     row.tags = extractTags(jo);
@@ -323,7 +326,7 @@ public class ListMetric extends ProcessWatchCommand {
             try {
                 return (Row) clone();
             } catch (CloneNotSupportedException e) {
-                return null;
+                throw new RuntimeException(e);
             }
         }
     }

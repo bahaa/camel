@@ -77,6 +77,7 @@ public class FromDefinition extends OptionalIdentifiedDefinition<FromDefinition>
         copy.setId(this.getId());
         copy.setCustomId(this.getCustomId());
         copy.setDescription(this.getDescription());
+        copy.setNote(this.getNote());
         copy.setLineNumber(this.getLineNumber());
         copy.setLocation(this.getLocation());
         return copy;
@@ -105,7 +106,7 @@ public class FromDefinition extends OptionalIdentifiedDefinition<FromDefinition>
         } else if (endpoint != null) {
             return endpoint.getEndpointUri();
         } else if (endpointConsumerBuilder != null) {
-            return endpointConsumerBuilder.getUri();
+            return endpointConsumerBuilder.getRawUri();
         } else {
             return null;
         }

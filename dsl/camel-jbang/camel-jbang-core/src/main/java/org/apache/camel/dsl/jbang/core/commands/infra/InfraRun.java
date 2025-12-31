@@ -16,33 +16,46 @@
  */
 package org.apache.camel.dsl.jbang.core.commands.infra;
 
+import java.io.Console;
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Scanner;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
+import org.apache.camel.dsl.jbang.core.common.Printer;
 import org.apache.camel.dsl.jbang.core.common.RuntimeUtil;
 import org.apache.camel.main.download.DependencyDownloaderClassLoader;
 import org.apache.camel.main.download.MavenDependencyDownloader;
 import org.apache.camel.tooling.maven.MavenArtifact;
 import picocli.CommandLine;
 
-@CommandLine.Command(name = "run",
-                     description = "Run an external service")
+import static org.apache.camel.dsl.jbang.core.commands.RunHelper.addCamelJBangCommand;
+
+@CommandLine.Command(name = "run", description = "Run an external service", sortOptions = false, showDefaultValues = true)
 public class InfraRun extends InfraBaseCommand {
+
+    @CommandLine.Spec
+    CommandLine.Model.CommandSpec spec;
 
     @CommandLine.Parameters(description = "Service name", arity = "1")
     private List<String> serviceName;
 
     @CommandLine.Option(names = { "--log" },
-                        description = "Log container's output to console")
+                        description = "Log container output to console")
     boolean logToStdout;
+
+    @CommandLine.Option(names = { "--background" }, defaultValue = "false", description = "Run in the background")
+    boolean background;
 
     public InfraRun(CamelJBangMain main) {
         super(main);
@@ -57,12 +70,10 @@ public class InfraRun extends InfraBaseCommand {
         String service = serviceName.get(0);
         String serviceImplementation = serviceName.size() > 1 ? serviceName.get(1) : null;
 
-        run(service, serviceImplementation);
-
-        return 0;
+        return run(service, serviceImplementation);
     }
 
-    private void run(String testService, String testServiceImplementation) throws Exception {
+    private Integer run(String testService, String testServiceImplementation) throws Exception {
         List<TestInfraService> services = getMetadata();
 
         TestInfraService testInfraService = services
@@ -87,28 +98,50 @@ public class InfraRun extends InfraBaseCommand {
             if (testServiceImplementation != null) {
                 printer().println("service " + testService + " with implementation " + testServiceImplementation + " not found"
                                   + message);
-
-                return;
             }
-
             printer().println("service " + testService + " not found" + message);
+            return 1;
         }
 
-        DependencyDownloaderClassLoader cl = getDependencyDownloaderClassLoader(testInfraService);
+        if (background) {
+            return runBackground(testService);
+        } else {
+            return doRun(testService, testServiceImplementation, testInfraService);
+        }
+    }
+
+    protected int runBackground(String testService) throws Exception {
+        List<String> cmds;
+        if (spec != null) {
+            cmds = new ArrayList<>(spec.commandLine().getParseResult().originalArgs());
+        } else {
+            cmds = new ArrayList<>();
+            cmds.add("run");
+        }
+
+        cmds.remove("--background=true");
+        cmds.remove("--background");
+
+        addCamelJBangCommand(cmds);
+
+        ProcessBuilder pb = new ProcessBuilder();
+        pb.command(cmds);
+
+        Process p = pb.start();
+        printer().println(
+                "Running " + testService + " in background with PID: " + p.pid());
+        return 0;
+    }
+
+    protected Integer doRun(String testService, String testServiceImplementation, TestInfraService testInfraService)
+            throws Exception {
+        DependencyDownloaderClassLoader cl = getDependencyDownloaderClassLoader(testInfraService, printer());
 
         // Update the class loader
         Thread.currentThread().setContextClassLoader(cl);
 
         String serviceInterface = testInfraService.service();
         String serviceImpl = testInfraService.implementation();
-
-        if (!jsonOutput) {
-            String prefix = "";
-            if (testServiceImplementation != null && !testServiceImplementation.isEmpty()) {
-                prefix = " with implementation " + testServiceImplementation;
-            }
-            printer().println("Starting service " + testService + prefix);
-        }
 
         Object actualService = cl.loadClass(serviceImpl).newInstance();
 
@@ -124,31 +157,35 @@ public class InfraRun extends InfraBaseCommand {
 
         if (!actualServiceIsAnInfrastructureService) {
             printer().println("Service " + serviceImpl + " is not an InfrastructureService");
-
-            return;
+            return 1;
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (actualService != null) {
-                try {
-                    actualService.getClass().getMethod("shutdown").invoke(actualService);
-                } catch (Exception e) {
-                    printer().printErr(e);
-                }
+        if (!jsonOutput) {
+            String prefix = "";
+            if (testServiceImplementation != null) {
+                prefix = " with implementation " + testServiceImplementation;
             }
-        }));
-
+            printer().println("Starting service " + testService + prefix + " (PID: " + RuntimeUtil.getPid() + ")");
+        }
         actualService.getClass().getMethod("initialize").invoke(actualService);
 
         Method[] serviceMethods = cl.loadClass(serviceInterface).getDeclaredMethods();
-        HashMap properties = new HashMap();
+        Map<String, Object> properties = new TreeMap<>();
         for (Method method : serviceMethods) {
             if (method.getParameterCount() == 0 && !method.getName().contains("registerProperties")) {
-                properties.put(method.getName(), method.invoke(actualService));
+                Object value = null;
+                try {
+                    value = method.invoke(actualService);
+                } catch (Exception e) {
+                    // ignore
+                }
+                if (value != null) {
+                    properties.put(method.getName(), value);
+                }
             }
         }
 
-        String jsonProperties = jsonMapper.writeValueAsString(properties);
+        String jsonProperties = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(properties);
         printer().println(jsonProperties);
 
         String name = getLogFileName(testService, RuntimeUtil.getPid());
@@ -156,53 +193,120 @@ public class InfraRun extends InfraBaseCommand {
 
         String jsonName = getJsonFileName(testService, RuntimeUtil.getPid());
         Path jsonFile = createFile(jsonName);
-        Files.write(jsonFile, jsonProperties.getBytes());
+        Files.write(jsonFile, jsonMapper.writeValueAsString(properties).getBytes());
 
-        if (Arrays.stream(actualService.getClass().getInterfaces()).filter(
-                c -> c.getName().contains("ContainerService")).count()
-            > 0) {
+        if (Arrays.stream(actualService.getClass().getInterfaces()).anyMatch(c -> c.getName().contains("ContainerService"))) {
             Object containerLogConsumer = cl.loadClass("org.apache.camel.test.infra.common.CamelLogConsumer")
                     .getConstructor(Path.class, boolean.class).newInstance(logFile, logToStdout);
-
             actualService.getClass()
                     .getMethod("followLog", cl.loadClass("org.testcontainers.containers.output.BaseConsumer"))
                     .invoke(actualService, containerLogConsumer);
         }
 
-        if (!jsonOutput) {
-            printer().println("Press any key to stop the execution");
-        }
-        Scanner sc = new Scanner(System.in);
+        AtomicBoolean closed = new AtomicBoolean();
+        // use shutdown hook as fallback to shut-down and delete files
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdownInfra(closed, logFile, jsonFile, actualService)));
 
-        while (!sc.hasNext()) {
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        // running in foreground then wait for user to exit
+        final Console c = System.console();
+        if (c != null) {
+            if (!jsonOutput) {
+                printer().println("Press ENTER to stop the execution");
+            }
+            Thread t = new Thread(() -> {
+                boolean quit = false;
+                do {
+                    String line = c.readLine();
+                    if (line != null) {
+                        quit = true;
+                        latch.countDown();
+                    }
+                } while (!quit);
+            }, "WaitEnter");
+            t.start();
+        } else {
+            // wait for this process to be stopped
+            printer().println("Running (use camel infra stop "
+                              + testService + (testServiceImplementation != null ? " " + testServiceImplementation : "")
+                              + " to stop the execution)");
         }
 
-        actualService.getClass().getMethod("shutdown").invoke(actualService);
-        sc.close();
+        // always wait for external signal to stop if the json-file is deleted
+        Thread t = new Thread(() -> {
+            while (latch.getCount() > 0) {
+                try {
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    // ignore
+                }
+                File f = jsonFile.toFile();
+                if (!f.exists()) {
+                    latch.countDown();
+                }
+            }
+        }, "WaitShutdownSignal");
+        t.start();
+
+        try {
+            latch.await();
+        } catch (Exception e) {
+            // ignore
+        }
+
+        shutdownInfra(closed, logFile, jsonFile, actualService);
+
+        return 0;
+    }
+
+    private static void shutdownInfra(AtomicBoolean closed, Path logFile, Path jsonFile, Object actualService) {
+        if (closed.compareAndSet(false, true)) {
+            try {
+                actualService.getClass().getMethod("shutdown").invoke(actualService);
+            } catch (Exception e) {
+                // ignore
+            }
+            try {
+                Files.deleteIfExists(logFile);
+            } catch (Exception e) {
+                // ignore
+            }
+            try {
+                Files.deleteIfExists(jsonFile);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
     }
 
     private static Path createFile(String name) throws IOException {
-        Path logFile = CommandLineHelper.getCamelDir().resolve(name);
+        Path logDir = CommandLineHelper.getCamelDir();
+        Files.createDirectories(logDir); //make sure the parent dir exists
+        Path logFile = logDir.resolve(name);
         Files.createFile(logFile);
         return logFile;
     }
 
     private static DependencyDownloaderClassLoader getDependencyDownloaderClassLoader(
-            TestInfraService testInfraService) {
+            TestInfraService testInfraService, Printer printer) {
         DependencyDownloaderClassLoader cl = new DependencyDownloaderClassLoader(InfraRun.class.getClassLoader());
 
-        MavenDependencyDownloader downloader = new MavenDependencyDownloader();
-        downloader.setClassLoader(cl);
-        downloader.start();
-        // download required camel-test-infra-* dependency
-        downloader.downloadDependency(testInfraService.groupId(),
-                testInfraService.artifactId(),
-                testInfraService.version(), true);
+        try (MavenDependencyDownloader downloader = new MavenDependencyDownloader()) {
+            downloader.setClassLoader(cl);
+            downloader.start();
+            // download required camel-test-infra-* dependency
+            downloader.downloadDependency(testInfraService.groupId(),
+                    testInfraService.artifactId(),
+                    testInfraService.version(), true);
 
-        MavenArtifact ma = downloader.downloadArtifact(testInfraService.groupId(),
-                testInfraService.artifactId(),
-                testInfraService.version());
-        cl.addFile(ma.getFile());
+            MavenArtifact ma = downloader.downloadArtifact(testInfraService.groupId(),
+                    testInfraService.artifactId(),
+                    testInfraService.version());
+            cl.addFile(ma.getFile());
+        } catch (Exception e) {
+            printer.printErr(e);
+        }
         return cl;
     }
 

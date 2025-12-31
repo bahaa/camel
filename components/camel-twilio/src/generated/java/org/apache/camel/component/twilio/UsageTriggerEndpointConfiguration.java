@@ -3,6 +3,8 @@
  */
 package org.apache.camel.component.twilio;
 
+import javax.annotation.processing.Generated;
+
 import org.apache.camel.spi.ApiMethod;
 import org.apache.camel.spi.ApiParam;
 import org.apache.camel.spi.ApiParams;
@@ -15,9 +17,10 @@ import org.apache.camel.spi.UriParams;
  */
 @ApiParams(apiName = "usage-trigger", 
            description = "",
-           apiMethods = {@ApiMethod(methodName = "creator", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerCreator creator(java.net.URI callbackUrl, String triggerValue, com.twilio.rest.api.v2010.account.usage.Trigger$UsageCategory usageCategory)", "com.twilio.rest.api.v2010.account.usage.TriggerCreator creator(String pathAccountSid, java.net.URI callbackUrl, String triggerValue, com.twilio.rest.api.v2010.account.usage.Trigger$UsageCategory usageCategory)"}), @ApiMethod(methodName = "deleter", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerDeleter deleter(String pathSid)", "com.twilio.rest.api.v2010.account.usage.TriggerDeleter deleter(String pathAccountSid, String pathSid)"}), @ApiMethod(methodName = "fetcher", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerFetcher fetcher(String pathSid)", "com.twilio.rest.api.v2010.account.usage.TriggerFetcher fetcher(String pathAccountSid, String pathSid)"}), @ApiMethod(methodName = "reader", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerReader reader()", "com.twilio.rest.api.v2010.account.usage.TriggerReader reader(String pathAccountSid)"}), @ApiMethod(methodName = "updater", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerUpdater updater(String pathSid)", "com.twilio.rest.api.v2010.account.usage.TriggerUpdater updater(String pathAccountSid, String pathSid)"}), }, aliases = {"^creator$=create", "^deleter$=delete", "^fetcher$=fetch", "^reader$=read", "^updater$=update"})
+           apiMethods = {@ApiMethod(methodName = "creator", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerCreator creator(java.net.URI callbackUrl, String triggerValue, String usageCategory)", "com.twilio.rest.api.v2010.account.usage.TriggerCreator creator(String pathAccountSid, java.net.URI callbackUrl, String triggerValue, String usageCategory)"}), @ApiMethod(methodName = "deleter", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerDeleter deleter(String pathSid)", "com.twilio.rest.api.v2010.account.usage.TriggerDeleter deleter(String pathAccountSid, String pathSid)"}), @ApiMethod(methodName = "fetcher", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerFetcher fetcher(String pathSid)", "com.twilio.rest.api.v2010.account.usage.TriggerFetcher fetcher(String pathAccountSid, String pathSid)"}), @ApiMethod(methodName = "reader", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerReader reader()", "com.twilio.rest.api.v2010.account.usage.TriggerReader reader(String pathAccountSid)"}), @ApiMethod(methodName = "updater", signatures={"com.twilio.rest.api.v2010.account.usage.TriggerUpdater updater(String pathSid)", "com.twilio.rest.api.v2010.account.usage.TriggerUpdater updater(String pathAccountSid, String pathSid)"}), }, aliases = {"^creator$=create", "^deleter$=delete", "^fetcher$=fetch", "^reader$=read", "^updater$=update"})
 @UriParams
 @Configurer(extended = true)
+@Generated("org.apache.camel.maven.ApiComponentGeneratorMojo")
 public final class UsageTriggerEndpointConfiguration extends TwilioConfiguration {
     @UriParam
     @ApiParam(optional = false, apiMethods = {@ApiMethod(methodName = "creator")})
@@ -33,7 +36,7 @@ public final class UsageTriggerEndpointConfiguration extends TwilioConfiguration
     private String triggerValue;
     @UriParam
     @ApiParam(optional = false, apiMethods = {@ApiMethod(methodName = "creator")})
-    private com.twilio.rest.api.v2010.account.usage.Trigger.UsageCategory usageCategory;
+    private String usageCategory;
 
     public java.net.URI getCallbackUrl() {
         return callbackUrl;
@@ -67,11 +70,11 @@ public final class UsageTriggerEndpointConfiguration extends TwilioConfiguration
         this.triggerValue = triggerValue;
     }
 
-    public com.twilio.rest.api.v2010.account.usage.Trigger.UsageCategory getUsageCategory() {
+    public String getUsageCategory() {
         return usageCategory;
     }
 
-    public void setUsageCategory(com.twilio.rest.api.v2010.account.usage.Trigger.UsageCategory usageCategory) {
+    public void setUsageCategory(String usageCategory) {
         this.usageCategory = usageCategory;
     }
 }

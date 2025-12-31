@@ -21,9 +21,9 @@ public class ActiveMQEndpointUriFactory extends org.apache.camel.support.compone
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(104);
+        Set<String> props = new HashSet<>(105);
         props.add("acceptMessagesWhileStopping");
         props.add("acknowledgementModeName");
         props.add("allowAdditionalHeaders");
@@ -92,6 +92,7 @@ public class ActiveMQEndpointUriFactory extends org.apache.camel.support.compone
         props.add("pubSubNoLocal");
         props.add("receiveTimeout");
         props.add("recoveryInterval");
+        props.add("replyCorrelationProperty");
         props.add("replyTo");
         props.add("replyToCacheLevelName");
         props.add("replyToConcurrentConsumers");
@@ -133,9 +134,9 @@ public class ActiveMQEndpointUriFactory extends org.apache.camel.support.compone
         secretProps.add("password");
         secretProps.add("username");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
-        Set<String> prefixes = new HashSet<>(1);
-        prefixes.add("destination.");
-        MULTI_VALUE_PREFIXES = Collections.unmodifiableSet(prefixes);
+        Map<String, String> prefixes = new HashMap<>(1);
+        prefixes.put("destinationOptions", "destination.");
+        MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
     }
 
     @Override
@@ -167,7 +168,7 @@ public class ActiveMQEndpointUriFactory extends org.apache.camel.support.compone
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

@@ -17,6 +17,7 @@
 package org.apache.camel.test.infra.milvus.services;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
 
@@ -45,6 +46,10 @@ public class MilvusLocalContainerInfraService implements MilvusInfraService, Con
 
     public MilvusLocalContainerInfraService(String imageName) {
         container = initContainer(imageName);
+        String name = ContainerEnvironmentUtil.containerName(this.getClass());
+        if (name != null) {
+            container.withCreateContainerCmdModifier(cmd -> cmd.withName(name));
+        }
     }
 
     public MilvusLocalContainerInfraService(MilvusContainer container) {
@@ -103,7 +108,7 @@ public class MilvusLocalContainerInfraService implements MilvusInfraService, Con
     public String host() {
         URL url = null;
         try {
-            url = new URL(container.getEndpoint());
+            url = URI.create(container.getEndpoint()).toURL();
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }
@@ -114,7 +119,7 @@ public class MilvusLocalContainerInfraService implements MilvusInfraService, Con
     public int port() {
         URL url = null;
         try {
-            url = new URL(container.getEndpoint());
+            url = URI.create(container.getEndpoint()).toURL();
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }

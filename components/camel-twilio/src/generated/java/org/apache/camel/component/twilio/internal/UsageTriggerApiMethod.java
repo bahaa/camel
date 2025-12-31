@@ -5,6 +5,7 @@ package org.apache.camel.component.twilio.internal;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import javax.annotation.processing.Generated;
 
 import com.twilio.rest.api.v2010.account.usage.Trigger;
 
@@ -18,6 +19,7 @@ import static org.apache.camel.support.component.ApiMethodArg.setter;
 /**
  * Camel {@link ApiMethod} Enumeration for com.twilio.rest.api.v2010.account.usage.Trigger
  */
+@Generated("org.apache.camel.maven.ApiComponentGeneratorMojo")
 public enum UsageTriggerApiMethod implements ApiMethod {
 
     CREATOR(
@@ -25,7 +27,7 @@ public enum UsageTriggerApiMethod implements ApiMethod {
         "creator",
         arg("callbackUrl", java.net.URI.class),
         arg("triggerValue", String.class),
-        arg("usageCategory", com.twilio.rest.api.v2010.account.usage.Trigger.UsageCategory.class)),
+        arg("usageCategory", String.class)),
 
     CREATOR_1(
         com.twilio.rest.api.v2010.account.usage.TriggerCreator.class,
@@ -33,7 +35,7 @@ public enum UsageTriggerApiMethod implements ApiMethod {
         arg("pathAccountSid", String.class),
         arg("callbackUrl", java.net.URI.class),
         arg("triggerValue", String.class),
-        arg("usageCategory", com.twilio.rest.api.v2010.account.usage.Trigger.UsageCategory.class)),
+        arg("usageCategory", String.class)),
 
     DELETER(
         com.twilio.rest.api.v2010.account.usage.TriggerDeleter.class,

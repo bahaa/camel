@@ -52,6 +52,7 @@ import org.apache.camel.tooling.model.ComponentModel;
 import org.apache.camel.tooling.model.DataFormatModel;
 import org.apache.camel.tooling.model.DevConsoleModel;
 import org.apache.camel.tooling.model.EipModel;
+import org.apache.camel.tooling.model.JBangModel;
 import org.apache.camel.tooling.model.JsonMapper;
 import org.apache.camel.tooling.model.LanguageModel;
 import org.apache.camel.tooling.model.MainModel;
@@ -161,6 +162,15 @@ public abstract class AbstractCamelCatalog {
     public MainModel mainModel() {
         String json = mainJSonSchema();
         return json != null ? JsonMapper.generateMainModel(json) : null;
+    }
+
+    public String jbangJSonSchema() {
+        return getJSonSchemaResolver().getJBangJsonSchema();
+    }
+
+    public JBangModel jbangModel() {
+        String json = jbangJSonSchema();
+        return json != null ? JsonMapper.generateJBangModel(json) : null;
     }
 
     public SuggestionStrategy getSuggestionStrategy() {
@@ -751,7 +761,6 @@ public abstract class AbstractCamelCatalog {
     private Map<String, BaseOptionModel> extractApiProperties(ComponentModel model, String key, String key2) {
         Map<String, BaseOptionModel> answer = new LinkedHashMap<>();
         if (key != null) {
-            String matchKey = null;
             String dashKey = StringHelper.camelCaseToDash(key);
             String ecKey = StringHelper.asEnumConstantValue(key);
             String dashKey2 = StringHelper.camelCaseToDash(key2);
@@ -1369,8 +1378,9 @@ public abstract class AbstractCamelCatalog {
                 answer.setError(errMsg);
 
                 // is it simple parser exception then we can grab the index where the problem is
-                if (cause.getClass().getName().equals("org.apache.camel.language.simple.types.SimpleIllegalSyntaxException")
-                        || cause.getClass().getName().equals("org.apache.camel.language.simple.types.SimpleParserException")) {
+                // NOTE: those types are not available at compilation time.
+                if (cause.getClass().getName().equals("org.apache.camel.language.simple.types.SimpleIllegalSyntaxException") // NOSONAR
+                        || cause.getClass().getName().equals("org.apache.camel.language.simple.types.SimpleParserException")) { // NOSONAR
                     try {
                         // we need to grab the index field from those simple parser exceptions
                         Method method = cause.getClass().getMethod("getIndex");
@@ -1385,7 +1395,8 @@ public abstract class AbstractCamelCatalog {
                 }
 
                 // we need to grab the short message field from this simple syntax exception
-                if (cause.getClass().getName().equals("org.apache.camel.language.simple.types.SimpleIllegalSyntaxException")) {
+                // NOTE: the type is not available at compilation time.
+                if (cause.getClass().getName().equals("org.apache.camel.language.simple.types.SimpleIllegalSyntaxException")) { // NOSONAR
                     try {
                         Method method = cause.getClass().getMethod("getShortMessage");
                         Object result = method.invoke(cause);
@@ -1467,7 +1478,8 @@ public abstract class AbstractCamelCatalog {
                 answer.setError(errMsg);
 
                 // is it simple parser exception then we can grab the index where the problem is
-                if (cause.getClass().getName().equals("org.apache.camel.language.groovy.GroovyValidationException")) {
+                // NOTE: the type is not available at compilation time.
+                if (cause.getClass().getName().equals("org.apache.camel.language.groovy.GroovyValidationException")) { // NOSONAR
                     try {
                         // we need to grab the index field from those simple parser exceptions
                         Method method = cause.getClass().getMethod("getIndex");
@@ -1585,7 +1597,6 @@ public abstract class AbstractCamelCatalog {
 
         if (clazz != null && instance != null) {
             Throwable cause = null;
-            Object obj;
             try {
                 try {
                     // favour using the validate method if present as this is for tooling usage

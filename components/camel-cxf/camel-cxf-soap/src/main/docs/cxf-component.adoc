@@ -63,22 +63,11 @@ cxf:bean:cxfEndpoint?wsdlURL=wsdl/hello_world.wsdl&dataFormat=PAYLOAD
 ----
 
 
-// component-configure options: START
-
-// component-configure options: END
-
 // component options: START
 include::partial$component-configure-options.adoc[]
 include::partial$component-endpoint-options.adoc[]
-// component options: END
-
-// endpoint options: START
-
-// endpoint options: END
-
-// component headers: START
 include::partial$component-endpoint-headers.adoc[]
-// component headers: END
+// component options: END
 
 The `serviceName` and `portName` are
 http://en.wikipedia.org/wiki/QName[QNames], so if you provide them be
@@ -119,6 +108,20 @@ You can determine the data format mode of an exchange by retrieving the
 exchange property, `CamelCXFDataFormat`. The exchange key constant is
 defined in
 `org.apache.camel.component.cxf.common.message.CxfConstants.DATA_FORMAT_PROPERTY`.
+
+== HTTP Transport
+
+When using CXF to host a SOAP-WS then CXF needs to integrate with an HTTP server.
+
+When running in JEE application servers then a _Servlet_ transport can be used.
+When running in a Java standalone application then CXF has support for using Jetty or Undertow.
+
+- cxf-rt-transports-http-jetty JAR
+- cxf-rt-transports-http-undertow JAR
+
+Using CXF with Spring Boot or Quarkus comes automatic integrated with the embedded HTTP server.
+
+See more details in the https://cxf.apache.org/docs/http-transport.html[CXF Transport] documentation.
 
 == Usage
 

@@ -50,37 +50,28 @@ debezium-postgres:name[?options]
 ---------------------------
 
 
-// component-configure options: START
-
-// component-configure options: END
-
 // component options: START
 include::partial$component-configure-options.adoc[]
 include::partial$component-endpoint-options.adoc[]
+include::partial$component-endpoint-headers.adoc[]
 // component options: END
-
-// endpoint options: START
-
-// endpoint options: END
 
 For more information about configuration:
 https://debezium.io/documentation/reference/0.10/operations/embedded.html#engine-properties[https://debezium.io/documentation/reference/0.10/operations/embedded.html#engine-properties]
 https://debezium.io/documentation/reference/0.10/connectors/postgresql.html#connector-properties[https://debezium.io/documentation/reference/0.10/connectors/postgresql.html#connector-properties]
 
-// component headers: START
-include::partial$component-endpoint-headers.adoc[]
-// component headers: END
 
 == Usage
 
 === Message body
 
-The message body if is not `null` (in case of tombstones), it contains the state of the row after the event occurred as `Struct` format or `Map` format if you use the included Type Converter from `Struct` to `Map`.
+If the message body is not `null` (in case of tombstones), it contains the state of the row after the event occurred. It is one of two formats:
 
-[NOTE]
-====
-Check below for more details.
-====
+- `Struct`
+- `Map` (if you use the included Type Converter from `Struct` to `Map`)
+
+See below for more details.
+
 
 == Examples
 

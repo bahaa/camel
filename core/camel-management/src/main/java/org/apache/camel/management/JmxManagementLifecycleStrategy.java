@@ -47,6 +47,7 @@ import org.apache.camel.Service;
 import org.apache.camel.StartupListener;
 import org.apache.camel.TimerListener;
 import org.apache.camel.VetoCamelContextStartException;
+import org.apache.camel.api.management.mbean.ManagedProcessorAware;
 import org.apache.camel.cluster.CamelClusterService;
 import org.apache.camel.health.HealthCheckRegistry;
 import org.apache.camel.impl.debugger.BacklogTracer;
@@ -66,6 +67,7 @@ import org.apache.camel.management.mbean.ManagedInflightRepository;
 import org.apache.camel.management.mbean.ManagedProducerCache;
 import org.apache.camel.management.mbean.ManagedRestRegistry;
 import org.apache.camel.management.mbean.ManagedRoute;
+import org.apache.camel.management.mbean.ManagedRouteGroup;
 import org.apache.camel.management.mbean.ManagedRuntimeEndpointRegistry;
 import org.apache.camel.management.mbean.ManagedService;
 import org.apache.camel.management.mbean.ManagedShutdownStrategy;
@@ -466,6 +468,10 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
         // skip already managed services, for example if a route has been restarted
         if (getManagementStrategy().isManaged(managedObject)) {
             LOG.trace("The service is already managed: {}", service);
+            // re-attach processor on mben so we can reuse existing MBean but with newly created processor
+            if (managedObject instanceof ManagedProcessorAware mpa && service instanceof Processor processor) {
+                mpa.setProcessor(processor);
+            }
             return;
         }
 
@@ -478,8 +484,19 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
 
     @Override
     public void onServiceRemove(CamelContext context, Service service, Route route) {
+        onServiceRemove(context, service, route, true);
+    }
+
+    @Override
+    public void onServiceRemove(CamelContext context, Service service, Route route, boolean shutdown) {
         // the agent hasn't been started
         if (!initialized) {
+            return;
+        }
+        // always remove consumer or producer
+        boolean consumerOrProducer = service instanceof Consumer || service instanceof Producer;
+        if (!consumerOrProducer && !shutdown) {
+            // only remove service if being shutdown
             return;
         }
 
@@ -649,6 +666,8 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
                 LOG.trace("The route is already managed: {}", route);
                 continue;
             }
+            ManagedRouteGroup mrg = (ManagedRouteGroup) getManagementObjectStrategy()
+                    .getManagedObjectForRouteGroup(camelContext, route.getGroup());
 
             // get the wrapped instrumentation processor from this route
             // and set me as the counter
@@ -658,7 +677,8 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
                 if (task != null) {
                     // we need to wrap the counter with the camel context, so we get stats updated on the context as well
                     if (camelContextMBean != null) {
-                        CompositePerformanceCounter wrapper = new CompositePerformanceCounter(routeMBean, camelContextMBean);
+                        CompositePerformanceCounter wrapper
+                                = new CompositePerformanceCounter(routeMBean, camelContextMBean, mrg);
                         task.setCounter(wrapper);
                     } else {
                         task.setCounter(routeMBean);
@@ -672,6 +692,17 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
                 LOG.warn("Could not register Route MBean", e);
             } catch (Exception e) {
                 LOG.warn("Could not create Route MBean", e);
+            }
+
+            // also manage the route group
+            if (mrg != null && !getManagementStrategy().isManaged(mrg)) {
+                try {
+                    manageObject(mrg);
+                } catch (JMException e) {
+                    LOG.warn("Could not register RouteGroup MBean", e);
+                } catch (Exception e) {
+                    LOG.warn("Could not create RouteGroup MBean", e);
+                }
             }
         }
     }
@@ -700,6 +731,21 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
 
             // remove from known routes ids, as the route has been removed
             knowRouteIds.remove(route.getId());
+
+            // if there are no routes anymore with a given route group then the mbean should be removed
+            if (route.getGroup() != null) {
+                int size = camelContext.getRoutesByGroup(route.getGroup()).size();
+                // if size is 1 then it is because its ourselves that we are currently removing
+                if (size <= 1) {
+                    ManagedRouteGroup mrg = (ManagedRouteGroup) getManagementObjectStrategy()
+                            .getManagedObjectForRouteGroup(camelContext, route.getGroup());
+                    try {
+                        unmanageObject(mrg);
+                    } catch (Exception e) {
+                        LOG.warn("Could not unregister Route Group MBean", e);
+                    }
+                }
+            }
         }
 
         // after the routes has been removed, we should clear the wrapped processors as we no longer need them
@@ -807,7 +853,6 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
                 }
             }
         }
-
     }
 
     private void registerPerformanceCounters(

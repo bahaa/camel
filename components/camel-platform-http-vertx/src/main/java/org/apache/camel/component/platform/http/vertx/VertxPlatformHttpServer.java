@@ -35,6 +35,7 @@ import org.apache.camel.api.management.ManagedResource;
 import org.apache.camel.component.platform.http.PlatformHttpConstants;
 import org.apache.camel.component.platform.http.vertx.auth.AuthenticationConfig;
 import org.apache.camel.component.platform.http.vertx.auth.AuthenticationConfig.AuthenticationConfigEntry;
+import org.apache.camel.component.platform.http.vertx.auth.Default401ErrorHandler;
 import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.service.ServiceHelper;
 import org.apache.camel.support.service.ServiceSupport;
@@ -121,11 +122,16 @@ public class VertxPlatformHttpServer extends ServiceSupport implements CamelCont
         }
     }
 
-    @ManagedAttribute(description = "HTTP port number")
+    @ManagedAttribute(description = "HTTP port number (actual)")
     public int getPort() {
         if (server != null) {
             return server.actualPort();
         }
+        return configuration.getBindPort();
+    }
+
+    @ManagedAttribute(description = "HTTP port number (configured)")
+    public int getConfigurationPort() {
         return configuration.getBindPort();
     }
 
@@ -192,6 +198,7 @@ public class VertxPlatformHttpServer extends ServiceSupport implements CamelCont
 
         AuthenticationConfig authenticationConfig = configuration.getAuthenticationConfig();
         if (authenticationConfig.isEnabled()) {
+            router.errorHandler(401, new Default401ErrorHandler());
             addAuthenticationHandlersStartingFromMoreSpecificPaths(authenticationConfig);
         }
 
@@ -231,7 +238,7 @@ public class VertxPlatformHttpServer extends ServiceSupport implements CamelCont
                             }
 
                             LOGGER.info("Vert.x HttpServer started on {}:{}", configuration.getBindHost(),
-                                    configuration.getBindPort());
+                                    server.actualPort());
                         } finally {
                             latch.countDown();
                         }
@@ -307,7 +314,7 @@ public class VertxPlatformHttpServer extends ServiceSupport implements CamelCont
                                     throw new RuntimeException(result.cause());
                                 }
 
-                                LOGGER.info("Vert.x stopped");
+                                LOGGER.debug("Vert.x stopped");
                             } finally {
                                 latch.countDown();
                             }

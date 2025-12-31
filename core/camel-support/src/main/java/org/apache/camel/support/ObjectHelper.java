@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -257,7 +258,7 @@ public final class ObjectHelper {
      * and right values. This allows you test for ordering for example with a String and Integer type as Camel will be
      * able to coerce the types.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings("unchecked")
     public static int typeCoerceCompare(TypeConverter converter, Object leftValue, Object rightValue) {
 
         // optimize for common combinations of comparing numbers
@@ -478,9 +479,16 @@ public final class ObjectHelper {
     public static Object invokeMethodSafe(Method method, Object instance, Object... parameters)
             throws InvocationTargetException, IllegalAccessException {
         Object answer;
-        if (!method.isAccessible()) {
-            method.setAccessible(true);
+        if (Modifier.isStatic(method.getModifiers())) {
+            if (!method.canAccess(null)) {
+                method.setAccessible(true);
+            }
+        } else {
+            if (!method.canAccess(instance)) {
+                method.setAccessible(true);
+            }
         }
+
         if (parameters != null) {
             answer = method.invoke(instance, parameters);
         } else {
@@ -559,7 +567,7 @@ public final class ObjectHelper {
      * @param b          the second object
      * @param ignoreCase ignore case for string comparison
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings("unchecked")
     public static int compare(Object a, Object b, boolean ignoreCase) {
         if (a == b) {
             return 0;

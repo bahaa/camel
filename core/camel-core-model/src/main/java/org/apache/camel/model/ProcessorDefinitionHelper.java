@@ -18,13 +18,12 @@ package org.apache.camel.model;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.NamedNode;
 import org.apache.camel.spi.Resource;
+import org.apache.camel.spi.ResourceAware;
 import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.util.FileUtil;
@@ -180,15 +179,15 @@ public final class ProcessorDefinitionHelper {
      * Traverses the node, including its children (recursive), and gathers all the node ids.
      *
      * @param  node            the target node
-     * @param  set             set to store ids, if <tt>null</tt> a new set will be created
+     * @param  set             list to store ids, if <tt>null</tt> a new list will be created
      * @param  onlyCustomId    whether to only store custom assigned ids (ie.
      *                         {@link org.apache.camel.model.OptionalIdentifiedDefinition#hasCustomIdAssigned()}
      * @param  includeAbstract whether to include abstract nodes (ie.
      *                         {@link org.apache.camel.model.ProcessorDefinition#isAbstract()}
-     * @return                 the set with the found ids.
+     * @return                 the list with the found ids.
      */
-    public static Set<String> gatherAllNodeIds(
-            ProcessorDefinition<?> node, Set<String> set, boolean onlyCustomId, boolean includeAbstract) {
+    public static List<String> gatherAllNodeIds(
+            ProcessorDefinition<?> node, List<String> set, boolean onlyCustomId, boolean includeAbstract) {
         if (node == null) {
             return set;
         }
@@ -199,7 +198,7 @@ public final class ProcessorDefinitionHelper {
         }
 
         if (set == null) {
-            set = new LinkedHashSet<>();
+            set = new ArrayList<>();
         }
 
         // add ourselves
@@ -431,18 +430,13 @@ public final class ProcessorDefinitionHelper {
 
     /**
      * Returns the level of the node in the route tree. Level 1 is the root level, level 2 is a child of an EIP, and so
-     * forth
+     * forth\
+     *
+     * @deprecated use {@link NamedNode#getLevel()}
      */
+    @Deprecated(since = "4.17.0")
     public static int getNodeLevel(NamedNode node) {
-        int level = 0;
-        while (node != null && node.getParent() != null) {
-            boolean shallow = node instanceof WhenDefinition || node instanceof OtherwiseDefinition;
-            node = node.getParent();
-            if (!shallow) {
-                level++;
-            }
-        }
-        return level;
+        return node.getLevel();
     }
 
     /**
@@ -529,6 +523,32 @@ public final class ProcessorDefinitionHelper {
             wrap = true;
         }
         return wrap;
+    }
+
+    /**
+     * Gets the resource the given node belongs to.
+     *
+     * @param  node the node
+     * @return      the resource, or <tt>null</tt> if not possible to find
+     */
+    public static Resource getResource(NamedNode node) {
+        if (node == null) {
+            return null;
+        }
+        if (node instanceof ResourceAware ra) {
+            return ra.getResource();
+        }
+
+        NamedNode def = node;
+        while (def != null && def.getParent() != null) {
+            def = def.getParent();
+            if (def instanceof ResourceAware ra) {
+                return ra.getResource();
+            }
+        }
+
+        // not found
+        return null;
     }
 
 }

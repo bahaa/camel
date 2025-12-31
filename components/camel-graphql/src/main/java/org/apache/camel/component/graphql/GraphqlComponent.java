@@ -20,16 +20,27 @@ import java.net.URI;
 import java.util.Map;
 
 import org.apache.camel.Endpoint;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.Component;
-import org.apache.camel.support.DefaultComponent;
+import org.apache.camel.support.HeaderFilterStrategyComponent;
 import org.apache.camel.util.URISupport;
+import org.apache.hc.client5.http.classic.HttpClient;
 
 @Component("graphql")
-public class GraphqlComponent extends DefaultComponent {
+public class GraphqlComponent extends HeaderFilterStrategyComponent {
+
+    @Metadata(label = "advanced")
+    private HttpClient httpClient;
+    @Metadata(label = "producer", defaultValue = "true",
+              description = "Option to disable throwing the HttpOperationFailedException in case of failed responses from the remote server. This allows you to get all responses regardless of the HTTP status code.")
+    private boolean throwExceptionOnFailure = true;
 
     @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
         GraphqlEndpoint endpoint = new GraphqlEndpoint(uri, this);
+        endpoint.setHeaderFilterStrategy(getHeaderFilterStrategy());
+        endpoint.setHttpClient(httpClient);
+        endpoint.setThrowExceptionOnFailure(throwExceptionOnFailure);
         endpoint.setHttpUri(new URI(remaining));
         setProperties(endpoint, parameters);
         return endpoint;
@@ -38,7 +49,6 @@ public class GraphqlComponent extends DefaultComponent {
     @Override
     protected void afterConfiguration(String uri, String remaining, Endpoint endpoint, Map<String, Object> parameters)
             throws Exception {
-
         GraphqlEndpoint graphqlEndpoint = (GraphqlEndpoint) endpoint;
         if (!parameters.isEmpty()) {
             URI httpUri = URISupport.createRemainingURI(graphqlEndpoint.getHttpUri(), parameters);
@@ -46,4 +56,23 @@ public class GraphqlComponent extends DefaultComponent {
         }
     }
 
+    public HttpClient getHttpClient() {
+        return httpClient;
+    }
+
+    /**
+     * To use a custom pre-existing Http Client. Beware that when using this, then other configurations such as proxy,
+     * access token, is not applied and all this must be pre-configured on the Http Client.
+     */
+    public void setHttpClient(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    public boolean isThrowExceptionOnFailure() {
+        return throwExceptionOnFailure;
+    }
+
+    public void setThrowExceptionOnFailure(boolean throwExceptionOnFailure) {
+        this.throwExceptionOnFailure = throwExceptionOnFailure;
+    }
 }

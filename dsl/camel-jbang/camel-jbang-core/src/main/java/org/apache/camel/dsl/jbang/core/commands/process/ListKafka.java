@@ -184,7 +184,7 @@ public class ListKafka extends ProcessWatchCommand {
                     new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).maxWidth(30, OverflowBehaviour.ELLIPSIS_RIGHT)
                             .with(r -> r.name),
                     new Column().header("ROUTE").dataAlign(HorizontalAlign.LEFT).with(this::getRouteId),
-                    new Column().header("STATE").dataAlign(HorizontalAlign.LEFT).with(this::getState),
+                    new Column().header("STATUS").dataAlign(HorizontalAlign.LEFT).with(this::getState),
                     new Column().header("GROUP-ID").dataAlign(HorizontalAlign.LEFT).with(r -> r.groupId),
                     new Column().header("TOPIC").dataAlign(HorizontalAlign.RIGHT).with(r -> r.lastTopic),
                     new Column().header("PARTITION").dataAlign(HorizontalAlign.RIGHT).with(r -> "" + r.lastPartition),
@@ -249,10 +249,6 @@ public class ListKafka extends ProcessWatchCommand {
         return u;
     }
 
-    private String getMetadata(Row r) {
-        return r.groupId;
-    }
-
     private String getState(Row r) {
         return StringHelper.capitalize(r.state.toLowerCase(Locale.ROOT));
     }
@@ -290,7 +286,7 @@ public class ListKafka extends ProcessWatchCommand {
             try {
                 return (Row) clone();
             } catch (CloneNotSupportedException e) {
-                return null;
+                throw new RuntimeException(e);
             }
         }
     }

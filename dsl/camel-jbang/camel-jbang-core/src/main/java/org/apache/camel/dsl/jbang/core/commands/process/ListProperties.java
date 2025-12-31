@@ -191,7 +191,7 @@ public class ListProperties extends ProcessWatchCommand {
             try {
                 return (Row) clone();
             } catch (CloneNotSupportedException e) {
-                return null;
+                throw new RuntimeException(e);
             }
         }
     }
@@ -205,6 +205,7 @@ public class ListProperties extends ProcessWatchCommand {
             case "SYS" -> loc = "JVM System Property";
             case "ENV", "env" -> loc = "OS Environment Variable";
             case "arguments", "CLI" -> loc = "Command Line";
+            default -> loc = "";
         }
         return loc;
     }

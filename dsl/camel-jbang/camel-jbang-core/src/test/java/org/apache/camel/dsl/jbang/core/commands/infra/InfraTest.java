@@ -19,13 +19,13 @@ package org.apache.camel.dsl.jbang.core.commands.infra;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.camel.dsl.jbang.core.commands.CamelCommandBaseTest;
+import org.apache.camel.dsl.jbang.core.commands.CamelCommandBaseTestSupport;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.assertj.core.api.Assertions;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
-public class InfraTest extends CamelCommandBaseTest {
+public class InfraTest extends CamelCommandBaseTestSupport {
 
     /**
      * This test asserts that the reflection in InfraRun works as expected. In case of issues in the reflection, most
@@ -48,8 +48,9 @@ public class InfraTest extends CamelCommandBaseTest {
 
         Awaitility.await().untilAsserted(() -> {
             List<String> lines = printer.getLines();
-            Assertions.assertThat(lines).contains("Starting service ftp");
-            Assertions.assertThat(lines).contains("Press any key to stop the execution");
+            Assertions.assertThat(lines).anyMatch(l -> l.startsWith("Starting service ftp"));
+            // because we run headless unit test then you would see this message instead of press ENTER to stop
+            Assertions.assertThat(lines).contains("Running (use camel infra stop ftp to stop the execution)");
         });
 
         thread.interrupt();

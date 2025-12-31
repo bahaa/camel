@@ -45,6 +45,98 @@ public interface BedrockEndpointBuilderFactory {
         }
 
         /**
+         * The identifier (ID or ARN) for the guardrail to apply to the model
+         * invocation.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param guardrailIdentifier the value to set
+         * @return the dsl builder
+         */
+        default BedrockEndpointBuilder guardrailIdentifier(String guardrailIdentifier) {
+            doSetProperty("guardrailIdentifier", guardrailIdentifier);
+            return this;
+        }
+        /**
+         * Whether to return trace information from the guardrail.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param guardrailTrace the value to set
+         * @return the dsl builder
+         */
+        default BedrockEndpointBuilder guardrailTrace(boolean guardrailTrace) {
+            doSetProperty("guardrailTrace", guardrailTrace);
+            return this;
+        }
+        /**
+         * Whether to return trace information from the guardrail.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param guardrailTrace the value to set
+         * @return the dsl builder
+         */
+        default BedrockEndpointBuilder guardrailTrace(String guardrailTrace) {
+            doSetProperty("guardrailTrace", guardrailTrace);
+            return this;
+        }
+        /**
+         * The version of the guardrail to use. Defaults to DRAFT.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: DRAFT
+         * Group: producer
+         * 
+         * @param guardrailVersion the value to set
+         * @return the dsl builder
+         */
+        default BedrockEndpointBuilder guardrailVersion(String guardrailVersion) {
+            doSetProperty("guardrailVersion", guardrailVersion);
+            return this;
+        }
+        /**
+         * Whether to include streaming metadata in the response headers
+         * (completion reason, token count, chunk count).
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: producer
+         * 
+         * @param includeStreamingMetadata the value to set
+         * @return the dsl builder
+         */
+        default BedrockEndpointBuilder includeStreamingMetadata(boolean includeStreamingMetadata) {
+            doSetProperty("includeStreamingMetadata", includeStreamingMetadata);
+            return this;
+        }
+        /**
+         * Whether to include streaming metadata in the response headers
+         * (completion reason, token count, chunk count).
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: producer
+         * 
+         * @param includeStreamingMetadata the value to set
+         * @return the dsl builder
+         */
+        default BedrockEndpointBuilder includeStreamingMetadata(String includeStreamingMetadata) {
+            doSetProperty("includeStreamingMetadata", includeStreamingMetadata);
+            return this;
+        }
+        /**
          * Define the model Id we are going to use.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -184,6 +276,23 @@ public interface BedrockEndpointBuilderFactory {
          */
         default BedrockEndpointBuilder region(String region) {
             doSetProperty("region", region);
+            return this;
+        }
+        /**
+         * The streaming output mode (complete or chunks). In complete mode, the
+         * full response is accumulated and returned as a single message. In
+         * chunks mode, each chunk is emitted as a separate exchange.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: complete
+         * Group: producer
+         * 
+         * @param streamOutputMode the value to set
+         * @return the dsl builder
+         */
+        default BedrockEndpointBuilder streamOutputMode(String streamOutputMode) {
+            doSetProperty("streamOutputMode", streamOutputMode);
             return this;
         }
         /**
@@ -510,6 +619,38 @@ public interface BedrockEndpointBuilderFactory {
             return this;
         }
         /**
+         * To use an existing configured AWS Bedrock Runtime Async client for
+         * streaming operations.
+         * 
+         * The option is a:
+         * <code>software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param bedrockRuntimeAsyncClient the value to set
+         * @return the dsl builder
+         */
+        default AdvancedBedrockEndpointBuilder bedrockRuntimeAsyncClient(software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient bedrockRuntimeAsyncClient) {
+            doSetProperty("bedrockRuntimeAsyncClient", bedrockRuntimeAsyncClient);
+            return this;
+        }
+        /**
+         * To use an existing configured AWS Bedrock Runtime Async client for
+         * streaming operations.
+         * 
+         * The option will be converted to a
+         * <code>software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param bedrockRuntimeAsyncClient the value to set
+         * @return the dsl builder
+         */
+        default AdvancedBedrockEndpointBuilder bedrockRuntimeAsyncClient(String bedrockRuntimeAsyncClient) {
+            doSetProperty("bedrockRuntimeAsyncClient", bedrockRuntimeAsyncClient);
+            return this;
+        }
+        /**
          * To use an existing configured AWS Bedrock Runtime client.
          * 
          * The option is a:
@@ -642,6 +783,239 @@ public interface BedrockEndpointBuilderFactory {
          */
         public String awsBedrockAcceptContentType() {
             return "CamelAwsBedrockAcceptContentType";
+        }
+        /**
+         * The streaming output mode (complete or chunks).
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockStreamOutputMode}.
+         */
+        public String awsBedrockStreamOutputMode() {
+            return "CamelAwsBedrockStreamOutputMode";
+        }
+        /**
+         * The completion reason for streaming response.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockCompletionReason}.
+         */
+        public String awsBedrockCompletionReason() {
+            return "CamelAwsBedrockCompletionReason";
+        }
+        /**
+         * The number of tokens generated in streaming response.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockTokenCount}.
+         */
+        public String awsBedrockTokenCount() {
+            return "CamelAwsBedrockTokenCount";
+        }
+        /**
+         * The number of chunks received in streaming response.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockChunkCount}.
+         */
+        public String awsBedrockChunkCount() {
+            return "CamelAwsBedrockChunkCount";
+        }
+        /**
+         * The conversation messages for Converse API.
+         * 
+         * The option is a: {@code List<Message>} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockConverseMessages}.
+         */
+        public String awsBedrockConverseMessages() {
+            return "CamelAwsBedrockConverseMessages";
+        }
+        /**
+         * The system prompts for Converse API.
+         * 
+         * The option is a: {@code List<SystemContentBlock>} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockConverseSystem}.
+         */
+        public String awsBedrockConverseSystem() {
+            return "CamelAwsBedrockConverseSystem";
+        }
+        /**
+         * The inference configuration for Converse API.
+         * 
+         * The option is a: {@code InferenceConfiguration} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AwsBedrockConverseInferenceConfig}.
+         */
+        public String awsBedrockConverseInferenceConfig() {
+            return "CamelAwsBedrockConverseInferenceConfig";
+        }
+        /**
+         * The tool configuration for Converse API.
+         * 
+         * The option is a: {@code ToolConfiguration} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockConverseToolConfig}.
+         */
+        public String awsBedrockConverseToolConfig() {
+            return "CamelAwsBedrockConverseToolConfig";
+        }
+        /**
+         * The additional model request fields for Converse API.
+         * 
+         * The option is a: {@code
+         * software.amazon.awssdk.core.document.Document} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AwsBedrockConverseAdditionalFields}.
+         */
+        public String awsBedrockConverseAdditionalFields() {
+            return "CamelAwsBedrockConverseAdditionalFields";
+        }
+        /**
+         * The stop reason from Converse API response.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockConverseStopReason}.
+         */
+        public String awsBedrockConverseStopReason() {
+            return "CamelAwsBedrockConverseStopReason";
+        }
+        /**
+         * The usage metrics from Converse API response.
+         * 
+         * The option is a: {@code TokenUsage} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockConverseUsage}.
+         */
+        public String awsBedrockConverseUsage() {
+            return "CamelAwsBedrockConverseUsage";
+        }
+        /**
+         * The output message from Converse API response.
+         * 
+         * The option is a: {@code Message} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AwsBedrockConverseOutputMessage}.
+         */
+        public String awsBedrockConverseOutputMessage() {
+            return "CamelAwsBedrockConverseOutputMessage";
+        }
+        /**
+         * The guardrail configuration to apply to the request.
+         * 
+         * The option is a: {@code GuardrailConfiguration} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockGuardrailConfig}.
+         */
+        public String awsBedrockGuardrailConfig() {
+            return "CamelAwsBedrockGuardrailConfig";
+        }
+        /**
+         * The content blocks for ApplyGuardrail operation.
+         * 
+         * The option is a: {@code List<GuardrailContentBlock>} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockGuardrailContent}.
+         */
+        public String awsBedrockGuardrailContent() {
+            return "CamelAwsBedrockGuardrailContent";
+        }
+        /**
+         * The source type for ApplyGuardrail operation (INPUT or OUTPUT).
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockGuardrailSource}.
+         */
+        public String awsBedrockGuardrailSource() {
+            return "CamelAwsBedrockGuardrailSource";
+        }
+        /**
+         * The guardrail assessment output from the response.
+         * 
+         * The option is a: {@code GuardrailAssessment} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockGuardrailOutput}.
+         */
+        public String awsBedrockGuardrailOutput() {
+            return "CamelAwsBedrockGuardrailOutput";
+        }
+        /**
+         * The trace information from guardrail evaluation.
+         * 
+         * The option is a: {@code GuardrailTrace} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockGuardrailTrace}.
+         */
+        public String awsBedrockGuardrailTrace() {
+            return "CamelAwsBedrockGuardrailTrace";
+        }
+        /**
+         * The guardrail assessments from ApplyGuardrail response.
+         * 
+         * The option is a: {@code List<GuardrailAssessment>} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AwsBedrockGuardrailAssessments}.
+         */
+        public String awsBedrockGuardrailAssessments() {
+            return "CamelAwsBedrockGuardrailAssessments";
+        }
+        /**
+         * The guardrail usage metrics from ApplyGuardrail response.
+         * 
+         * The option is a: {@code GuardrailUsage} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsBedrockGuardrailUsage}.
+         */
+        public String awsBedrockGuardrailUsage() {
+            return "CamelAwsBedrockGuardrailUsage";
         }
     }
     static BedrockEndpointBuilder endpointBuilder(String componentName, String path) {

@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>components</artifactId>
-        <version>4.14.0-SNAPSHOT</version>
+        <version>4.17.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-aws-parent</artifactId>
@@ -39,6 +39,7 @@
     </properties>
 
     <modules>
+        <module>camel-aws-common</module>
         <module>camel-aws2-athena</module>
         <module>camel-aws-bedrock</module>
         <module>camel-aws-cloudtrail</module>
@@ -57,13 +58,16 @@
         <module>camel-aws2-mq</module>
         <module>camel-aws2-redshift</module>
         <module>camel-aws2-s3</module>
+        <module>camel-aws2-s3-vectors</module>
         <module>camel-aws-secrets-manager</module>
         <module>camel-aws2-ses</module>
         <module>camel-aws2-sns</module>
         <module>camel-aws2-sqs</module>
         <module>camel-aws2-step-functions</module>
         <module>camel-aws2-sts</module>
+        <module>camel-aws2-textract</module>
         <module>camel-aws2-timestream</module>
+        <module>camel-aws2-transcribe</module>
         <module>camel-aws2-translate</module>
         <module>camel-aws-xray</module>
     </modules>

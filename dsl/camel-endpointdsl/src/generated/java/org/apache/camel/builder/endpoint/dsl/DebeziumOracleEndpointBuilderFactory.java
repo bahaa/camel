@@ -427,6 +427,38 @@ public interface DebeziumOracleEndpointBuilderFactory {
             return this;
         }
         /**
+         * The maximum time in milliseconds to wait for connection validation to
+         * complete. Defaults to 60 seconds.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Default: 1m
+         * Group: oracle
+         * 
+         * @param connectionValidationTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder connectionValidationTimeoutMs(long connectionValidationTimeoutMs) {
+            doSetProperty("connectionValidationTimeoutMs", connectionValidationTimeoutMs);
+            return this;
+        }
+        /**
+         * The maximum time in milliseconds to wait for connection validation to
+         * complete. Defaults to 60 seconds.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Default: 1m
+         * Group: oracle
+         * 
+         * @param connectionValidationTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder connectionValidationTimeoutMs(String connectionValidationTimeoutMs) {
+            doSetProperty("connectionValidationTimeoutMs", connectionValidationTimeoutMs);
+            return this;
+        }
+        /**
          * Optional list of custom converters that would be used instead of
          * default ones. The converters are defined using '.type' config option
          * and configured using options '.'.
@@ -458,6 +490,24 @@ public interface DebeziumOracleEndpointBuilderFactory {
          */
         default DebeziumOracleEndpointBuilder customMetricTags(String customMetricTags) {
             doSetProperty("customMetricTags", customMetricTags);
+            return this;
+        }
+        /**
+         * Regular expression identifying configuration keys whose values should
+         * be masked. When set, this custom pattern replaces Debeziums default
+         * password masking pattern.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default:
+         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret
+         * Group: oracle
+         * 
+         * @param customSanitizePattern the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder customSanitizePattern(String customSanitizePattern) {
+            doSetProperty("customSanitizePattern", customSanitizePattern);
             return this;
         }
         /**
@@ -735,6 +785,125 @@ public interface DebeziumOracleEndpointBuilderFactory {
             return this;
         }
         /**
+         * The maximum time in milliseconds to wait for task executor to shut
+         * down.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Default: 4s
+         * Group: oracle
+         * 
+         * @param executorShutdownTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder executorShutdownTimeoutMs(long executorShutdownTimeoutMs) {
+            doSetProperty("executorShutdownTimeoutMs", executorShutdownTimeoutMs);
+            return this;
+        }
+        /**
+         * The maximum time in milliseconds to wait for task executor to shut
+         * down.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Default: 4s
+         * Group: oracle
+         * 
+         * @param executorShutdownTimeoutMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder executorShutdownTimeoutMs(String executorShutdownTimeoutMs) {
+            doSetProperty("executorShutdownTimeoutMs", executorShutdownTimeoutMs);
+            return this;
+        }
+        /**
+         * Enable/Disable Debezium context headers that provides essential
+         * metadata for tracking and identifying the source of CDC events in
+         * downstream processing systems.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: oracle
+         * 
+         * @param extendedHeadersEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder extendedHeadersEnabled(boolean extendedHeadersEnabled) {
+            doSetProperty("extendedHeadersEnabled", extendedHeadersEnabled);
+            return this;
+        }
+        /**
+         * Enable/Disable Debezium context headers that provides essential
+         * metadata for tracking and identifying the source of CDC events in
+         * downstream processing systems.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: oracle
+         * 
+         * @param extendedHeadersEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder extendedHeadersEnabled(String extendedHeadersEnabled) {
+            doSetProperty("extendedHeadersEnabled", extendedHeadersEnabled);
+            return this;
+        }
+        /**
+         * Specify the action to take when a guardrail collections limit is
+         * exceeded: 'warn' (the default) logs a warning message and continues
+         * processing; 'fail' stops the connector with an error.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: warn
+         * Group: oracle
+         * 
+         * @param guardrailCollectionsLimitAction the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder guardrailCollectionsLimitAction(String guardrailCollectionsLimitAction) {
+            doSetProperty("guardrailCollectionsLimitAction", guardrailCollectionsLimitAction);
+            return this;
+        }
+        /**
+         * The maximum number of collections or tables that can be captured by
+         * the connector. When this limit is exceeded, the action specified by
+         * 'guardrail.collections.limit.action' will be taken. Set to 0 to
+         * disable this guardrail.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 0
+         * Group: oracle
+         * 
+         * @param guardrailCollectionsMax the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder guardrailCollectionsMax(int guardrailCollectionsMax) {
+            doSetProperty("guardrailCollectionsMax", guardrailCollectionsMax);
+            return this;
+        }
+        /**
+         * The maximum number of collections or tables that can be captured by
+         * the connector. When this limit is exceeded, the action specified by
+         * 'guardrail.collections.limit.action' will be taken. Set to 0 to
+         * disable this guardrail.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 0
+         * Group: oracle
+         * 
+         * @param guardrailCollectionsMax the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder guardrailCollectionsMax(String guardrailCollectionsMax) {
+            doSetProperty("guardrailCollectionsMax", guardrailCollectionsMax);
+            return this;
+        }
+        /**
          * The query executed with every heartbeat.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -915,6 +1084,36 @@ public interface DebeziumOracleEndpointBuilderFactory {
          */
         default DebeziumOracleEndpointBuilder intervalHandlingMode(String intervalHandlingMode) {
             doSetProperty("intervalHandlingMode", intervalHandlingMode);
+            return this;
+        }
+        /**
+         * Uses the legacy decimal handling behavior before DBZ-7882.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: oracle
+         * 
+         * @param legacyDecimalHandlingStrategy the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder legacyDecimalHandlingStrategy(boolean legacyDecimalHandlingStrategy) {
+            doSetProperty("legacyDecimalHandlingStrategy", legacyDecimalHandlingStrategy);
+            return this;
+        }
+        /**
+         * Uses the legacy decimal handling behavior before DBZ-7882.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: oracle
+         * 
+         * @param legacyDecimalHandlingStrategy the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder legacyDecimalHandlingStrategy(String legacyDecimalHandlingStrategy) {
+            doSetProperty("legacyDecimalHandlingStrategy", legacyDecimalHandlingStrategy);
             return this;
         }
         /**
@@ -1399,6 +1598,34 @@ public interface DebeziumOracleEndpointBuilderFactory {
             return this;
         }
         /**
+         * Comma separated list of client ids to exclude from LogMiner query.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: oracle
+         * 
+         * @param logMiningClientidExcludeList the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder logMiningClientidExcludeList(String logMiningClientidExcludeList) {
+            doSetProperty("logMiningClientidExcludeList", logMiningClientidExcludeList);
+            return this;
+        }
+        /**
+         * Comma separated list of client ids to include from LogMiner query.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: oracle
+         * 
+         * @param logMiningClientidIncludeList the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder logMiningClientidIncludeList(String logMiningClientidIncludeList) {
+            doSetProperty("logMiningClientidIncludeList", logMiningClientidIncludeList);
+            return this;
+        }
+        /**
          * The name of the flush table used by the connector, defaults to
          * LOG_MINING_FLUSH.
          * 
@@ -1447,6 +1674,21 @@ public interface DebeziumOracleEndpointBuilderFactory {
             return this;
         }
         /**
+         * This is required when using the connector against a read-only
+         * database replica.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: oracle
+         * 
+         * @param logMiningPathDictionary the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder logMiningPathDictionary(String logMiningPathDictionary) {
+            doSetProperty("logMiningPathDictionary", logMiningPathDictionary);
+            return this;
+        }
+        /**
          * Specifies how the filter configuration is applied to the LogMiner
          * database query. none - The query does not apply any schema or table
          * filters, all filtering is at runtime by the connector. in - The query
@@ -1464,6 +1706,21 @@ public interface DebeziumOracleEndpointBuilderFactory {
          */
         default DebeziumOracleEndpointBuilder logMiningQueryFilterMode(String logMiningQueryFilterMode) {
             doSetProperty("logMiningQueryFilterMode", logMiningQueryFilterMode);
+            return this;
+        }
+        /**
+         * The hostname the connector will use to connect and perform read-only
+         * operations for the the replica.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: oracle
+         * 
+         * @param logMiningReadonlyHostname the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder logMiningReadonlyHostname(String logMiningReadonlyHostname) {
+            doSetProperty("logMiningReadonlyHostname", logMiningReadonlyHostname);
             return this;
         }
         /**
@@ -1981,6 +2238,128 @@ public interface DebeziumOracleEndpointBuilderFactory {
             return this;
         }
         /**
+         * Path to OpenLineage file configuration. See
+         * https://openlineage.io/docs/client/java/configuration.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: ./openlineage.yml
+         * Group: oracle
+         * 
+         * @param openlineageIntegrationConfigFilePath the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder openlineageIntegrationConfigFilePath(String openlineageIntegrationConfigFilePath) {
+            doSetProperty("openlineageIntegrationConfigFilePath", openlineageIntegrationConfigFilePath);
+            return this;
+        }
+        /**
+         * The Kafka bootstrap server address used as input/output namespace/.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: oracle
+         * 
+         * @param openlineageIntegrationDatasetKafkaBootstrapServers the value
+         * to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder openlineageIntegrationDatasetKafkaBootstrapServers(String openlineageIntegrationDatasetKafkaBootstrapServers) {
+            doSetProperty("openlineageIntegrationDatasetKafkaBootstrapServers", openlineageIntegrationDatasetKafkaBootstrapServers);
+            return this;
+        }
+        /**
+         * Enable Debezium to emit data lineage metadata through OpenLineage
+         * API.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: oracle
+         * 
+         * @param openlineageIntegrationEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder openlineageIntegrationEnabled(boolean openlineageIntegrationEnabled) {
+            doSetProperty("openlineageIntegrationEnabled", openlineageIntegrationEnabled);
+            return this;
+        }
+        /**
+         * Enable Debezium to emit data lineage metadata through OpenLineage
+         * API.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: oracle
+         * 
+         * @param openlineageIntegrationEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder openlineageIntegrationEnabled(String openlineageIntegrationEnabled) {
+            doSetProperty("openlineageIntegrationEnabled", openlineageIntegrationEnabled);
+            return this;
+        }
+        /**
+         * The job's description emitted by Debezium.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: Debezium change data capture job
+         * Group: oracle
+         * 
+         * @param openlineageIntegrationJobDescription the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder openlineageIntegrationJobDescription(String openlineageIntegrationJobDescription) {
+            doSetProperty("openlineageIntegrationJobDescription", openlineageIntegrationJobDescription);
+            return this;
+        }
+        /**
+         * The job's namespace emitted by Debezium.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: oracle
+         * 
+         * @param openlineageIntegrationJobNamespace the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder openlineageIntegrationJobNamespace(String openlineageIntegrationJobNamespace) {
+            doSetProperty("openlineageIntegrationJobNamespace", openlineageIntegrationJobNamespace);
+            return this;
+        }
+        /**
+         * The job's owners emitted by Debezium. A comma-separated list of
+         * key-value pairs.For example: k1=v1,k2=v2.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: oracle
+         * 
+         * @param openlineageIntegrationJobOwners the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder openlineageIntegrationJobOwners(String openlineageIntegrationJobOwners) {
+            doSetProperty("openlineageIntegrationJobOwners", openlineageIntegrationJobOwners);
+            return this;
+        }
+        /**
+         * The job's tags emitted by Debezium. A comma-separated list of
+         * key-value pairs.For example: k1=v1,k2=v2.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: oracle
+         * 
+         * @param openlineageIntegrationJobTags the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleEndpointBuilder openlineageIntegrationJobTags(String openlineageIntegrationJobTags) {
+            doSetProperty("openlineageIntegrationJobTags", openlineageIntegrationJobTags);
+            return this;
+        }
+        /**
          * The hostname of the OpenLogReplicator network service.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -2363,7 +2742,9 @@ public interface DebeziumOracleEndpointBuilderFactory {
         }
         /**
          * The name of the data collection that is used to send signals/commands
-         * to Debezium. Signaling is disabled when not set.
+         * to Debezium. For multi-partition mode connectors, multiple signal
+         * data collections can be specified as a comma-separated list.
+         * Signaling is disabled when not set.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 

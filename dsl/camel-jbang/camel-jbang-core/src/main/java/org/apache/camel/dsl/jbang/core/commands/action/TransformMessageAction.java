@@ -115,7 +115,7 @@ public class TransformMessageAction extends ActionWatchCommand {
                         description = "Pretty print message body when using JSon or XML format")
     boolean pretty;
 
-    @CommandLine.Option(names = { "--repos" },
+    @CommandLine.Option(names = { "--repo", "--repos" },
                         description = "Additional maven repositories (Use commas to separate multiple repositories)")
     String repositories;
 
@@ -284,7 +284,7 @@ public class TransformMessageAction extends ActionWatchCommand {
                     tableHelper.setPretty(pretty);
                     tableHelper.setLoggingColor(loggingColor);
                     tableHelper.setShowExchangeProperties(showExchangeProperties);
-                    String table = tableHelper.getDataAsTable(exchangeId, "InOut", null, null, message, cause);
+                    String table = tableHelper.getDataAsTable(exchangeId, "InOut", null, null, null, message, cause);
                     printer().println(table);
                 }
             }

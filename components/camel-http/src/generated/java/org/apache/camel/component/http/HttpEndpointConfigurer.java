@@ -49,6 +49,8 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "connectionClose": target.setConnectionClose(property(camelContext, boolean.class, value)); return true;
         case "connectionsperroute":
         case "connectionsPerRoute": target.setConnectionsPerRoute(property(camelContext, int.class, value)); return true;
+        case "contenttypecharsetenabled":
+        case "contentTypeCharsetEnabled": target.setContentTypeCharsetEnabled(property(camelContext, boolean.class, value)); return true;
         case "cookiehandler":
         case "cookieHandler": target.setCookieHandler(property(camelContext, org.apache.camel.http.base.cookie.CookieHandler.class, value)); return true;
         case "cookiestore":
@@ -93,6 +95,10 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "multipartUpload": target.setMultipartUpload(property(camelContext, boolean.class, value)); return true;
         case "multipartuploadname":
         case "multipartUploadName": target.setMultipartUploadName(property(camelContext, java.lang.String.class, value)); return true;
+        case "nonproxyhosts":
+        case "nonProxyHosts": target.setNonProxyHosts(property(camelContext, java.lang.String.class, value)); return true;
+        case "oauth2bodyauthentication":
+        case "oauth2BodyAuthentication": target.setOauth2BodyAuthentication(property(camelContext, boolean.class, value)); return true;
         case "oauth2cachetokens":
         case "oauth2CacheTokens": target.setOauth2CacheTokens(property(camelContext, boolean.class, value)); return true;
         case "oauth2cachedtokensdefaultexpiryseconds":
@@ -182,6 +188,8 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "connectionClose": return boolean.class;
         case "connectionsperroute":
         case "connectionsPerRoute": return int.class;
+        case "contenttypecharsetenabled":
+        case "contentTypeCharsetEnabled": return boolean.class;
         case "cookiehandler":
         case "cookieHandler": return org.apache.camel.http.base.cookie.CookieHandler.class;
         case "cookiestore":
@@ -226,6 +234,10 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "multipartUpload": return boolean.class;
         case "multipartuploadname":
         case "multipartUploadName": return java.lang.String.class;
+        case "nonproxyhosts":
+        case "nonProxyHosts": return java.lang.String.class;
+        case "oauth2bodyauthentication":
+        case "oauth2BodyAuthentication": return boolean.class;
         case "oauth2cachetokens":
         case "oauth2CacheTokens": return boolean.class;
         case "oauth2cachedtokensdefaultexpiryseconds":
@@ -316,6 +328,8 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "connectionClose": return target.isConnectionClose();
         case "connectionsperroute":
         case "connectionsPerRoute": return target.getConnectionsPerRoute();
+        case "contenttypecharsetenabled":
+        case "contentTypeCharsetEnabled": return target.isContentTypeCharsetEnabled();
         case "cookiehandler":
         case "cookieHandler": return target.getCookieHandler();
         case "cookiestore":
@@ -360,6 +374,10 @@ public class HttpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "multipartUpload": return target.isMultipartUpload();
         case "multipartuploadname":
         case "multipartUploadName": return target.getMultipartUploadName();
+        case "nonproxyhosts":
+        case "nonProxyHosts": return target.getNonProxyHosts();
+        case "oauth2bodyauthentication":
+        case "oauth2BodyAuthentication": return target.isOauth2BodyAuthentication();
         case "oauth2cachetokens":
         case "oauth2CacheTokens": return target.isOauth2CacheTokens();
         case "oauth2cachedtokensdefaultexpiryseconds":

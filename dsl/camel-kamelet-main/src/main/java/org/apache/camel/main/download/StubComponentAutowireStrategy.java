@@ -23,6 +23,7 @@ import org.apache.camel.spi.AutowiredLifecycleStrategy;
 import org.apache.camel.spi.DataFormat;
 import org.apache.camel.spi.Language;
 import org.apache.camel.support.LifecycleStrategySupport;
+import org.apache.camel.support.PatternHelper;
 
 public class StubComponentAutowireStrategy extends LifecycleStrategySupport implements AutowiredLifecycleStrategy, Ordered {
     private final CamelContext camelContext;
@@ -79,7 +80,18 @@ public class StubComponentAutowireStrategy extends LifecycleStrategySupport impl
     }
 
     private void autowire(String name, String kind, Object target) {
-        if (pattern.contains(name)) {
+        boolean stubbed = false;
+        for (String n : pattern.split(",")) {
+            if ("component".equals(kind) && n.startsWith("component:")) {
+                n = n.substring(10);
+            } else if ("dataformat".equals(kind) && n.startsWith("dataformat:")) {
+                n = n.substring(11);
+            } else if ("language".equals(kind) && n.startsWith("language:")) {
+                n = n.substring(9);
+            }
+            stubbed |= PatternHelper.matchPattern(name, n);
+        }
+        if (stubbed) {
             // do not autowire
         } else {
             doAutoWire(name, kind, target, camelContext);

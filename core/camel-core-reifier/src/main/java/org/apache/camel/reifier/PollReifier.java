@@ -21,6 +21,8 @@ import org.apache.camel.Processor;
 import org.apache.camel.Route;
 import org.apache.camel.model.PollDefinition;
 import org.apache.camel.model.ProcessorDefinition;
+import org.apache.camel.model.ProcessorDefinitionHelper;
+import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.processor.PollProcessor;
 import org.apache.camel.spi.Language;
 import org.apache.camel.support.EndpointHelper;
@@ -36,14 +38,24 @@ public class PollReifier extends ProcessorReifier<PollDefinition> {
     @Override
     public Processor createProcessor() throws Exception {
         String uri;
+        Expression exp;
         if (definition.getEndpointConsumerBuilder() != null) {
             uri = definition.getEndpointConsumerBuilder().getRawUri();
+            exp = definition.getEndpointConsumerBuilder().expr(getCamelContext());
         } else {
             uri = StringHelper.notEmpty(definition.getUri(), "uri", this);
+            exp = createExpression(uri);
         }
-        Expression exp = createExpression(uri);
+
+        // route templates should pre parse uri as they have dynamic values as part of their template parameters
+        RouteDefinition rd = ProcessorDefinitionHelper.getRoute(definition);
+        if (rd != null && rd.isTemplate() != null && rd.isTemplate()) {
+            uri = EndpointHelper.resolveEndpointUriPropertyPlaceholders(camelContext, uri);
+        }
+
         long timeout = parseDuration(definition.getTimeout(), 20000);
         PollProcessor answer = new PollProcessor(exp, uri, timeout);
+        answer.setDisabled(isDisabled(camelContext, definition));
         answer.setVariableReceive(parseString(definition.getVariableReceive()));
         return answer;
     }
@@ -62,6 +74,10 @@ public class PollReifier extends ProcessorReifier<PollDefinition> {
         if (language == null) {
             // only use simple language if needed
             language = LanguageSupport.hasSimpleFunction(uri) ? "simple" : "constant";
+        }
+        if ("simple".equals(language)) {
+            // special for simple as we need to not include file functions
+            language = "simple-no-file";
         }
         Language lan = camelContext.resolveLanguage(language);
         return lan.createExpression(uri);

@@ -76,6 +76,10 @@ public class Init extends CamelCommand {
             description = "When creating a yaml file should it be created as a Pipe CR")
     private boolean pipe;
 
+    @Option(names = { "--repo", "--repos" },
+            description = "Additional maven repositories (Use commas to separate multiple repositories)")
+    protected String repositories;
+
     public Init(CamelJBangMain main) {
         super(main);
     }
@@ -118,7 +122,7 @@ public class Init extends CamelCommand {
                     kameletsVersion = VersionHelper.extractKameletsVersion();
                 }
                 // load existing kamelet
-                is = KameletCatalogHelper.loadKameletYamlSchema(fromKamelet, kameletsVersion);
+                is = KameletCatalogHelper.loadKameletYamlSchema(fromKamelet, kameletsVersion, repositories);
             } else if (file.contains("source")) {
                 ext = "kamelet-source.yaml";
             } else if (file.contains("sink")) {
@@ -248,18 +252,19 @@ public class Init extends CamelCommand {
             }
 
             CamelContext tiny = new DefaultCamelContext();
-            GitHubResourceResolver resolver = new GitHubResourceResolver();
-            resolver.setCamelContext(tiny);
-            for (String u : all.toString().split(",")) {
-                Resource resource = resolver.resolve(u);
-                if (!resource.exists()) {
-                    throw new ResourceDoesNotExist(resource);
-                }
-                String loc = resource.getLocation();
-                String name = FileUtil.stripPath(loc);
-                Path targetPath = Paths.get(directory, name);
-                try (OutputStream os = Files.newOutputStream(targetPath)) {
-                    IOUtils.copy(resource.getInputStream(), os);
+            try (GitHubResourceResolver resolver = new GitHubResourceResolver()) {
+                resolver.setCamelContext(tiny);
+                for (String u : all.toString().split(",")) {
+                    Resource resource = resolver.resolve(u);
+                    if (!resource.exists()) {
+                        throw new ResourceDoesNotExist(resource);
+                    }
+                    String loc = resource.getLocation();
+                    String name = FileUtil.stripPath(loc);
+                    Path targetPath = Paths.get(directory, name);
+                    try (OutputStream os = Files.newOutputStream(targetPath)) {
+                        IOUtils.copy(resource.getInputStream(), os);
+                    }
                 }
             }
         }
@@ -284,18 +289,19 @@ public class Init extends CamelCommand {
             }
 
             CamelContext tiny = new DefaultCamelContext();
-            GistResourceResolver resolver = new GistResourceResolver();
-            resolver.setCamelContext(tiny);
-            for (String u : all.toString().split(",")) {
-                Resource resource = resolver.resolve(u);
-                if (!resource.exists()) {
-                    throw new ResourceDoesNotExist(resource);
-                }
-                String loc = resource.getLocation();
-                String name = FileUtil.stripPath(loc);
-                Path targetPath = Paths.get(directory, name);
-                try (OutputStream os = Files.newOutputStream(targetPath)) {
-                    IOUtils.copy(resource.getInputStream(), os);
+            try (GistResourceResolver resolver = new GistResourceResolver()) {
+                resolver.setCamelContext(tiny);
+                for (String u : all.toString().split(",")) {
+                    Resource resource = resolver.resolve(u);
+                    if (!resource.exists()) {
+                        throw new ResourceDoesNotExist(resource);
+                    }
+                    String loc = resource.getLocation();
+                    String name = FileUtil.stripPath(loc);
+                    Path targetPath = Paths.get(directory, name);
+                    try (OutputStream os = Files.newOutputStream(targetPath)) {
+                        IOUtils.copy(resource.getInputStream(), os);
+                    }
                 }
             }
         }

@@ -64,6 +64,7 @@ import org.apache.maven.project.artifact.ProjectArtifact;
 import org.codehaus.mojo.exec.AbstractExecMojo;
 import org.codehaus.mojo.exec.ExecutableDependency;
 import org.codehaus.mojo.exec.Property;
+import org.eclipse.aether.RepositorySystem;
 
 /**
  * Runs a CamelContext using any Spring configuration files found in <code>META-INF/spring/*.xml</code>, and
@@ -89,6 +90,15 @@ public class RunMojo extends AbstractExecMojo {
     // If we could avoid the mega-cut-n-paste it would really really help!
     // ideally all I wanna do is auto-default 2 values!
     // namely the main and the command line arguments..
+
+    @Inject
+    protected ArtifactResolver artifactResolver;
+    @Inject
+    protected ArtifactFactory artifactFactory;
+    @Inject
+    protected ArtifactMetadataSource metadataSource;
+    @Inject
+    protected MavenProjectBuilder projectBuilder;
 
     /**
      * Sets the time duration (seconds) that the application will run for before terminating. A value <= 0 will run
@@ -141,19 +151,11 @@ public class RunMojo extends AbstractExecMojo {
 
     protected String extendedPluginDependencyArtifactId;
 
-    protected final ArtifactResolver artifactResolver;
-
-    private final ArtifactFactory artifactFactory;
-
-    private final ArtifactMetadataSource metadataSource;
-
     @Parameter(property = "localRepository")
     private ArtifactRepository localRepository;
 
     @Parameter(property = "project.remoteArtifactRepositories")
     private List<ArtifactRepository> remoteRepositories;
-
-    private final MavenProjectBuilder projectBuilder;
 
     @Parameter(property = "plugin.artifacts")
     private List<Artifact> pluginDependencies;
@@ -271,7 +273,7 @@ public class RunMojo extends AbstractExecMojo {
     private long daemonThreadJoinTimeout;
 
     /**
-     * Wether to call {@link Thread#stop()} following a timing out of waiting for an interrupted thread to finish. This
+     * Whether to call {@link Thread#stop()} following a timing out of waiting for an interrupted thread to finish. This
      * is only taken into account if {@link #cleanupDaemonThreads} is <code>true</code> and the
      * {@link #daemonThreadJoinTimeout} threshold has been reached for an uncooperative thread. If this is
      * <code>false</code>, or if {@link Thread#stop()} fails to get the thread to stop, then a warning is logged and
@@ -288,15 +290,8 @@ public class RunMojo extends AbstractExecMojo {
     private String extraPluginDependencyArtifactId;
 
     @Inject
-    public RunMojo(
-                   ArtifactResolver artifactResolver,
-                   ArtifactFactory artifactFactory,
-                   ArtifactMetadataSource metadataSource,
-                   MavenProjectBuilder projectBuilder) {
-        this.artifactResolver = artifactResolver;
-        this.artifactFactory = artifactFactory;
-        this.metadataSource = metadataSource;
-        this.projectBuilder = projectBuilder;
+    public RunMojo(RepositorySystem repositorySystem) {
+        super(repositorySystem);
     }
 
     /**
@@ -473,9 +468,6 @@ public class RunMojo extends AbstractExecMojo {
 
         @Override
         public void uncaughtException(Thread thread, Throwable throwable) {
-            if (throwable instanceof ThreadDeath) {
-                return; // harmless
-            }
             boolean doLog = false;
             synchronized (this) {
                 // only remember the first one
@@ -560,8 +552,9 @@ public class RunMojo extends AbstractExecMojo {
                 uncooperativeThreads.add(thread); // ensure we don't process
                 // again
                 if (stopUnresponsiveDaemonThreads) {
-                    getLog().warn("thread " + thread + " will be Thread.stop()'ed");
-                    thread.stop();
+                    getLog().warn("thread " + thread + " is unresponsive to interruption and will be left to run");
+                    // Try to interrupt again
+                    thread.interrupt();
                 } else {
                     getLog().warn("thread " + thread
                                   + " will linger despite being asked to die via interruption");

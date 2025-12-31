@@ -25,9 +25,9 @@ public interface MockSendToEndpointStrategyFactory {
     String FACTORY = "mock-send-to-endpoint-strategy-factory";
 
     /**
-     * Mock sending to endpoint
+     * Mock sending to endpoint using interceptor EIPs
      *
-     * @param  pattern pattern for intercepting (null or * = intercept all, otherwise its an text pattern (and regexp).
+     * @param  pattern pattern for intercepting (null or * = intercept all, otherwise it's a text pattern (and regexp).
      * @param  skip    whether to skip sending to original endpoint (only to mock endpoint).
      * @return         the endpoint strategy that intercepts.
      */

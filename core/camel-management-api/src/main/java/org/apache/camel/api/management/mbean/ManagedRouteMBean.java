@@ -46,6 +46,9 @@ public interface ManagedRouteMBean extends ManagedPerformanceCounterMBean {
     @ManagedAttribute(description = "Route Description")
     String getDescription();
 
+    @ManagedAttribute(description = "Route Note")
+    String getNote();
+
     @ManagedAttribute(description = "Route Auto Startup")
     Boolean getAutoStartup();
 
@@ -136,6 +139,9 @@ public interface ManagedRouteMBean extends ManagedPerformanceCounterMBean {
     @ManagedOperation(description = "Dumps the route as XML")
     String dumpRouteAsXml(boolean resolvePlaceholders, boolean generatedIds) throws Exception;
 
+    @ManagedOperation(description = "Dumps the route as XML")
+    String dumpRouteAsXml(boolean resolvePlaceholders, boolean generatedIds, boolean sourceLocation) throws Exception;
+
     @ManagedOperation(description = "Dumps the route as YAML")
     String dumpRouteAsYaml() throws Exception;
 
@@ -146,10 +152,14 @@ public interface ManagedRouteMBean extends ManagedPerformanceCounterMBean {
     String dumpRouteAsYaml(boolean resolvePlaceholders, boolean uriAsParameters) throws Exception;
 
     @ManagedOperation(description = "Dumps the route as YAML")
-    String dumpRouteAsYaml(boolean resolvePlaceholders, boolean uriAsParameters, boolean generatedIds) throws Exception;
+    String dumpRouteAsYaml(boolean resolvePlaceholders, boolean uriAsParameters, boolean generatedIds, boolean sourceLocation)
+            throws Exception;
 
     @ManagedOperation(description = "Dumps the route stats as XML")
     String dumpRouteStatsAsXml(boolean fullStats, boolean includeProcessors) throws Exception;
+
+    @ManagedOperation(description = "Dumps the route stats as JSon")
+    String dumpRouteStatsAsJSon(boolean fullStats, boolean includeProcessors) throws Exception;
 
     @ManagedOperation(description = "Dumps the route and steps stats as XML")
     String dumpStepStatsAsXml(boolean fullStats) throws Exception;

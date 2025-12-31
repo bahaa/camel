@@ -36,7 +36,7 @@ public abstract class SmbServerTestSupport extends CamelTestSupport {
 
     // docker container shared by all tests using this service
     @RegisterExtension
-    public static SmbService service = SmbServiceFactory.createService();
+    public static SmbService service = SmbServiceFactory.createSingletonService();
 
     public byte[] copyFileContentFromContainer(String fileName) {
         return service.copyFileFromContainer(fileName, IOUtils::toByteArray);
@@ -47,18 +47,19 @@ public abstract class SmbServerTestSupport extends CamelTestSupport {
     }
 
     public void createIfNoDir(String name) throws Exception {
-        SMBClient smbClient = new SMBClient();
-        int port = Integer.parseInt(service.address().split(":")[1]);
-        try (Connection connection = smbClient.connect("localhost", port)) {
-            AuthenticationContext ac = new AuthenticationContext(service.userName(), service.password().toCharArray(), null);
-            Session session = connection.authenticate(ac);
+        try (SMBClient smbClient = new SMBClient()) {
+            int port = Integer.parseInt(service.address().split(":")[1]);
+            try (Connection connection = smbClient.connect("localhost", port)) {
+                AuthenticationContext ac
+                        = new AuthenticationContext(service.userName(), service.password().toCharArray(), null);
+                Session session = connection.authenticate(ac);
 
-            try (DiskShare share = (DiskShare) session.connectShare(service.shareName())) {
-                if (!share.folderExists(name)) {
-                    new SmbFiles().mkdirs(share, name);
+                try (DiskShare share = (DiskShare) session.connectShare(service.shareName())) {
+                    if (!share.folderExists(name)) {
+                        new SmbFiles().mkdirs(share, name);
+                    }
                 }
             }
-
         }
     }
 }

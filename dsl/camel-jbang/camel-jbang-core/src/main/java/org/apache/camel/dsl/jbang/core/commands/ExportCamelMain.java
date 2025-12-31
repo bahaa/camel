@@ -16,6 +16,7 @@
  */
 package org.apache.camel.dsl.jbang.core.commands;
 
+import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +37,11 @@ import org.apache.camel.util.CamelCaseOrderedProperties;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 
+import static org.apache.camel.dsl.jbang.core.commands.ExportHelper.exportPackageName;
+
 class ExportCamelMain extends Export {
+
+    protected static final String GROOVY_COMPILE_DIR = CommandLineHelper.CAMEL_JBANG_WORK_DIR + "/compile/groovy";
 
     public ExportCamelMain(CamelJBangMain main) {
         super(main);
@@ -56,6 +61,7 @@ class ExportCamelMain extends Export {
         }
         if (buildTool.equals("gradle")) {
             printer().printErr("--build-tool=gradle is not support yet for camel-main runtime.");
+            return 1;
         }
 
         // the settings file has information what to export
@@ -73,7 +79,7 @@ class ExportCamelMain extends Export {
 
         printer().println("Exporting as Camel Main project to: " + exportDir);
 
-        Path profile = Path.of("application.properties");
+        Path profile = exportBaseDir.resolve("application.properties");
 
         // use a temporary work dir
         Path buildDir = Path.of(BUILD_DIR);
@@ -107,6 +113,9 @@ class ExportCamelMain extends Export {
         // copy from settings to profile
         copySettingsAndProfile(settings, profile,
                 srcResourcesDir, prop -> {
+                    if (groovyPrecompiled && !prop.containsKey("camel.main.groovyPreloadCompiled")) {
+                        prop.put("camel.main.groovyPreloadCompiled", "true");
+                    }
                     if (!prop.containsKey("camel.main.basePackageScan")
                             && !prop.containsKey("camel.main.base-package-scan")) {
                         // use dot as root package if no package are in use
@@ -127,7 +136,13 @@ class ExportCamelMain extends Export {
                             prop.put("camel.server.port", port);
                         }
                         if (!prop.containsKey("camel.server.health-check-enabled")) {
-                            prop.put("camel.server.health-check-enabled", "true");
+                            if (VersionHelper.isGE(camelVersion, "4.14.0")) {
+                                prop.put("camel.management.enabled", "true");
+                                prop.put("camel.management.health-check-enabled", "true");
+                            } else {
+                                // old option name for Camel 4.13 and older
+                                prop.put("camel.server.health-check-enabled", "true");
+                            }
                         }
                     }
                     port = httpManagementPort(settings);
@@ -141,6 +156,10 @@ class ExportCamelMain extends Export {
         createMainClassSource(srcJavaDir, srcPackageName, mainClassname);
         // copy local lib JARs
         copyLocalLibDependencies(deps);
+        // copy local lib JARs
+        if (groovyPrecompiled) {
+            copyGroovyPrecompiled(srcResourcesDir);
+        }
         // copy agent JARs and remove as dependency
         copyAgentDependencies(deps);
         deps.removeIf(d -> d.startsWith("agent:"));
@@ -228,6 +247,9 @@ class ExportCamelMain extends Export {
             if (gav.getVersion() != null) {
                 sb.append("            <version>").append(gav.getVersion()).append("</version>\n");
             }
+            if (gav.getScope() != null) {
+                sb.append("            <scope>").append(gav.getScope()).append("</scope>\n");
+            }
             // special for lib JARs
             if ("lib".equals(gav.getPackaging())) {
                 sb.append("            <scope>system</scope>\n");
@@ -282,7 +304,7 @@ class ExportCamelMain extends Export {
             }
             // from image is mandatory so use a default image if none provided
             if (fromImage == null) {
-                fromImage = "eclipse-temurin:" + javaVersion + "-jre";
+                fromImage = "mirror.gcr.io/library/eclipse-temurin:" + javaVersion + "-jre";
                 sb1.append(String.format("        <%s>%s</%s>%n", "jib.from.image", fromImage, "jib.from.image"));
             }
 
@@ -343,7 +365,9 @@ class ExportCamelMain extends Export {
             Properties prop = new CamelCaseOrderedProperties();
             RuntimeUtil.loadProperties(prop, profile);
             // if metrics is defined then include camel-micrometer-prometheus for camel-main runtime
-            if (prop.getProperty("camel.metrics.enabled") != null || prop.getProperty("camel.server.metricsEnabled") != null) {
+            if (prop.getProperty("camel.metrics.enabled") != null
+                    || prop.getProperty("camel.management.metricsEnabled") != null
+                    || prop.getProperty("camel.server.metricsEnabled") != null) {
                 answer.add("mvn:org.apache.camel:camel-micrometer-prometheus");
             }
         }
@@ -397,11 +421,31 @@ class ExportCamelMain extends Export {
 
         // log4j configuration
         InputStream is = ExportCamelMain.class.getResourceAsStream("/log4j2-main.properties");
-        safeCopy(is, srcResourcesDir.resolve("log4j2.properties"));
+        ExportHelper.safeCopy(is, srcResourcesDir.resolve("log4j2.properties"));
         is = ExportCamelMain.class.getResourceAsStream("/log4j2.component.properties");
-        safeCopy(is, srcResourcesDir.resolve("log4j2.component.properties"));
+        ExportHelper.safeCopy(is, srcResourcesDir.resolve("log4j2.component.properties"));
         // assembly for runner jar
         is = ExportCamelMain.class.getResourceAsStream("/assembly/runner.xml");
-        safeCopy(is, srcResourcesDir.resolve("assembly/runner.xml"));
+        ExportHelper.safeCopy(is, srcResourcesDir.resolve("assembly/runner.xml"));
     }
+
+    protected void copyGroovyPrecompiled(Path srcResourcesDir) throws Exception {
+        // are there any pre-compiled groovy code
+        File gc = new File(GROOVY_COMPILE_DIR);
+        if (gc.exists() && gc.isDirectory()) {
+            File[] files = gc.listFiles();
+            if (files != null) {
+                Path targetDir = srcResourcesDir.resolve("camel-groovy-compiled");
+                for (File file : files) {
+                    // skip anonymous scripts
+                    if (file.getName().endsWith(".class") && !file.getName().startsWith("Script_")) {
+                        Files.createDirectories(targetDir);
+                        Path out = targetDir.resolve(file.getName());
+                        ExportHelper.safeCopy(file.toPath(), out, true);
+                    }
+                }
+            }
+        }
+    }
+
 }

@@ -21,9 +21,9 @@ public class GooglePubsubEndpointUriFactory extends org.apache.camel.support.com
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(18);
+        Set<String> props = new HashSet<>(20);
         props.add("ackMode");
         props.add("authenticate");
         props.add("bridgeErrorHandler");
@@ -31,6 +31,8 @@ public class GooglePubsubEndpointUriFactory extends org.apache.camel.support.com
         props.add("destinationName");
         props.add("exceptionHandler");
         props.add("exchangePattern");
+        props.add("headerFilterStrategy");
+        props.add("includeAllGoogleProperties");
         props.add("lazyStartProducer");
         props.add("loggerId");
         props.add("maxAckExtensionPeriod");
@@ -44,7 +46,7 @@ public class GooglePubsubEndpointUriFactory extends org.apache.camel.support.com
         props.add("synchronousPull");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         SECRET_PROPERTY_NAMES = Collections.emptySet();
-        MULTI_VALUE_PREFIXES = Collections.emptySet();
+        MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
     @Override
@@ -76,7 +78,7 @@ public class GooglePubsubEndpointUriFactory extends org.apache.camel.support.com
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

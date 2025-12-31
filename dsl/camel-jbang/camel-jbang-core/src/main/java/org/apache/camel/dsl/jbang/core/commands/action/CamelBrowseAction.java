@@ -240,7 +240,7 @@ public class CamelBrowseAction extends ActionBaseCommand {
                     }
                     JsonObject ep = new JsonObject();
                     ep.put("endpoint", row.uri);
-                    String table = tableHelper.getDataAsTable(exchangeId, null, ep, null, message, null);
+                    String table = tableHelper.getDataAsTable(exchangeId, null, null, ep, null, message, null);
                     String header = String.format("Browse Message: (%s/%s)", row.position + i + 1,
                             row.position + row.messages.size());
                     if (loggingColor) {
@@ -338,7 +338,7 @@ public class CamelBrowseAction extends ActionBaseCommand {
             try {
                 return (Row) clone();
             } catch (CloneNotSupportedException e) {
-                return null;
+                throw new RuntimeException(e);
             }
         }
     }

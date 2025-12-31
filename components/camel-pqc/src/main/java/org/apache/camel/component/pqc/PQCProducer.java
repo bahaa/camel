@@ -31,15 +31,11 @@ import org.apache.camel.util.ObjectHelper;
 import org.bouncycastle.jcajce.SecretKeyWithEncapsulation;
 import org.bouncycastle.jcajce.spec.KEMExtractSpec;
 import org.bouncycastle.jcajce.spec.KEMGenerateSpec;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A Producer which sign or verify a payload
  */
 public class PQCProducer extends DefaultProducer {
-
-    private static final Logger LOG = LoggerFactory.getLogger(PQCProducer.class);
 
     private Signature signer;
     private KeyGenerator keyGenerator;
@@ -98,8 +94,8 @@ public class PQCProducer extends DefaultProducer {
             signer = getEndpoint().getConfiguration().getSigner();
 
             if (ObjectHelper.isEmpty(signer)) {
-                signer = Signature
-                        .getInstance(PQCSignatureAlgorithms.valueOf(getConfiguration().getSignatureAlgorithm()).getAlgorithm());
+                PQCSignatureAlgorithms sigAlg = PQCSignatureAlgorithms.valueOf(getConfiguration().getSignatureAlgorithm());
+                signer = Signature.getInstance(sigAlg.getAlgorithm(), sigAlg.getBcProvider());
             }
         }
 
@@ -108,9 +104,9 @@ public class PQCProducer extends DefaultProducer {
             keyGenerator = getEndpoint().getConfiguration().getKeyGenerator();
 
             if (ObjectHelper.isEmpty(keyGenerator)) {
-                keyGenerator = KeyGenerator
-                        .getInstance(PQCKeyEncapsulationAlgorithms.valueOf(getConfiguration().getKeyEncapsulationAlgorithm())
-                                .getAlgorithm());
+                PQCKeyEncapsulationAlgorithms kemAlg
+                        = PQCKeyEncapsulationAlgorithms.valueOf(getConfiguration().getKeyEncapsulationAlgorithm());
+                keyGenerator = KeyGenerator.getInstance(kemAlg.getAlgorithm(), kemAlg.getBcProvider());
             }
         }
 

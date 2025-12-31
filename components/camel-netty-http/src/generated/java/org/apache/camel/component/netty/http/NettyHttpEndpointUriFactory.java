@@ -21,9 +21,9 @@ public class NettyHttpEndpointUriFactory extends org.apache.camel.support.compon
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(90);
+        Set<String> props = new HashSet<>(88);
         props.add("allowSerializedHeaders");
         props.add("backlog");
         props.add("bossCount");
@@ -50,7 +50,6 @@ public class NettyHttpEndpointUriFactory extends org.apache.camel.support.compon
         props.add("hostnameVerification");
         props.add("httpMethodRestrict");
         props.add("keepAlive");
-        props.add("keyStoreFile");
         props.add("keyStoreFormat");
         props.add("keyStoreResource");
         props.add("lazyChannelCreation");
@@ -106,7 +105,6 @@ public class NettyHttpEndpointUriFactory extends org.apache.camel.support.compon
         props.add("traceEnabled");
         props.add("transferException");
         props.add("transferExchange");
-        props.add("trustStoreFile");
         props.add("trustStoreResource");
         props.add("unixDomainSocketPath");
         props.add("urlDecodeHeaders");
@@ -118,10 +116,10 @@ public class NettyHttpEndpointUriFactory extends org.apache.camel.support.compon
         Set<String> secretProps = new HashSet<>(1);
         secretProps.add("passphrase");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
-        Set<String> prefixes = new HashSet<>(2);
-        prefixes.add("option.");
-        prefixes.add("securityConfiguration.");
-        MULTI_VALUE_PREFIXES = Collections.unmodifiableSet(prefixes);
+        Map<String, String> prefixes = new HashMap<>(2);
+        prefixes.put("options", "option.");
+        prefixes.put("securityOptions", "securityConfiguration.");
+        MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
     }
 
     @Override
@@ -155,7 +153,7 @@ public class NettyHttpEndpointUriFactory extends org.apache.camel.support.compon
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

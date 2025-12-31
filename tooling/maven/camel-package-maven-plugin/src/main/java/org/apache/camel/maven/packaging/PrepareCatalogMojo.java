@@ -163,6 +163,12 @@ public class PrepareCatalogMojo extends AbstractMojo {
     protected File mainOutDir;
 
     /**
+     * The output directory for generated jbang
+     */
+    @Parameter(defaultValue = "${project.basedir}/src/generated/resources/org/apache/camel/catalog/jbang")
+    protected File jbangOutDir;
+
+    /**
      * The components directory where all the Apache Camel components are
      */
     @Parameter(defaultValue = "${project.basedir}/../../components")
@@ -215,6 +221,12 @@ public class PrepareCatalogMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "${project.basedir}/../../core/camel-main/target/classes/META-INF")
     protected File mainDir;
+
+    /**
+     * The directory where the camel-jbang metadata are
+     */
+    @Parameter(defaultValue = "${project.basedir}/../../dsl/camel-jbang/camel-jbang-core/target/classes/META-INF")
+    protected File jbangDir;
 
     /**
      * Skip the execution of this mojo
@@ -397,6 +409,7 @@ public class PrepareCatalogMojo extends AbstractMojo {
             executeDocuments(components, dataformats, languages, others);
             executeXmlSchemas();
             executeMain();
+            executeJBang();
         } catch (Exception e) {
             throw new MojoFailureException("Error preparing catalog", e);
         }
@@ -911,6 +924,7 @@ public class PrepareCatalogMojo extends AbstractMojo {
                 case "camel-as2":
                 case "camel-avro-rpc":
                 case "camel-aws":
+                case "camel-aws-common":
                 case "camel-azure":
                 case "camel-box":
                 case "camel-cxf":
@@ -921,16 +935,17 @@ public class PrepareCatalogMojo extends AbstractMojo {
                 case "camel-http-base":
                 case "camel-http-common":
                 case "camel-huawei":
+                case "camel-ibm":
                 case "camel-infinispan":
                 case "camel-jetty-common":
                 case "camel-knative":
-                case "camel-langchain4j-core":
                 case "camel-microprofile":
                 case "camel-olingo2":
                 case "camel-olingo4":
                 case "camel-salesforce":
                 case "camel-servicenow":
                 case "camel-spring-parent":
+                case "camel-spring-ai":
                 case "camel-test":
                 case "camel-vertx":
                     return false;
@@ -997,6 +1012,11 @@ public class PrepareCatalogMojo extends AbstractMojo {
         copyFile(mainDir.toPath().resolve("camel-main-configuration-metadata.json"), mainOutDir.toPath());
     }
 
+    protected void executeJBang() throws Exception {
+        getLog().info("Copying camel-jbang metadata");
+        copyFile(jbangDir.toPath().resolve("camel-jbang-configuration-metadata.json"), jbangOutDir.toPath());
+    }
+
     protected void executeDocuments(
             Set<String> components, Set<String> dataformats, Set<String> languages, Set<String> others) {
         // lets use sorted set/maps
@@ -1026,6 +1046,10 @@ public class PrepareCatalogMojo extends AbstractMojo {
                                     // the dir must be active (inactive can be removed component from old branch)
                                     String[] poms = dir.toFile().list((dir1, name) -> "pom.xml".equals(name));
                                     valid = poms != null && poms.length == 1;
+                                }
+                                if (valid && "core".equals(n)) {
+                                    // skip camel-core
+                                    valid = false;
                                 }
                                 if (valid) {
                                     missingAdocFiles.add(dir);
@@ -1073,6 +1097,9 @@ public class PrepareCatalogMojo extends AbstractMojo {
                 case "ftps":
                     component = "ftp";
                     break;
+                default: {
+                    // NO-OP
+                }
             }
             String name = component + "-component";
             if (!docs.contains(name)

@@ -16,22 +16,24 @@
  */
 package org.apache.camel.dsl.jbang.core.commands.infra;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
-import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
+import org.apache.camel.dsl.jbang.core.common.PathUtils;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "stop",
-                     description = "Stop an external service")
+                     description = "Shuts down running external services", sortOptions = false, showDefaultValues = true)
 public class InfraStop extends InfraBaseCommand {
 
-    @CommandLine.Parameters(description = "Service name", arity = "1")
-    private List<String> serviceName;
+    @CommandLine.Parameters(description = "Name or pid of running service(s)", arity = "0..1")
+    String name = "*";
+
+    @CommandLine.Option(names = { "--kill" },
+                        description = "To force killing the process (SIGKILL)")
+    boolean kill;
 
     public InfraStop(CamelJBangMain main) {
         super(main);
@@ -39,36 +41,27 @@ public class InfraStop extends InfraBaseCommand {
 
     @Override
     public Integer doCall() throws Exception {
-        String serviceToStop = serviceName.get(0);
 
-        boolean serviceStopped = false;
-        String pid = null;
-        try {
-            List<Path> pidFiles = Files.list(CommandLineHelper.getCamelDir())
-                    .filter(p -> p.getFileName().toString().startsWith("infra-" + serviceToStop + "-"))
-                    .collect(java.util.stream.Collectors.toList());
+        Map<Long, Path> pids = findPids(name);
 
-            for (Path pidFile : pidFiles) {
-                String name = pidFile.getFileName().toString();
-                pid = name.substring(name.lastIndexOf("-") + 1, name.lastIndexOf('.'));
-
-                Files.deleteIfExists(pidFile);
-                serviceStopped = true;
-                break;
+        // stop by deleting the pid file
+        for (var entry : pids.entrySet()) {
+            Path pidFile = entry.getValue();
+            if (Files.exists(pidFile)) {
+                printer().println("Shutting down external services (PID: " + entry.getKey() + ")");
+                PathUtils.deleteFile(pidFile);
             }
-        } catch (IOException e) {
-            // ignore
         }
-
-        if (!serviceStopped) {
-            printer().println("No Camel Infrastructure found with name " + serviceToStop + " found.");
-
-            return -1;
+        if (kill) {
+            for (Long pid : pids.keySet()) {
+                ProcessHandle.of(pid).ifPresent(ph -> {
+                    printer().println("Killing external service (PID: " + pid + ")");
+                    ph.destroyForcibly();
+                });
+            }
         }
-
-        printer().println("Shutting down service " + serviceToStop + " (PID: " + pid + ")");
-        ProcessHandle.of(Long.valueOf(pid)).ifPresent(ProcessHandle::destroy);
 
         return 0;
     }
+
 }

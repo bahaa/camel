@@ -602,6 +602,7 @@ public interface JettyHttp12EndpointBuilderFactory {
          * 
          * The option is a: <code>java.lang.Boolean</code> type.
          * 
+         * Default: false
          * Group: consumer
          * 
          * @param useContinuation the value to set
@@ -617,6 +618,7 @@ public interface JettyHttp12EndpointBuilderFactory {
          * The option will be converted to a <code>java.lang.Boolean</code>
          * type.
          * 
+         * Default: false
          * Group: consumer
          * 
          * @param useContinuation the value to set
@@ -1244,8 +1246,8 @@ public interface JettyHttp12EndpointBuilderFactory {
             return this;
         }
         /**
-         * Allows using a custom multipart filter. Note: setting
-         * multipartFilterRef forces the value of enableMultipartFilter to true.
+         * Allows using a custom multipart filter. Note: setting multipartFilter
+         * forces the value of enableMultipartFilter to true.
          * 
          * The option is a: <code>jakarta.servlet.Filter</code> type.
          * 
@@ -1259,8 +1261,8 @@ public interface JettyHttp12EndpointBuilderFactory {
             return this;
         }
         /**
-         * Allows using a custom multipart filter. Note: setting
-         * multipartFilterRef forces the value of enableMultipartFilter to true.
+         * Allows using a custom multipart filter. Note: setting multipartFilter
+         * forces the value of enableMultipartFilter to true.
          * 
          * The option will be converted to a <code>jakarta.servlet.Filter</code>
          * type.

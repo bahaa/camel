@@ -161,8 +161,8 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
     private String oauth2TokenEndpoint;
     @UriParam(label = "producer,security", description = "OAuth2 scope")
     private String oauth2Scope;
-    @UriParam(label = "producer,security", defaultValue = "false", description = "Whether to cache OAuth2 client tokens.")
-    private boolean oauth2CacheTokens = false;
+    @UriParam(label = "producer,security", description = "Whether to cache OAuth2 client tokens.")
+    private boolean oauth2CacheTokens;
     @UriParam(label = "producer,security", defaultValue = "3600",
               description = "Default expiration time for cached OAuth2 tokens, in seconds. Used if token response does not contain 'expires_in' field.")
     private long oauth2CachedTokensDefaultExpirySeconds = 3600L;
@@ -172,28 +172,35 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
                             "Set this parameter to high value if you OAuth2 Token Endpoint answers slowly or you tokens expire quickly. "
                             +
                             "If you set this parameter to too small value, you can get 4xx http errors because camel will think that the received token is still valid, while in reality the token is expired for the Authentication server.")
-    private long oauth2CachedTokensExpirationMarginSeconds = 5L;
+    private long oauth2CachedTokensExpirationMarginSeconds = 5;
+    @UriParam(label = "producer,security",
+              description = "Whether to use OAuth2 body authentication.")
+    private boolean oauth2BodyAuthentication;
     @Deprecated
     @UriParam(label = "producer,security", description = "Authentication domain to use with NTLM")
     private String authDomain;
     @Deprecated
     @UriParam(label = "producer,security", description = "Authentication host to use with NTLM")
     private String authHost;
-    @UriParam(label = "producer,proxy", description = "Proxy hostname to use")
+    @UriParam(label = "producer,proxy", description = "Proxy server host")
     private String proxyHost;
-    @UriParam(label = "producer,proxy", description = "Proxy port to use")
+    @UriParam(label = "producer,proxy", description = "Proxy server port")
     private int proxyPort;
-    @UriParam(label = "producer,proxy", enums = "http,https", description = "Proxy authentication scheme to use")
+    @UriParam(label = "producer,proxy", enums = "http,https",
+              description = "Proxy server authentication protocol scheme to use")
     private String proxyAuthScheme;
-    @UriParam(label = "producer,proxy", enums = "Basic,Bearer,NTLM", description = "Proxy authentication method to use")
+    @UriParam(label = "producer,proxy", enums = "Basic,Bearer,NTLM",
+              description = "Proxy authentication method to use (NTLM is deprecated)")
     private String proxyAuthMethod;
-    @UriParam(label = "producer,proxy", secret = true, description = "Proxy authentication username")
+    @UriParam(label = "producer,proxy", secret = true, description = "Proxy server username")
     private String proxyAuthUsername;
-    @UriParam(label = "producer,proxy", secret = true, description = "Proxy authentication password")
+    @UriParam(label = "producer,proxy", secret = true, description = "Proxy server password")
     private String proxyAuthPassword;
-    @UriParam(label = "producer,proxy", description = "Proxy authentication host")
+    @Deprecated
+    @UriParam(label = "producer,proxy", description = "Proxy server host")
     private String proxyAuthHost;
-    @UriParam(label = "producer,proxy", description = "Proxy authentication port")
+    @Deprecated
+    @UriParam(label = "producer,proxy", description = "Proxy server port")
     private int proxyAuthPort;
     @Deprecated
     @UriParam(label = "producer,proxy", description = "Proxy authentication domain to use with NTLM")
@@ -201,6 +208,9 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
     @Deprecated
     @UriParam(label = "producer,proxy", description = "Proxy authentication domain (workstation name) to use with NTLM")
     private String proxyAuthNtHost;
+    @UriParam(label = "producer,proxy", description = "Comma-separated list of hosts that should bypass the proxy. "
+                                                      + "Supports wildcards, e.g., localhost,*.example.com,192.168.*.")
+    private String nonProxyHosts;
 
     protected HttpCommonEndpoint() {
     }
@@ -809,6 +819,18 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
         return proxyAuthNtHost;
     }
 
+    public String getNonProxyHosts() {
+        return nonProxyHosts;
+    }
+
+    /**
+     * To specify a set of hosts that should bypass the proxy. The hosts can be specified as a comma-separated list.
+     * Supports wildcards such as *.example.com or 192.168.*. Matching is case-insensitive.
+     */
+    public void setNonProxyHosts(String nonProxyHosts) {
+        this.nonProxyHosts = nonProxyHosts;
+    }
+
     /**
      * Proxy authentication domain (workstation name) to use with NTLM
      */
@@ -907,5 +929,16 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
      */
     public void setOauth2CachedTokensExpirationMarginSeconds(long cachedTokensExpirationMarginSeconds) {
         this.oauth2CachedTokensExpirationMarginSeconds = cachedTokensExpirationMarginSeconds;
+    }
+
+    public boolean isOauth2BodyAuthentication() {
+        return oauth2BodyAuthentication;
+    }
+
+    /**
+     * Whether to use OAuth2 body authentication.
+     */
+    public void setOauth2BodyAuthentication(boolean oauth2BodyAuthentication) {
+        this.oauth2BodyAuthentication = oauth2BodyAuthentication;
     }
 }

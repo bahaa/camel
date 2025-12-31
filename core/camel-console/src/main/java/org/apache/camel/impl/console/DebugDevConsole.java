@@ -34,6 +34,7 @@ import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.console.AbstractDevConsole;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
+import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
@@ -44,6 +45,7 @@ public class DebugDevConsole extends AbstractDevConsole {
 
     public static final String COMMAND = "command";
     public static final String BREAKPOINT = "breakpoint";
+    public static final String POSITION = "position";
     public static final String CODE_LIMIT = "codeLimit";
     public static final String HISTORY = "history";
 
@@ -55,9 +57,11 @@ public class DebugDevConsole extends AbstractDevConsole {
     protected String doCallText(Map<String, Object> options) {
         String command = (String) options.get(COMMAND);
         String breakpoint = (String) options.get(BREAKPOINT);
+        String position = (String) options.get(POSITION);
+        int num = position == null || position.isBlank() ? 0 : Integer.parseInt(position);
 
         if (ObjectHelper.isNotEmpty(command)) {
-            doCommand(command, breakpoint);
+            doCommand(command, breakpoint, num);
             return "";
         }
 
@@ -102,7 +106,7 @@ public class DebugDevConsole extends AbstractDevConsole {
         return sb.toString();
     }
 
-    private void doCommand(String command, String breakpoint) {
+    private void doCommand(String command, String breakpoint, int position) {
         BacklogDebugger backlog = getCamelContext().hasService(BacklogDebugger.class);
         if (backlog == null) {
             return;
@@ -122,10 +126,15 @@ public class DebugDevConsole extends AbstractDevConsole {
             if (ObjectHelper.isNotEmpty(breakpoint)) {
                 backlog.stepBreakpoint(breakpoint);
             } else {
-                backlog.stepBreakpoint();
+                if (position < 1 || !stepToPosition(backlog, position)) {
+                    // if we cannot successfully step to a position we must do a step
+                    backlog.stepBreakpoint();
+                }
             }
         } else if ("stepover".equalsIgnoreCase(command)) {
             backlog.stepOver();
+        } else if ("skipover".equalsIgnoreCase(command)) {
+            backlog.skipOver();
         } else if ("add".equalsIgnoreCase(command) && ObjectHelper.isNotEmpty(breakpoint)) {
             backlog.addBreakpoint(breakpoint);
         } else if ("remove".equalsIgnoreCase(command)) {
@@ -137,6 +146,60 @@ public class DebugDevConsole extends AbstractDevConsole {
         }
     }
 
+    private boolean stepToPosition(BacklogDebugger backlog, int position) {
+        if (position < 1) {
+            return false;
+        }
+        if (!backlog.isSingleStepMode()) {
+            return false;
+        }
+        if (backlog.getSuspendedBreakpointNodeIds().size() != 1) {
+            return false;
+        }
+        String id = backlog.getSuspendedBreakpointNodeIds().iterator().next();
+        Exchange exchange = backlog.getSuspendedExchange(id);
+        if (exchange == null) {
+            return false;
+        }
+        List<MessageHistory> list = exchange.getProperty(ExchangePropertyKey.MESSAGE_HISTORY, List.class);
+        if (list == null) {
+            return false;
+        }
+        int diff = position - list.size() + 1;
+        if (diff <= 0) {
+            return false;
+        }
+
+        StopWatch watch = new StopWatch();
+        for (int i = 0; i < diff; i++) {
+            // if there are no suspended then exit
+            if (backlog.getSuspendedBreakpointNodeIds().isEmpty()) {
+                return true;
+            }
+            // stop when we hit last
+            id = backlog.getSuspendedBreakpointNodeIds().iterator().next();
+            var msg = backlog.getSuspendedBreakpointMessage(id);
+            if (msg.isLast()) {
+                return true;
+            }
+
+            // go to next and wait for debugger to suspend again
+            watch.restart();
+            backlog.stepBreakpoint();
+            while (backlog.isSingleStepMode() && backlog.getSuspendedBreakpointNodeIds().isEmpty()) {
+                if (watch.taken() > 10000) {
+                    return false;
+                }
+                try {
+                    Thread.sleep(10);
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+        }
+        return true;
+    }
+
     @Override
     protected Map<String, Object> doCallJson(Map<String, Object> options) {
         JsonObject root = new JsonObject();
@@ -145,9 +208,11 @@ public class DebugDevConsole extends AbstractDevConsole {
         String breakpoint = (String) options.get(BREAKPOINT);
         String codeLimit = (String) options.getOrDefault(CODE_LIMIT, "5");
         boolean history = "true".equals(options.getOrDefault(HISTORY, "true"));
+        String repeat = (String) options.get(POSITION);
+        int num = repeat == null || repeat.isBlank() ? 0 : Integer.parseInt(repeat);
 
         if (ObjectHelper.isNotEmpty(command)) {
-            doCommand(command, breakpoint);
+            doCommand(command, breakpoint, num);
             return root;
         }
 
@@ -226,6 +291,7 @@ public class DebugDevConsole extends AbstractDevConsole {
             return arr;
         }
 
+        int counter = 0;
         for (MessageHistory h : list) {
             JsonObject jo = new JsonObject();
 
@@ -239,13 +305,18 @@ public class DebugDevConsole extends AbstractDevConsole {
                     }
                 }
             }
+            jo.put("index", counter++);
             if (h.getRouteId() != null) {
                 jo.put("routeId", h.getRouteId());
             }
             jo.put("elapsed", h.getElapsed());
             jo.put("acceptDebugger", h.isAcceptDebugger());
+            jo.put("skipOver", h.isDebugSkipOver());
             if (h.getNode() != null) {
                 jo.put("nodeId", h.getNode().getId());
+                jo.put("nodeShortName", h.getNode().getShortName());
+                jo.put("nodeLabel", h.getNode().getLabel());
+                jo.put("level", h.getNode().getLevel());
                 if (h.getNode().getLocation() != null) {
                     String loc = h.getNode().getLocation();
                     // strip schema

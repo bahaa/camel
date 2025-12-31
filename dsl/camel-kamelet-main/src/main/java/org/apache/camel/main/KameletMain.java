@@ -65,7 +65,9 @@ import org.apache.camel.main.download.ExportTypeConverter;
 import org.apache.camel.main.download.JavaKnownImportsDownloader;
 import org.apache.camel.main.download.KameletAutowiredLifecycleStrategy;
 import org.apache.camel.main.download.KameletMainInjector;
+import org.apache.camel.main.download.KameletOptimisedComponentResolver;
 import org.apache.camel.main.download.KnownDependenciesResolver;
+import org.apache.camel.main.download.KnownDependenciesVersionResolver;
 import org.apache.camel.main.download.KnownReposResolver;
 import org.apache.camel.main.download.MavenDependencyDownloader;
 import org.apache.camel.main.download.PackageNameSourceLoader;
@@ -82,17 +84,21 @@ import org.apache.camel.main.util.ExtraClassesClassLoader;
 import org.apache.camel.main.util.ExtraFilesClassLoader;
 import org.apache.camel.main.xml.blueprint.BlueprintXmlBeansHandler;
 import org.apache.camel.main.xml.spring.SpringXmlBeansHandler;
+import org.apache.camel.model.OnExceptionDefinition;
+import org.apache.camel.reifier.OnExceptionReifier;
 import org.apache.camel.reifier.ProcessorReifier;
 import org.apache.camel.spi.ClassResolver;
 import org.apache.camel.spi.CliConnector;
 import org.apache.camel.spi.CliConnectorFactory;
 import org.apache.camel.spi.CompileStrategy;
 import org.apache.camel.spi.ComponentResolver;
+import org.apache.camel.spi.ContextServiceLoaderPluginResolver;
 import org.apache.camel.spi.DataFormatResolver;
 import org.apache.camel.spi.FactoryFinder;
 import org.apache.camel.spi.FactoryFinderResolver;
 import org.apache.camel.spi.LanguageResolver;
 import org.apache.camel.spi.LifecycleStrategy;
+import org.apache.camel.spi.OptimisedComponentResolver;
 import org.apache.camel.spi.PeriodTaskResolver;
 import org.apache.camel.spi.PeriodTaskScheduler;
 import org.apache.camel.spi.Registry;
@@ -113,7 +119,7 @@ import org.apache.camel.tooling.maven.MavenGav;
  */
 public class KameletMain extends MainCommandLineSupport {
 
-    public static final String DEFAULT_KAMELETS_LOCATION = "classpath:kamelets,github:apache:camel-kamelets/kamelets";
+    public static final String DEFAULT_KAMELETS_LOCATION = "classpath:kamelets";
 
     private final String instanceType;
     protected final MainRegistry registry = new MainRegistry();
@@ -440,6 +446,12 @@ public class KameletMain extends MainCommandLineSupport {
             pc.setPropertiesFunctionResolver(new DependencyDownloaderPropertiesFunctionResolver(answer, false));
         }
 
+        // groovy scripts
+        String groovyFiles = getInitialProperties().getProperty(getInstanceType() + ".groovyFiles");
+        if (groovyFiles != null) {
+            configure().withGroovyScriptPattern(groovyFiles);
+        }
+
         boolean prompt = "true".equals(getInitialProperties().get(getInstanceType() + ".prompt"));
         if (prompt) {
             answer.getPropertiesComponent().addPropertiesSource(new PromptPropertyPlaceholderSource());
@@ -482,9 +494,10 @@ public class KameletMain extends MainCommandLineSupport {
         if (silent) {
             // silent should not include http server
             configure().httpServer().withEnabled(false);
+            configure().httpManagementServer().withEnabled(false);
         }
 
-        if (silent || "*".equals(stubPattern)) {
+        if (silent || "*".equals(stubPattern) || "component:*".equals(stubPattern)) {
             // turn off auto-wiring when running in silent mode (or stub = *)
             mainConfigurationProperties.setAutowiredEnabled(false);
             // and turn off fail fast as we stub components
@@ -525,6 +538,7 @@ public class KameletMain extends MainCommandLineSupport {
                 }
             }
         }
+
         configure().withProfile(profile);
 
         // embed HTTP server if port is specified
@@ -536,12 +550,12 @@ public class KameletMain extends MainCommandLineSupport {
         boolean console = "true".equals(getInitialProperties().get(getInstanceType() + ".console"));
         if (console) {
             configure().setDevConsoleEnabled(true);
-            configure().httpServer().withEnabled(true);
-            configure().httpServer().withDevConsoleEnabled(true);
+            configure().httpManagementServer().withEnabled(true);
+            configure().httpManagementServer().withDevConsoleEnabled(true);
             // also include health,info and jolokia
-            configure().httpServer().withHealthCheckEnabled(true);
-            configure().httpServer().withInfoEnabled(true);
-            configure().httpServer().withJolokiaEnabled(true);
+            configure().httpManagementServer().withHealthCheckEnabled(true);
+            configure().httpManagementServer().withInfoEnabled(true);
+            configure().httpManagementServer().withJolokiaEnabled(true);
         }
         boolean tracing = "true".equals(getInitialProperties().get(getInstanceType() + ".backlogTracing"));
         if (tracing) {
@@ -549,15 +563,15 @@ public class KameletMain extends MainCommandLineSupport {
         }
         boolean infoConsole = "true".equals(getInitialProperties().get(getInstanceType() + ".info"));
         if (infoConsole) {
-            configure().httpServer().withEnabled(true);
-            configure().httpServer().withInfoEnabled(true);
+            configure().httpManagementServer().withEnabled(true);
+            configure().httpManagementServer().withInfoEnabled(true);
         }
         // Deprecated: to be replaced by observe flag
         boolean health = "true".equals(getInitialProperties().get(getInstanceType() + ".health"));
         if (health) {
             configure().health().withEnabled(true);
-            configure().httpServer().withEnabled(true);
-            configure().httpServer().withHealthCheckEnabled(true);
+            configure().httpManagementServer().withEnabled(true);
+            configure().httpManagementServer().withHealthCheckEnabled(true);
         }
         // Deprecated: to be replaced by observe flag
         boolean metrics = "true".equals(getInitialProperties().get(getInstanceType() + ".metrics"));
@@ -567,8 +581,8 @@ public class KameletMain extends MainCommandLineSupport {
                     .withEnableMessageHistory(true)
                     .withEnableExchangeEventNotifier(true)
                     .withEnableRoutePolicy(true).withEnabled(true);
-            configure().httpServer().withEnabled(true);
-            configure().httpServer().withMetricsEnabled(true);
+            configure().httpManagementServer().withEnabled(true);
+            configure().httpManagementServer().withMetricsEnabled(true);
         }
         boolean ignoreLoading = "true".equals(getInitialProperties().get(getInstanceType() + ".ignoreLoadingError"));
         if (ignoreLoading) {
@@ -595,8 +609,7 @@ public class KameletMain extends MainCommandLineSupport {
             MavenGav g = MavenGav.parseGav(gav);
             if (g.getGroupId() != null && g.getArtifactId() != null) {
                 // plugin a custom source loader with package name based on GAV
-                String defaultPackageName = g.getGroupId().replace('-', '.') + "." + g.getArtifactId().replace('-', '.');
-                SourceLoader sl = new PackageNameSourceLoader(defaultPackageName);
+                SourceLoader sl = new PackageNameSourceLoader(g.getGroupId(), g.getArtifactId());
                 answer.getRegistry().bind("PackageNameSourceLoader", sl);
             }
         }
@@ -654,11 +667,14 @@ public class KameletMain extends MainCommandLineSupport {
                     new DependencyDownloaderUriFactoryResolver(answer));
             answer.getCamelContextExtension().addContextPlugin(ResourceLoader.class,
                     new DependencyDownloaderResourceLoader(answer, sourceDir));
+            answer.getCamelContextExtension().addContextPlugin(OptimisedComponentResolver.class,
+                    new KameletOptimisedComponentResolver(answer));
 
             if (stubPattern != null) {
                 // need to replace autowire strategy with stub capable
                 answer.getLifecycleStrategies()
-                        .removeIf(s -> s.getClass().getSimpleName().equals("DefaultAutowiredLifecycleStrategy"));
+                        // NOTE: class not available at compilation time.
+                        .removeIf(s -> s.getClass().getSimpleName().equals("DefaultAutowiredLifecycleStrategy")); // NOSONAR
                 answer.getLifecycleStrategies().add(new StubComponentAutowireStrategy(answer, stubPattern));
             }
             answer.setInjector(new KameletMainInjector(answer.getInjector(), stubPattern, silent));
@@ -672,14 +688,14 @@ public class KameletMain extends MainCommandLineSupport {
 
             // reloader
             if (sourceDir != null) {
-                configure().httpServer().withStaticSourceDir(sourceDir);
-                configure().httpServer().withUploadSourceDir(sourceDir);
-
                 if (console || health) {
+                    // allow to load static web content from source-dir
+                    configure().httpServer().withStaticSourceDir(sourceDir);
+                    configure().httpManagementServer().withEnabled(true);
                     // allow to upload/download source (source-dir is intended to be dynamic) via http when HTTP console enabled
-                    configure().httpServer().withEnabled(true);
-                    configure().httpServer().withUploadEnabled(true);
-                    configure().httpServer().withDownloadEnabled(true);
+                    configure().httpManagementServer().withUploadEnabled(true);
+                    configure().httpManagementServer().withDownloadEnabled(true);
+                    configure().httpManagementServer().withUploadSourceDir(sourceDir);
                 }
                 RouteOnDemandReloadStrategy reloader = new RouteOnDemandReloadStrategy(sourceDir, true);
                 reloader.setPattern("*");
@@ -720,6 +736,15 @@ public class KameletMain extends MainCommandLineSupport {
             throw RuntimeCamelException.wrapRuntimeException(e);
         }
 
+        // Start the context service loader plugin after all dependencies and downloaders are set up
+        // This ensures the classpath is enhanced and ServiceLoader can discover third-party plugins
+        ContextServiceLoaderPluginResolver contextServicePlugin = answer
+                .getCamelContextExtension().getContextPlugin(ContextServiceLoaderPluginResolver.class);
+        if (contextServicePlugin != null) {
+            // force start context service loader plugin to discover and load third-party plugins
+            ServiceHelper.startService(contextServicePlugin);
+        }
+
         return answer;
     }
 
@@ -745,6 +770,7 @@ public class KameletMain extends MainCommandLineSupport {
         downloader.addDownloadListener(new AutoConfigureDownloadListener());
         downloader.addArtifactDownloadListener(new TypeConverterLoaderDownloadListener());
         downloader.addArtifactDownloadListener(new BasePackageScanDownloadListener(packageScanJars));
+        downloader.setVersionResolver(new KnownDependenciesVersionResolver(downloader));
 
         return downloader;
     }
@@ -767,6 +793,10 @@ public class KameletMain extends MainCommandLineSupport {
         answer.getTypeConverterRegistry().addTypeConverter(Byte.class, String.class, ec);
         answer.getTypeConverterRegistry().addTypeConverter(Boolean.class, String.class, ec);
         answer.getTypeConverterRegistry().addFallbackTypeConverter(ec, false);
+
+        // turn of validator in onException during export
+        ProcessorReifier.registerReifier(OnExceptionDefinition.class,
+                (route, def) -> new OnExceptionReifier(route, (OnExceptionDefinition) def, false));
     }
 
     private String getInstanceType() {

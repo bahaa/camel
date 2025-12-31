@@ -21,6 +21,7 @@ import java.io.IOError;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
@@ -71,7 +72,7 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
     @Parameter(required = true, defaultValue = "${project}", readonly = true)
     protected MavenProject project;
 
-    private ClassLoader projectClassLoader;
+    protected ClassLoader projectClassLoader;
 
     // Thread-safe deferred-construction singleton via nested static class
     private static class VelocityEngineHolder {
@@ -133,7 +134,7 @@ public abstract class AbstractGeneratorMojo extends AbstractMojo {
 
         // if there are no urls then its because we are testing ourselves, then add the urls for source so java source parser can find them
         if (urls.length == 0) {
-            urls = new URL[] { new URL("file:src/main/java/"), new URL("file:src/test/java/") };
+            urls = new URL[] { URI.create("file:src/main/java/").toURL(), URI.create("file:src/test/java/").toURL() };
         }
 
         ClassLoader tccl = Thread.currentThread().getContextClassLoader();

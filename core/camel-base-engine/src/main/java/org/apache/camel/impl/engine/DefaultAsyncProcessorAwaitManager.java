@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.camel.AsyncProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.RuntimeCamelException;
-import org.apache.camel.StaticService;
 import org.apache.camel.spi.AsyncProcessorAwaitManager;
 import org.apache.camel.spi.ExchangeFormatter;
 import org.apache.camel.spi.ReactiveExecutor;
@@ -39,7 +38,7 @@ import org.apache.camel.util.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DefaultAsyncProcessorAwaitManager extends ServiceSupport implements AsyncProcessorAwaitManager, StaticService {
+public class DefaultAsyncProcessorAwaitManager extends ServiceSupport implements AsyncProcessorAwaitManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultAsyncProcessorAwaitManager.class);
 
@@ -260,6 +259,8 @@ public class DefaultAsyncProcessorAwaitManager extends ServiceSupport implements
         sb.append(
                 "---------------------------------------------------------------------------------------------------------------------------------------\n");
 
+        // TODO Update once baseline is Java 21
+        //        sb.append(style("Id:")).append(entry.getBlockedThread().threadId()).append("\n");
         sb.append(style("Id:")).append(entry.getBlockedThread().getId()).append("\n");
         sb.append(style("Name:")).append(entry.getBlockedThread().getName()).append("\n");
         sb.append(style("RouteId:")).append(safeNull(entry.getRouteId())).append("\n");

@@ -85,6 +85,7 @@ public final class CatalogLoader {
             answer.enableCache();
         } finally {
             downloader.stop();
+            downloader.close();
         }
 
         return answer;
@@ -119,7 +120,9 @@ public final class CatalogLoader {
                 throw new IOException("Cannot download org.apache.camel:camel-catalog:" + camelCatalogVersion);
             }
 
-            ma = downloader.downloadArtifact("org.apache.camel.springboot", "camel-catalog-provider-springboot", version);
+            final String camelVersion = version;
+            ma = downloader.downloadArtifact("org.apache.camel.springboot", "camel-catalog-provider-springboot",
+                    PropertyResolver.fromSystemProperty(CamelJBangConstants.CAMEL_SPRING_BOOT_VERSION, () -> camelVersion));
             if (ma != null) {
                 cl.addFile(ma.getFile());
             } else {
@@ -143,6 +146,7 @@ public final class CatalogLoader {
             answer.enableCache();
         } finally {
             downloader.stop();
+            downloader.close();
         }
 
         return answer;
@@ -157,7 +161,7 @@ public final class CatalogLoader {
             return answer;
         }
         // quarkus 3.2.x and older must have .Final
-        boolean finalSuffix = VersionHelper.isLE(quarkusVersion, "3.2");
+        boolean finalSuffix = VersionHelper.isLE(quarkusVersion, "3.2.0");
         if (finalSuffix && !quarkusVersion.endsWith(".Final")) {
             quarkusVersion += ".Final";
         }
@@ -223,6 +227,7 @@ public final class CatalogLoader {
             answer.enableCache();
         } finally {
             downloader.stop();
+            downloader.close();
         }
 
         return answer;
@@ -250,6 +255,7 @@ public final class CatalogLoader {
             }
         } finally {
             downloader.stop();
+            downloader.close();
         }
 
         return null;
@@ -278,6 +284,7 @@ public final class CatalogLoader {
             }
         } finally {
             downloader.stop();
+            downloader.close();
         }
 
         return null;
@@ -304,6 +311,7 @@ public final class CatalogLoader {
             }
         } finally {
             downloader.stop();
+            downloader.close();
         }
 
         return null;

@@ -2220,9 +2220,10 @@ public interface AWS2S3EndpointBuilderFactory {
         }
         /**
          * Set up the partSize which is used in multipart upload, the default
-         * size is 25M. Camel will only do multipart uploads for files that are
-         * larger than the part-size thresholds. Files that are smaller will be
-         * uploaded in a single operation.
+         * size is 25 MB. The minimum size in AWS is 5 MB. Camel will only do
+         * multipart uploads for files that are larger than the part-size
+         * thresholds. Files that are smaller will be uploaded in a single
+         * operation.
          * 
          * The option is a: <code>long</code> type.
          * 
@@ -2238,9 +2239,10 @@ public interface AWS2S3EndpointBuilderFactory {
         }
         /**
          * Set up the partSize which is used in multipart upload, the default
-         * size is 25M. Camel will only do multipart uploads for files that are
-         * larger than the part-size thresholds. Files that are smaller will be
-         * uploaded in a single operation.
+         * size is 25 MB. The minimum size in AWS is 5 MB. Camel will only do
+         * multipart uploads for files that are larger than the part-size
+         * thresholds. Files that are smaller will be uploaded in a single
+         * operation.
          * 
          * The option will be converted to a <code>long</code> type.
          * 
@@ -2361,6 +2363,90 @@ public interface AWS2S3EndpointBuilderFactory {
          */
         default AWS2S3EndpointProducerBuilder streamingUploadTimeout(String streamingUploadTimeout) {
             doSetProperty("streamingUploadTimeout", streamingUploadTimeout);
+            return this;
+        }
+        /**
+         * Enable timestamp-based grouping of messages into time windows for
+         * file creation. When enabled, messages are grouped by their timestamp
+         * header into time windows.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param timestampGroupingEnabled the value to set
+         * @return the dsl builder
+         */
+        default AWS2S3EndpointProducerBuilder timestampGroupingEnabled(boolean timestampGroupingEnabled) {
+            doSetProperty("timestampGroupingEnabled", timestampGroupingEnabled);
+            return this;
+        }
+        /**
+         * Enable timestamp-based grouping of messages into time windows for
+         * file creation. When enabled, messages are grouped by their timestamp
+         * header into time windows.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param timestampGroupingEnabled the value to set
+         * @return the dsl builder
+         */
+        default AWS2S3EndpointProducerBuilder timestampGroupingEnabled(String timestampGroupingEnabled) {
+            doSetProperty("timestampGroupingEnabled", timestampGroupingEnabled);
+            return this;
+        }
+        /**
+         * The name of the message header containing the timestamp for grouping.
+         * Default is CamelMessageTimestamp.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: CamelMessageTimestamp
+         * Group: producer
+         * 
+         * @param timestampHeaderName the value to set
+         * @return the dsl builder
+         */
+        default AWS2S3EndpointProducerBuilder timestampHeaderName(String timestampHeaderName) {
+            doSetProperty("timestampHeaderName", timestampHeaderName);
+            return this;
+        }
+        /**
+         * The size of the time window in milliseconds for timestamp-based
+         * grouping. Messages within the same time window will be written to the
+         * same file. Default is 300000 (5 minutes).
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Default: 300000
+         * Group: producer
+         * 
+         * @param timestampWindowSizeMillis the value to set
+         * @return the dsl builder
+         */
+        default AWS2S3EndpointProducerBuilder timestampWindowSizeMillis(long timestampWindowSizeMillis) {
+            doSetProperty("timestampWindowSizeMillis", timestampWindowSizeMillis);
+            return this;
+        }
+        /**
+         * The size of the time window in milliseconds for timestamp-based
+         * grouping. Messages within the same time window will be written to the
+         * same file. Default is 300000 (5 minutes).
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Default: 300000
+         * Group: producer
+         * 
+         * @param timestampWindowSizeMillis the value to set
+         * @return the dsl builder
+         */
+        default AWS2S3EndpointProducerBuilder timestampWindowSizeMillis(String timestampWindowSizeMillis) {
+            doSetProperty("timestampWindowSizeMillis", timestampWindowSizeMillis);
             return this;
         }
         /**
@@ -4139,6 +4225,159 @@ public interface AWS2S3EndpointBuilderFactory {
          */
         public String awsS3OverrideBucketName() {
             return "CamelAwsS3OverrideBucketName";
+        }
+        /**
+         * A list of keys to delete when using deleteObjects operation.
+         * 
+         * The option is a: {@code List<String>} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3KeysToDelete}.
+         */
+        public String awsS3KeysToDelete() {
+            return "CamelAwsS3KeysToDelete";
+        }
+        /**
+         * The number of days for which the restore request will remain active
+         * when using restoreObject operation.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3RestoreDays}.
+         */
+        public String awsS3RestoreDays() {
+            return "CamelAwsS3RestoreDays";
+        }
+        /**
+         * The tier at which the restore will be processed when using
+         * restoreObject operation (e.g., Standard, Bulk, Expedited).
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3RestoreTier}.
+         */
+        public String awsS3RestoreTier() {
+            return "CamelAwsS3RestoreTier";
+        }
+        /**
+         * The object tags to set when using putObjectTagging operation.
+         * 
+         * The option is a: {@code Map<String, String>} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3ObjectTags}.
+         */
+        public String awsS3ObjectTags() {
+            return "CamelAwsS3ObjectTags";
+        }
+        /**
+         * The bucket tags to set when using putBucketTagging operation.
+         * 
+         * The option is a: {@code Map<String, String>} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3BucketTags}.
+         */
+        public String awsS3BucketTags() {
+            return "CamelAwsS3BucketTags";
+        }
+        /**
+         * The bucket policy as JSON string when using putBucketPolicy
+         * operation.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3BucketPolicy}.
+         */
+        public String awsS3BucketPolicy() {
+            return "CamelAwsS3BucketPolicy";
+        }
+        /**
+         * The versioning status (Enabled or Suspended) when using
+         * putBucketVersioning operation.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3VersioningStatus}.
+         */
+        public String awsS3VersioningStatus() {
+            return "CamelAwsS3VersioningStatus";
+        }
+        /**
+         * Whether to enable MFA delete when using putBucketVersioning
+         * operation.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3MfaDelete}.
+         */
+        public String awsS3MfaDelete() {
+            return "CamelAwsS3MfaDelete";
+        }
+        /**
+         * The expiration time of the upload link in milliseconds.
+         * 
+         * The option is a: {@code Long} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3UploadLinkExpirationTime}.
+         */
+        public String awsS3UploadLinkExpirationTime() {
+            return "CamelAwsS3UploadLinkExpirationTime";
+        }
+        /**
+         * Whether the upload link is browser compatible.
+         * 
+         * The option is a: {@code boolean} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AwsS3UploadLinkBrowserCompatible}.
+         */
+        public String awsS3UploadLinkBrowserCompatible() {
+            return "CamelAwsS3UploadLinkBrowserCompatible";
+        }
+        /**
+         * The headers that are needed by the service for upload (not needed
+         * when BrowserCompatible is true).
+         * 
+         * The option is a: {@code Map<String, List<String>>} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AwsS3UploadLinkHttpRequestHeaders}.
+         */
+        public String awsS3UploadLinkHttpRequestHeaders() {
+            return "CamelAwsS3UploadLinkHttpRequestHeaders";
+        }
+        /**
+         * The request payload that is needed by the service for upload (not
+         * needed when BrowserCompatible is true).
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsS3UploadLinkSignedPayload}.
+         */
+        public String awsS3UploadLinkSignedPayload() {
+            return "CamelAwsS3UploadLinkSignedPayload";
         }
     }
     static AWS2S3EndpointBuilder endpointBuilder(String componentName, String path) {

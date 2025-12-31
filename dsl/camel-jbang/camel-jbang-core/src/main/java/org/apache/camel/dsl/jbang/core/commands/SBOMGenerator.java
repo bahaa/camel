@@ -22,12 +22,15 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.camel.dsl.jbang.core.common.CamelJBangConstants;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.RuntimeType;
 import org.apache.camel.dsl.jbang.core.common.RuntimeUtil;
 import org.apache.camel.util.CamelCaseOrderedProperties;
 import org.apache.camel.util.FileUtil;
 import picocli.CommandLine;
+
+import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.*;
 
 @CommandLine.Command(name = "sbom",
                      description = "Generate a CycloneDX or SPDX SBOM for a specific project", sortOptions = false,
@@ -78,6 +81,18 @@ public class SBOMGenerator extends Export {
 
     @Override
     protected Integer export() throws Exception {
+        exportBaseDir = Path.of(".");
+
+        // special if user type: camel run . or camel run dirName
+        if (files != null && files.size() == 1) {
+            String name = FileUtil.stripTrailingSeparator(files.get(0));
+            Path first = Path.of(name);
+            if (Files.isDirectory(first)) {
+                exportBaseDir = first;
+                RunHelper.dirToFiles(name, files);
+            }
+        }
+
         Integer answer = doExport();
         if (answer == 0) {
             Path buildDir = Paths.get(EXPORT_DIR);
@@ -95,16 +110,16 @@ public class SBOMGenerator extends Export {
                 } else {
                     outputDirectoryParameter += "../../" + outputDirectory;
                 }
-                Process p = Runtime.getRuntime()
-                        .exec(mvnProgramCall + " org.cyclonedx:cyclonedx-maven-plugin:" + cyclonedxPluginVersion
-                              + ":makeAggregateBom "
-                              + outputDirectoryParameter
-                              + " -DoutputName="
-                              + outputName
-                              + " -DoutputFormat="
-                              + sbomOutputFormat,
-                                null,
-                                buildDir.toFile());
+                ProcessBuilder pb = new ProcessBuilder(
+                        mvnProgramCall,
+                        "org.cyclonedx:cyclonedx-maven-plugin:" + cyclonedxPluginVersion + ":makeAggregateBom",
+                        outputDirectoryParameter,
+                        "-DoutputName=" + outputName,
+                        "-DoutputFormat=" + sbomOutputFormat);
+
+                pb.directory(buildDir.toFile());
+
+                Process p = pb.start();
                 done = p.waitFor(60, TimeUnit.SECONDS);
                 if (!done) {
                     answer = 1;
@@ -125,13 +140,14 @@ public class SBOMGenerator extends Export {
                 } else if (sbomOutputFormat.equalsIgnoreCase(SBOM_XML_FORMAT)) {
                     outputFormat = "RDF/XML";
                 }
-                Process p = Runtime.getRuntime()
-                        .exec(mvnProgramCall + " org.spdx:spdx-maven-plugin:" + spdxPluginVersion
-                              + ":createSPDX -DspdxFileName="
-                              + Paths.get(outputDirectoryParameter, outputName + "." + sbomOutputFormat).toString()
-                              + " -DoutputFormat=" + outputFormat,
-                                null,
-                                buildDir.toFile());
+                ProcessBuilder pb = new ProcessBuilder(
+                        mvnProgramCall,
+                        "org.spdx:spdx-maven-plugin:" + spdxPluginVersion + ":createSPDX",
+                        "-DspdxFileName=" + Paths.get(outputDirectoryParameter, outputName + "." + sbomOutputFormat),
+                        "-DoutputFormat=" + outputFormat);
+                pb.directory(buildDir.toFile());
+
+                Process p = pb.start();
                 done = p.waitFor(60, TimeUnit.SECONDS);
                 if (!done) {
                     answer = 1;
@@ -148,25 +164,25 @@ public class SBOMGenerator extends Export {
 
     protected Integer doExport() throws Exception {
         // read runtime and gav from properties if not configured
-        Path profile = Paths.get("application.properties");
+        Path profile = exportBaseDir.resolve("application.properties");
         if (Files.exists(profile)) {
             Properties prop = new CamelCaseOrderedProperties();
             RuntimeUtil.loadProperties(prop, profile);
-            if (this.runtime == null && prop.containsKey("camel.jbang.runtime")) {
-                this.runtime = RuntimeType.fromValue(prop.getProperty("camel.jbang.runtime"));
+            if (this.runtime == null && prop.containsKey(CamelJBangConstants.RUNTIME)) {
+                this.runtime = RuntimeType.fromValue(prop.getProperty(CamelJBangConstants.RUNTIME));
             }
             if (this.gav == null) {
-                this.gav = prop.getProperty("camel.jbang.gav");
+                this.gav = prop.getProperty(GAV);
             }
             // allow configuring versions from profile
-            this.javaVersion = prop.getProperty("camel.jbang.javaVersion", this.javaVersion);
-            this.camelVersion = prop.getProperty("camel.jbang.camelVersion", this.camelVersion);
-            this.kameletsVersion = prop.getProperty("camel.jbang.kameletsVersion", this.kameletsVersion);
-            this.localKameletDir = prop.getProperty("camel.jbang.localKameletDir", this.localKameletDir);
-            this.quarkusGroupId = prop.getProperty("camel.jbang.quarkusGroupId", this.quarkusGroupId);
-            this.quarkusArtifactId = prop.getProperty("camel.jbang.quarkusArtifactId", this.quarkusArtifactId);
-            this.quarkusVersion = prop.getProperty("camel.jbang.quarkusVersion", this.quarkusVersion);
-            this.springBootVersion = prop.getProperty("camel.jbang.springBootVersion", this.springBootVersion);
+            this.javaVersion = prop.getProperty(JAVA_VERSION, this.javaVersion);
+            this.camelVersion = prop.getProperty(CAMEL_VERSION, this.camelVersion);
+            this.kameletsVersion = prop.getProperty(KAMELETS_VERSION, this.kameletsVersion);
+            this.localKameletDir = prop.getProperty(LOCAL_KAMELET_DIR, this.localKameletDir);
+            this.quarkusGroupId = prop.getProperty(QUARKUS_GROUP_ID, this.quarkusGroupId);
+            this.quarkusArtifactId = prop.getProperty(QUARKUS_ARTIFACT_ID, this.quarkusArtifactId);
+            this.quarkusVersion = prop.getProperty(QUARKUS_VERSION, this.quarkusVersion);
+            this.springBootVersion = prop.getProperty(SPRING_BOOT_VERSION, this.springBootVersion);
         }
 
         // use temporary export dir
@@ -180,13 +196,13 @@ public class SBOMGenerator extends Export {
 
         switch (runtime) {
             case springBoot -> {
-                return export(new ExportSpringBoot(getMain()));
+                return export(exportBaseDir, new ExportSpringBoot(getMain()));
             }
             case quarkus -> {
-                return export(new ExportQuarkus(getMain()));
+                return export(exportBaseDir, new ExportQuarkus(getMain()));
             }
             case main -> {
-                return export(new ExportCamelMain(getMain()));
+                return export(exportBaseDir, new ExportCamelMain(getMain()));
             }
             default -> {
                 printer().printErr("Unknown runtime: " + runtime);

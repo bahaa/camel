@@ -32,23 +32,35 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
     private boolean enabled;
     @Metadata(defaultValue = "0.0.0.0")
     private String host = "0.0.0.0";
-    @Metadata(defaultValue = "9876")
-    private int port = 9876;
+    @Metadata(defaultValue = "8080")
+    private int port = 8080;
     @Metadata(defaultValue = "/")
     private String path = "/";
-    private Long maxBodySize;
-    private boolean useGlobalSslContextParameters;
+    @Metadata(defaultValue = "/observe/info")
+    private String infoPath = "/observe/info";
+    @Metadata(defaultValue = "/observe/health")
+    private String healthPath = "/observe/health";
+    @Metadata(defaultValue = "/observe/jolokia")
+    private String jolokiaPath = "/observe/jolokia";
+
     private boolean infoEnabled;
     private boolean devConsoleEnabled;
     private boolean healthCheckEnabled;
     private boolean jolokiaEnabled;
     private boolean metricsEnabled;
+    private boolean uploadEnabled;
+    private String uploadSourceDir;
+    private boolean downloadEnabled;
     private boolean sendEnabled;
 
+    @Metadata(label = "security")
+    private boolean useGlobalSslContextParameters;
     @Metadata(label = "security")
     private boolean authenticationEnabled;
     @Metadata(label = "security")
     private String authenticationPath;
+    @Metadata(label = "security")
+    private String authenticationRealm;
     @Metadata(label = "security")
     private String basicPropertiesFile;
     @Metadata(label = "security")
@@ -57,11 +69,6 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
     private String jwtKeystorePath;
     @Metadata(label = "security", secret = true)
     private String jwtKeystorePassword;
-
-    @Metadata(defaultValue = "/observe/health")
-    private String healthPath = "/observe/health";
-    @Metadata(defaultValue = "/observe/jolokia")
-    private String jolokiaPath = "/observe/jolokia";
 
     public HttpManagementServerConfigurationProperties(MainConfigurationProperties parent) {
         this.parent = parent;
@@ -103,7 +110,7 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
     }
 
     /**
-     * Port to use for binding embedded HTTP server
+     * Port to use for binding embedded HTTP management server. Use 0 to dynamic assign a free random port number.
      */
     public void setPort(int port) {
         this.port = port;
@@ -118,17 +125,6 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
      */
     public void setPath(String path) {
         this.path = path;
-    }
-
-    public Long getMaxBodySize() {
-        return maxBodySize;
-    }
-
-    /**
-     * Maximum HTTP body size the embedded HTTP server can accept.
-     */
-    public void setMaxBodySize(Long maxBodySize) {
-        this.maxBodySize = maxBodySize;
     }
 
     public boolean isUseGlobalSslContextParameters() {
@@ -147,7 +143,7 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
     }
 
     /**
-     * Whether to enable info console. If enabled then you can see some basic Camel information at /q/info
+     * Whether to enable info console. If enabled then you can see some basic Camel information at /observe/info
      */
     public void setInfoEnabled(boolean infoEnabled) {
         this.infoEnabled = infoEnabled;
@@ -173,7 +169,7 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
 
     /**
      * Whether to enable health-check console. If enabled then you can access health-check status on context-path:
-     * /q/health (default)
+     * /observe/health
      */
     public void setHealthCheckEnabled(boolean healthCheckEnabled) {
         this.healthCheckEnabled = healthCheckEnabled;
@@ -184,7 +180,7 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
     }
 
     /**
-     * Whether to enable jolokia. If enabled then you can access jolokia api on context-path: /q/jolokia
+     * Whether to enable jolokia. If enabled then you can access jolokia api on context-path: /observe/jolokia
      */
     public void setJolokiaEnabled(boolean jolokiaEnabled) {
         this.jolokiaEnabled = jolokiaEnabled;
@@ -195,10 +191,21 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
     }
 
     /**
-     * Whether to enable metrics. If enabled then you can access metrics on context-path: /q/metrics (default)
+     * Whether to enable metrics. If enabled then you can access metrics on context-path: /observe/metrics
      */
     public void setMetricsEnabled(boolean metricsEnabled) {
         this.metricsEnabled = metricsEnabled;
+    }
+
+    public String getInfoPath() {
+        return infoPath;
+    }
+
+    /**
+     * The path endpoint used to expose the info status
+     */
+    public void setInfoPath(String infoPath) {
+        this.infoPath = infoPath;
     }
 
     public String getHealthPath() {
@@ -221,6 +228,44 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
      */
     public void setJolokiaPath(String jolokiaPath) {
         this.jolokiaPath = jolokiaPath;
+    }
+
+    public boolean isUploadEnabled() {
+        return uploadEnabled;
+    }
+
+    /**
+     * Whether to enable file upload via HTTP (not intended for production use). This functionality is for development
+     * to be able to reload Camel routes and code with source changes (if reload is enabled). If enabled then you can
+     * upload/delete files via HTTP PUT/DELETE on context-path: /q/upload/{name}. You must also configure the
+     * uploadSourceDir option.
+     */
+    public void setUploadEnabled(boolean uploadEnabled) {
+        this.uploadEnabled = uploadEnabled;
+    }
+
+    public String getUploadSourceDir() {
+        return uploadSourceDir;
+    }
+
+    /**
+     * Source directory when upload is enabled.
+     */
+    public void setUploadSourceDir(String uploadSourceDir) {
+        this.uploadSourceDir = uploadSourceDir;
+    }
+
+    public boolean isDownloadEnabled() {
+        return downloadEnabled;
+    }
+
+    /**
+     * Whether to enable file download via HTTP. This makes it possible to browse and download resource source files
+     * such as Camel XML or YAML routes. Only enable this for development, troubleshooting or special situations for
+     * management and monitoring.
+     */
+    public void setDownloadEnabled(boolean downloadEnabled) {
+        this.downloadEnabled = downloadEnabled;
     }
 
     public boolean isSendEnabled() {
@@ -256,6 +301,17 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
      */
     public void setAuthenticationPath(String authenticationPath) {
         this.authenticationPath = authenticationPath;
+    }
+
+    public String getAuthenticationRealm() {
+        return authenticationRealm;
+    }
+
+    /**
+     * Sets the authentication realm
+     */
+    public void setAuthenticationRealm(String authenticationRealm) {
+        this.authenticationRealm = authenticationRealm;
     }
 
     public String getBasicPropertiesFile() {
@@ -319,7 +375,7 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
     }
 
     /**
-     * Port to use for binding embedded HTTP management server
+     * Port to use for binding embedded HTTP management server. Use 0 to dynamic assign a free random port number.
      */
     public HttpManagementServerConfigurationProperties withPort(int port) {
         this.port = port;
@@ -331,14 +387,6 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
      */
     public HttpManagementServerConfigurationProperties withPath(String path) {
         this.path = path;
-        return this;
-    }
-
-    /**
-     * Maximum HTTP body size the embedded HTTP management server can accept.
-     */
-    public HttpManagementServerConfigurationProperties withMaxBodySize(long maxBodySize) {
-        this.maxBodySize = maxBodySize;
         return this;
     }
 
@@ -396,6 +444,35 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
     }
 
     /**
+     * Whether to enable file upload via HTTP (not intended for production use). This functionality is for development
+     * to be able to reload Camel routes and code with source changes (if reload is enabled). If enabled then you can
+     * upload/delete files via HTTP PUT/DELETE on context-path: /q/upload/{name}. You must also configure the
+     * uploadSourceDir option.
+     */
+    public HttpManagementServerConfigurationProperties withUploadEnabled(boolean uploadEnabled) {
+        this.uploadEnabled = uploadEnabled;
+        return this;
+    }
+
+    /**
+     * Source directory when upload is enabled.
+     */
+    public HttpManagementServerConfigurationProperties withUploadSourceDir(String uploadSourceDir) {
+        this.uploadSourceDir = uploadSourceDir;
+        return this;
+    }
+
+    /**
+     * Whether to enable file download via HTTP. This makes it possible to browse and download resource source files
+     * such as Camel XML or YAML routes. Only enable this for development, troubleshooting or special situations for
+     * management and monitoring.
+     */
+    public HttpManagementServerConfigurationProperties withDownloadEnabled(boolean downloadEnabled) {
+        this.downloadEnabled = downloadEnabled;
+        return this;
+    }
+
+    /**
      * Whether to enable sending messages to Camel via HTTP. This makes it possible to use Camel to send messages to
      * Camel endpoint URIs via HTTP.
      */
@@ -418,6 +495,14 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
      */
     public HttpManagementServerConfigurationProperties withAuthenticationPath(String authenticationPath) {
         this.authenticationPath = authenticationPath;
+        return this;
+    }
+
+    /**
+     * Sets the authentication realm
+     */
+    public HttpManagementServerConfigurationProperties withAuthenticationRealm(String authenticationRealm) {
+        this.authenticationRealm = authenticationRealm;
         return this;
     }
 
@@ -450,6 +535,14 @@ public class HttpManagementServerConfigurationProperties implements BootstrapClo
      */
     public HttpManagementServerConfigurationProperties withJwtKeystorePassword(String jwtKeystorePassword) {
         this.jwtKeystorePassword = jwtKeystorePassword;
+        return this;
+    }
+
+    /**
+     * The path endpoint used to expose the info status
+     */
+    public HttpManagementServerConfigurationProperties withInfoPath(String infoPath) {
+        this.infoPath = infoPath;
         return this;
     }
 

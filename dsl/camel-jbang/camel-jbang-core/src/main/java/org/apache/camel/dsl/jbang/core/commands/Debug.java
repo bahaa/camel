@@ -18,25 +18,35 @@ package org.apache.camel.dsl.jbang.core.commands;
 
 import java.io.BufferedReader;
 import java.io.Console;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.camel.dsl.jbang.core.commands.action.MessageTableHelper;
 import org.apache.camel.dsl.jbang.core.common.CamelCommandHelper;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.PathUtils;
+import org.apache.camel.dsl.jbang.core.common.ProcessHelper;
 import org.apache.camel.dsl.jbang.core.common.VersionHelper;
 import org.apache.camel.main.KameletMain;
+import org.apache.camel.support.LoggerHelper;
+import org.apache.camel.support.PatternHelper;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.StringHelper;
@@ -46,15 +56,30 @@ import org.apache.camel.util.concurrent.ThreadHelper;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 import org.apache.camel.util.json.Jsoner;
+import org.apache.maven.model.Activation;
+import org.apache.maven.model.Build;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginExecution;
+import org.apache.maven.model.Profile;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+import static org.apache.camel.dsl.jbang.core.common.CommandLineHelper.CAMEL_JBANG_WORK_DIR;
 import static org.apache.camel.util.IOHelper.buffered;
 
 @Command(name = "debug", description = "Debug local Camel integration", sortOptions = false, showDefaultValues = true)
 public class Debug extends Run {
+
+    @CommandLine.Option(names = { "--remote-attach" },
+                        description = "Attaches debugger remotely to an existing running Camel integration. (Add camel-cli-debug JAR to the existing Camel application and run before attaching this debugger)")
+    boolean remoteAttach;
 
     @CommandLine.Option(names = { "--breakpoint" },
                         description = "To set breakpoint at the given node id (Multiple ids can be separated by comma). If no breakpoint is set, then the first route is automatic selected.")
@@ -133,7 +158,12 @@ public class Debug extends Run {
             printConfigurationValues("Debugging integration with the following configuration:");
         }
 
-        Integer exit = runDebug();
+        Integer exit;
+        if (remoteAttach) {
+            exit = runRemoteAttach();
+        } else {
+            exit = runDebug();
+        }
         if (exit != null && exit != 0) {
             return exit;
         }
@@ -152,10 +182,12 @@ public class Debug extends Run {
         // read log input
         final AtomicBoolean quit = new AtomicBoolean();
         final Console c = System.console();
-        Thread t = new Thread(() -> {
-            doReadLog(quit);
-        }, "ReadLog");
-        t.start();
+        if (logLines > 0) {
+            Thread t = new Thread(() -> {
+                doReadLog(quit);
+            }, "ReadLog");
+            t.start();
+        }
 
         // read CLI input from user
         Thread t2 = new Thread(() -> doRead(c, quit), "ReadCommand");
@@ -172,8 +204,14 @@ public class Debug extends Run {
                     printer().println(line);
                 }
                 // and any error
-                String text = IOHelper.loadText(spawnError);
-                printer().println(text);
+                if (spawnError != null) {
+                    try {
+                        String text = IOHelper.loadText(spawnError);
+                        printer().println(text);
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
                 return -1;
             }
         } while (exit == 0 && !quit.get());
@@ -181,25 +219,62 @@ public class Debug extends Run {
         return 0;
     }
 
+    private Integer runRemoteAttach() {
+        // find PID of running apps (if there are multiple then filter by name)
+        List<Long> pids = findPids(name);
+        if (pids.isEmpty()) {
+            return -1;
+        } else if (pids.size() > 1) {
+            printer().println("Name or pid " + name + " matches " + pids.size()
+                              + " running Camel integrations. Specify a name or PID that matches exactly one.");
+            return -1;
+        }
+        long pid = pids.get(0);
+
+        Path outputFile = getOutputFile(Long.toString(pid));
+        PathUtils.deleteFile(outputFile);
+
+        try {
+            JsonObject root = new JsonObject();
+            root.put("action", "cli-debug");
+            root.put("command", "attach");
+            if (breakpoint != null) {
+                root.put("breakpoint", breakpoint);
+            }
+            Path f = getActionFile(Long.toString(pid));
+            Files.writeString(f, root.toJson());
+        } catch (Exception e) {
+            return -1;
+        }
+
+        // attach to this pid
+        spawnPid = pid;
+        logLines = 0; // no logging possible
+
+        return 0;
+    }
+
     private void doReadLog(AtomicBoolean quit) {
         do {
-            InputStreamReader isr = new InputStreamReader(spawnOutput);
-            try {
-                BufferedReader reader = buffered(isr);
-                while (true) {
-                    String line = reader.readLine();
-                    if (line != null) {
-                        while (logBuffer.size() >= 100) {
-                            logBuffer.remove(0);
+            if (spawnOutput != null) {
+                InputStreamReader isr = new InputStreamReader(spawnOutput);
+                try {
+                    BufferedReader reader = buffered(isr);
+                    while (true) {
+                        String line = reader.readLine();
+                        if (line != null) {
+                            while (logBuffer.size() >= 100) {
+                                logBuffer.remove(0);
+                            }
+                            logBuffer.add(line);
+                            logUpdated.set(true);
+                        } else {
+                            break;
                         }
-                        logBuffer.add(line);
-                        logUpdated.set(true);
-                    } else {
-                        break;
                     }
+                } catch (Exception e) {
+                    // ignore
                 }
-            } catch (Exception e) {
-                // ignore
             }
         } while (!quit.get());
     }
@@ -221,10 +296,13 @@ public class Debug extends Run {
                         }
                     }
                     String cmd = "step";
+                    int position = lineIsNumber(line);
                     if (line.equalsIgnoreCase("o") || line.equalsIgnoreCase("over")) {
                         cmd = "stepover";
+                    } else if (line.equalsIgnoreCase("s") || line.equalsIgnoreCase("skip")) {
+                        cmd = "skipover";
                     }
-                    sendDebugCommand(spawnPid, cmd, null);
+                    sendDebugCommand(spawnPid, cmd, null, position);
                 }
                 // user have pressed ENTER so continue
                 waitForUser.set(false);
@@ -234,6 +312,253 @@ public class Debug extends Run {
 
     @Override
     protected int runDebug(KameletMain main) throws Exception {
+        File pom = new File("pom.xml");
+        if (pom.isFile() && pom.exists()) {
+            try (InputStream is = new FileInputStream(pom)) {
+                String text = IOHelper.loadText(is);
+                if (text.contains("camel-spring-boot-bom")) {
+                    return doRunDebugSpringBoot(main);
+                } else if (text.contains("org.apache.camel.quarkus")) {
+                    return doRunDebugQuarkus(main);
+                }
+            }
+        }
+        return doRunDebug(main);
+    }
+
+    private int doRunDebugSpringBoot(KameletMain main) throws Exception {
+        Path pom = Paths.get("pom.xml");
+        MavenXpp3Reader mavenReader = new MavenXpp3Reader();
+        try (Reader reader = Files.newBufferedReader(pom)) {
+            Model model = mavenReader.read(reader);
+
+            // include camel-debug dependency
+            Dependency d = new Dependency();
+            d.setGroupId("org.apache.camel.springboot");
+            d.setArtifactId("camel-debug-starter");
+            model.getDependencies().add(d);
+            d = new Dependency();
+            d.setGroupId("org.apache.camel.springboot");
+            d.setArtifactId("camel-cli-connector-starter");
+            model.getDependencies().add(d);
+
+            Profile mp = new Profile();
+            model.addProfile(mp);
+            mp.setId("camel-debug");
+            Activation a = new Activation();
+            a.setActiveByDefault(true);
+            mp.setActivation(a);
+
+            Build b = new Build();
+            mp.setBuild(b);
+
+            Plugin pi = new Plugin();
+            b.addPlugin(pi);
+            pi.setGroupId("org.springframework.boot");
+            pi.setArtifactId("spring-boot-maven-plugin");
+            pi.setVersion("${spring-boot-version}");
+            PluginExecution pe = new PluginExecution();
+            pe.addGoal("repackage");
+            pi.addExecution(pe);
+            Xpp3Dom cfg = new Xpp3Dom("finalName");
+            cfg.setValue("camel-jbang-debug");
+            Xpp3Dom root = new Xpp3Dom("configuration");
+            root.addChild(cfg);
+            pi.setConfiguration(root);
+
+            MavenXpp3Writer w = new MavenXpp3Writer();
+            FileOutputStream fos = new FileOutputStream("camel-jbang-debug-pom.xml", false);
+            w.write(fos, model);
+            IOHelper.close(fos);
+
+            printer().println("Preparing Camel Spring Boot for debugging ...");
+
+            // use maven wrapper if present
+            String mvnw = "/mvnw";
+            if (FileUtil.isWindows()) {
+                mvnw = "/mvnw.cmd";
+            }
+            if (!new File(mvnw).exists()) {
+                mvnw = "mvn";
+            }
+            // use maven to build the JAR and then run the JAR after-wards
+            ProcessBuilder pb = new ProcessBuilder();
+            pb.command(mvnw, "-Dmaven.test.skip", "--file", "camel-jbang-debug-pom.xml", "package", "spring-boot:repackage");
+            Process p = pb.start();
+
+            if (p.waitFor(30, TimeUnit.SECONDS)) {
+                AtomicReference<Process> processRef = new AtomicReference<>();
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    try {
+                        // We need to wait for the process to exit before doing any cleanup
+                        Process process = processRef.get();
+                        if (process != null) {
+                            process.destroy();
+                            for (int i = 0; i < 30; i++) {
+                                if (!process.isAlive()) {
+                                    break;
+                                }
+                                try {
+                                    Thread.sleep(1000);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                }
+                            }
+                        }
+                        removeDir(Paths.get(RUN_PLATFORM_DIR));
+                        removeDir(Paths.get(CAMEL_JBANG_WORK_DIR));
+                        Files.deleteIfExists(Paths.get("camel-jbang-debug-pom.xml"));
+                    } catch (Exception e) {
+                        // Ignore
+                    }
+                }));
+
+                // okay build is complete then run java
+                pb = new ProcessBuilder();
+                pb.command("java",
+                        "-Dcamel.debug.enabled=true",
+                        (breakpoint == null
+                                ? "-Dcamel.debug.breakpoints=_all_routes_" : "-Dcamel.debug.breakpoints=" + breakpoint),
+                        "-Dcamel.debug.loggingLevel=DEBUG",
+                        "-Dcamel.debug.singleStepIncludeStartEnd=true",
+                        loggingColor ? "-Dspring.output.ansi.enabled=ALWAYS" : "-Dspring.output.ansi.enabled=NEVER",
+                        "-jar", "target/camel-jbang-debug.jar");
+
+                p = pb.start();
+                processRef.set(p);
+                this.spawnOutput = p.getInputStream();
+                this.spawnError = p.getErrorStream();
+                this.spawnPid = p.pid();
+                printer().println("Debugging Camel Spring Boot integration: " + name + " with PID: " + p.pid());
+            } else {
+                printer().printErr("Timed out preparing Camel Spring Boot for debugging");
+                this.spawnError = p.getErrorStream();
+                this.spawnPid = p.pid();
+                p.destroy();
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
+    private int doRunDebugQuarkus(KameletMain main) throws Exception {
+        Path pom = Paths.get("pom.xml");
+        MavenXpp3Reader mavenReader = new MavenXpp3Reader();
+        try (Reader reader = Files.newBufferedReader(pom)) {
+            Model model = mavenReader.read(reader);
+
+            // include camel-debug dependency
+            Dependency d = new Dependency();
+            d.setGroupId("org.apache.camel.quarkus");
+            d.setArtifactId("camel-quarkus-debug");
+            model.getDependencies().add(d);
+            d = new Dependency();
+            d.setGroupId("org.apache.camel.quarkus");
+            d.setArtifactId("camel-quarkus-cli-connector");
+            model.getDependencies().add(d);
+
+            Profile mp = new Profile();
+            model.addProfile(mp);
+            mp.setId("camel-debug");
+            Activation a = new Activation();
+            a.setActiveByDefault(true);
+            mp.setActivation(a);
+
+            Build b = new Build();
+            mp.setBuild(b);
+
+            Plugin pi = new Plugin();
+            b.addPlugin(pi);
+            pi.setGroupId(quarkusGroupId);
+            pi.setArtifactId("quarkus-maven-plugin");
+            pi.setVersion(quarkusVersion);
+            PluginExecution pe = new PluginExecution();
+            pe.addGoal("build");
+            pi.addExecution(pe);
+            Xpp3Dom cfg = new Xpp3Dom("finalName");
+            cfg.setValue("camel-jbang-debug");
+            Xpp3Dom root = new Xpp3Dom("configuration");
+            root.addChild(cfg);
+            pi.setConfiguration(root);
+
+            MavenXpp3Writer w = new MavenXpp3Writer();
+            FileOutputStream fos = new FileOutputStream("camel-jbang-debug-pom.xml", false);
+            w.write(fos, model);
+            IOHelper.close(fos);
+
+            printer().println("Preparing Camel Quarkus for debugging ...");
+
+            // use maven wrapper if present
+            String mvnw = "/mvnw";
+            if (FileUtil.isWindows()) {
+                mvnw = "/mvnw.cmd";
+            }
+            if (!new File(mvnw).exists()) {
+                mvnw = "mvn";
+            }
+            // use maven to build the JAR and then run the JAR after-wards
+            ProcessBuilder pb = new ProcessBuilder();
+            pb.command(mvnw, "-Dmaven.test.skip", "--file", "camel-jbang-debug-pom.xml", "package", "quarkus:build");
+            Process p = pb.start();
+
+            if (p.waitFor(30, TimeUnit.SECONDS)) {
+                AtomicReference<Process> processRef = new AtomicReference<>();
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    try {
+                        // We need to wait for the process to exit before doing any cleanup
+                        Process process = processRef.get();
+                        if (process != null) {
+                            process.destroy();
+                            for (int i = 0; i < 30; i++) {
+                                if (!process.isAlive()) {
+                                    break;
+                                }
+                                try {
+                                    Thread.sleep(1000);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                }
+                            }
+                        }
+                        removeDir(Paths.get(RUN_PLATFORM_DIR));
+                        removeDir(Paths.get(CAMEL_JBANG_WORK_DIR));
+                        Files.deleteIfExists(Paths.get("camel-jbang-debug-pom.xml"));
+                    } catch (Exception e) {
+                        // Ignore
+                    }
+                }));
+
+                // okay build is complete then run java
+                pb = new ProcessBuilder();
+                pb.command("java",
+                        "-Dcamel.debug.enabled=true",
+                        (breakpoint == null
+                                ? "-Dcamel.debug.breakpoints=_all_routes_" : "-Dcamel.debug.breakpoints=" + breakpoint),
+                        "-Dcamel.debug.loggingLevel=DEBUG",
+                        "-Dcamel.debug.singleStepIncludeStartEnd=true",
+                        "-Dcamel.main.sourceLocationEnabled=true",
+                        "-jar", "target/quarkus-app/quarkus-run.jar");
+
+                p = pb.start();
+                processRef.set(p);
+                this.spawnOutput = p.getInputStream();
+                this.spawnError = p.getErrorStream();
+                this.spawnPid = p.pid();
+                printer().println("Debugging Camel Quarkus integration: " + name + " with PID: " + p.pid());
+            } else {
+                printer().printErr("Timed out preparing Camel Quarkus for debugging");
+                this.spawnError = p.getErrorStream();
+                this.spawnPid = p.pid();
+                p.destroy();
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
+    protected int doRunDebug(KameletMain main) throws Exception {
         List<String> cmds = new ArrayList<>(spec.commandLine().getParseResult().originalArgs());
 
         // debug should be run
@@ -259,7 +584,7 @@ public class Debug extends Run {
         cmds.add("--prop=camel.debug.loggingLevel=DEBUG");
         cmds.add("--prop=camel.debug.singleStepIncludeStartEnd=true");
 
-        addCamelCommand(cmds);
+        RunHelper.addCamelJBangCommand(cmds);
 
         ProcessBuilder pb = new ProcessBuilder();
         pb.command(cmds);
@@ -317,7 +642,7 @@ public class Debug extends Run {
         return 0;
     }
 
-    private void sendDebugCommand(long pid, String command, String breakpoint) {
+    private void sendDebugCommand(long pid, String command, String breakpoint, int position) {
         // ensure output file is deleted before executing action
         Path outputFile = getOutputFile(Long.toString(pid));
         PathUtils.deleteFile(outputFile);
@@ -329,6 +654,9 @@ public class Debug extends Run {
         }
         if (breakpoint != null) {
             root.put("breakpoint", breakpoint);
+        }
+        if (position > 0) {
+            root.put("position", position);
         }
         Path f = getActionFile(Long.toString(pid));
         try {
@@ -347,6 +675,11 @@ public class Debug extends Run {
         return version == null || VersionHelper.isGE(version, "4.8.3");
     }
 
+    private static boolean isSkipOverSupported(String version) {
+        // skip-over is Camel 4.14 or better
+        return version == null || VersionHelper.isGE(version, "4.14.0");
+    }
+
     private void printDebugStatus(long pid, StringWriter buffer) {
         JsonObject jo = loadDebug(pid);
         if (jo != null) {
@@ -355,6 +688,10 @@ public class Debug extends Run {
             // only read if expecting new data
             long cnt = jo.getLongOrDefault("debugCounter", 0);
             String version = jo.getString("version");
+            // clip -SNAPSHOT from version
+            if (version != null && version.endsWith("-SNAPSHOT")) {
+                version = version.substring(0, version.length() - 9);
+            }
             if (cnt > debugCounter.get()) {
                 JsonArray arr = jo.getCollection("suspended");
                 if (arr != null) {
@@ -376,6 +713,10 @@ public class Debug extends Run {
                         row.location = jo.getString("location");
                         row.routeId = jo.getString("routeId");
                         row.nodeId = jo.getString("nodeId");
+                        if ("aggregate".equals(jo.getString("nodeShortName"))) {
+                            row.aggregate = new JsonObject();
+                            row.aggregate.put("nodeLabel", jo.getString("nodeLabel"));
+                        }
                         String uri = jo.getString("endpointUri");
                         if (uri != null) {
                             row.endpoint = new JsonObject();
@@ -435,9 +776,14 @@ public class Debug extends Run {
                                 boolean accept = line.getBooleanOrDefault("acceptDebugger", true);
                                 if (accept) {
                                     History history = new History();
+                                    history.index = line.getIntegerOrDefault("index", 0);
                                     history.routeId = line.getString("routeId");
                                     history.nodeId = line.getString("nodeId");
+                                    history.nodeShortName = line.getString("nodeShortName");
+                                    history.nodeLabel = line.getString("nodeLabel");
+                                    history.level = line.getIntegerOrDefault("level", 0);
                                     history.elapsed = line.getLongOrDefault("elapsed", 0);
+                                    history.skipOver = line.getBooleanOrDefault("skipOver", false);
                                     history.location = line.getString("location");
                                     history.line = line.getIntegerOrDefault("line", -1);
                                     history.code = line.getString("code");
@@ -471,6 +817,8 @@ public class Debug extends Run {
                 this.waitForUser.set(true);
             }
             if (this.waitForUser.get()) {
+                boolean first = this.suspendedRow != null && this.suspendedRow.first;
+                boolean last = this.suspendedRow != null && this.suspendedRow.last;
                 // save current message to file
                 if (output != null && this.suspendedRow != null) {
                     JsonObject j = this.suspendedRow.message;
@@ -492,10 +840,12 @@ public class Debug extends Run {
                 }
 
                 String msg;
-                if (isStepOverSupported(version)) {
-                    msg = "    Breakpoint suspended (i = step into (default), o = step over). Press ENTER to continue.";
+                if (!last && !first && isSkipOverSupported(version)) {
+                    msg = "    Breakpoint suspended (i = step into (default), o = step over, s = skip over, N = step to index). Press ENTER to continue (q = quit).";
+                } else if (!last && !first && isStepOverSupported(version)) {
+                    msg = "    Breakpoint suspended (i = step into (default), o = step over). Press ENTER to continue (q = quit).";
                 } else {
-                    msg = "    Breakpoint suspended. Press ENTER to continue.";
+                    msg = "    Breakpoint suspended. Press ENTER to continue (q = quit).";
                 }
                 if (loggingColor) {
                     AnsiConsole.out().println(Ansi.ansi().a(Ansi.Attribute.INTENSITY_BOLD).a(msg).reset());
@@ -540,6 +890,7 @@ public class Debug extends Run {
                 int length = msg.length();
                 if (loggingColor && code.match) {
                     Ansi.Color col = Ansi.Color.BLUE;
+                    Ansi.Attribute it = Ansi.Attribute.INTENSITY_BOLD;
                     if (row.failed && row.last) {
                         col = Ansi.Color.RED;
                     } else if (row.last) {
@@ -551,7 +902,7 @@ public class Debug extends Run {
                         msg = msg + extra;
                         length = 80;
                     }
-                    msg = Ansi.ansi().bg(col).a(Ansi.Attribute.INTENSITY_BOLD).a(msg).reset().toString();
+                    msg = Ansi.ansi().bg(col).a(it).a(msg).reset().toString();
                 } else {
                     // need to fill out entire line, so fill in spaces
                     if (length < 80) {
@@ -583,7 +934,7 @@ public class Debug extends Run {
                     // from camel 4.7 onwards then message history include current line as well
                     // so the history panel needs to output a bit different in this situation
                     boolean top = false;
-                    if (row.version != null && VersionHelper.isGE(row.version, "4.7")) {
+                    if (row.version != null && VersionHelper.isGE(row.version, "4.7.0")) {
                         top = h == row.history.get(row.history.size() - 1);
                     }
 
@@ -603,28 +954,37 @@ public class Debug extends Run {
                     }
                     long e = i == 2 ? 0 : h.elapsed; // the pseudo from should have 0 as elapsed
                     String elapsed = "(" + e + "ms)";
+                    if (h.skipOver) {
+                        elapsed = "(skipped)";
+                    }
 
                     String c = "";
-                    if (h.code != null) {
+                    if (source && h.code != null) {
                         c = Jsoner.unescape(h.code);
                         c = c.trim();
+                    } else {
+                        c = Jsoner.escape(h.nodeLabel);
+                        c = c.trim();
                     }
+                    // pad with level
+                    String pad = StringHelper.padString(h.level);
+                    c = pad + c;
 
                     String fids = String.format("%-30.30s", ids);
                     String msg;
                     if (top && !row.last) {
-                        msg = String.format("%10.10s %s %4d:   %s", "--->", fids, h.line, c);
+                        msg = String.format("%2d %10.10s %s %4d:   %s", h.index, "--->", fids, h.line, c);
                     } else {
-                        msg = String.format("%10.10s %s %4d:   %s", elapsed, fids, h.line, c);
+                        msg = String.format("%2d %10.10s %s %4d:   %s", h.index, elapsed, fids, h.line, c);
                     }
                     int len = msg.length();
                     if (loggingColor) {
                         fids = String.format("%-30.30s", ids);
                         fids = Ansi.ansi().fgCyan().a(fids).reset().toString();
                         if (top && !row.last) {
-                            msg = String.format("%10.10s %s %4d:   %s", "--->", fids, h.line, c);
+                            msg = String.format("%2d %10.10s %s %4d:   %s", h.index, "--->", fids, h.line, c);
                         } else {
-                            msg = String.format("%10.10s %s %4d:   %s", elapsed, fids, h.line, c);
+                            msg = String.format("%2d %10.10s %s %4d:   %s", h.index, elapsed, fids, h.line, c);
                         }
                     }
 
@@ -726,8 +1086,8 @@ public class Debug extends Run {
     }
 
     private static String locationAndLine(String loc, int line) {
-        // shorten path as there is no much space
-        loc = FileUtil.stripPath(loc);
+        // shorten path as there is no much space (there are no scheme as add fake)
+        loc = LoggerHelper.sourceNameOnly("file:" + FileUtil.stripPath(loc));
         return line == -1 ? loc : loc + ":" + line;
     }
 
@@ -765,7 +1125,8 @@ public class Debug extends Run {
     }
 
     private String getDataAsTable(SuspendedRow r) {
-        return tableHelper.getDataAsTable(r.exchangeId, r.exchangePattern, r.endpoint, r.endpointService, r.message,
+        return tableHelper.getDataAsTable(r.exchangeId, r.exchangePattern, r.aggregate, r.endpoint, r.endpointService,
+                r.message,
                 r.exception);
     }
 
@@ -827,6 +1188,14 @@ public class Debug extends Run {
         return null;
     }
 
+    private static int lineIsNumber(String line) {
+        try {
+            return Integer.parseInt(line);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     private static class SuspendedRow {
         String pid;
         String version;
@@ -843,6 +1212,7 @@ public class Debug extends Run {
         long elapsed;
         boolean done;
         boolean failed;
+        JsonObject aggregate;
         JsonObject endpoint;
         JsonObject endpointService;
         JsonObject message;
@@ -858,9 +1228,14 @@ public class Debug extends Run {
     }
 
     private static class History {
+        int index;
         String routeId;
         String nodeId;
+        String nodeShortName;
+        String nodeLabel;
+        int level;
         long elapsed;
+        boolean skipOver;
         String location;
         int line;
         String code;
@@ -893,6 +1268,67 @@ public class Debug extends Run {
             return this;
         }
 
+    }
+
+    List<Long> findPids(String name) {
+        List<Long> pids = new ArrayList<>();
+
+        // we need to know the pids of the running camel integrations
+        if (name.matches("\\d+")) {
+            return List.of(Long.parseLong(name));
+        } else {
+            if (name.endsWith("!")) {
+                // exclusive this name only
+                name = name.substring(0, name.length() - 1);
+            } else if (!name.endsWith("*")) {
+                // lets be open and match all that starts with this pattern
+                name = name + "*";
+            }
+        }
+
+        final long cur = ProcessHandle.current().pid();
+        final String pattern = name;
+        ProcessHandle.allProcesses()
+                .filter(ph -> ph.pid() != cur)
+                .forEach(ph -> {
+                    JsonObject root = loadStatus(ph.pid());
+                    // there must be a status file for the running Camel integration
+                    if (root != null) {
+                        String pName = ProcessHelper.extractName(root, ph);
+                        // ignore file extension, so it is easier to match by name
+                        pName = FileUtil.onlyName(pName);
+                        if (pName != null && !pName.isEmpty() && PatternHelper.matchPattern(pName, pattern)) {
+                            pids.add(ph.pid());
+                        } else {
+                            // try camel context name
+                            JsonObject context = (JsonObject) root.get("context");
+                            if (context != null) {
+                                pName = context.getString("name");
+                                if ("CamelJBang".equals(pName)) {
+                                    pName = null;
+                                }
+                                if (pName != null && !pName.isEmpty() && PatternHelper.matchPattern(pName, pattern)) {
+                                    pids.add(ph.pid());
+                                }
+                            }
+                        }
+                    }
+                });
+
+        return pids;
+    }
+
+    JsonObject loadStatus(long pid) {
+        try {
+            Path f = getStatusFile(Long.toString(pid));
+            if (f != null && Files.exists(f)) {
+                String text = Files.readString(f);
+                return (JsonObject) Jsoner.deserialize(text);
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return null;
     }
 
 }

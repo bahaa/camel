@@ -17,6 +17,7 @@
 package org.apache.camel.component.graphql;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Map;
@@ -27,18 +28,21 @@ import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
 import org.apache.camel.RuntimeCamelException;
+import org.apache.camel.http.base.HttpHeaderFilterStrategy;
 import org.apache.camel.spi.EndpointServiceLocation;
+import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
+import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.util.IOHelper;
-import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.json.JsonObject;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.CredentialsStore;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
+import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
@@ -79,8 +83,14 @@ public class GraphqlEndpoint extends DefaultEndpoint implements EndpointServiceL
     private String variablesHeader;
     @UriParam
     private String queryHeader;
-
-    private CloseableHttpClient httpClient;
+    @UriParam(label = "advanced")
+    private HttpClient httpClient;
+    @UriParam(label = "producer", defaultValue = "true",
+              description = "Option to disable throwing the HttpOperationFailedException in case of failed responses from the remote server. This allows you to get all responses regardless of the HTTP status code.")
+    private boolean throwExceptionOnFailure = true;
+    @UriParam(label = "common,advanced",
+              description = "To use a custom HeaderFilterStrategy to filter header to and from Camel message.")
+    private HeaderFilterStrategy headerFilterStrategy;
 
     public GraphqlEndpoint(String uri, Component component) {
         super(uri, component);
@@ -103,15 +113,16 @@ public class GraphqlEndpoint extends DefaultEndpoint implements EndpointServiceL
     }
 
     @Override
-    public String getServiceProtocol() {
-        return "rest";
+    protected void doStart() throws Exception {
+        super.doStart();
+        if (headerFilterStrategy == null) {
+            headerFilterStrategy = new HttpHeaderFilterStrategy();
+        }
     }
 
     @Override
-    protected void doStop() throws Exception {
-        if (httpClient != null) {
-            httpClient.close();
-        }
+    public String getServiceProtocol() {
+        return "rest";
     }
 
     @Override
@@ -124,14 +135,7 @@ public class GraphqlEndpoint extends DefaultEndpoint implements EndpointServiceL
         throw new UnsupportedOperationException("You cannot receive messages at this endpoint: " + getEndpointUri());
     }
 
-    public CloseableHttpClient getHttpclient() {
-        if (httpClient == null) {
-            this.httpClient = createHttpClient();
-        }
-        return httpClient;
-    }
-
-    private CloseableHttpClient createHttpClient() {
+    CloseableHttpClient createHttpClient() {
         HttpClientBuilder httpClientBuilder = HttpClients.custom();
         if (proxyHost != null) {
             String[] parts = proxyHost.split(":");
@@ -214,10 +218,14 @@ public class GraphqlEndpoint extends DefaultEndpoint implements EndpointServiceL
 
     public String getQuery() {
         if (query == null && queryFile != null) {
+            InputStream is = null;
             try {
-                query = IOHelper.loadText(ObjectHelper.loadResourceAsStream(queryFile, getClass().getClassLoader()));
+                is = ResourceHelper.resolveResourceAsInputStream(getCamelContext(), queryFile);
+                query = IOHelper.loadText(is);
             } catch (IOException e) {
                 throw new RuntimeCamelException("Failed to read query file: " + queryFile, e);
+            } finally {
+                IOHelper.close(is);
             }
         }
         return query;
@@ -246,7 +254,7 @@ public class GraphqlEndpoint extends DefaultEndpoint implements EndpointServiceL
     }
 
     /**
-     * The query file name located in the classpath.
+     * The query file name located in the classpath (or use file: to load from file system).
      */
     public void setQueryFile(String queryFile) {
         this.queryFile = queryFile;
@@ -296,12 +304,32 @@ public class GraphqlEndpoint extends DefaultEndpoint implements EndpointServiceL
         this.queryHeader = queryHeader;
     }
 
-    public CloseableHttpClient getHttpClient() {
+    public HttpClient getHttpClient() {
         return httpClient;
     }
 
-    public void setHttpClient(CloseableHttpClient httpClient) {
+    /**
+     * To use a custom pre-existing Http Client. Beware that when using this, then other configurations such as proxy,
+     * access token, is not applied and all this must be pre-configured on the Http Client.
+     */
+    public void setHttpClient(HttpClient httpClient) {
         this.httpClient = httpClient;
+    }
+
+    public boolean isThrowExceptionOnFailure() {
+        return throwExceptionOnFailure;
+    }
+
+    public void setThrowExceptionOnFailure(boolean throwExceptionOnFailure) {
+        this.throwExceptionOnFailure = throwExceptionOnFailure;
+    }
+
+    public HeaderFilterStrategy getHeaderFilterStrategy() {
+        return headerFilterStrategy;
+    }
+
+    public void setHeaderFilterStrategy(HeaderFilterStrategy headerFilterStrategy) {
+        this.headerFilterStrategy = headerFilterStrategy;
     }
 
     @Override

@@ -35,7 +35,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import picocli.CommandLine;
 
-class DependencyListTest extends CamelCommandBaseTest {
+class DependencyListTest extends CamelCommandBaseTestSupport {
 
     private File workingDir;
 
@@ -62,9 +62,8 @@ class DependencyListTest extends CamelCommandBaseTest {
         Assertions.assertEquals(0, exit);
 
         List<String> lines = printer.getLines();
-        System.out.println(lines);
 
-        Assertions.assertTrue(lines.size() >= 5);
+        Assertions.assertTrue(lines.size() >= 4);
         if (rt == RuntimeType.quarkus) {
             Assertions.assertEquals("org.apache.camel.quarkus:camel-quarkus-core:3.22.2", lines.get(0));
         } else if (rt == RuntimeType.springBoot) {

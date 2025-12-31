@@ -70,14 +70,12 @@ public class KameletAutowiredLifecycleStrategy extends MainAutowiredLifecycleStr
         }
         if (stubPattern == null) {
             return true;
-        } else if (stubPattern.equals("*")) {
+        } else if (stubPattern.equals("*") || stubPattern.equals("component:*")) {
             return false;
         } else {
             // is the component stubbed, then it should not autowire
-            for (String n : stubPattern.split(",")) {
-                if (PatternHelper.matchPattern(n, stubPattern)) {
-                    return false;
-                }
+            if (PatternHelper.matchPatterns(name, stubPattern.split(","))) {
+                return false;
             }
         }
         return true;

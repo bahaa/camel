@@ -52,12 +52,14 @@ public class OAuth2ClientConfigurer extends ServiceSupport implements HttpClient
     private final Long cachedTokensDefaultExpirySeconds;
     private final Long cachedTokensExpirationMarginSeconds;
     private final static ConcurrentMap<OAuth2URIAndCredentials, TokenCache> tokenCache = new ConcurrentHashMap<>();
+    private final boolean useBodyAuthentication;
     private final String resourceIndicator;
     private HttpClient httpClient;
 
     public OAuth2ClientConfigurer(String clientId, String clientSecret, String tokenEndpoint, String resourceIndicator,
                                   String scope, boolean cacheTokens,
-                                  long cachedTokensDefaultExpirySeconds, long cachedTokensExpirationMarginSeconds) {
+                                  long cachedTokensDefaultExpirySeconds, long cachedTokensExpirationMarginSeconds,
+                                  boolean useBodyAuthentication) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.tokenEndpoint = tokenEndpoint;
@@ -66,6 +68,7 @@ public class OAuth2ClientConfigurer extends ServiceSupport implements HttpClient
         this.cacheTokens = cacheTokens;
         this.cachedTokensDefaultExpirySeconds = cachedTokensDefaultExpirySeconds;
         this.cachedTokensExpirationMarginSeconds = cachedTokensExpirationMarginSeconds;
+        this.useBodyAuthentication = useBodyAuthentication;
     }
 
     @Override
@@ -106,9 +109,13 @@ public class OAuth2ClientConfigurer extends ServiceSupport implements HttpClient
         }
 
         final HttpPost httpPost = new HttpPost(tokenEndpoint);
-
-        httpPost.addHeader(HttpHeaders.AUTHORIZATION,
-                HttpCredentialsHelper.generateBasicAuthHeader(clientId, clientSecret));
+        if (useBodyAuthentication) {
+            bodyStr += "&client_id=" + clientId;
+            bodyStr += "&client_secret=" + clientSecret;
+        } else {
+            httpPost.addHeader(HttpHeaders.AUTHORIZATION,
+                    HttpCredentialsHelper.generateBasicAuthHeader(clientId, clientSecret));
+        }
         if (null != resourceIndicator) {
             bodyStr = String.join(bodyStr, "&resource=" + resourceIndicator);
         }
@@ -147,9 +154,6 @@ public class OAuth2ClientConfigurer extends ServiceSupport implements HttpClient
         private String token;
         private Instant expirationTime;
 
-        public TokenCache() {
-        }
-
         public TokenCache(String token, String expires_in) {
             this.token = token;
             setExpirationTimeSeconds(expires_in);
@@ -158,10 +162,6 @@ public class OAuth2ClientConfigurer extends ServiceSupport implements HttpClient
         public TokenCache(String accessToken, Long seconds) {
             this.token = accessToken;
             this.expirationTime = Instant.now().plusSeconds(seconds);
-        }
-
-        public boolean isExpired() {
-            return Instant.now().isAfter(expirationTime);
         }
 
         public boolean isExpiredWithMargin(Long marginSeconds) {
@@ -174,18 +174,6 @@ public class OAuth2ClientConfigurer extends ServiceSupport implements HttpClient
 
         public String getToken() {
             return token;
-        }
-
-        public void setToken(String token) {
-            this.token = token;
-        }
-
-        public Instant getExpirationTime() {
-            return expirationTime;
-        }
-
-        public void setExpirationTime(Instant expirationTime) {
-            this.expirationTime = expirationTime;
         }
     }
 

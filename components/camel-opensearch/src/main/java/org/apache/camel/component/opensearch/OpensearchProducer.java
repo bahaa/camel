@@ -228,7 +228,8 @@ class OpensearchProducer extends DefaultAsyncProducer {
                         int scrollKeepAliveMs
                                 = message.getHeader(PARAM_SCROLL_KEEP_ALIVE_MS, configuration.getScrollKeepAliveMs(),
                                         Integer.class);
-                        OpensearchScrollRequestIterator<?> scrollRequestIterator = new OpensearchScrollRequestIterator<>(
+                        // NOTE: the stream must be closed by the client.
+                        OpensearchScrollRequestIterator<?> scrollRequestIterator = new OpensearchScrollRequestIterator<>( // NOSONAR
                                 searchRequestBuilder, new OpenSearchClient(transport), scrollKeepAliveMs, exchange,
                                 documentClass);
                         exchange.getIn().setBody(scrollRequestIterator);
@@ -480,35 +481,56 @@ class OpensearchProducer extends DefaultAsyncProducer {
 
         builder.setRequestConfigCallback(requestConfigBuilder -> requestConfigBuilder
                 .setConnectTimeout(Timeout.of(Duration.ofMillis(configuration.getConnectionTimeout()))));
-        if (ObjectHelper.isNotEmpty(configuration.getUser()) && ObjectHelper.isNotEmpty(configuration.getPassword())) {
-            final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-            credentialsProvider.setCredentials(new AuthScope(configuration.getHostAddressesList().get(0)),
-                    new UsernamePasswordCredentials(configuration.getUser(), configuration.getPassword().toCharArray()));
-
-            builder.setHttpClientConfigCallback(httpClientBuilder -> {
+        builder.setHttpClientConfigCallback(httpClientBuilder -> {
+            if (ObjectHelper.isNotEmpty(configuration.getUser()) && ObjectHelper.isNotEmpty(configuration.getPassword())) {
+                final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+                credentialsProvider.setCredentials(new AuthScope(configuration.getHostAddressesList().get(0)),
+                        new UsernamePasswordCredentials(configuration.getUser(), configuration.getPassword().toCharArray()));
                 httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
-                if (ObjectHelper.isNotEmpty(configuration.getCertificatePath())) {
-                    final TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
-                            .setSslContext(createSslContextFromCa())
-                            .setHostnameVerifier(configuration.getHostnameVerifier())
-                            .setTlsDetailsFactory(
-                                    sslEngine -> new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol()))
-                            .build();
+            }
 
-                    final PoolingAsyncClientConnectionManager connectionManager
-                            = PoolingAsyncClientConnectionManagerBuilder.create()
-                                    .setTlsStrategy(tlsStrategy)
-                                    .setDefaultConnectionConfig(ConnectionConfig.custom()
-                                            .setConnectTimeout(
-                                                    Timeout.of(Duration.ofMillis(configuration.getConnectionTimeout())))
-                                            .setSocketTimeout(Timeout.of(Duration.ofMillis(configuration.getSocketTimeout())))
-                                            .build())
-                                    .build();
-                    httpClientBuilder.setConnectionManager(connectionManager);
+            // Configure SSL if enabled
+            if (configuration.isEnableSSL()) {
+                SSLContext sslContext = null;
+                if (ObjectHelper.isNotEmpty(configuration.getCertificatePath())) {
+                    // Use custom certificate
+                    sslContext = createSslContextFromCa();
+                } else {
+                    // Use default SSL context
+                    try {
+                        sslContext = SSLContext.getDefault();
+                    } catch (Exception e) {
+                        sslContext = null;
+                    }
                 }
-                return httpClientBuilder;
-            });
-        }
+
+                // Build TLS strategy
+                ClientTlsStrategyBuilder tlsStrategyBuilder = ClientTlsStrategyBuilder.create()
+                        .setHostnameVerifier(configuration.getHostnameVerifier())
+                        .setTlsDetailsFactory(
+                                sslEngine -> new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol()));
+
+                // Set SSL context if available
+                if (sslContext != null) {
+                    tlsStrategyBuilder.setSslContext(sslContext);
+                }
+
+                TlsStrategy tlsStrategy = tlsStrategyBuilder.build();
+
+                final PoolingAsyncClientConnectionManager connectionManager
+                        = PoolingAsyncClientConnectionManagerBuilder.create()
+                                .setTlsStrategy(tlsStrategy)
+                                .setDefaultConnectionConfig(ConnectionConfig.custom()
+                                        .setConnectTimeout(
+                                                Timeout.of(Duration.ofMillis(configuration.getConnectionTimeout())))
+                                        .setSocketTimeout(Timeout.of(Duration.ofMillis(configuration.getSocketTimeout())))
+                                        .build())
+                                .build();
+                httpClientBuilder.setConnectionManager(connectionManager);
+            }
+            return httpClientBuilder;
+        });
+
         final RestClient restClient = builder.build();
         if (configuration.isEnableSniffer()) {
             SnifferBuilder snifferBuilder = Sniffer.builder(restClient);

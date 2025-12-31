@@ -66,6 +66,74 @@ public interface AwsBedrockComponentBuilderFactory {
             return this;
         }
     
+        /**
+         * The identifier (ID or ARN) for the guardrail to apply to the model
+         * invocation.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param guardrailIdentifier the value to set
+         * @return the dsl builder
+         */
+        default AwsBedrockComponentBuilder guardrailIdentifier(java.lang.String guardrailIdentifier) {
+            doSetProperty("guardrailIdentifier", guardrailIdentifier);
+            return this;
+        }
+    
+        
+        /**
+         * Whether to return trace information from the guardrail.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param guardrailTrace the value to set
+         * @return the dsl builder
+         */
+        default AwsBedrockComponentBuilder guardrailTrace(boolean guardrailTrace) {
+            doSetProperty("guardrailTrace", guardrailTrace);
+            return this;
+        }
+    
+        
+        /**
+         * The version of the guardrail to use. Defaults to DRAFT.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: DRAFT
+         * Group: producer
+         * 
+         * @param guardrailVersion the value to set
+         * @return the dsl builder
+         */
+        default AwsBedrockComponentBuilder guardrailVersion(java.lang.String guardrailVersion) {
+            doSetProperty("guardrailVersion", guardrailVersion);
+            return this;
+        }
+    
+        
+        /**
+         * Whether to include streaming metadata in the response headers
+         * (completion reason, token count, chunk count).
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: producer
+         * 
+         * @param includeStreamingMetadata the value to set
+         * @return the dsl builder
+         */
+        default AwsBedrockComponentBuilder includeStreamingMetadata(boolean includeStreamingMetadata) {
+            doSetProperty("includeStreamingMetadata", includeStreamingMetadata);
+            return this;
+        }
+    
         
         /**
          * Whether the producer should be started lazy (on the first message).
@@ -193,6 +261,25 @@ public interface AwsBedrockComponentBuilderFactory {
             return this;
         }
     
+        
+        /**
+         * The streaming output mode (complete or chunks). In complete mode, the
+         * full response is accumulated and returned as a single message. In
+         * chunks mode, each chunk is emitted as a separate exchange.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: complete
+         * Group: producer
+         * 
+         * @param streamOutputMode the value to set
+         * @return the dsl builder
+         */
+        default AwsBedrockComponentBuilder streamOutputMode(java.lang.String streamOutputMode) {
+            doSetProperty("streamOutputMode", streamOutputMode);
+            return this;
+        }
+    
         /**
          * Set the overriding uri endpoint. This option needs to be used in
          * combination with overrideEndpoint option.
@@ -265,6 +352,23 @@ public interface AwsBedrockComponentBuilderFactory {
          */
         default AwsBedrockComponentBuilder autowiredEnabled(boolean autowiredEnabled) {
             doSetProperty("autowiredEnabled", autowiredEnabled);
+            return this;
+        }
+    
+        /**
+         * To use an existing configured AWS Bedrock Runtime Async client for
+         * streaming operations.
+         * 
+         * The option is a:
+         * &lt;code&gt;software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param bedrockRuntimeAsyncClient the value to set
+         * @return the dsl builder
+         */
+        default AwsBedrockComponentBuilder bedrockRuntimeAsyncClient(software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient bedrockRuntimeAsyncClient) {
+            doSetProperty("bedrockRuntimeAsyncClient", bedrockRuntimeAsyncClient);
             return this;
         }
     
@@ -474,6 +578,10 @@ public interface AwsBedrockComponentBuilderFactory {
                 Object value) {
             switch (name) {
             case "configuration": ((BedrockComponent) component).setConfiguration((org.apache.camel.component.aws2.bedrock.runtime.BedrockConfiguration) value); return true;
+            case "guardrailIdentifier": getOrCreateConfiguration((BedrockComponent) component).setGuardrailIdentifier((java.lang.String) value); return true;
+            case "guardrailTrace": getOrCreateConfiguration((BedrockComponent) component).setGuardrailTrace((boolean) value); return true;
+            case "guardrailVersion": getOrCreateConfiguration((BedrockComponent) component).setGuardrailVersion((java.lang.String) value); return true;
+            case "includeStreamingMetadata": getOrCreateConfiguration((BedrockComponent) component).setIncludeStreamingMetadata((boolean) value); return true;
             case "lazyStartProducer": ((BedrockComponent) component).setLazyStartProducer((boolean) value); return true;
             case "modelId": getOrCreateConfiguration((BedrockComponent) component).setModelId((java.lang.String) value); return true;
             case "operation": getOrCreateConfiguration((BedrockComponent) component).setOperation((org.apache.camel.component.aws2.bedrock.runtime.BedrockOperations) value); return true;
@@ -481,10 +589,12 @@ public interface AwsBedrockComponentBuilderFactory {
             case "pojoRequest": getOrCreateConfiguration((BedrockComponent) component).setPojoRequest((boolean) value); return true;
             case "profileCredentialsName": getOrCreateConfiguration((BedrockComponent) component).setProfileCredentialsName((java.lang.String) value); return true;
             case "region": getOrCreateConfiguration((BedrockComponent) component).setRegion((java.lang.String) value); return true;
+            case "streamOutputMode": getOrCreateConfiguration((BedrockComponent) component).setStreamOutputMode((java.lang.String) value); return true;
             case "uriEndpointOverride": getOrCreateConfiguration((BedrockComponent) component).setUriEndpointOverride((java.lang.String) value); return true;
             case "useDefaultCredentialsProvider": getOrCreateConfiguration((BedrockComponent) component).setUseDefaultCredentialsProvider((boolean) value); return true;
             case "useProfileCredentialsProvider": getOrCreateConfiguration((BedrockComponent) component).setUseProfileCredentialsProvider((boolean) value); return true;
             case "autowiredEnabled": ((BedrockComponent) component).setAutowiredEnabled((boolean) value); return true;
+            case "bedrockRuntimeAsyncClient": getOrCreateConfiguration((BedrockComponent) component).setBedrockRuntimeAsyncClient((software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient) value); return true;
             case "bedrockRuntimeClient": getOrCreateConfiguration((BedrockComponent) component).setBedrockRuntimeClient((software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient) value); return true;
             case "healthCheckConsumerEnabled": ((BedrockComponent) component).setHealthCheckConsumerEnabled((boolean) value); return true;
             case "healthCheckProducerEnabled": ((BedrockComponent) component).setHealthCheckProducerEnabled((boolean) value); return true;

@@ -17,6 +17,7 @@
 package org.apache.camel.openapi;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
@@ -24,6 +25,7 @@ import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,7 +61,12 @@ import static org.apache.camel.openapi.RestDefinitionsResolver.JMX_REST_DEFINITI
  */
 public class RestOpenApiSupport {
 
-    public static DateFormat DEFAULT_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+    private static final DateFormat DEFAULT_DATE_FORMAT;
+    static {
+        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd");
+        f.setTimeZone(TimeZone.getTimeZone("UTC"));
+        DEFAULT_DATE_FORMAT = f;
+    }
 
     static final String HEADER_X_FORWARDED_PREFIX = "X-Forwarded-Prefix";
     static final String HEADER_X_FORWARDED_HOST = "X-Forwarded-Host";
@@ -138,9 +145,10 @@ public class RestOpenApiSupport {
         if (openapi.getServers() != null
                 && openapi.getServers().get(0) != null) {
             try {
-                URL serverUrl = new URL(
+                URL serverUrl = URI.create(
                         parseVariables(openapi.getServers().get(0).getUrl(),
-                                openapi.getServers().get(0)));
+                                openapi.getServers().get(0)))
+                        .toURL();
                 host = serverUrl.getHost();
             } catch (MalformedURLException e) {
                 LOG.debug("Error when parsing OpenApi 3.0 doc server url. This exception is ignored.", e);
@@ -160,9 +168,10 @@ public class RestOpenApiSupport {
                 }
                 if (basePath == null) {
                     // parse server url as fallback
-                    URL serverUrl = new URL(
+                    URL serverUrl = URI.create(
                             parseVariables(openapi.getServers().get(0).getUrl(),
-                                    openapi.getServers().get(0)));
+                                    openapi.getServers().get(0)))
+                            .toURL();
                     // strip off the first "/" if double "/" exists
                     basePath = serverUrl.getPath().replace("//", "/");
                     if ("/".equals(basePath)) {

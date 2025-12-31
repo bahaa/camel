@@ -36,6 +36,8 @@ import org.apache.camel.console.DevConsoleRegistry;
 import org.apache.camel.health.HealthCheckRegistry;
 import org.apache.camel.health.HealthCheckRepository;
 import org.apache.camel.impl.debugger.BacklogTracer;
+import org.apache.camel.impl.debugger.DebuggerJmxConnectorService;
+import org.apache.camel.impl.debugger.DefaultBacklogDebugger;
 import org.apache.camel.impl.engine.DefaultCompileStrategy;
 import org.apache.camel.impl.engine.PooledExchangeFactory;
 import org.apache.camel.impl.engine.PooledProcessorExchangeFactory;
@@ -61,6 +63,7 @@ import org.apache.camel.spi.EventNotifier;
 import org.apache.camel.spi.ExchangeFactory;
 import org.apache.camel.spi.ExecutorServiceManager;
 import org.apache.camel.spi.FactoryFinderResolver;
+import org.apache.camel.spi.GroovyScriptCompiler;
 import org.apache.camel.spi.InflightRepository;
 import org.apache.camel.spi.InterceptStrategy;
 import org.apache.camel.spi.LifecycleStrategy;
@@ -90,12 +93,14 @@ import org.apache.camel.spi.VariableRepositoryFactory;
 import org.apache.camel.support.ClassicUuidGenerator;
 import org.apache.camel.support.DefaultContextReloadStrategy;
 import org.apache.camel.support.DefaultUuidGenerator;
+import org.apache.camel.support.LifecycleStrategySupport;
 import org.apache.camel.support.OffUuidGenerator;
 import org.apache.camel.support.PluginHelper;
 import org.apache.camel.support.RouteWatcherReloadStrategy;
 import org.apache.camel.support.ShortUuidGenerator;
 import org.apache.camel.support.SimpleUuidGenerator;
 import org.apache.camel.support.jsse.GlobalSSLContextParametersSupplier;
+import org.apache.camel.support.service.ServiceHelper;
 import org.apache.camel.support.startup.BacklogStartupStepRecorder;
 import org.apache.camel.support.startup.LoggingStartupStepRecorder;
 import org.apache.camel.util.ObjectHelper;
@@ -124,6 +129,9 @@ public final class DefaultConfigurationConfigurer {
     public static void configure(CamelContext camelContext, DefaultConfigurationProperties<?> config) throws Exception {
         ExtendedCamelContext ecc = camelContext.getCamelContextExtension();
 
+        if (config.getAdditionalSensitiveKeywords() != null) {
+            ecc.setAdditionalSensitiveKeywords(config.getAdditionalSensitiveKeywords());
+        }
         if (config.getStartupRecorder() != null) {
             if ("false".equals(config.getStartupRecorder())) {
                 ecc.getStartupStepRecorder().setEnabled(false);
@@ -349,6 +357,20 @@ public final class DefaultConfigurationConfigurer {
                 ecc.addContextPlugin(CompileStrategy.class, cs);
             }
             cs.setWorkDir(config.getCompileWorkDir());
+        }
+        if (config.getGroovyScriptPattern() != null) {
+            // check if there is any groovy sources before demanding the GroovyScriptCompiler plugin (which is in camel-groovy JAR)
+            boolean exists = GroovyScriptCompiler.existsSourceFiles(camelContext, config.getGroovyScriptPattern());
+            if (exists || camelContext.getCamelContextExtension().isContextPluginInUse(GroovyScriptCompiler.class)) {
+                GroovyScriptCompiler gsc = camelContext.getCamelContextExtension().getContextPlugin(GroovyScriptCompiler.class);
+                if (gsc != null) {
+                    gsc.setScriptPattern(config.getGroovyScriptPattern());
+                    gsc.setPreloadCompiled(config.isGroovyPreloadCompiled());
+                    camelContext.addService(gsc);
+                    // force start compiler eager so Camel routes can load these pre-compiled classes
+                    ServiceHelper.startService(gsc);
+                }
+            }
         }
 
         if (config.getRouteFilterIncludePattern() != null || config.getRouteFilterExcludePattern() != null) {
@@ -637,6 +659,11 @@ public final class DefaultConfigurationConfigurer {
             VaultConfiguration vault = camelContext.getVaultConfiguration();
             vault.setIBMSecretsManagerVaultConfiguration(ibmSecretsManager);
         }
+        CyberArkVaultConfiguration cyberark = getSingleBeanOfType(registry, CyberArkVaultConfiguration.class);
+        if (cyberark != null) {
+            VaultConfiguration vault = camelContext.getVaultConfiguration();
+            vault.setCyberArkVaultConfiguration(cyberark);
+        }
         configureVaultRefresh(camelContext);
 
         // apply custom configurations if any
@@ -646,6 +673,73 @@ public final class DefaultConfigurationConfigurer {
                     .sorted(Comparator.comparing(CamelContextCustomizer::getOrder))
                     .forEach(c -> c.configure(camelContext));
         }
+    }
+
+    /**
+     * Configures the {@link BacklogDebugger} with the configuration.
+     *
+     * @param camelContext the camel context
+     * @param config       the configuration
+     */
+    public static void configureBacklogDebugger(CamelContext camelContext, DebuggerConfigurationProperties config)
+            throws Exception {
+        if (!config.isEnabled() && !config.isStandby()) {
+            return;
+        }
+
+        // must enable source location and history
+        // so debugger tooling knows to map breakpoints to source code
+        camelContext.setSourceLocationEnabled(true);
+        camelContext.setMessageHistory(true);
+
+        // enable debugger on camel
+        camelContext.setDebugging(config.isEnabled());
+        camelContext.setDebugStandby(config.isStandby());
+
+        // NOTE: BacklogDebugger is autocloseable. It is added as a Service to the context.
+        // The context will be in charge to suspend and close it according the its lifecycle.
+        BacklogDebugger debugger = DefaultBacklogDebugger.createDebugger(camelContext); // NOSONAR
+        debugger.setEnabled(config.isEnabled());
+        debugger.setStandby(config.isStandby());
+        debugger.setInitialBreakpoints(config.getBreakpoints());
+        debugger.setSingleStepIncludeStartEnd(config.isSingleStepIncludeStartEnd());
+        debugger.setBodyMaxChars(config.getBodyMaxChars());
+        debugger.setBodyIncludeStreams(config.isBodyIncludeStreams());
+        debugger.setBodyIncludeFiles(config.isBodyIncludeFiles());
+        debugger.setIncludeExchangeProperties(config.isIncludeExchangeProperties());
+        debugger.setIncludeExchangeVariables(config.isIncludeExchangeVariables());
+        debugger.setIncludeException(config.isIncludeException());
+        debugger.setLoggingLevel(config.getLoggingLevel().name());
+        debugger.setSuspendMode(config.isWaitForAttach()); // this option is named wait-for-attach
+        debugger.setFallbackTimeout(config.getFallbackTimeout());
+
+        // enable jmx connector if port is set
+        if (config.isJmxConnectorEnabled()) {
+            DebuggerJmxConnectorService connector = new DebuggerJmxConnectorService();
+            connector.setCreateConnector(true);
+            connector.setRegistryPort(config.getJmxConnectorPort());
+            camelContext.addService(connector);
+        }
+
+        // start debugger after context is started
+        camelContext.addLifecycleStrategy(new LifecycleStrategySupport() {
+            @Override
+            public void onContextStarted(CamelContext context) {
+                // only enable debugger if not in standby mode
+                if (debugger.isEnabled() && !debugger.isStandby()) {
+                    debugger.enableDebugger();
+                }
+            }
+
+            @Override
+            public void onContextStopping(CamelContext context) {
+                if (debugger.isEnabled()) {
+                    debugger.disableDebugger();
+                }
+            }
+        });
+
+        camelContext.addService(debugger);
     }
 
     /**
@@ -765,6 +859,25 @@ public final class DefaultConfigurationConfigurer {
                 }
                 PeriodTaskScheduler scheduler = PluginHelper.getPeriodTaskScheduler(camelContext);
                 scheduler.scheduledTask(r);
+            }
+        }
+
+        if (vc.hashicorp().isRefreshEnabled()) {
+            Optional<Runnable> task = PluginHelper.getPeriodTaskResolver(camelContext)
+                    .newInstance("hashicorp-secret-refresh", Runnable.class);
+            if (task.isPresent()) {
+                long period = vc.hashicorp().getRefreshPeriod();
+                Runnable r = task.get();
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Scheduling: {} (period: {})", r, TimeUtils.printDuration(period, false));
+                }
+                if (camelContext.hasService(ContextReloadStrategy.class) == null) {
+                    // refresh is enabled then we need to automatically enable context-reload as well
+                    ContextReloadStrategy reloader = new DefaultContextReloadStrategy();
+                    camelContext.addService(reloader);
+                }
+                PeriodTaskScheduler scheduler = PluginHelper.getPeriodTaskScheduler(camelContext);
+                scheduler.schedulePeriodTask(r, period);
             }
         }
 

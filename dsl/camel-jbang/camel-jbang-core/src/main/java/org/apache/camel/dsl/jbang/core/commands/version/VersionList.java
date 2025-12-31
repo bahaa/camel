@@ -24,13 +24,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.github.freva.asciitable.AsciiTable;
@@ -44,6 +45,7 @@ import org.apache.camel.dsl.jbang.core.common.RuntimeCompletionCandidates;
 import org.apache.camel.dsl.jbang.core.common.RuntimeType;
 import org.apache.camel.dsl.jbang.core.common.RuntimeTypeConverter;
 import org.apache.camel.dsl.jbang.core.common.VersionHelper;
+import org.apache.camel.dsl.jbang.core.model.VersionListDTO;
 import org.apache.camel.main.KameletMain;
 import org.apache.camel.main.download.MavenDependencyDownloader;
 import org.apache.camel.tooling.maven.RepositoryResolver;
@@ -65,6 +67,8 @@ public class VersionList extends CamelCommand {
     private static final String GIT_CAMEL_QUARKUS_URL
             = "https://raw.githubusercontent.com/apache/camel-website/main/content/releases/q/release-%s.md";
 
+    private static final String DEFAULT_DATE_FORMAT = "MMMM yyyy";
+
     @CommandLine.Option(names = { "--runtime" },
                         defaultValue = "camel-main",
                         completionCandidates = RuntimeCompletionCandidates.class,
@@ -80,12 +84,21 @@ public class VersionList extends CamelCommand {
                         description = "Filter by Camel version (exclusive)")
     String toVersion;
 
+    @CommandLine.Option(names = { "--from-date" },
+                        description = "Filter by release date (inclusive)")
+    String fromDate;
+
+    @CommandLine.Option(names = { "--to-date" },
+                        description = "Filter by release date (exclusive)")
+    String toDate;
+
     @CommandLine.Option(names = { "--sort" },
-                        description = "Sort by (version, or date)", defaultValue = "version")
+                        description = "Sort by (version, date, or days)", defaultValue = "version")
     String sort;
 
-    @CommandLine.Option(names = { "--repo" }, description = "Maven repository for downloading available versions")
-    String repo;
+    @CommandLine.Option(names = { "--repo", "--repos" },
+                        description = "Additional maven repositories (Use commas to separate multiple repositories)")
+    String repositories;
 
     @CommandLine.Option(names = { "--lts" }, description = "Only show LTS supported releases", defaultValue = "false")
     boolean lts;
@@ -98,6 +111,17 @@ public class VersionList extends CamelCommand {
 
     @CommandLine.Option(names = { "--rc" }, description = "Include also milestone or RC releases", defaultValue = "false")
     boolean rc;
+
+    @CommandLine.Option(names = { "--days" }, description = "Whether to include days since release", defaultValue = "true")
+    boolean days;
+
+    @CommandLine.Option(names = { "--date-format" }, description = "The format to show the date (such as dd-MM-yyyy)",
+                        defaultValue = DEFAULT_DATE_FORMAT)
+    String dateFormat;
+
+    @CommandLine.Option(names = { "--tail" },
+                        description = "The number of lines from the end of the table to show.")
+    int tail;
 
     @CommandLine.Option(names = { "--fresh" }, description = "Make sure we use fresh (i.e. non-cached) resources",
                         defaultValue = "false")
@@ -130,7 +154,7 @@ public class VersionList extends CamelCommand {
 
         // only download if fresh, using a custom repo, or special runtime based
         List<String[]> versions = new ArrayList<>();
-        if (fresh || repo != null || runtime != RuntimeType.main) {
+        if (fresh || repositories != null || runtime != RuntimeType.main) {
             downloadReleases(versions);
         }
 
@@ -172,10 +196,23 @@ public class VersionList extends CamelCommand {
         // sort rows
         rows.sort(this::sortRow);
 
+        if (tail > 0) {
+            int pos = rows.size() - tail;
+            if (pos > 0) {
+                rows = rows.subList(pos, rows.size());
+            }
+        }
+
         if (jsonOutput) {
             printer().println(
                     Jsoner.serialize(
-                            rows.stream().map(VersionList::mapOf).collect(Collectors.toList())));
+                            rows.stream()
+                                    .map(row -> new VersionListDTO(
+                                            row.coreVersion, runtime.runtime(), row.runtimeVersion, row.jdks, row.kind,
+                                            row.releaseDate,
+                                            row.eolDate))
+                                    .map(VersionListDTO::toMap)
+                                    .collect(Collectors.toList())));
         } else {
             printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
                     new Column().header("CAMEL VERSION")
@@ -187,11 +224,13 @@ public class VersionList extends CamelCommand {
                     new Column().header("JDK")
                             .headerAlign(HorizontalAlign.CENTER).dataAlign(HorizontalAlign.RIGHT).with(this::jdkVersion),
                     new Column().header("KIND")
-                            .headerAlign(HorizontalAlign.CENTER).dataAlign(HorizontalAlign.CENTER).with(this::kind),
+                            .headerAlign(HorizontalAlign.CENTER).dataAlign(HorizontalAlign.RIGHT).with(this::kind),
                     new Column().header("RELEASED")
                             .headerAlign(HorizontalAlign.CENTER).dataAlign(HorizontalAlign.RIGHT).with(this::releaseDate),
                     new Column().header("SUPPORTED UNTIL")
-                            .headerAlign(HorizontalAlign.CENTER).dataAlign(HorizontalAlign.RIGHT).with(this::eolDate))));
+                            .headerAlign(HorizontalAlign.CENTER).dataAlign(HorizontalAlign.RIGHT).with(this::eolDate),
+                    new Column().header("DAYS").visible(days)
+                            .headerAlign(HorizontalAlign.CENTER).dataAlign(HorizontalAlign.RIGHT).with(this::daysAgo))));
         }
 
         return 0;
@@ -202,7 +241,7 @@ public class VersionList extends CamelCommand {
 
         try {
             main.setFresh(fresh);
-            main.setRepositories(repo);
+            main.setRepositories(repositories);
             main.start();
 
             // use kamelet-main to download from maven
@@ -220,10 +259,10 @@ public class VersionList extends CamelCommand {
 
             RepositoryResolver rr = downloader.getRepositoryResolver();
             if (rr != null) {
-                repo = rr.resolveRepository(repo);
+                repositories = rr.resolveRepository(repositories);
             }
 
-            var versions = downloader.resolveAvailableVersions(g, a, fromVersion, repo);
+            var versions = downloader.resolveAvailableVersions(g, a, fromVersion, repositories);
             versions = versions.stream().filter(v -> acceptVersion(v[0])).toList();
             answer.addAll(versions);
 
@@ -249,20 +288,29 @@ public class VersionList extends CamelCommand {
                     }
                     accept = VersionHelper.isBetween(rm.getVersion(), fromVersion, toVersion);
                 }
+                if (accept && fromDate != null || toDate != null) {
+                    if (fromDate == null) {
+                        fromDate = "2000-01-01";
+                    }
+                    if (toDate == null) {
+                        toDate = "9999-01-01";
+                    }
+                    accept = rm.getDate() == null || isDateBetween(rm.getDate(), fromDate, toDate);
+                }
                 if (accept) {
                     Row row = new Row();
                     rows.add(row);
                     row.coreVersion = rm.getVersion();
                     row.releaseDate = rm.getDate();
+                    row.daysSince = daysSince(rm.getDate());
                     row.eolDate = rm.getEol();
                     row.jdks = rm.getJdk();
                     row.kind = rm.getKind();
                 }
             }
-        } else
+        } else {
             for (String[] v : versions) {
                 Row row = new Row();
-                rows.add(row);
                 row.coreVersion = v[0];
                 row.runtimeVersion = v[1];
 
@@ -278,22 +326,62 @@ public class VersionList extends CamelCommand {
                 }
                 if (rm != null) {
                     row.releaseDate = rm.getDate();
+                    row.daysSince = daysSince(rm.getDate());
                     row.eolDate = rm.getEol();
                     row.jdks = rm.getJdk();
                     row.kind = rm.getKind();
                 }
+                boolean accept = true;
+                if (fromVersion != null || toVersion != null) {
+                    if (fromVersion == null) {
+                        fromVersion = "1.0";
+                    }
+                    if (toVersion == null) {
+                        toVersion = "99.0";
+                    }
+                    accept = VersionHelper.isBetween(row.coreVersion, fromVersion, toVersion);
+                }
+                if (accept && fromDate != null || toDate != null) {
+                    if (fromDate == null) {
+                        fromDate = "2000-01-01";
+                    }
+                    if (toDate == null) {
+                        toDate = "9999-01-01";
+                    }
+                    accept = row.releaseDate == null || isDateBetween(row.releaseDate, fromDate, toDate);
+                }
+                if (accept) {
+                    rows.add(row);
+                }
             }
+        }
     }
 
-    private static Map<String, Object> mapOf(Row r) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        map.put("camelVersion", r.coreVersion);
-        map.put("runtimeVersion", r.runtimeVersion);
-        map.put("jdkVersion", r.jdks);
-        map.put("kind", r.kind);
-        map.put("releaseDate", r.releaseDate);
-        map.put("eolDate", r.eolDate);
-        return map;
+    private long daysSince(String date) {
+        if (date != null) {
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat(YYYY_MM_DD);
+                Date d = sdf.parse(date);
+                Date d2 = new Date();
+                return ChronoUnit.DAYS.between(d.toInstant(), d2.toInstant());
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        return -1;
+    }
+
+    private boolean isDateBetween(String date, String from, String to) {
+        try {
+            var df = DateTimeFormatter.ofPattern(YYYY_MM_DD);
+            LocalDate d = LocalDate.parse(date, df);
+            LocalDate d2 = LocalDate.parse(from, df);
+            LocalDate d3 = LocalDate.parse(to, df);
+            return (d.isEqual(d2) || d.isAfter(d2)) && d.isBefore(d3);
+        } catch (Exception e) {
+            // ignore
+        }
+        return true;
     }
 
     protected int sortRow(Row o1, Row o2) {
@@ -310,6 +398,8 @@ public class VersionList extends CamelCommand {
                 String d1 = o1.releaseDate != null ? o1.releaseDate : "";
                 String d2 = o2.releaseDate != null ? o2.releaseDate : "";
                 return d1.compareTo(d2) * negate;
+            case "days":
+                return Long.compare(o2.daysSince, o1.daysSince) * negate;
             default:
                 return 0;
         }
@@ -326,12 +416,19 @@ public class VersionList extends CamelCommand {
         return "";
     }
 
+    private String daysAgo(Row r) {
+        if (r.daysSince > -1) {
+            return "" + r.daysSince;
+        }
+        return "";
+    }
+
     private String releaseDate(Row r) {
         try {
             if (r.releaseDate != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat(YYYY_MM_DD);
                 Date d = sdf.parse(r.releaseDate);
-                SimpleDateFormat sdf2 = new SimpleDateFormat("MMMM yyyy", Locale.US);
+                SimpleDateFormat sdf2 = new SimpleDateFormat(dateFormat, Locale.US);
                 return sdf2.format(d);
             }
         } catch (Exception e) {
@@ -345,7 +442,7 @@ public class VersionList extends CamelCommand {
             if (r.eolDate != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat(YYYY_MM_DD);
                 Date d = sdf.parse(r.eolDate);
-                SimpleDateFormat sdf2 = new SimpleDateFormat("MMMM yyyy", Locale.US);
+                SimpleDateFormat sdf2 = new SimpleDateFormat(dateFormat, Locale.US);
                 return sdf2.format(d);
             }
         } catch (Exception e) {
@@ -405,6 +502,7 @@ public class VersionList extends CamelCommand {
         String coreVersion;
         String runtimeVersion;
         String releaseDate;
+        long daysSince = -1;
         String eolDate;
         String kind;
         String jdks;

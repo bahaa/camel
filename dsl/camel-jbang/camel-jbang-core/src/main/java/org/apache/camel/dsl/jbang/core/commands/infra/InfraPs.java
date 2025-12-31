@@ -22,7 +22,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
@@ -32,18 +32,31 @@ import picocli.CommandLine;
                      showDefaultValues = true)
 public class InfraPs extends InfraBaseCommand {
 
+    @CommandLine.Parameters(description = "Service name", arity = "0..1")
+    private List<String> serviceName;
+
     public InfraPs(CamelJBangMain main) {
         super(main);
+    }
+
+    @Override
+    protected boolean showPidColumn() {
+        return true;
     }
 
     @Override
     public Integer doCall() throws Exception {
         // retrieve running services to filter output
         Set<String> runningAliases = new HashSet<>();
-        try {
-            List<Path> pidFiles = Files.list(CommandLineHelper.getCamelDir())
-                    .filter(p -> p.getFileName().toString().startsWith("infra-"))
-                    .collect(java.util.stream.Collectors.toList());
+        try (Stream<Path> files = Files.list(CommandLineHelper.getCamelDir())) {
+            List<Path> pidFiles = files.filter(p -> {
+                if (serviceName == null) {
+                    return p.getFileName().toString().startsWith("infra-");
+                } else {
+                    return p.getFileName().toString().startsWith("infra-" + serviceName.get(0));
+                }
+            })
+                    .toList();
 
             for (Path pidFile : pidFiles) {
                 String runningServiceName = pidFile.getFileName().toString().split("-")[1];

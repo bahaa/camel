@@ -44,9 +44,9 @@ import org.apache.commons.io.IOUtils;
 
 @Dataformat("protobuf")
 @Metadata(excludeProperties = "library,objectMapper,useDefaultObjectMapper,jsonViewTypeName,jsonView,include,allowJmsType," +
-                              "collectionTypeName,collectionType,useList,combineUnicodeSurrogates,moduleClassNames,moduleRefs,enableFeatures,"
+                              "collectionTypeName,collectionType,useList,combineUnicodeSurrogates,moduleClassNames,moduleRefs,"
                               +
-                              "disableFeatures,allowUnmarshallType,timezone,autoDiscoverObjectMapper," +
+                              "enableFeatures,disableFeatures,allowUnmarshallType,timezone,autoDiscoverObjectMapper," +
                               "schemaResolver,autoDiscoverSchemaResolver,unmarshalType,unmarshalTypeName")
 public class ProtobufDataFormat extends ServiceSupport
         implements DataFormat, DataFormatName, DataFormatContentTypeHeader, CamelContextAware {
@@ -59,7 +59,7 @@ public class ProtobufDataFormat extends ServiceSupport
 
     private CamelContext camelContext;
     private Message defaultInstance;
-    private String instanceClassName;
+    private String instanceClass;
     private boolean contentTypeHeader = true;
     private String contentTypeFormat = CONTENT_TYPE_FORMAT_NATIVE;
 
@@ -104,8 +104,12 @@ public class ProtobufDataFormat extends ServiceSupport
     }
 
     public void setInstanceClass(String className) {
-        ObjectHelper.notNull(className, "ProtobufDataFormat instaceClass");
-        instanceClassName = className;
+        ObjectHelper.notNull(className, "ProtobufDataFormat instanceClass");
+        instanceClass = className;
+    }
+
+    public String getInstanceClass() {
+        return instanceClass;
     }
 
     public void setContentTypeHeader(boolean contentTypeHeader) {
@@ -114,6 +118,10 @@ public class ProtobufDataFormat extends ServiceSupport
 
     public boolean isContentTypeHeader() {
         return contentTypeHeader;
+    }
+
+    public String getContentTypeFormat() {
+        return contentTypeFormat;
     }
 
     /*
@@ -209,8 +217,8 @@ public class ProtobufDataFormat extends ServiceSupport
 
     @Override
     protected void doStart() throws Exception {
-        if (defaultInstance == null && instanceClassName != null) {
-            defaultInstance = loadDefaultInstance(instanceClassName, getCamelContext());
+        if (defaultInstance == null && instanceClass != null) {
+            defaultInstance = loadDefaultInstance(instanceClass, getCamelContext());
         }
     }
 

@@ -41,6 +41,7 @@ import org.apache.camel.health.HealthCheckHelper;
 import org.apache.camel.health.WritableHealthCheckRepository;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.spi.RouteIdAware;
+import org.apache.camel.spi.UnitOfWork;
 import org.apache.camel.support.DefaultAsyncProducer;
 import org.apache.camel.util.KeyValueHolder;
 import org.apache.camel.util.ObjectHelper;
@@ -178,7 +179,7 @@ public class KafkaProducer extends DefaultAsyncProducer implements RouteIdAware 
                 workerPool = configuration.getWorkerPool();
                 shutdownWorkerPool = false;
             } else {
-                workerPool = endpoint.createProducerExecutor();
+                workerPool = endpoint.createProducerExecutor(this);
                 // we create a thread pool so we should also shut it down
                 shutdownWorkerPool = true;
             }
@@ -527,9 +528,17 @@ public class KafkaProducer extends DefaultAsyncProducer implements RouteIdAware 
     }
 
     private void startKafkaTransaction(Exchange exchange) {
-        exchange.getUnitOfWork().beginTransactedBy(transactionId);
-        kafkaProducer.beginTransaction();
-        exchange.getUnitOfWork().addSynchronization(new KafkaTransactionSynchronization(transactionId, kafkaProducer));
+        UnitOfWork uow = exchange.getUnitOfWork();
+
+        if (!uow.isTransactedBy(transactionId)) {
+            LOG.debug("Starting kafka transaction {} with exchange {}", transactionId, exchange.getExchangeId());
+            uow.beginTransactedBy(transactionId);
+            kafkaProducer.beginTransaction();
+            uow.addSynchronization(new KafkaTransactionSynchronization(transactionId, kafkaProducer));
+        } else {
+            LOG.debug("Using existing kafka transaction {} with exchange {}.",
+                    transactionId, exchange.getExchangeId());
+        }
     }
 
     @Override

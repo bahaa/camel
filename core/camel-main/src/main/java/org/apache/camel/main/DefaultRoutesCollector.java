@@ -19,6 +19,7 @@ package org.apache.camel.main;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -29,8 +30,10 @@ import org.apache.camel.builder.LambdaRouteBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.spi.PackageScanResourceResolver;
 import org.apache.camel.spi.Resource;
+import org.apache.camel.spi.ResourceAware;
 import org.apache.camel.spi.RoutesLoader;
 import org.apache.camel.support.PluginHelper;
+import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.util.AntPathMatcher;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StopWatch;
@@ -143,6 +146,16 @@ public class DefaultRoutesCollector implements RoutesCollector {
             }
         }
 
+        // the route may have source code available so attempt to load as resource
+        for (RoutesBuilder route : routes) {
+            if (route instanceof ResourceAware ra && ra.getResource() == null) {
+                Resource r = ResourceHelper.resolveResource(camelContext, "source:" + route.getClass().getName());
+                if (r != null && r.exists()) {
+                    ra.setResource(r);
+                }
+            }
+        }
+
         return routes;
     }
 
@@ -228,7 +241,7 @@ public class DefaultRoutesCollector implements RoutesCollector {
             return new ArrayList<>();
         }
 
-        Collection<Resource> accepted = new ArrayList<>();
+        Collection<Resource> accepted = new LinkedHashSet<>();
         for (String include : includes) {
             if (include.endsWith("?optional=true")) {
                 include = include.substring(0, include.length() - 14);

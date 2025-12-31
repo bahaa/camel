@@ -27,10 +27,9 @@ import org.apache.camel.spi.Resource;
 import org.apache.camel.support.LoggerHelper;
 import org.apache.camel.support.PluginHelper;
 import org.apache.camel.util.IOHelper;
+import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.json.JsonObject;
 import org.apache.camel.util.json.Jsoner;
-
-import static org.apache.camel.support.LoggerHelper.extractSourceLocationLineNumber;
 
 public final class ConsoleHelper {
 
@@ -83,10 +82,19 @@ public final class ConsoleHelper {
     }
 
     public static String loadSourceLine(CamelContext camelContext, String location, Integer lineNumber) {
-        if (location == null || lineNumber == null) {
-            return null;
+        List<String> lines = loadSourceLines(camelContext, location, lineNumber, lineNumber + 1);
+        if (lines.size() == 1) {
+            return lines.get(0);
+        }
+        return null;
+    }
+
+    public static List<String> loadSourceLines(CamelContext camelContext, String location, Integer start, Integer end) {
+        if (location == null || start == null) {
+            return Collections.emptyList();
         }
 
+        List<String> answer = new ArrayList<>();
         try {
             location = LoggerHelper.stripSourceLocationLineNumber(location);
             Resource resource = PluginHelper.getResourceLoader(camelContext).resolveResource(location);
@@ -98,8 +106,8 @@ public final class ConsoleHelper {
                     t = reader.readLine();
                     if (t != null) {
                         i++;
-                        if (i == lineNumber) {
-                            return t;
+                        if (i >= start && (end == null || i < end)) {
+                            answer.add(t);
                         }
                     }
                 } while (t != null);
@@ -109,6 +117,23 @@ public final class ConsoleHelper {
             // ignore
         }
 
+        return answer;
+    }
+
+    public static Integer extractSourceLocationLineNumber(String location) {
+        int cnt = StringHelper.countChar(location, ':');
+        if (cnt > 0) {
+            int pos = location.lastIndexOf(':');
+            // in case pos is end of line
+            if (pos < location.length() - 1) {
+                String num = location.substring(pos + 1);
+                try {
+                    return Integer.valueOf(num);
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+        }
         return null;
     }
 

@@ -66,22 +66,6 @@ public interface ConsulComponentBuilderFactory {
         }
     
         /**
-         * Reference to a org.kiwiproject.consul.Consul in the registry.
-         * 
-         * The option is a:
-         * &lt;code&gt;org.kiwiproject.consul.Consul&lt;/code&gt; type.
-         * 
-         * Group: common
-         * 
-         * @param consulClient the value to set
-         * @return the dsl builder
-         */
-        default ConsulComponentBuilder consulClient(org.kiwiproject.consul.Consul consulClient) {
-            doSetProperty("consulClient", consulClient);
-            return this;
-        }
-    
-        /**
          * The default key. Can be overridden by CamelConsulKey.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
@@ -156,6 +140,24 @@ public interface ConsulComponentBuilderFactory {
          */
         default ConsulComponentBuilder url(java.lang.String url) {
             doSetProperty("url", url);
+            return this;
+        }
+    
+        
+        /**
+         * Default to transform values retrieved from Consul i.e. on KV endpoint
+         * to string.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: common
+         * 
+         * @param valueAsString the value to set
+         * @return the dsl builder
+         */
+        default ConsulComponentBuilder valueAsString(boolean valueAsString) {
+            doSetProperty("valueAsString", valueAsString);
             return this;
         }
     
@@ -244,24 +246,6 @@ public interface ConsulComponentBuilderFactory {
     
         
         /**
-         * Default to transform values retrieved from Consul i.e. on KV endpoint
-         * to string.
-         * 
-         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
-         * 
-         * Default: false
-         * Group: producer
-         * 
-         * @param valueAsString the value to set
-         * @return the dsl builder
-         */
-        default ConsulComponentBuilder valueAsString(boolean valueAsString) {
-            doSetProperty("valueAsString", valueAsString);
-            return this;
-        }
-    
-        
-        /**
          * Whether autowiring is enabled. This is used for automatic autowiring
          * options (the option must be marked as autowired) by looking up in the
          * registry to find if there is a single instance of matching type,
@@ -318,6 +302,22 @@ public interface ConsulComponentBuilderFactory {
         }
     
         /**
+         * The consul client to use.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.kiwiproject.consul.Consul&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param consulClient the value to set
+         * @return the dsl builder
+         */
+        default ConsulComponentBuilder consulClient(org.kiwiproject.consul.Consul consulClient) {
+            doSetProperty("consulClient", consulClient);
+            return this;
+        }
+    
+        /**
          * The data center.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
@@ -348,17 +348,16 @@ public interface ConsulComponentBuilderFactory {
         }
     
         /**
-         * The note meta-data to use for queries.
+         * The comma separated node meta-data to use for queries.
          * 
-         * The option is a:
-         * &lt;code&gt;java.util.List&amp;lt;java.lang.String&amp;gt;&lt;/code&gt; type.
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
          * Group: advanced
          * 
          * @param nodeMeta the value to set
          * @return the dsl builder
          */
-        default ConsulComponentBuilder nodeMeta(java.util.List<java.lang.String> nodeMeta) {
+        default ConsulComponentBuilder nodeMeta(java.lang.String nodeMeta) {
             doSetProperty("nodeMeta", nodeMeta);
             return this;
         }
@@ -514,23 +513,23 @@ public interface ConsulComponentBuilderFactory {
                 Object value) {
             switch (name) {
             case "connectTimeout": getOrCreateConfiguration((ConsulComponent) component).setConnectTimeout((java.time.Duration) value); return true;
-            case "consulClient": getOrCreateConfiguration((ConsulComponent) component).setConsulClient((org.kiwiproject.consul.Consul) value); return true;
             case "key": getOrCreateConfiguration((ConsulComponent) component).setKey((java.lang.String) value); return true;
             case "pingInstance": getOrCreateConfiguration((ConsulComponent) component).setPingInstance((boolean) value); return true;
             case "readTimeout": getOrCreateConfiguration((ConsulComponent) component).setReadTimeout((java.time.Duration) value); return true;
             case "tags": getOrCreateConfiguration((ConsulComponent) component).setTags((java.lang.String) value); return true;
             case "url": getOrCreateConfiguration((ConsulComponent) component).setUrl((java.lang.String) value); return true;
+            case "valueAsString": getOrCreateConfiguration((ConsulComponent) component).setValueAsString((boolean) value); return true;
             case "writeTimeout": getOrCreateConfiguration((ConsulComponent) component).setWriteTimeout((java.time.Duration) value); return true;
             case "bridgeErrorHandler": ((ConsulComponent) component).setBridgeErrorHandler((boolean) value); return true;
             case "action": getOrCreateConfiguration((ConsulComponent) component).setAction((java.lang.String) value); return true;
             case "lazyStartProducer": ((ConsulComponent) component).setLazyStartProducer((boolean) value); return true;
-            case "valueAsString": getOrCreateConfiguration((ConsulComponent) component).setValueAsString((boolean) value); return true;
             case "autowiredEnabled": ((ConsulComponent) component).setAutowiredEnabled((boolean) value); return true;
             case "configuration": ((ConsulComponent) component).setConfiguration((org.apache.camel.component.consul.ConsulConfiguration) value); return true;
             case "consistencyMode": getOrCreateConfiguration((ConsulComponent) component).setConsistencyMode((org.kiwiproject.consul.option.ConsistencyMode) value); return true;
+            case "consulClient": getOrCreateConfiguration((ConsulComponent) component).setConsulClient((org.kiwiproject.consul.Consul) value); return true;
             case "datacenter": getOrCreateConfiguration((ConsulComponent) component).setDatacenter((java.lang.String) value); return true;
             case "nearNode": getOrCreateConfiguration((ConsulComponent) component).setNearNode((java.lang.String) value); return true;
-            case "nodeMeta": getOrCreateConfiguration((ConsulComponent) component).setNodeMeta((java.util.List) value); return true;
+            case "nodeMeta": getOrCreateConfiguration((ConsulComponent) component).setNodeMeta((java.lang.String) value); return true;
             case "aclToken": getOrCreateConfiguration((ConsulComponent) component).setAclToken((java.lang.String) value); return true;
             case "password": getOrCreateConfiguration((ConsulComponent) component).setPassword((java.lang.String) value); return true;
             case "sslContextParameters": getOrCreateConfiguration((ConsulComponent) component).setSslContextParameters((org.apache.camel.support.jsse.SSLContextParameters) value); return true;

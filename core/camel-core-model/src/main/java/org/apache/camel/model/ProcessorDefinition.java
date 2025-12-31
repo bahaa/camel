@@ -67,8 +67,8 @@ import org.apache.camel.spi.IdempotentRepository;
 import org.apache.camel.spi.InterceptStrategy;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.Policy;
+import org.apache.camel.spi.PredicateExceptionFactory;
 import org.apache.camel.spi.Resource;
-import org.apache.camel.spi.ResourceAware;
 import org.apache.camel.support.ExpressionAdapter;
 import org.slf4j.Logger;
 
@@ -226,7 +226,7 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
                 || context.isDebugging() || context.isDebugStandby()
                 || context.isTracing() || context.isTracingStandby())) {
             // we want to capture source location:line for every output (also when debugging or tracing enabled/standby)
-            Resource resource = this instanceof ResourceAware ? ((ResourceAware) this).getResource() : null;
+            Resource resource = ProcessorDefinitionHelper.getResource(this);
             ProcessorDefinitionHelper.prepareSourceLocation(resource, output);
         }
     }
@@ -788,6 +788,23 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
     }
 
     /**
+     * Set the route note for this route
+     *
+     * @param  note the route note
+     * @return      the builder
+     */
+    public Type routeNote(String note) {
+        ProcessorDefinition<?> def = this;
+
+        RouteDefinition route = ProcessorDefinitionHelper.getRoute(def);
+        if (route != null) {
+            route.setNote(note);
+        }
+
+        return asType();
+    }
+
+    /**
      * Sets a prefix to use for all node ids (not route id).
      *
      * @param  prefixId the prefix
@@ -883,31 +900,102 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
     }
 
     /**
-     * Disables this EIP from the route during build time. Once an EIP has been disabled then it cannot be enabled later
-     * at runtime.
+     * Sets the note of this node.
+     *
+     * @param  note the note
+     * @return      the builder
+     */
+    @Override
+    public Type note(String note) {
+        // special for choice otherwise
+        if (this instanceof ChoiceDefinition cbr) {
+            if (cbr.getOtherwise() != null) {
+                if (cbr.getOtherwise().getOutputs().isEmpty()) {
+                    cbr.getOtherwise().note(note);
+                } else {
+                    var last = cbr.getOtherwise().getOutputs().get(cbr.getOtherwise().getOutputs().size() - 1);
+                    last.note(note);
+                }
+            } else if (!cbr.getWhenClauses().isEmpty()) {
+                var last = cbr.getWhenClauses().get(cbr.getWhenClauses().size() - 1);
+                if (last.getOutputs().isEmpty()) {
+                    last.note(note);
+                } else {
+                    var p = last.getOutputs().get(last.getOutputs().size() - 1);
+                    p.note(note);
+                }
+            } else {
+                cbr.note(note);
+            }
+            return asType();
+        }
+
+        if (this instanceof OutputNode && getOutputs().isEmpty()) {
+            // set note on this
+            setNote(note);
+        } else {
+            List<ProcessorDefinition<?>> outputs = null;
+            if (this instanceof NoOutputDefinition<Type>) {
+                // this does not accept output so it should be on the parent
+                if (getParent() != null) {
+                    outputs = getParent().getOutputs();
+                }
+            } else if (this instanceof OutputExpressionNode) {
+                outputs = getOutputs();
+            } else if (this instanceof ExpressionNode) {
+                // this does not accept output so it should be on the parent
+                if (getParent() != null) {
+                    outputs = getParent().getOutputs();
+                }
+            } else {
+                outputs = getOutputs();
+            }
+
+            // set it on last output as this is what the user means to do
+            // for Block(s) with non empty getOutputs() the id probably refers
+            // to the last definition in the current Block
+            if (!blocks.isEmpty()) {
+                if (blocks.getLast() instanceof ProcessorDefinition) {
+                    ProcessorDefinition<?> block = (ProcessorDefinition<?>) blocks.getLast();
+                    if (!block.getOutputs().isEmpty()) {
+                        outputs = block.getOutputs();
+                    }
+                }
+            }
+            if (outputs != null && !outputs.isEmpty()) {
+                // set note on last output
+                outputs.get(outputs.size() - 1).setNote(note);
+            } else {
+                // the output could be empty
+                setNote(note);
+            }
+        }
+
+        return asType();
+    }
+
+    /**
+     * Disables this EIP from the route.
      */
     public Type disabled() {
         return disabled("true");
     }
 
     /**
-     * Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be
-     * enabled later at runtime.
+     * Disables this EIP from the route.
      */
     public Type disabled(boolean disabled) {
         return disabled(disabled ? "true" : "false");
     }
 
     /**
-     * Whether to disable this EIP from the route during build time. Once an EIP has been disabled then it cannot be
-     * enabled later at runtime.
+     * Disables this EIP from the route.
      */
     public Type disabled(String disabled) {
         if (this instanceof OutputNode && getOutputs().isEmpty()) {
             // set id on this
             setDisabled(disabled);
         } else {
-
             // set it on last output as this is what the user means to do
             // for Block(s) with non empty getOutputs() the id probably refers
             // to the last definition in the current Block
@@ -1339,10 +1427,10 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
      * @param  expression the expression
      * @return            the builder
      */
-    public ValidateDefinition validate(@AsPredicate Expression expression) {
+    public Type validate(@AsPredicate Expression expression) {
         ValidateDefinition answer = new ValidateDefinition(expression);
         addOutput(answer);
-        return answer;
+        return asType();
     }
 
     /**
@@ -1352,10 +1440,10 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
      * @param  predicate the predicate
      * @return           the builder
      */
-    public ValidateDefinition validate(@AsPredicate Predicate predicate) {
+    public Type validate(@AsPredicate Predicate predicate) {
         ValidateDefinition answer = new ValidateDefinition(predicate);
         addOutput(answer);
-        return answer;
+        return asType();
     }
 
     /**
@@ -1365,10 +1453,25 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
      * @return the builder
      */
     @AsPredicate
-    public ExpressionClause<ValidateDefinition> validate() {
-        ValidateDefinition answer = new ValidateDefinition();
+    public ExpressionClause<ProcessorDefinition<Type>> validate() {
+        ExpressionClause<ProcessorDefinition<Type>> clause = new ExpressionClause<>(this);
+        ValidateDefinition answer = new ValidateDefinition((Expression) clause);
         addOutput(answer);
-        return createAndSetExpression(answer);
+        return clause;
+    }
+
+    /**
+     * Creates a validation expression which only if it is <tt>true</tt> then the exchange is forwarded to the
+     * destination. Otherwise a {@link org.apache.camel.support.processor.PredicateValidationException} is thrown.
+     *
+     * @return the builder
+     */
+    public ExpressionClause<ProcessorDefinition<Type>> validate(PredicateExceptionFactory predicateExceptionFactory) {
+        ExpressionClause<ProcessorDefinition<Type>> clause = new ExpressionClause<>(this);
+        ValidateDefinition answer = new ValidateDefinition((Expression) clause);
+        answer.predicateExceptionFactory(predicateExceptionFactory);
+        addOutput(answer);
+        return clause;
     }
 
     /**
@@ -2334,6 +2437,10 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
      * @return               the exception builder to configure
      */
     public OnExceptionDefinition onException(Class<? extends Throwable> exceptionType) {
+        if (this.getRouteConfiguration() != null) {
+            // this is part of route configuration
+            return this.getRouteConfiguration().onException(exceptionType);
+        }
         OnExceptionDefinition answer = new OnExceptionDefinition(exceptionType);
         addOutput(answer);
         return answer;
@@ -2349,6 +2456,10 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
      */
     public OnExceptionDefinition onException(
             Class<? extends Throwable> exceptionType1, Class<? extends Throwable> exceptionType2) {
+        if (this.getRouteConfiguration() != null) {
+            // this is part of route configuration
+            return this.getRouteConfiguration().onException(exceptionType1, exceptionType2);
+        }
         OnExceptionDefinition answer = new OnExceptionDefinition(Arrays.asList(exceptionType1, exceptionType2));
         addOutput(answer);
         return answer;
@@ -2366,6 +2477,10 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
     public OnExceptionDefinition onException(
             Class<? extends Throwable> exceptionType1, Class<? extends Throwable> exceptionType2,
             Class<? extends Throwable> exceptionType3) {
+        if (this.getRouteConfiguration() != null) {
+            // this is part of route configuration
+            return this.getRouteConfiguration().onException(exceptionType1, exceptionType2, exceptionType2);
+        }
         OnExceptionDefinition answer = new OnExceptionDefinition(Arrays.asList(exceptionType1, exceptionType2, exceptionType3));
         addOutput(answer);
         return answer;
@@ -2380,6 +2495,10 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
      */
     @SafeVarargs
     public final OnExceptionDefinition onException(Class<? extends Throwable>... exceptions) {
+        if (this.getRouteConfiguration() != null) {
+            // this is part of route configuration
+            return this.getRouteConfiguration().onException(exceptions);
+        }
         OnExceptionDefinition answer = new OnExceptionDefinition(Arrays.asList(exceptions));
         addOutput(answer);
         return answer;
@@ -2738,33 +2857,6 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
 
     /**
      * <a href="http://camel.apache.org/message-translator.html">Message Translator EIP:</a> Adds a processor which sets
-     * the body on the OUT message according to a data type transformation.
-     *
-     * @param  fromType the data type representing the input of the transformation
-     * @param  toType   the data type representing the output of the transformation.
-     * @return          the builder
-     */
-    public Type transform(DataType fromType, DataType toType) {
-        TransformDefinition answer = new TransformDefinition(fromType, toType);
-        addOutput(answer);
-        return asType();
-    }
-
-    /**
-     * <a href="http://camel.apache.org/message-translator.html">Message Translator EIP:</a> Adds a processor which sets
-     * the body on the OUT message according to a data type transformation.
-     *
-     * @param  toType the data type representing the output of the transformation.
-     * @return        the builder
-     */
-    public Type transform(DataType toType) {
-        TransformDefinition answer = new TransformDefinition(DataType.ANY, toType);
-        addOutput(answer);
-        return asType();
-    }
-
-    /**
-     * <a href="http://camel.apache.org/message-translator.html">Message Translator EIP:</a> Adds a processor which sets
      * the body on the OUT message
      *
      * @return a expression builder clause to set the body
@@ -2774,6 +2866,52 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
         TransformDefinition answer = new TransformDefinition(clause);
         addOutput(answer);
         return clause;
+    }
+
+    /**
+     * To transform the message using known data types.
+     *
+     * @param  fromType the data type representing the input of the transformation
+     * @param  toType   the data type representing the output of the transformation.
+     * @return          the builder
+     */
+    public Type transformDataType(DataType fromType, DataType toType) {
+        TransformDataTypeDefinition answer = new TransformDataTypeDefinition(fromType, toType);
+        addOutput(answer);
+        return asType();
+    }
+
+    /**
+     * To transform the message using known data types.
+     *
+     * @param  fromType the data type representing the input of the transformation
+     * @param  toType   the data type representing the output of the transformation.
+     * @return          the builder
+     */
+    public Type transformDataType(String fromType, String toType) {
+        return transformDataType(new DataType(fromType), new DataType(toType));
+    }
+
+    /**
+     * To transform the message using known data types.
+     *
+     * @param  toType the data type representing the output of the transformation.
+     * @return        the builder
+     */
+    public Type transformDataType(DataType toType) {
+        TransformDataTypeDefinition answer = new TransformDataTypeDefinition(DataType.ANY, toType);
+        addOutput(answer);
+        return asType();
+    }
+
+    /**
+     * To transform the message using known data types.
+     *
+     * @param  toType the data type representing the output of the transformation.
+     * @return        the builder
+     */
+    public Type transformDataType(String toType) {
+        return transformDataType(new DataType(toType));
     }
 
     /**
@@ -3618,7 +3756,7 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
      * @see                org.apache.camel.processor.PollEnricher
      */
     public Type pollEnrich(EndpointConsumerBuilder resourceUri) {
-        return pollEnrich(new SimpleExpression(resourceUri.getRawUri()), -1, (String) null, false);
+        return pollEnrich(resourceUri.expr(getCamelContext()), -1, (String) null, false);
     }
 
     /**
@@ -3843,7 +3981,7 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
     public Type pollEnrich(
             @AsEndpointUri EndpointConsumerBuilder resourceUri, long timeout, AggregationStrategy aggregationStrategy,
             boolean aggregateOnException) {
-        return pollEnrich(new SimpleExpression(resourceUri.getRawUri()), timeout, aggregationStrategy, aggregateOnException);
+        return pollEnrich(resourceUri.expr(getCamelContext()), timeout, aggregationStrategy, aggregateOnException);
     }
 
     /**
@@ -3870,7 +4008,7 @@ public abstract class ProcessorDefinition<Type extends ProcessorDefinition<Type>
     public Type pollEnrich(
             @AsEndpointUri EndpointConsumerBuilder resourceUri, long timeout, String aggregationStrategyRef,
             boolean aggregateOnException) {
-        return pollEnrich(new SimpleExpression(resourceUri.getRawUri()), timeout, aggregationStrategyRef, aggregateOnException);
+        return pollEnrich(resourceUri.expr(getCamelContext()), timeout, aggregationStrategyRef, aggregateOnException);
     }
 
     /**

@@ -18,7 +18,7 @@ package org.apache.camel.test.oauth;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URL;
+import java.net.URI;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -31,8 +31,12 @@ import javax.net.ssl.TrustManagerFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class SSLCertTrustTest extends AbstractKeycloakTest {
+
+    private static final Logger LOG = LoggerFactory.getLogger(SSLCertTrustTest.class);
 
     @Test
     void testCheckClusterCertificateTrust() throws Exception {
@@ -57,11 +61,11 @@ class SSLCertTrustTest extends AbstractKeycloakTest {
                 xtm.checkServerTrusted(new X509Certificate[] { cert }, "RSA");
             }
         } catch (CertificateException ex) {
-            System.err.println("Untrusted, because of: " + ex);
+            LOG.error("Untrusted, because of: ", ex);
             return;
         }
 
-        System.out.println("Trusted");
+        LOG.info("Trusted");
     }
 
     @Test
@@ -78,7 +82,7 @@ class SSLCertTrustTest extends AbstractKeycloakTest {
     }
 
     private static void connectToUrl(String httpsUrl) throws IOException {
-        var url = new URL(httpsUrl);
+        var url = URI.create(httpsUrl).toURL();
         var con = (HttpsURLConnection) url.openConnection();
         con.connect();
     }

@@ -113,19 +113,19 @@ public interface GoogleDriveComponentBuilderFactory {
         }
     
         /**
-         * Specifies the level of permissions you want a drive application to
+         * Specifies the level of permissions you want a calendar application to
          * have to a user account. See
-         * https://developers.google.com/drive/web/scopes for more info.
+         * https://developers.google.com/identity/protocols/googlescopes for
+         * more info. Multiple scopes can be separated by comma.
          * 
-         * The option is a:
-         * &lt;code&gt;java.util.List&amp;lt;java.lang.String&amp;gt;&lt;/code&gt; type.
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
          * Group: common
          * 
          * @param scopes the value to set
          * @return the dsl builder
          */
-        default GoogleDriveComponentBuilder scopes(java.util.List<java.lang.String> scopes) {
+        default GoogleDriveComponentBuilder scopes(java.lang.String scopes) {
             doSetProperty("scopes", scopes);
             return this;
         }
@@ -223,6 +223,36 @@ public interface GoogleDriveComponentBuilderFactory {
         }
     
         /**
+         * Proxy server host.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: proxy
+         * 
+         * @param proxyHost the value to set
+         * @return the dsl builder
+         */
+        default GoogleDriveComponentBuilder proxyHost(java.lang.String proxyHost) {
+            doSetProperty("proxyHost", proxyHost);
+            return this;
+        }
+    
+        /**
+         * Proxy server port.
+         * 
+         * The option is a: &lt;code&gt;java.lang.Integer&lt;/code&gt; type.
+         * 
+         * Group: proxy
+         * 
+         * @param proxyPort the value to set
+         * @return the dsl builder
+         */
+        default GoogleDriveComponentBuilder proxyPort(java.lang.Integer proxyPort) {
+            doSetProperty("proxyPort", proxyPort);
+            return this;
+        }
+    
+        /**
          * OAuth 2 access token. This typically expires after an hour so
          * refreshToken is recommended for long term usage.
          * 
@@ -254,7 +284,7 @@ public interface GoogleDriveComponentBuilderFactory {
         }
     
         /**
-         * OAuth 2 refresh token. Using this, the Google Calendar component can
+         * OAuth 2 refresh token. Using this, the Google Drive component can
          * obtain a new accessToken whenever the current one expires - a
          * necessity if the application is long-lived.
          * 
@@ -310,11 +340,13 @@ public interface GoogleDriveComponentBuilderFactory {
             case "clientId": getOrCreateConfiguration((GoogleDriveComponent) component).setClientId((java.lang.String) value); return true;
             case "configuration": ((GoogleDriveComponent) component).setConfiguration((org.apache.camel.component.google.drive.GoogleDriveConfiguration) value); return true;
             case "delegate": getOrCreateConfiguration((GoogleDriveComponent) component).setDelegate((java.lang.String) value); return true;
-            case "scopes": getOrCreateConfiguration((GoogleDriveComponent) component).setScopes((java.util.List) value); return true;
+            case "scopes": getOrCreateConfiguration((GoogleDriveComponent) component).setScopes((java.lang.String) value); return true;
             case "bridgeErrorHandler": ((GoogleDriveComponent) component).setBridgeErrorHandler((boolean) value); return true;
             case "lazyStartProducer": ((GoogleDriveComponent) component).setLazyStartProducer((boolean) value); return true;
             case "autowiredEnabled": ((GoogleDriveComponent) component).setAutowiredEnabled((boolean) value); return true;
             case "clientFactory": ((GoogleDriveComponent) component).setClientFactory((org.apache.camel.component.google.drive.GoogleDriveClientFactory) value); return true;
+            case "proxyHost": ((GoogleDriveComponent) component).setProxyHost((java.lang.String) value); return true;
+            case "proxyPort": ((GoogleDriveComponent) component).setProxyPort((java.lang.Integer) value); return true;
             case "accessToken": getOrCreateConfiguration((GoogleDriveComponent) component).setAccessToken((java.lang.String) value); return true;
             case "clientSecret": getOrCreateConfiguration((GoogleDriveComponent) component).setClientSecret((java.lang.String) value); return true;
             case "refreshToken": getOrCreateConfiguration((GoogleDriveComponent) component).setRefreshToken((java.lang.String) value); return true;

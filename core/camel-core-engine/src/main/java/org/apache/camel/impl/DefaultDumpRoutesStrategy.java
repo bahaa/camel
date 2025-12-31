@@ -350,7 +350,7 @@ public class DefaultDumpRoutesStrategy extends ServiceSupport implements DumpRou
             CamelContext camelContext, NamedNode def, Resource resource,
             ModelToYAMLDumper dumper, String kind, StringBuilder sbLocal, StringBuilder sbLog) {
         try {
-            String dump = dumper.dumpModelAsYaml(camelContext, def, resolvePlaceholders, uriAsParameters, generatedIds);
+            String dump = dumper.dumpModelAsYaml(camelContext, def, resolvePlaceholders, uriAsParameters, generatedIds, false);
             sbLocal.append(dump);
             appendLogDump(resource, dump, sbLog);
         } catch (Exception e) {
@@ -608,7 +608,7 @@ public class DefaultDumpRoutesStrategy extends ServiceSupport implements DumpRou
             CamelContext camelContext, NamedNode def, Resource resource,
             ModelToXMLDumper dumper, String replace, String kind, StringBuilder sbLocal, StringBuilder sbLog) {
         try {
-            String xml = dumper.dumpModelAsXml(camelContext, def, resolvePlaceholders, generatedIds);
+            String xml = dumper.dumpModelAsXml(camelContext, def, resolvePlaceholders, generatedIds, false);
             // remove spring schema xmlns that camel-jaxb dumper includes
             xml = StringHelper.replaceFirst(xml, " xmlns=\"http://camel.apache.org/schema/spring\">", ">");
             xml = xml.replace("</" + replace + ">", "</" + replace + ">\n");

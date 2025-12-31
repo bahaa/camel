@@ -2630,7 +2630,7 @@ public interface SqlEndpointBuilderFactory {
         /**
          * Query to execute. This query takes precedence over the query
          * specified in the endpoint URI. Note that query parameters in the
-         * header _are_ represented by a instead of a pass:# symbol.
+         * header are represented by a instead of a pass:# symbol.
          * 
          * The option is a: {@code String} type.
          * 
@@ -2729,6 +2729,19 @@ public interface SqlEndpointBuilderFactory {
          */
         public String sqlParameters() {
             return "CamelSqlParameters";
+        }
+        /**
+         * To use a specific DataSource to operate on another database than the
+         * pre configured DataSource on the component.
+         * 
+         * The option is a: {@code javax.sql.DataSource} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code SqlDataSource}.
+         */
+        public String sqlDataSource() {
+            return "CamelSqlDataSource";
         }
     }
     static SqlEndpointBuilder endpointBuilder(String componentName, String path) {

@@ -16,6 +16,7 @@
  */
 package org.apache.camel.processor;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.AggregationStrategy;
@@ -38,9 +39,9 @@ import org.apache.camel.spi.EndpointUtilizationStatistics;
 import org.apache.camel.spi.ExceptionHandler;
 import org.apache.camel.spi.HeadersMapFactory;
 import org.apache.camel.spi.IdAware;
+import org.apache.camel.spi.OptimisedComponentResolver;
 import org.apache.camel.spi.PollDynamicAware;
 import org.apache.camel.spi.RouteIdAware;
-import org.apache.camel.support.AsyncProcessorSupport;
 import org.apache.camel.support.BridgeExceptionHandlerToErrorHandler;
 import org.apache.camel.support.DefaultConsumer;
 import org.apache.camel.support.EndpointHelper;
@@ -65,7 +66,7 @@ import static org.apache.camel.support.ExchangeHelper.copyResultsPreservePattern
  * @see PollProcessor
  * @see Enricher
  */
-public class PollEnricher extends AsyncProcessorSupport implements IdAware, RouteIdAware, CamelContextAware {
+public class PollEnricher extends BaseProcessorSupport implements IdAware, RouteIdAware, CamelContextAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(PollEnricher.class);
 
@@ -597,8 +598,10 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
     @Override
     protected void doStart() throws Exception {
         // ensure the component is started
-        if (autoStartupComponents && scheme != null) {
-            camelContext.getComponent(scheme);
+        if (autoStartupComponents && scheme != null && uri != null) {
+            OptimisedComponentResolver resolver
+                    = camelContext.getCamelContextExtension().getContextPlugin(OptimisedComponentResolver.class);
+            resolver.resolveComponent(uri);
         }
 
         ServiceHelper.startService(consumerCache, aggregationStrategy, dynamicAware);
@@ -619,7 +622,17 @@ public class PollEnricher extends AsyncProcessorSupport implements IdAware, Rout
         @Override
         public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
             if (newExchange != null) {
+                // preserve original headers before copying results
+                Map<String, Object> originalHeaders = new HashMap<>(oldExchange.getMessage().getHeaders());
+
+                // copy results from polled resource
                 copyResultsPreservePattern(oldExchange, newExchange);
+
+                // restore original headers, but don't overwrite headers from the polled resource
+                Map<String, Object> currentHeaders = oldExchange.getMessage().getHeaders();
+                for (Map.Entry<String, Object> entry : originalHeaders.entrySet()) {
+                    currentHeaders.putIfAbsent(entry.getKey(), entry.getValue());
+                }
             } else {
                 // if no newExchange then there was no message from the external resource,
                 // and therefore we should set an empty body to indicate this fact

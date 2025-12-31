@@ -54,6 +54,13 @@ public interface MessageHistory {
     void nodeProcessingDone();
 
     /**
+     * Used for signalling that processing of the node is done.
+     *
+     * @param delta extra time in millis that should be subtracted from the processing time
+     */
+    void nodeProcessingDone(long delta);
+
+    /**
      * A read-only copy of the message at the point of this history (if this has been enabled).
      */
     Message getMessage();
@@ -69,5 +76,15 @@ public interface MessageHistory {
      * This allows tooling to avoid dumping message history for nodes that did not take part in the debugger.
      */
     boolean isAcceptDebugger();
+
+    /**
+     * Used specially during debugging to know that an EIP was skipped over
+     */
+    void setDebugSkipOver(boolean skipOver);
+
+    /**
+     * Used specially during debugging to know that an EIP was skipped over
+     */
+    boolean isDebugSkipOver();
 
 }

@@ -100,25 +100,12 @@ public interface GoogleMailEndpointBuilderFactory {
             return this;
         }
         /**
-         * GMail scopes.
+         * Specifies the level of permissions you want a calendar application to
+         * have to a user account. See
+         * https://developers.google.com/identity/protocols/googlescopes for
+         * more info. Multiple scopes can be separated by comma.
          * 
-         * The option is a:
-         * <code>java.util.Collection&lt;java.lang.String&gt;</code> type.
-         * 
-         * Group: common
-         * 
-         * @param scopes the value to set
-         * @return the dsl builder
-         */
-        default GoogleMailEndpointConsumerBuilder scopes(Collection<java.lang.String> scopes) {
-            doSetProperty("scopes", scopes);
-            return this;
-        }
-        /**
-         * GMail scopes.
-         * 
-         * The option will be converted to a
-         * <code>java.util.Collection&lt;java.lang.String&gt;</code> type.
+         * The option is a: <code>java.lang.String</code> type.
          * 
          * Group: common
          * 
@@ -648,7 +635,7 @@ public interface GoogleMailEndpointBuilderFactory {
             return this;
         }
         /**
-         * OAuth 2 refresh token. Using this, the Google Calendar component can
+         * OAuth 2 refresh token. Using this, the Google Mail component can
          * obtain a new accessToken whenever the current one expires - a
          * necessity if the application is long-lived.
          * 
@@ -911,25 +898,12 @@ public interface GoogleMailEndpointBuilderFactory {
             return this;
         }
         /**
-         * GMail scopes.
+         * Specifies the level of permissions you want a calendar application to
+         * have to a user account. See
+         * https://developers.google.com/identity/protocols/googlescopes for
+         * more info. Multiple scopes can be separated by comma.
          * 
-         * The option is a:
-         * <code>java.util.Collection&lt;java.lang.String&gt;</code> type.
-         * 
-         * Group: common
-         * 
-         * @param scopes the value to set
-         * @return the dsl builder
-         */
-        default GoogleMailEndpointProducerBuilder scopes(Collection<java.lang.String> scopes) {
-            doSetProperty("scopes", scopes);
-            return this;
-        }
-        /**
-         * GMail scopes.
-         * 
-         * The option will be converted to a
-         * <code>java.util.Collection&lt;java.lang.String&gt;</code> type.
+         * The option is a: <code>java.lang.String</code> type.
          * 
          * Group: common
          * 
@@ -970,7 +944,7 @@ public interface GoogleMailEndpointBuilderFactory {
             return this;
         }
         /**
-         * OAuth 2 refresh token. Using this, the Google Calendar component can
+         * OAuth 2 refresh token. Using this, the Google Mail component can
          * obtain a new accessToken whenever the current one expires - a
          * necessity if the application is long-lived.
          * 
@@ -1126,25 +1100,12 @@ public interface GoogleMailEndpointBuilderFactory {
             return this;
         }
         /**
-         * GMail scopes.
+         * Specifies the level of permissions you want a calendar application to
+         * have to a user account. See
+         * https://developers.google.com/identity/protocols/googlescopes for
+         * more info. Multiple scopes can be separated by comma.
          * 
-         * The option is a:
-         * <code>java.util.Collection&lt;java.lang.String&gt;</code> type.
-         * 
-         * Group: common
-         * 
-         * @param scopes the value to set
-         * @return the dsl builder
-         */
-        default GoogleMailEndpointBuilder scopes(Collection<java.lang.String> scopes) {
-            doSetProperty("scopes", scopes);
-            return this;
-        }
-        /**
-         * GMail scopes.
-         * 
-         * The option will be converted to a
-         * <code>java.util.Collection&lt;java.lang.String&gt;</code> type.
+         * The option is a: <code>java.lang.String</code> type.
          * 
          * Group: common
          * 
@@ -1185,7 +1146,7 @@ public interface GoogleMailEndpointBuilderFactory {
             return this;
         }
         /**
-         * OAuth 2 refresh token. Using this, the Google Calendar component can
+         * OAuth 2 refresh token. Using this, the Google Mail component can
          * obtain a new accessToken whenever the current one expires - a
          * necessity if the application is long-lived.
          * 

@@ -41,12 +41,11 @@ import org.apache.camel.util.ObjectHelper;
 
 @Dataformat("grok")
 public class GrokDataFormat extends ServiceSupport implements DataFormat, DataFormatName, CamelContextAware {
+
     private CamelContext camelContext;
-
     private Grok grok;
-
+    private final Set<GrokPattern> customPatterns = new HashSet<>();
     private boolean allowMultipleMatchesPerLine = true;
-    private Set<GrokPattern> customPatterns = new HashSet<>();
     private boolean flattened;
     private boolean namedOnly;
     private String pattern;
@@ -72,9 +71,17 @@ public class GrokDataFormat extends ServiceSupport implements DataFormat, DataFo
         return registerPatternDefinition(new GrokPattern(name, pattern));
     }
 
+    public String getPattern() {
+        return pattern;
+    }
+
     public GrokDataFormat setPattern(String pattern) {
         this.pattern = pattern;
         return this;
+    }
+
+    public boolean isFlattened() {
+        return flattened;
     }
 
     /**
@@ -87,9 +94,17 @@ public class GrokDataFormat extends ServiceSupport implements DataFormat, DataFo
         return this;
     }
 
+    public boolean isAllowMultipleMatchesPerLine() {
+        return allowMultipleMatchesPerLine;
+    }
+
     public GrokDataFormat setAllowMultipleMatchesPerLine(boolean allowMultipleMatchesPerLine) {
         this.allowMultipleMatchesPerLine = allowMultipleMatchesPerLine;
         return this;
+    }
+
+    public boolean isNamedOnly() {
+        return namedOnly;
     }
 
     /**

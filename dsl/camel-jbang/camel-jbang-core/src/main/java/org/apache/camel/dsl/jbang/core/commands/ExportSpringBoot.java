@@ -42,6 +42,8 @@ import org.apache.camel.util.CamelCaseOrderedProperties;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 
+import static org.apache.camel.dsl.jbang.core.commands.ExportHelper.exportPackageName;
+
 class ExportSpringBoot extends Export {
 
     public ExportSpringBoot(CamelJBangMain main) {
@@ -60,8 +62,12 @@ class ExportSpringBoot extends Export {
             printer().printErr("--build-tool must either be maven or gradle, was: " + buildTool);
             return 1;
         }
+        if (buildTool.equals("gradle")) {
+            printer().println("WARN: --build-tool=gradle is deprecated.");
+        }
 
-        Path profile = Path.of("application.properties");
+        exportBaseDir = exportBaseDir != null ? exportBaseDir : Path.of(".");
+        Path profile = exportBaseDir.resolve("application.properties");
 
         // the settings file has information what to export
         Path settings = CommandLineHelper.getWorkDir().resolve(Run.RUN_SETTINGS_FILE);
@@ -121,16 +127,32 @@ class ExportSpringBoot extends Export {
                 prop.put("camel.main.run-controller", "true");
             }
             // are we using http then enable embedded HTTP server (if not explicit configured already)
-            int port = httpServerPort(settings);
-            if (port == -1 && http) {
-                port = 8080;
+            if (!prop.containsKey("server.port")) {
+                int port = httpServerPort(settings);
+                if (port == -1 && http) {
+                    port = 8080;
+                }
+                if (port != -1 && port != 8080) {
+                    prop.put("server.port", port);
+                }
             }
-            if (port != -1 && port != 8080) {
-                prop.put("server.port", port);
+            if (!prop.containsKey("management.server.port")) {
+                port = httpManagementPort(settings);
+                if (port != -1) {
+                    prop.put("management.server.port", port);
+                }
             }
-            port = httpManagementPort(settings);
-            if (port != -1) {
-                prop.put("management.server.port", port);
+            if (hawtio) {
+                // spring boot needs these options configured to support hawtio
+                String s = prop.getProperty("management.endpoints.web.exposure.include");
+                if (s == null) {
+                    s = "hawtio,jolokia";
+                } else {
+                    s = s + ",hawtio,jolokia";
+                }
+                prop.setProperty("management.endpoints.web.exposure.include", s);
+                prop.setProperty("spring.jmx.enabled", "true");
+                prop.setProperty("hawtio.authenticationEnabled", "false");
             }
             return prop;
         });
@@ -249,6 +271,9 @@ class ExportSpringBoot extends Export {
             if (gav.getVersion() != null) {
                 sb.append("            <version>").append(gav.getVersion()).append("</version>\n");
             }
+            if (gav.getScope() != null) {
+                sb.append("            <scope>").append(gav.getScope()).append("</scope>\n");
+            }
             if ("lib".equals(gav.getPackaging())) {
                 // special for lib JARs
                 sb.append("            <scope>system</scope>\n");
@@ -365,6 +390,10 @@ class ExportSpringBoot extends Export {
             // include http server if using openapi
             answer.add("mvn:org.apache.camel:camel-platform-http");
         }
+        if (hawtio) {
+            answer.add("mvn:org.apache.camel:camel-management");
+            answer.add("mvn:io.hawt:hawtio-springboot:" + hawtioVersion);
+        }
 
         return answer;
     }
@@ -390,11 +419,11 @@ class ExportSpringBoot extends Export {
 
     @Override
     protected String applicationPropertyLine(String key, String value) {
-        if (key.startsWith("camel.server.")) {
-            // skip "camel.server." as this is for camel-main only
+        if (key.startsWith("camel.server.") || key.startsWith("camel.management.")) {
+            // skip "camel.server." or "camel.management." as this is for camel-main only
             return null;
         }
-        boolean camel44orOlder = camelSpringBootVersion != null && VersionHelper.isLE("4.4", camelSpringBootVersion);
+        boolean camel44orOlder = camelSpringBootVersion != null && VersionHelper.isGE("4.4.0", camelSpringBootVersion);
         if (camel44orOlder) {
             // camel.main.x should be renamed to camel.springboot.x (for camel 4.4.x or older)
             if (key.startsWith("camel.main.")) {

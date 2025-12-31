@@ -32,7 +32,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class S3CreateDownloadLinkWithProvidedPresignerOperationIT extends Aws2S3Base {
 
@@ -48,7 +48,6 @@ public class S3CreateDownloadLinkWithProvidedPresignerOperationIT extends Aws2S3
     @EndpointInject("mock:result")
     private MockEndpoint result;
 
-    @SuppressWarnings("unchecked")
     @Test
     public void sendIn() throws Exception {
         result.expectedMessageCount(1);

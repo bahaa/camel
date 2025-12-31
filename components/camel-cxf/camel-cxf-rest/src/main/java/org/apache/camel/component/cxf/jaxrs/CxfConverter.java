@@ -29,6 +29,7 @@ import javax.xml.namespace.QName;
 
 import org.apache.camel.Converter;
 import org.apache.camel.Exchange;
+import org.apache.camel.StreamCache;
 import org.apache.camel.TypeConverter;
 import org.apache.camel.component.cxf.common.DataFormat;
 import org.apache.camel.converter.stream.CachedOutputStream;
@@ -121,6 +122,36 @@ public final class CxfConverter {
         }
 
         return null;
+    }
+
+    @Converter(allowNull = true)
+    public static StreamCache toStreamCache(Response response, Exchange exchange) {
+        if (response == null) {
+            return null;
+        }
+
+        // retrieve the HTTP status from the Response object
+        // and set it explicitly on the Exchange's IN message headers.
+        // This ensures the status code is saved before the conversion loses the Response object context.
+        int status = response.getStatus();
+        if (status > 0) {
+            exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, status);
+        }
+
+        // Convert the body (entity) to an InputStream
+        InputStream is = toInputStream(response, exchange);
+
+        // Find the appropriate TypeConverter for StreamCache
+        TypeConverterRegistry registry = exchange.getContext().getTypeConverterRegistry();
+        TypeConverter tc = registry.lookup(StreamCache.class, is.getClass());
+
+        if (tc != null) {
+            // Convert the InputStream payload into a StreamCache
+            return tc.convertTo(StreamCache.class, exchange, is);
+        }
+
+        return null;
+
     }
 
     /**

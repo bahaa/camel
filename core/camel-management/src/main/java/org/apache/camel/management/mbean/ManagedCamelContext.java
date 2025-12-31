@@ -54,6 +54,8 @@ import org.apache.camel.spi.ManagementStrategy;
 import org.apache.camel.spi.UnitOfWork;
 import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.PluginHelper;
+import org.apache.camel.util.json.JsonArray;
+import org.apache.camel.util.json.JsonObject;
 
 @ManagedResource(description = "Managed CamelContext")
 public class ManagedCamelContext extends ManagedPerformanceCounter implements TimerListener, ManagedCamelContextMBean {
@@ -259,6 +261,11 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
     @Override
     public String getHeadersMapFactoryClassName() {
         return context.getCamelContextExtension().getHeadersMapFactory().getClass().getName();
+    }
+
+    @Override
+    public String getAdditionalSensitiveKeywords() {
+        return context.getCamelContextExtension().getAdditionalSensitiveKeywords();
     }
 
     @Override
@@ -547,7 +554,7 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
         RestsDefinition def = new RestsDefinition();
         def.setRests(rests);
 
-        return PluginHelper.getModelToXMLDumper(context).dumpModelAsXml(context, def, resolvePlaceholders, true);
+        return PluginHelper.getModelToXMLDumper(context).dumpModelAsXml(context, def, resolvePlaceholders, true, false);
     }
 
     @Override
@@ -562,6 +569,11 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
 
     @Override
     public String dumpRoutesAsXml(boolean resolvePlaceholders, boolean generatedIds) throws Exception {
+        return dumpRoutesAsXml(resolvePlaceholders, true, false);
+    }
+
+    @Override
+    public String dumpRoutesAsXml(boolean resolvePlaceholders, boolean generatedIds, boolean sourceLocation) throws Exception {
         List<RouteDefinition> routes = context.getCamelContextExtension().getContextPlugin(Model.class).getRouteDefinitions();
         if (routes.isEmpty()) {
             return null;
@@ -575,7 +587,8 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
         if (context.isDebugging()) {
             generatedIds = true;
         }
-        return PluginHelper.getModelToXMLDumper(context).dumpModelAsXml(context, def, resolvePlaceholders, generatedIds);
+        return PluginHelper.getModelToXMLDumper(context).dumpModelAsXml(context, def, resolvePlaceholders, generatedIds,
+                sourceLocation);
     }
 
     @Override
@@ -596,6 +609,13 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
     @Override
     public String dumpRoutesAsYaml(boolean resolvePlaceholders, boolean uriAsParameters, boolean generatedIds)
             throws Exception {
+        return dumpRoutesAsYaml(resolvePlaceholders, uriAsParameters, true, false);
+    }
+
+    @Override
+    public String dumpRoutesAsYaml(
+            boolean resolvePlaceholders, boolean uriAsParameters, boolean generatedIds, boolean sourceLocation)
+            throws Exception {
         List<RouteDefinition> routes = context.getCamelContextExtension().getContextPlugin(Model.class).getRouteDefinitions();
         if (routes.isEmpty()) {
             return null;
@@ -611,7 +631,7 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
         }
 
         return PluginHelper.getModelToYAMLDumper(context).dumpModelAsYaml(context, def, resolvePlaceholders, uriAsParameters,
-                generatedIds);
+                generatedIds, sourceLocation);
     }
 
     @Override
@@ -632,7 +652,8 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
     @Override
     public String dumpRoutesStatsAsXml(boolean fullStats, boolean includeProcessors) throws Exception {
         StringBuilder sb = new StringBuilder();
-        sb.append("<camelContextStat").append(String.format(" id=\"%s\" state=\"%s\"", getCamelId(), getState()));
+        sb.append("<camelContextStat")
+                .append(String.format(" id=\"%s\" state=\"%s\" uptime=\"%s\"", getCamelId(), getState(), getUptimeMillis()));
         // use substring as we only want the attributes
         String stat = dumpStatsAsXml(fullStats);
         sb.append(" exchangesInflight=\"").append(getInflightExchanges()).append("\"");
@@ -666,7 +687,11 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
                 ManagedRouteMBean route
                         = context.getManagementStrategy().getManagementAgent().newProxyClient(on, ManagedRouteMBean.class);
                 sb.append("    <routeStat")
-                        .append(String.format(" id=\"%s\" state=\"%s\"", route.getRouteId(), route.getState()));
+                        .append(String.format(" id=\"%s\" state=\"%s\" uptime=\"%s\"", route.getRouteId(), route.getState(),
+                                route.getUptimeMillis()));
+                if (route.getRouteGroup() != null) {
+                    sb.append(String.format(" group=\"%s\"", route.getRouteGroup()));
+                }
                 if (route.getSourceLocation() != null) {
                     sb.append(String.format(" sourceLocation=\"%s\"", route.getSourceLocation()));
                 }
@@ -684,8 +709,10 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
                         // the processor must belong to this route
                         if (route.getRouteId().equals(processor.getRouteId())) {
                             sb.append("        <processorStat")
-                                    .append(String.format(" id=\"%s\" index=\"%s\" state=\"%s\" sourceLineNumber=\"%s\"",
-                                            processor.getProcessorId(), processor.getIndex(), processor.getState(), line));
+                                    .append(String.format(
+                                            " id=\"%s\" index=\"%s\" state=\"%s\" disabled=\"%s\" sourceLineNumber=\"%s\"",
+                                            processor.getProcessorId(), processor.getIndex(), processor.getState(),
+                                            processor.getDisabled(), line));
                             // use substring as we only want the attributes
                             stat = processor.dumpStatsAsXml(fullStats);
                             sb.append(" exchangesInflight=\"").append(processor.getExchangesInflight()).append("\"");
@@ -704,9 +731,90 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
     }
 
     @Override
+    public String dumpRouteStatsAsJSon(boolean fullStats, boolean includeProcessors) throws Exception {
+        JsonObject root = new JsonObject();
+        root.put("id", getCamelId());
+        root.put("state", getState());
+        root.put("uptime", getUptimeMillis());
+
+        statsAsJSon(root, fullStats);
+        root.put("exchangesInflight", getInflightExchanges());
+
+        MBeanServer server = getContext().getManagementStrategy().getManagementAgent().getMBeanServer();
+        if (server != null) {
+            // gather all the routes for this CamelContext, which requires JMX
+            String prefix = getContext().getManagementStrategy().getManagementAgent().getIncludeHostName() ? "*/" : "";
+            ObjectName query = ObjectName
+                    .getInstance(jmxDomain + ":context=" + prefix + getContext().getManagementName() + ",type=routes,*");
+            Set<ObjectName> routes = server.queryNames(query, null);
+
+            List<ManagedProcessorMBean> processors = new ArrayList<>();
+            if (includeProcessors) {
+                // gather all the processors for this CamelContext, which requires JMX
+                query = ObjectName.getInstance(
+                        jmxDomain + ":context=" + prefix + getContext().getManagementName() + ",type=processors,*");
+                Set<ObjectName> names = server.queryNames(query, null);
+                for (ObjectName on : names) {
+                    ManagedProcessorMBean processor = context.getManagementStrategy().getManagementAgent().newProxyClient(on,
+                            ManagedProcessorMBean.class);
+                    processors.add(processor);
+                }
+            }
+            processors.sort(new OrderProcessorMBeans());
+
+            // loop the routes, and append the processor stats if needed
+            JsonArray arr = new JsonArray();
+            root.put("routes", arr);
+            for (ObjectName on : routes) {
+                JsonObject jo = new JsonObject();
+                arr.add(jo);
+
+                ManagedRouteMBean route
+                        = context.getManagementStrategy().getManagementAgent().newProxyClient(on, ManagedRouteMBean.class);
+                jo.put("id", route.getRouteId());
+                jo.put("state", route.getState());
+                jo.put("uptime", route.getUptimeMillis());
+                if (route.getRouteGroup() != null) {
+                    jo.put("group", route.getRouteGroup());
+                }
+                if (route.getSourceLocation() != null) {
+                    jo.put("sourceLocation", route.getSourceLocation());
+                }
+
+                // use substring as we only want the attributes
+                route.statsAsJSon(jo, fullStats);
+
+                // add processor details if needed
+                if (includeProcessors) {
+                    JsonArray arr2 = new JsonArray();
+                    jo.put("processors", arr2);
+                    for (ManagedProcessorMBean processor : processors) {
+                        int line = processor.getSourceLineNumber() != null ? processor.getSourceLineNumber() : -1;
+                        // the processor must belong to this route
+                        if (route.getRouteId().equals(processor.getRouteId())) {
+                            JsonObject jo2 = new JsonObject();
+                            arr2.add(jo2);
+                            jo2.put("id", processor.getProcessorId());
+                            jo2.put("index", processor.getIndex());
+                            jo2.put("state", processor.getState());
+                            jo2.put("disabled", processor.getDisabled());
+                            jo2.put("sourceLineNumber", line);
+                            processor.statsAsJSon(jo2, fullStats);
+                            jo2.put("exchangesInflight", processor.getExchangesInflight());
+                        }
+                    }
+                }
+            }
+        }
+
+        return root.toJson();
+    }
+
+    @Override
     public String dumpStepStatsAsXml(boolean fullStats) throws Exception {
         StringBuilder sb = new StringBuilder();
-        sb.append("<camelContextStat").append(String.format(" id=\"%s\" state=\"%s\"", getCamelId(), getState()));
+        sb.append("<camelContextStat")
+                .append(String.format(" id=\"%s\" state=\"%s\" uptime=\"%s\"", getCamelId(), getState(), getUptimeMillis()));
         // use substring as we only want the attributes
         String stat = dumpStatsAsXml(fullStats);
         sb.append(" exchangesInflight=\"").append(getInflightExchanges()).append("\"");
@@ -738,7 +846,11 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
                 ManagedRouteMBean route
                         = context.getManagementStrategy().getManagementAgent().newProxyClient(on, ManagedRouteMBean.class);
                 sb.append("    <routeStat")
-                        .append(String.format(" id=\"%s\" state=\"%s\"", route.getRouteId(), route.getState()));
+                        .append(String.format(" id=\"%s\" state=\"%s\" uptime=\"%s\"", route.getRouteId(), route.getState(),
+                                route.getUptimeMillis()));
+                if (route.getRouteGroup() != null) {
+                    sb.append(String.format(" group=\"%s\"", route.getRouteGroup()));
+                }
                 if (route.getSourceLocation() != null) {
                     sb.append(String.format(" sourceLocation=\"%s\"", route.getSourceLocation()));
                 }
@@ -755,8 +867,9 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
                     if (route.getRouteId().equals(step.getRouteId())) {
                         int line = step.getSourceLineNumber() != null ? step.getSourceLineNumber() : -1;
                         sb.append("        <stepStat")
-                                .append(String.format(" id=\"%s\" index=\"%s\" state=\"%s\" sourceLineNumber=\"%s\"",
-                                        step.getProcessorId(), step.getIndex(), step.getState(), line));
+                                .append(String.format(
+                                        " id=\"%s\" index=\"%s\" state=\"%s\" disabled=\"%s\" sourceLineNumber=\"%s\"",
+                                        step.getProcessorId(), step.getIndex(), step.getState(), step.getDisabled(), line));
                         // use substring as we only want the attributes
                         stat = step.dumpStatsAsXml(fullStats);
                         sb.append(" exchangesInflight=\"").append(step.getExchangesInflight()).append("\"");
@@ -860,6 +973,16 @@ public class ManagedCamelContext extends ManagedPerformanceCounter implements Ti
     @Override
     public Set<String> dataFormatNames() throws Exception {
         return context.getDataFormatNames();
+    }
+
+    @Override
+    public Set<String> routeIds() {
+        return context.getRouteIds();
+    }
+
+    @Override
+    public Set<String> routeGroups() {
+        return context.getRouteGroupIds();
     }
 
     /**

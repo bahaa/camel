@@ -25,8 +25,18 @@ public class BedrockEndpointConfigurer extends PropertyConfigurerSupport impleme
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "accesskey":
         case "accessKey": target.getConfiguration().setAccessKey(property(camelContext, java.lang.String.class, value)); return true;
+        case "bedrockruntimeasyncclient":
+        case "bedrockRuntimeAsyncClient": target.getConfiguration().setBedrockRuntimeAsyncClient(property(camelContext, software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient.class, value)); return true;
         case "bedrockruntimeclient":
         case "bedrockRuntimeClient": target.getConfiguration().setBedrockRuntimeClient(property(camelContext, software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient.class, value)); return true;
+        case "guardrailidentifier":
+        case "guardrailIdentifier": target.getConfiguration().setGuardrailIdentifier(property(camelContext, java.lang.String.class, value)); return true;
+        case "guardrailtrace":
+        case "guardrailTrace": target.getConfiguration().setGuardrailTrace(property(camelContext, boolean.class, value)); return true;
+        case "guardrailversion":
+        case "guardrailVersion": target.getConfiguration().setGuardrailVersion(property(camelContext, java.lang.String.class, value)); return true;
+        case "includestreamingmetadata":
+        case "includeStreamingMetadata": target.getConfiguration().setIncludeStreamingMetadata(property(camelContext, boolean.class, value)); return true;
         case "lazystartproducer":
         case "lazyStartProducer": target.setLazyStartProducer(property(camelContext, boolean.class, value)); return true;
         case "modelid":
@@ -49,6 +59,8 @@ public class BedrockEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "secretKey": target.getConfiguration().setSecretKey(property(camelContext, java.lang.String.class, value)); return true;
         case "sessiontoken":
         case "sessionToken": target.getConfiguration().setSessionToken(property(camelContext, java.lang.String.class, value)); return true;
+        case "streamoutputmode":
+        case "streamOutputMode": target.getConfiguration().setStreamOutputMode(property(camelContext, java.lang.String.class, value)); return true;
         case "trustallcertificates":
         case "trustAllCertificates": target.getConfiguration().setTrustAllCertificates(property(camelContext, boolean.class, value)); return true;
         case "uriendpointoverride":
@@ -65,7 +77,7 @@ public class BedrockEndpointConfigurer extends PropertyConfigurerSupport impleme
 
     @Override
     public String[] getAutowiredNames() {
-        return new String[]{"bedrockRuntimeClient"};
+        return new String[]{"bedrockRuntimeAsyncClient", "bedrockRuntimeClient"};
     }
 
     @Override
@@ -73,8 +85,18 @@ public class BedrockEndpointConfigurer extends PropertyConfigurerSupport impleme
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "accesskey":
         case "accessKey": return java.lang.String.class;
+        case "bedrockruntimeasyncclient":
+        case "bedrockRuntimeAsyncClient": return software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient.class;
         case "bedrockruntimeclient":
         case "bedrockRuntimeClient": return software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient.class;
+        case "guardrailidentifier":
+        case "guardrailIdentifier": return java.lang.String.class;
+        case "guardrailtrace":
+        case "guardrailTrace": return boolean.class;
+        case "guardrailversion":
+        case "guardrailVersion": return java.lang.String.class;
+        case "includestreamingmetadata":
+        case "includeStreamingMetadata": return boolean.class;
         case "lazystartproducer":
         case "lazyStartProducer": return boolean.class;
         case "modelid":
@@ -97,6 +119,8 @@ public class BedrockEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "secretKey": return java.lang.String.class;
         case "sessiontoken":
         case "sessionToken": return java.lang.String.class;
+        case "streamoutputmode":
+        case "streamOutputMode": return java.lang.String.class;
         case "trustallcertificates":
         case "trustAllCertificates": return boolean.class;
         case "uriendpointoverride":
@@ -117,8 +141,18 @@ public class BedrockEndpointConfigurer extends PropertyConfigurerSupport impleme
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "accesskey":
         case "accessKey": return target.getConfiguration().getAccessKey();
+        case "bedrockruntimeasyncclient":
+        case "bedrockRuntimeAsyncClient": return target.getConfiguration().getBedrockRuntimeAsyncClient();
         case "bedrockruntimeclient":
         case "bedrockRuntimeClient": return target.getConfiguration().getBedrockRuntimeClient();
+        case "guardrailidentifier":
+        case "guardrailIdentifier": return target.getConfiguration().getGuardrailIdentifier();
+        case "guardrailtrace":
+        case "guardrailTrace": return target.getConfiguration().isGuardrailTrace();
+        case "guardrailversion":
+        case "guardrailVersion": return target.getConfiguration().getGuardrailVersion();
+        case "includestreamingmetadata":
+        case "includeStreamingMetadata": return target.getConfiguration().isIncludeStreamingMetadata();
         case "lazystartproducer":
         case "lazyStartProducer": return target.isLazyStartProducer();
         case "modelid":
@@ -141,6 +175,8 @@ public class BedrockEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "secretKey": return target.getConfiguration().getSecretKey();
         case "sessiontoken":
         case "sessionToken": return target.getConfiguration().getSessionToken();
+        case "streamoutputmode":
+        case "streamOutputMode": return target.getConfiguration().getStreamOutputMode();
         case "trustallcertificates":
         case "trustAllCertificates": return target.getConfiguration().isTrustAllCertificates();
         case "uriendpointoverride":

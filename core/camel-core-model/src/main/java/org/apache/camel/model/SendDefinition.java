@@ -62,7 +62,7 @@ public abstract class SendDefinition<Type extends ProcessorDefinition<Type>> ext
     @Override
     public String getEndpointUri() {
         if (endpointProducerBuilder != null) {
-            return endpointProducerBuilder.getUri();
+            return endpointProducerBuilder.getRawUri();
         } else if (endpoint != null) {
             return endpoint.getEndpointUri();
         } else {
@@ -129,7 +129,7 @@ public abstract class SendDefinition<Type extends ProcessorDefinition<Type>> ext
         }
 
         String uri = endpointUriToString;
-        return uri != null ? uri : "no uri supplied";
+        return "to[" + uri + "]";
     }
 
     protected void clear() {

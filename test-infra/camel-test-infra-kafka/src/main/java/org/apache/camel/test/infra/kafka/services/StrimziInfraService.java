@@ -19,6 +19,7 @@ package org.apache.camel.test.infra.kafka.services;
 
 import org.apache.camel.spi.annotations.InfraService;
 import org.apache.camel.test.infra.common.TestUtils;
+import org.apache.camel.test.infra.common.services.ContainerEnvironmentUtil;
 import org.apache.camel.test.infra.common.services.ContainerService;
 import org.apache.camel.test.infra.kafka.common.KafkaProperties;
 import org.slf4j.Logger;
@@ -44,6 +45,10 @@ public class StrimziInfraService implements KafkaInfraService, ContainerService<
 
         zookeeperContainer = initZookeeperContainer(network, zookeeperInstanceName);
         strimziContainer = initStrimziContainer(network, strimziInstanceName, zookeeperInstanceName);
+        String name = ContainerEnvironmentUtil.containerName(this.getClass());
+        if (name != null) {
+            strimziContainer.withCreateContainerCmdModifier(cmd -> cmd.withName(name));
+        }
     }
 
     public StrimziInfraService(ZookeeperContainer zookeeperContainer, StrimziContainer strimziContainer) {
@@ -52,11 +57,32 @@ public class StrimziInfraService implements KafkaInfraService, ContainerService<
     }
 
     protected StrimziContainer initStrimziContainer(Network network, String instanceName, String zookeeperInstanceName) {
-        return new StrimziContainer(network, instanceName, zookeeperInstanceName);
+        class TestInfraStrimziContainer extends StrimziContainer {
+            public TestInfraStrimziContainer(Network network, String name, String zookeeperInstanceName, boolean fixedPort) {
+                super(network, name, zookeeperInstanceName);
+
+                if (fixedPort) {
+                    addFixedExposedPort(9092, 9092);
+                }
+            }
+        }
+
+        return new TestInfraStrimziContainer(
+                network, instanceName, zookeeperInstanceName, ContainerEnvironmentUtil.isFixedPort(this.getClass()));
     }
 
     protected ZookeeperContainer initZookeeperContainer(Network network, String instanceName) {
-        return new ZookeeperContainer(network, instanceName);
+        class TestInfraZookeeperContainer extends ZookeeperContainer {
+            public TestInfraZookeeperContainer(Network network, String name, boolean fixedPort) {
+                super(network, name);
+
+                if (fixedPort) {
+                    addFixedExposedPort(2181, 2181);
+                }
+            }
+        }
+
+        return new TestInfraZookeeperContainer(network, instanceName, ContainerEnvironmentUtil.isFixedPort(this.getClass()));
     }
 
     protected Integer getKafkaPort() {

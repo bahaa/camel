@@ -65,6 +65,7 @@ import static org.apache.camel.support.CamelContextHelper.parseText;
 public class RestDefinition extends OptionalIdentifiedDefinition<RestDefinition> implements ResourceAware {
 
     public static final String MISSING_VERB = "Must add verb first, such as get/post/delete";
+
     @XmlAttribute
     private String path;
     @XmlAttribute
@@ -1038,10 +1039,13 @@ public class RestDefinition extends OptionalIdentifiedDefinition<RestDefinition>
             boolean clientRequestValidation, boolean clientResponseValidation) {
 
         RouteDefinition route = new RouteDefinition();
+        route.setResource(getResource());
+        route.setLocation(getLocation());
+        route.setLineNumber(getLineNumber());
         if (openApi.getRouteId() != null) {
             route.routeId(parseText(camelContext, openApi.getRouteId()));
         }
-        // add dummy empty stop
+        // the route must have an output so use a dummy stop
         route.getOutputs().add(new StopDefinition());
 
         // local configuration can override global
@@ -1103,6 +1107,8 @@ public class RestDefinition extends OptionalIdentifiedDefinition<RestDefinition>
 
         // the route should be from this rest endpoint
         route.fromRest(from);
+        route.getInput().setLocation(getLocation());
+        route.getInput().setLineNumber(getLineNumber());
         route.setRestDefinition(this);
         answer.add(route);
     }

@@ -16,7 +16,6 @@
  */
 package org.apache.camel.component.dapr.operations;
 
-import java.util.List;
 import java.util.Map;
 
 import io.dapr.client.DaprClient;
@@ -26,6 +25,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.component.dapr.DaprConfiguration;
 import org.apache.camel.component.dapr.DaprConfigurationOptionsProxy;
 import org.apache.camel.component.dapr.DaprConstants;
+import org.apache.camel.component.dapr.DaprEndpoint;
 import org.apache.camel.component.dapr.DaprOperation;
 import org.apache.camel.support.DefaultExchange;
 import org.apache.camel.test.junit5.CamelTestSupport;
@@ -47,24 +47,27 @@ public class DaprConfigurationTest extends CamelTestSupport {
 
     @Mock
     private DaprClient client;
+    @Mock
+    private DaprEndpoint endpoint;
 
     @Test
     void testInvokeBinding() throws Exception {
         final Map<String, ConfigurationItem> mockResponse = Map.of("myKey", new ConfigurationItem("myKey", "myVal", "myVer"));
         final Map<String, String> mockBody = Map.of("myKey", "myVal");
 
+        when(endpoint.getClient()).thenReturn(client);
         when(client.getConfiguration(any(GetConfigurationRequest.class))).thenReturn(Mono.just(mockResponse));
 
         DaprConfiguration configuration = new DaprConfiguration();
         configuration.setOperation(DaprOperation.configuration);
         configuration.setSecretStore("myStore");
-        configuration.setConfigKeys(List.of("myKey"));
+        configuration.setConfigKeys("myKey");
         DaprConfigurationOptionsProxy configurationOptionsProxy = new DaprConfigurationOptionsProxy(configuration);
 
         final Exchange exchange = new DefaultExchange(context);
 
-        final DaprConfigurationHandler operation = new DaprConfigurationHandler(configurationOptionsProxy);
-        final DaprOperationResponse operationResponse = operation.handle(exchange, client);
+        final DaprConfigurationHandler operation = new DaprConfigurationHandler(configurationOptionsProxy, endpoint);
+        final DaprOperationResponse operationResponse = operation.handle(exchange);
 
         assertNotNull(operationResponse);
         assertEquals(mockBody, operationResponse.getBody());
@@ -78,7 +81,7 @@ public class DaprConfigurationTest extends CamelTestSupport {
         DaprConfigurationOptionsProxy configurationOptionsProxy = new DaprConfigurationOptionsProxy(configuration);
 
         final Exchange exchange = new DefaultExchange(context);
-        final DaprConfigurationHandler operation = new DaprConfigurationHandler(configurationOptionsProxy);
+        final DaprConfigurationHandler operation = new DaprConfigurationHandler(configurationOptionsProxy, endpoint);
 
         // case 1: both configStore and configKeys empty
         assertThrows(IllegalArgumentException.class, () -> operation.validateConfiguration(exchange));
@@ -88,7 +91,7 @@ public class DaprConfigurationTest extends CamelTestSupport {
         assertThrows(IllegalArgumentException.class, () -> operation.validateConfiguration(exchange));
 
         // case 3: valid configuration
-        configuration.setConfigKeys(List.of("myKey"));
+        configuration.setConfigKeys("myKey");
         assertDoesNotThrow(() -> operation.validateConfiguration(exchange));
     }
 }

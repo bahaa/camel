@@ -35,9 +35,13 @@ import org.w3c.dom.NodeList;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.RuntimeType;
 import org.apache.camel.dsl.jbang.core.common.XmlHelper;
+import org.apache.camel.main.util.VersionHelper;
 import org.apache.camel.tooling.maven.MavenGav;
 import org.apache.camel.util.CamelCaseOrderedProperties;
+import org.apache.camel.util.FileUtil;
 import picocli.CommandLine;
+
+import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.*;
 
 @CommandLine.Command(name = "list",
                      description = "Displays all Camel dependencies required to run", sortOptions = false,
@@ -56,6 +60,8 @@ public class DependencyList extends Export {
     @Override
     public Integer doCall() throws Exception {
         this.quiet = true; // be quiet and generate from fresh data to ensure the output is up-to-date
+        this.ignoreLoadingError = true; // also attempt to update for source files that are partly complete so ignore errors
+        this.lazyBean = true;
         return super.doCall();
     }
 
@@ -66,12 +72,17 @@ public class DependencyList extends Export {
             return 1;
         }
 
-        // automatic detect maven/gradle based projects and use that
-        if (files.isEmpty()) {
-            if (Files.exists(Paths.get("pom.xml"))) {
-                files.add("pom.xml");
-            } else if (Files.exists(Paths.get("build.gradle"))) {
-                files.add("build.gradle");
+        exportBaseDir = Path.of(".");
+
+        // special if user type: camel run . or camel run dirName
+        if (files != null && files.size() == 1) {
+            String name = FileUtil.stripTrailingSeparator(files.get(0));
+            if (getScheme(name) == null) {
+                Path first = Path.of(name);
+                if (Files.isDirectory(first)) {
+                    exportBaseDir = first;
+                    RunHelper.dirToFiles(name, files);
+                }
             }
         }
 
@@ -145,6 +156,13 @@ public class DependencyList extends Export {
                     if (v == null && g.equals("org.apache.camel")) {
                         v = camelVersion;
                     }
+                    if (v == null && g.equals("org.apache.camel.kamelets")) {
+                        if (kameletsVersion != null) {
+                            v = kameletsVersion;
+                        } else {
+                            v = VersionHelper.extractKameletsVersion();
+                        }
+                    }
                     if (v == null && g.equals("org.apache.camel.springboot")) {
                         v = camelVersion;
                     }
@@ -200,6 +218,9 @@ public class DependencyList extends Export {
             outPrinter().printf("    <groupId>%s</groupId>%n", gav.getGroupId());
             outPrinter().printf("    <artifactId>%s</artifactId>%n", gav.getArtifactId());
             outPrinter().printf("    <version>%s</version>%n", gav.getVersion());
+            if (gav.getScope() != null) {
+                outPrinter().printf("    <scope>%s</scope>%n", gav.getScope());
+            }
             outPrinter().println("</dependency>");
         } else if ("jbang".equals(output)) {
             if (index == 0) {
@@ -215,7 +236,7 @@ public class DependencyList extends Export {
 
     protected Integer doExport() throws Exception {
         // read runtime and gav from properties if not configured
-        Path profile = Paths.get("application.properties");
+        Path profile = exportBaseDir.resolve("application.properties");
         if (Files.exists(profile)) {
             Properties prop = new CamelCaseOrderedProperties();
             try (InputStream is = Files.newInputStream(profile)) {
@@ -223,21 +244,21 @@ public class DependencyList extends Export {
             } catch (IOException e) {
                 // ignore
             }
-            if (this.runtime == null && prop.containsKey("camel.jbang.runtime")) {
-                this.runtime = RuntimeType.fromValue(prop.getProperty("camel.jbang.runtime"));
+            if (this.runtime == null && prop.containsKey(RUNTIME)) {
+                this.runtime = RuntimeType.fromValue(prop.getProperty(RUNTIME));
             }
             if (this.gav == null) {
-                this.gav = prop.getProperty("camel.jbang.gav");
+                this.gav = prop.getProperty(GAV);
             }
             // allow configuring versions from profile
-            this.javaVersion = prop.getProperty("camel.jbang.javaVersion", this.javaVersion);
-            this.camelVersion = prop.getProperty("camel.jbang.camelVersion", this.camelVersion);
-            this.kameletsVersion = prop.getProperty("camel.jbang.kameletsVersion", this.kameletsVersion);
-            this.localKameletDir = prop.getProperty("camel.jbang.localKameletDir", this.localKameletDir);
-            this.quarkusGroupId = prop.getProperty("camel.jbang.quarkusGroupId", this.quarkusGroupId);
-            this.quarkusArtifactId = prop.getProperty("camel.jbang.quarkusArtifactId", this.quarkusArtifactId);
-            this.quarkusVersion = prop.getProperty("camel.jbang.quarkusVersion", this.quarkusVersion);
-            this.springBootVersion = prop.getProperty("camel.jbang.springBootVersion", this.springBootVersion);
+            this.javaVersion = prop.getProperty(JAVA_VERSION, this.javaVersion);
+            this.camelVersion = prop.getProperty(CAMEL_VERSION, this.camelVersion);
+            this.kameletsVersion = prop.getProperty(KAMELETS_VERSION, this.kameletsVersion);
+            this.localKameletDir = prop.getProperty(LOCAL_KAMELET_DIR, this.localKameletDir);
+            this.quarkusGroupId = prop.getProperty(QUARKUS_GROUP_ID, this.quarkusGroupId);
+            this.quarkusArtifactId = prop.getProperty(QUARKUS_ARTIFACT_ID, this.quarkusArtifactId);
+            this.quarkusVersion = prop.getProperty(QUARKUS_VERSION, this.quarkusVersion);
+            this.springBootVersion = prop.getProperty(SPRING_BOOT_VERSION, this.springBootVersion);
         }
 
         // use temporary export dir
@@ -252,13 +273,13 @@ public class DependencyList extends Export {
         // turn off noise
         switch (runtime) {
             case springBoot -> {
-                return export(new ExportSpringBoot(getMain()));
+                return export(exportBaseDir, new ExportSpringBoot(getMain()));
             }
             case quarkus -> {
-                return export(new ExportQuarkus(getMain()));
+                return export(exportBaseDir, new ExportQuarkus(getMain()));
             }
             case main -> {
-                return export(new ExportCamelMain(getMain()));
+                return export(exportBaseDir, new ExportCamelMain(getMain()));
             }
             default -> {
                 printer().printErr("Unknown runtime: " + runtime);

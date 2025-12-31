@@ -72,8 +72,8 @@ public class JaxbDataFormat extends DataFormatDefinition implements ContentTypeH
     @Metadata(label = "advanced")
     private String partNamespace;
     @XmlAttribute
-    @Metadata(label = "advanced")
-    private String namespacePrefixRef;
+    @Metadata(label = "advanced", javaType = "java.util.Map")
+    private String namespacePrefix;
     @XmlAttribute
     @Metadata(label = "advanced")
     private String xmlStreamWriterWrapper;
@@ -91,7 +91,7 @@ public class JaxbDataFormat extends DataFormatDefinition implements ContentTypeH
                             + " For example application/xml for data formats marshalling to XML, or application/json for data formats marshalling to JSON")
     private String contentTypeHeader;
     @XmlAttribute
-    @Metadata(label = "security", defaultValue = "false")
+    @Metadata(label = "security")
     private String accessExternalSchemaProtocols;
 
     public JaxbDataFormat() {
@@ -113,7 +113,7 @@ public class JaxbDataFormat extends DataFormatDefinition implements ContentTypeH
         this.fragment = source.fragment;
         this.partClass = source.partClass;
         this.partNamespace = source.partNamespace;
-        this.namespacePrefixRef = source.namespacePrefixRef;
+        this.namespacePrefix = source.namespacePrefix;
         this.xmlStreamWriterWrapper = source.xmlStreamWriterWrapper;
         this.schemaLocation = source.schemaLocation;
         this.noNamespaceSchemaLocation = source.noNamespaceSchemaLocation;
@@ -142,7 +142,7 @@ public class JaxbDataFormat extends DataFormatDefinition implements ContentTypeH
         this.fragment = builder.fragment;
         this.partClass = builder.partClass;
         this.partNamespace = builder.partNamespace;
-        this.namespacePrefixRef = builder.namespacePrefixRef;
+        this.namespacePrefix = builder.namespacePrefix;
         this.xmlStreamWriterWrapper = builder.xmlStreamWriterWrapper;
         this.schemaLocation = builder.schemaLocation;
         this.noNamespaceSchemaLocation = builder.noNamespaceSchemaLocation;
@@ -314,17 +314,17 @@ public class JaxbDataFormat extends DataFormatDefinition implements ContentTypeH
         this.partNamespace = partNamespace;
     }
 
-    public String getNamespacePrefixRef() {
-        return namespacePrefixRef;
+    public String getNamespacePrefix() {
+        return namespacePrefix;
     }
 
     /**
-     * When marshalling using JAXB or SOAP then the JAXB implementation will automatic assign namespace prefixes, such
-     * as ns2, ns3, ns4 etc. To control this mapping, Camel allows you to refer to a map which contains the desired
+     * When marshalling using JAXB or SOAP then the JAXB implementation will automatically assign namespace prefixes,
+     * such as ns2, ns3, ns4 etc. To control this mapping, Camel allows you to refer to a map which contains the desired
      * mapping.
      */
-    public void setNamespacePrefixRef(String namespacePrefixRef) {
-        this.namespacePrefixRef = namespacePrefixRef;
+    public void setNamespacePrefix(String namespacePrefix) {
+        this.namespacePrefix = namespacePrefix;
     }
 
     public String getXmlStreamWriterWrapper() {
@@ -390,8 +390,8 @@ public class JaxbDataFormat extends DataFormatDefinition implements ContentTypeH
      * Restrict access to the protocols specified for external reference set by the schemaLocation attribute, Import and
      * Include element. Examples of protocols are file, http, jar:file.
      *
-     * false or none to deny all access to external references; a specific protocol, such as file, to give permission to
-     * only the protocol; the keyword all to grant permission to all protocols.
+     * empty, false or none to deny all access to external references; a specific protocol, such as file, to give
+     * permission to only the protocol; the keyword all to grant permission to all protocols.
      */
     public void setAccessExternalSchemaProtocols(String accessExternalSchemaProtocols) {
         this.accessExternalSchemaProtocols = accessExternalSchemaProtocols;
@@ -416,7 +416,7 @@ public class JaxbDataFormat extends DataFormatDefinition implements ContentTypeH
         private String fragment;
         private String partClass;
         private String partNamespace;
-        private String namespacePrefixRef;
+        private String namespacePrefix;
         private String xmlStreamWriterWrapper;
         private String schemaLocation;
         private String noNamespaceSchemaLocation;
@@ -624,8 +624,8 @@ public class JaxbDataFormat extends DataFormatDefinition implements ContentTypeH
          * prefixes, such as ns2, ns3, ns4 etc. To control this mapping, Camel allows you to refer to a map which
          * contains the desired mapping.
          */
-        public Builder namespacePrefixRef(String namespacePrefixRef) {
-            this.namespacePrefixRef = namespacePrefixRef;
+        public Builder namespacePrefix(String namespacePrefix) {
+            this.namespacePrefix = namespacePrefix;
             return this;
         }
 

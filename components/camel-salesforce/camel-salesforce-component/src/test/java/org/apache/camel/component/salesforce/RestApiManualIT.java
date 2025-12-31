@@ -51,10 +51,12 @@ import org.apache.camel.component.salesforce.dto.generated.Account;
 import org.apache.camel.component.salesforce.dto.generated.Contact;
 import org.apache.camel.component.salesforce.dto.generated.ContentVersion;
 import org.apache.camel.component.salesforce.dto.generated.Document;
+import org.apache.camel.component.salesforce.dto.generated.Folder;
 import org.apache.camel.component.salesforce.dto.generated.Line_Item__c;
 import org.apache.camel.component.salesforce.dto.generated.Merchandise__c;
 import org.apache.camel.component.salesforce.dto.generated.QueryRecordsAccount;
 import org.apache.camel.component.salesforce.dto.generated.QueryRecordsContact;
+import org.apache.camel.component.salesforce.dto.generated.QueryRecordsFolder;
 import org.apache.camel.component.salesforce.dto.generated.QueryRecordsLine_Item__c;
 import org.apache.camel.component.salesforce.dto.generated.Task;
 import org.apache.camel.component.salesforce.dto.generated.User;
@@ -281,6 +283,50 @@ public class RestApiManualIT extends AbstractSalesforceTestBase {
     }
 
     @Test
+    public void testCreateMultipart() {
+        final ContentVersion cv = new ContentVersion();
+        cv.setPathOnClient("camel-test-doc.pdf");
+        cv.setVersionDataBinary(getClass().getClassLoader().getResourceAsStream("camel-test-doc.pdf"));
+        final CreateSObjectResult result
+                = template.requestBody("salesforce:createSObject?sObjectName=ContentVersion",
+                        cv,
+                        CreateSObjectResult.class);
+        assertTrue(result.getSuccess());
+    }
+
+    @Test
+    public void testUpdateMultipart() {
+        final QueryRecordsFolder queryResult = template.requestBody("salesforce:query" +
+                                                                    "?sObjectQuery=SELECT Id FROM Folder WHERE Name = 'Test Documents'"
+                                                                    +
+                                                                    "&sObjectName=QueryRecordsFolder",
+                null, QueryRecordsFolder.class);
+        final Folder folder = queryResult.getRecords().get(0);
+
+        // Create a Document
+        final Document doc = new Document();
+        doc.setFolderId(folder.getId());
+        doc.setName("camel-test-doc.pdf");
+        doc.setBodyBinary(getClass().getClassLoader().getResourceAsStream("camel-test-doc.pdf"));
+        final CreateSObjectResult createResult = template.requestBody(
+                "salesforce:createSObject?sObjectName=Document",
+                doc,
+                CreateSObjectResult.class);
+        assertTrue(createResult.getSuccess());
+        assertNotNull(createResult.getId());
+
+        // Update the Document (e.g., change the name)
+        final Document updateDoc = new Document();
+        updateDoc.setId(createResult.getId());
+        updateDoc.setName("camel-test-doc-updated.pdf");
+        updateDoc.setBodyBinary(getClass().getClassLoader().getResourceAsStream("camel-test-doc.pdf"));
+        final Object updateResult = template.requestBody(
+                "salesforce:updateSObject?sObjectName=Document",
+                updateDoc);
+        assertNotNull(updateResult);
+    }
+
+    @Test
     public void testRelationshipCreateDelete() throws Exception {
         final Account account = new Account();
         account.setName("Account 1");
@@ -476,7 +522,7 @@ public class RestApiManualIT extends AbstractSalesforceTestBase {
         ObjectMapper mapper = new ObjectMapper();
         String enc = mapper.convertValue(bytes, String.class);
         ContentVersion cv = new ContentVersion();
-        cv.setVersionDataUrl(enc);
+        cv.setVersionData(enc);
         cv.setPathOnClient("camel-test-doc.pdf");
         cv.setTitle("Camel Test Doc");
         final CreateSObjectResult result = template.requestBody("salesforce:createSObject", cv, CreateSObjectResult.class);
@@ -678,13 +724,17 @@ public class RestApiManualIT extends AbstractSalesforceTestBase {
         httpClient.setConnectTimeout(60000);
         httpClient.start();
 
-        final String uri = sf.getLoginConfig().getLoginUrl() + "/services/oauth2/revoke?token=" + accessToken;
-        final Request logoutGet = httpClient.newRequest(uri).method(HttpMethod.GET).timeout(1, TimeUnit.MINUTES);
+        try {
+            final String uri = sf.getLoginConfig().getLoginUrl() + "/services/oauth2/revoke?token=" + accessToken;
+            final Request logoutGet = httpClient.newRequest(uri).method(HttpMethod.GET).timeout(1, TimeUnit.MINUTES);
 
-        final ContentResponse response = logoutGet.send();
-        assertEquals(HttpStatus.OK_200, response.getStatus());
+            final ContentResponse response = logoutGet.send();
+            assertEquals(HttpStatus.OK_200, response.getStatus());
 
-        testGetGlobalObjects();
+            testGetGlobalObjects();
+        } finally {
+            httpClient.stop();
+        }
     }
 
     @Test
@@ -701,30 +751,43 @@ public class RestApiManualIT extends AbstractSalesforceTestBase {
         httpClient.setConnectTimeout(60000);
         httpClient.start();
 
-        final String uri = sf.getLoginConfig().getLoginUrl() + "/services/oauth2/revoke?token=" + accessToken;
-        final Request logoutGet = httpClient.newRequest(uri).method(HttpMethod.GET).timeout(1, TimeUnit.MINUTES);
-
-        final ContentResponse response = logoutGet.send();
-        assertEquals(HttpStatus.OK_200, response.getStatus());
-
-        // set component config to bad password to cause relogin attempts to
-        // fail
-        final String password = sf.getLoginConfig().getPassword();
-        sf.getLoginConfig().setPassword("bad_password");
-
         try {
-            testGetGlobalObjects();
-            fail("Expected CamelExecutionException!");
-        } catch (final CamelExecutionException e) {
-            if (e.getCause() instanceof SalesforceException) {
-                final SalesforceException cause = (SalesforceException) e.getCause();
-                assertEquals(HttpStatus.BAD_REQUEST_400, cause.getStatusCode(), "Expected 400 on authentication retry failure");
-            } else {
-                fail("Expected SalesforceException!");
+            final String uri = sf.getLoginConfig().getLoginUrl() + "/services/oauth2/revoke?token=" + accessToken;
+            final Request logoutGet = httpClient.newRequest(uri).method(HttpMethod.GET).timeout(1, TimeUnit.MINUTES);
+
+            final ContentResponse response = logoutGet.send();
+            assertEquals(HttpStatus.OK_200, response.getStatus());
+
+            // set component config to bad password to cause relogin attempts to
+            // fail. Also clear refresh token and set explicit auth type to avoid ambiguous config.
+            // Important: save password and refreshToken first, then clear refreshToken before
+            // doing anything else - getType() throws if both password and refreshToken are set.
+            final String password = sf.getLoginConfig().getPassword();
+            final String refreshToken = sf.getLoginConfig().getRefreshToken();
+            sf.getLoginConfig().setRefreshToken(null);
+            sf.getLoginConfig().setPassword("bad_password");
+            sf.getLoginConfig().setType(AuthenticationType.USERNAME_PASSWORD);
+
+            try {
+                testGetGlobalObjects();
+                fail("Expected CamelExecutionException!");
+            } catch (final CamelExecutionException e) {
+                if (e.getCause() instanceof SalesforceException) {
+                    final SalesforceException cause = (SalesforceException) e.getCause();
+                    assertEquals(HttpStatus.BAD_REQUEST_400, cause.getStatusCode(),
+                            "Expected 400 on authentication retry failure");
+                } else {
+                    fail("Expected SalesforceException!");
+                }
+            } finally {
+                // reset config to allow other tests to pass
+                // restore refreshToken first, then password, then clear type to let it auto-determine
+                sf.getLoginConfig().setRefreshToken(refreshToken);
+                sf.getLoginConfig().setPassword(password);
+                sf.getLoginConfig().setType(null);
             }
         } finally {
-            // reset password and retries to allow other tests to pass
-            sf.getLoginConfig().setPassword(password);
+            httpClient.stop();
         }
     }
 

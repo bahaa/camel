@@ -23,6 +23,7 @@ import java.util.function.BiFunction;
 
 import org.apache.camel.AggregationStrategy;
 import org.apache.camel.CamelContextAware;
+import org.apache.camel.DisabledAware;
 import org.apache.camel.Processor;
 import org.apache.camel.Route;
 import org.apache.camel.model.MulticastDefinition;
@@ -42,6 +43,9 @@ public class MulticastReifier extends ProcessorReifier<MulticastDefinition> {
     @Override
     public Processor createProcessor() throws Exception {
         Processor answer = this.createChildProcessor(true);
+        if (answer instanceof DisabledAware da) {
+            da.setDisabled(isDisabled(camelContext, definition));
+        }
 
         // force the answer as a multicast processor even if there is only one
         // child processor in the multicast
@@ -99,6 +103,8 @@ public class MulticastReifier extends ProcessorReifier<MulticastDefinition> {
                 }
                 strategy = adapter;
             } else if (aggStrategy != null) {
+                @SuppressWarnings("resource")
+                // NOTE: the adapter holds no leaking resources, so we can safely ignore its closure.
                 AggregationStrategyBeanAdapter adapter
                         = new AggregationStrategyBeanAdapter(
                                 aggStrategy, parseString(definition.getAggregationStrategyMethodName()));

@@ -34,7 +34,6 @@ import org.apache.camel.Traceable;
 import org.apache.camel.spi.IdAware;
 import org.apache.camel.spi.RouteIdAware;
 import org.apache.camel.spi.SynchronizationRouteAware;
-import org.apache.camel.support.AsyncProcessorSupport;
 import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.support.SynchronizationAdapter;
 import org.apache.camel.support.service.ServiceHelper;
@@ -47,7 +46,7 @@ import static org.apache.camel.util.ObjectHelper.notNull;
 /**
  * Processor implementing <a href="http://camel.apache.org/oncompletion.html">onCompletion</a>.
  */
-public class OnCompletionProcessor extends AsyncProcessorSupport implements Traceable, IdAware, RouteIdAware {
+public class OnCompletionProcessor extends BaseProcessorSupport implements Traceable, IdAware, RouteIdAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(OnCompletionProcessor.class);
 
@@ -249,7 +248,7 @@ public class OnCompletionProcessor extends AsyncProcessorSupport implements Trac
         return answer;
     }
 
-    private final class OnCompletionSynchronizationAfterConsumer extends SynchronizationAdapter implements Ordered {
+    private final class OnCompletionSynchronizationAfterConsumer extends SynchronizationAdapter {
 
         private final boolean routeScoped;
         private final String routeId;
@@ -404,7 +403,7 @@ public class OnCompletionProcessor extends AsyncProcessorSupport implements Trac
         }
     }
 
-    private final class OnCompletionSynchronizationBeforeConsumer extends SynchronizationAdapter implements Ordered {
+    private final class OnCompletionSynchronizationBeforeConsumer extends SynchronizationAdapter {
 
         private final boolean routeScoped;
         private final String routeId;

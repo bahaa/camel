@@ -45,6 +45,10 @@ public class ListPlatformHttp extends ProcessWatchCommand {
                         description = "Sort by pid, name or age", defaultValue = "pid")
     String sort;
 
+    @CommandLine.Option(names = { "--all" },
+                        description = "Include management endpoints")
+    boolean all;
+
     public ListPlatformHttp(CamelJBangMain main) {
         super(main);
     }
@@ -73,14 +77,14 @@ public class ListPlatformHttp extends ProcessWatchCommand {
                         row.uptime = extractSince(ph);
                         row.age = TimeUtils.printSince(row.uptime);
 
-                        JsonObject jo = (JsonObject) root.get("platform-http");
-                        if (jo != null) {
-                            String server = jo.getString("server");
-                            JsonArray arr = (JsonArray) jo.get("endpoints");
+                        JsonObject jph = (JsonObject) root.get("platform-http");
+                        if (jph != null) {
+                            String server = jph.getString("server");
+                            JsonArray arr = (JsonArray) jph.get("endpoints");
                             if (arr != null) {
                                 for (int i = 0; i < arr.size(); i++) {
                                     row = row.copy();
-                                    jo = (JsonObject) arr.get(i);
+                                    JsonObject jo = (JsonObject) arr.get(i);
                                     row.server = server;
                                     row.url = jo.getString("url");
                                     row.path = jo.getString("path");
@@ -88,6 +92,22 @@ public class ListPlatformHttp extends ProcessWatchCommand {
                                     row.consumes = jo.getString("consumes");
                                     row.produces = jo.getString("produces");
                                     rows.add(row);
+                                }
+                            }
+                            if (all) {
+                                arr = (JsonArray) jph.get("managementEndpoints");
+                                if (arr != null) {
+                                    for (int i = 0; i < arr.size(); i++) {
+                                        row = row.copy();
+                                        JsonObject jo = (JsonObject) arr.get(i);
+                                        row.server = server;
+                                        row.url = jo.getString("url");
+                                        row.path = jo.getString("path");
+                                        row.verbs = jo.getString("verbs");
+                                        row.consumes = jo.getString("consumes");
+                                        row.produces = jo.getString("produces");
+                                        rows.add(row);
+                                    }
                                 }
                             }
                         }
@@ -161,7 +181,7 @@ public class ListPlatformHttp extends ProcessWatchCommand {
             try {
                 return (Row) clone();
             } catch (CloneNotSupportedException e) {
-                return null;
+                throw new RuntimeException(e);
             }
         }
     }

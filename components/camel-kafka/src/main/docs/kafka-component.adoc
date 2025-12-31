@@ -38,27 +38,16 @@ kafka:topic[?options]
 ---------------------------
 
 
-// component-configure options: START
-
-// component-configure options: END
-
 // component options: START
 include::partial$component-configure-options.adoc[]
 include::partial$component-endpoint-options.adoc[]
+include::partial$component-endpoint-headers.adoc[]
 // component options: END
-
-// endpoint options: START
-
-// endpoint options: END
 
 For more information about Producer/Consumer configuration:
 
 http://kafka.apache.org/documentation.html#newconsumerconfigs[http://kafka.apache.org/documentation.html#newconsumerconfigs]
 http://kafka.apache.org/documentation.html#producerconfigs[http://kafka.apache.org/documentation.html#producerconfigs]
-
-// component headers: START
-include::partial$component-endpoint-headers.adoc[]
-// component headers: END
 
 If you want to send a message to a dynamic topic then use `KafkaConstants.OVERRIDE_TOPIC` as it is used as a one-time header that is not sent along the message, and actually is removed in the producer.
 
@@ -519,6 +508,235 @@ public void configure() {
     }).to(KafkaTestUtil.MOCK_RESULT);
 }
 ----
+
+===== Break on First Error in Batching Mode
+
+The `breakOnFirstError` option is also supported in batching mode, providing the same error handling behavior as in streaming mode but applied to batch processing.
+
+When `breakOnFirstError=true` is configured with batching enabled:
+
+* **Auto Commit Mode**: When an error occurs during batch processing, Camel will commit the current batch position and trigger a consumer reconnection. This allows the problematic batch to be retried on the next polling cycle.
+
+* **Manual Commit Mode**: When an error occurs, the route's error handler is responsible for performing the manual commit (if desired) before the consumer reconnects.
+
+* **Reconnection**: After an error triggers `breakOnFirstError`, the consumer automatically reconnects and resumes polling from the committed position.
+
+The behavior is consistent with streaming mode, ensuring that error handling patterns work similarly across both processing modes.
+
+Example with automatic commits:
+
+[tabs]
+====
+Java DSL::
++
+[source,java]
+----
+from("kafka:topic?groupId=myGroup&pollTimeoutMs=1000&batching=true&maxPollRecords=10&breakOnFirstError=true&autoCommitEnable=true")
+    .process(e -> {
+        final List<?> exchanges = e.getMessage().getBody(List.class);
+        // Process batch - any exception will trigger breakOnFirstError behavior
+        for (Object exchange : exchanges) {
+            // ... processing logic
+        }
+    }).to("mock:result");
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: "kafka:topic"
+      parameters:
+        groupId: "myGroup"
+        pollTimeoutMs: 1000
+        batching: true
+        maxPollRecords: 10
+        breakOnFirstError: true
+        autoCommitEnable: true
+    steps:
+      - process:
+          ref: "batchProcessor"
+      - to: "mock:result"
+----
+
+Processor Implementation::
++
+[source,java]
+----
+@Component("batchProcessor")
+public class BatchProcessor implements Processor {
+    private static final Logger LOG = LoggerFactory.getLogger(BatchProcessor.class);
+
+    @Override
+    public void process(Exchange exchange) throws Exception {
+        final List<?> exchanges = exchange.getMessage().getBody(List.class);
+
+        if (exchanges == null || exchanges.isEmpty()) {
+            return;
+        }
+
+        // Process each exchange in the batch
+        for (Object obj : exchanges) {
+            if (obj instanceof Exchange batchExchange) {
+                String body = batchExchange.getMessage().getBody(String.class);
+                LOG.info("Processing exchange with body: {}", body);
+
+                // Your business logic here
+                // Any exception thrown will trigger breakOnFirstError behavior
+                processMessage(body);
+            }
+        }
+    }
+
+    private void processMessage(String message) {
+        // Implement your message processing logic
+        // Throw exceptions for error conditions that should trigger breakOnFirstError
+        if (message.contains("error")) {
+            throw new RuntimeException("Processing failed for message: " + message);
+        }
+    }
+}
+----
+====
+
+Example with manual commits:
+
+[tabs]
+====
+Java DSL::
++
+[source,java]
+----
+// Error handler that performs manual commit before reconnection
+onException(Exception.class)
+    .handled(false)
+    .process(exchange -> {
+        // Commit manually when error occurs
+        KafkaManualCommit manual = exchange.getMessage()
+            .getHeader(KafkaConstants.MANUAL_COMMIT, KafkaManualCommit.class);
+        manual.commit();
+    });
+
+from("kafka:topic?groupId=myGroup&batching=true&breakOnFirstError=true&autoCommitEnable=false&allowManualCommit=true")
+    .process(e -> {
+        final List<?> exchanges = e.getMessage().getBody(List.class);
+        // Process batch - errors will be handled by the error handler above
+        for (Object exchange : exchanges) {
+            // ... processing logic
+        }
+    })
+    .process(exchange -> {
+        // Manual commit on successful processing
+        KafkaManualCommit manual = exchange.getMessage()
+            .getHeader(KafkaConstants.MANUAL_COMMIT, KafkaManualCommit.class);
+        manual.commit();
+    })
+    .to("mock:result");
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    on-exception:
+      - exception: "java.lang.Exception"
+        handled: false
+        steps:
+          - process:
+              ref: "errorCommitProcessor"
+    from:
+      uri: "kafka:topic"
+      parameters:
+        groupId: "myGroup"
+        batching: true
+        breakOnFirstError: true
+        autoCommitEnable: false
+        allowManualCommit: true
+    steps:
+      - process:
+          ref: "batchProcessorManual"
+      - process:
+          ref: "successCommitProcessor"
+      - to: "mock:result"
+----
+
+Processor Implementations::
++
+[source,java]
+----
+@Component("batchProcessorManual")
+public class BatchProcessorManual implements Processor {
+    private static final Logger LOG = LoggerFactory.getLogger(BatchProcessorManual.class);
+
+    @Override
+    public void process(Exchange exchange) throws Exception {
+        final List<?> exchanges = exchange.getMessage().getBody(List.class);
+
+        if (exchanges == null || exchanges.isEmpty()) {
+            return;
+        }
+
+        // Process each exchange in the batch
+        for (Object obj : exchanges) {
+            if (obj instanceof Exchange batchExchange) {
+                String body = batchExchange.getMessage().getBody(String.class);
+                LOG.info("Processing exchange with body: {}", body);
+
+                // Your business logic here
+                // Errors will be handled by the error handler
+                processMessage(body);
+            }
+        }
+    }
+
+    private void processMessage(String message) {
+        // Implement your message processing logic
+        if (message.contains("error")) {
+            throw new RuntimeException("Processing failed for message: " + message);
+        }
+    }
+}
+
+@Component("errorCommitProcessor")
+public class ErrorCommitProcessor implements Processor {
+    private static final Logger LOG = LoggerFactory.getLogger(ErrorCommitProcessor.class);
+
+    @Override
+    public void process(Exchange exchange) throws Exception {
+        LOG.warn("Error occurred, performing manual commit before reconnection");
+
+        KafkaManualCommit manual = exchange.getMessage()
+            .getHeader(KafkaConstants.MANUAL_COMMIT, KafkaManualCommit.class);
+
+        if (manual != null) {
+            manual.commit();
+            LOG.info("Manual commit completed after error");
+        }
+    }
+}
+
+@Component("successCommitProcessor")
+public class SuccessCommitProcessor implements Processor {
+    private static final Logger LOG = LoggerFactory.getLogger(SuccessCommitProcessor.class);
+
+    @Override
+    public void process(Exchange exchange) throws Exception {
+        LOG.debug("Batch processed successfully, performing manual commit");
+
+        KafkaManualCommit manual = exchange.getMessage()
+            .getHeader(KafkaConstants.MANUAL_COMMIT, KafkaManualCommit.class);
+
+        if (manual != null) {
+            manual.commit();
+            LOG.debug("Manual commit completed after successful processing");
+        }
+    }
+}
+----
+====
 
 ==== Manual Commits
 

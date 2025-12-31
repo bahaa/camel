@@ -35,7 +35,9 @@ import org.apache.camel.catalog.CamelCatalog;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.commands.Export;
 import org.apache.camel.dsl.jbang.core.commands.ExportBaseCommand;
+import org.apache.camel.dsl.jbang.core.commands.ExportHelper;
 import org.apache.camel.dsl.jbang.core.commands.Run;
+import org.apache.camel.dsl.jbang.core.commands.RunHelper;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.TraitCatalog;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.TraitContext;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.TraitHelper;
@@ -47,6 +49,7 @@ import org.apache.camel.dsl.jbang.core.common.RuntimeUtil;
 import org.apache.camel.dsl.jbang.core.common.Source;
 import org.apache.camel.dsl.jbang.core.common.SourceHelper;
 import org.apache.camel.util.CamelCaseOrderedProperties;
+import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.StringHelper;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -103,7 +106,7 @@ public class KubernetesExport extends Export {
     protected String imageGroup;
 
     @CommandLine.Option(names = { "--image-builder" }, defaultValue = "jib",
-                        description = "The image builder used to build the container image (e.g. docker, jib, podman).")
+                        description = "The image builder used to build the container image (e.g. docker, jib, s2i).")
     protected String imageBuilder = "jib";
 
     @CommandLine.Option(names = { "--image-push" }, defaultValue = "true",
@@ -115,7 +118,7 @@ public class KubernetesExport extends Export {
     protected String[] imagePlatforms;
 
     @CommandLine.Option(names = { "--base-image" },
-                        description = "The base image that is used to build the container image from (default is eclipse-temurin:<java-version>).")
+                        description = "The base image that is used to build the container image from (default is mirror.gcr.io/library/eclipse-temurin:21-jdk:<java-version>).")
     protected String baseImage;
 
     @CommandLine.Option(names = { "--registry-mirror" },
@@ -123,7 +126,9 @@ public class KubernetesExport extends Export {
     protected String registryMirror;
 
     @CommandLine.Option(names = { "--cluster-type" },
-                        description = "The target cluster type. Special configurations may be applied to different cluster types such as Kind or Minikube or Openshift.")
+                        completionCandidates = ClusterTypeCompletionCandidates.class,
+                        converter = ClusterTypeConverter.class,
+                        description = "The target cluster type (${COMPLETION-CANDIDATES}). Special configurations may be applied to different cluster types such as Kind or Minikube.")
     protected String clusterType;
 
     private static final String SRC_MAIN_RESOURCES = "/src/main/resources/";
@@ -134,7 +139,7 @@ public class KubernetesExport extends Export {
 
     public KubernetesExport(CamelJBangMain main, String[] files) {
         super(main);
-        this.files = Arrays.asList(files);
+        this.files.addAll(Arrays.asList(files));
     }
 
     public KubernetesExport(CamelJBangMain main, ExportConfigurer configurer) {
@@ -143,6 +148,7 @@ public class KubernetesExport extends Export {
         runtime = configurer.runtime;
         quarkusVersion = configurer.quarkusVersion;
 
+        exportBaseDir = configurer.exportBaseDir;
         files = configurer.files;
         name = configurer.name;
         gav = configurer.gav;
@@ -174,16 +180,33 @@ public class KubernetesExport extends Export {
         gradleWrapper = configurer.gradleWrapper;
         fresh = configurer.fresh;
         download = configurer.download;
+        skipPlugins = configurer.skipPlugins;
         packageScanJars = configurer.packageScanJars;
         quiet = configurer.quiet;
         logging = configurer.logging;
         loggingLevel = configurer.loggingLevel;
         verbose = configurer.verbose;
+        observe = true; // always include observability-services for kubernetes
     }
 
     public Integer export() throws Exception {
         if (runtime == null) {
             runtime = RuntimeType.quarkus;
+        }
+
+        // special if user type: camel run . or camel run dirName
+        if (files != null && files.size() == 1) {
+            String name = FileUtil.stripTrailingSeparator(files.get(0));
+            if (getScheme(name) == null) {
+                Path first = Path.of(name);
+                if (Files.isDirectory(first)) {
+                    exportBaseDir = first;
+                    RunHelper.dirToFiles(name, files);
+                }
+            }
+        }
+        if (exportBaseDir == null) {
+            exportBaseDir = Paths.get(".");
         }
 
         printer().println("Exporting application ...");
@@ -272,7 +295,17 @@ public class KubernetesExport extends Export {
         var applicationProfileProperties = new String[0];
         if (this.profile != null) {
             // override from profile specific configuration
-            applicationProfileProperties = extractPropertiesTraits(Paths.get("application-" + profile + ".properties"));
+            applicationProfileProperties
+                    = extractPropertiesTraits(exportBaseDir.resolve("application-" + profile + ".properties"));
+        } else {
+            for (String f : files) {
+                String name = FileUtil.stripPath(f);
+                if ("application.properties".equals(name)) {
+                    // load default properties configuration
+                    applicationProfileProperties
+                            = extractPropertiesTraits(exportBaseDir.resolve(f));
+                }
+            }
         }
 
         Traits traitsSpec = getTraitSpec(applicationProfileProperties, applicationProperties);
@@ -319,7 +352,7 @@ public class KubernetesExport extends Export {
 
         if (baseImage == null) {
             // use default base image with java version
-            baseImage = "eclipse-temurin:%s".formatted(javaVersion);
+            baseImage = "mirror.gcr.io/library/eclipse-temurin:%s".formatted(javaVersion);
         }
 
         if (registryMirror != null) {
@@ -346,9 +379,18 @@ public class KubernetesExport extends Export {
 
         Path settingsPath = CommandLineHelper.getWorkDir().resolve(Run.RUN_SETTINGS_FILE);
         var jkubeVersion = jkubeMavenPluginVersion(settingsPath, mapBuildProperties());
+        var managementPort = httpManagementPort(settingsPath);
         buildProperties.add("jkube.version=%s".formatted(jkubeVersion));
 
-        setContainerHealthPaths();
+        boolean cronJobEnabled = traitsSpec.getCronjob() != null && traitsSpec.getCronjob().getEnabled();
+        if (cronJobEnabled) {
+            // set this property to allow the JVM to finish quickly once there are no more exchange messages
+            // important for cronjobs so that the jvm can end quickly
+            addToApplicationProperties(
+                    "camel.main.duration-max-idle-seconds=" + traitsSpec.getCronjob().getDurationMaxIdleSeconds());
+        } else {
+            setContainerHealthPaths(managementPort);
+        }
 
         // Run export
         int exit = super.doExport();
@@ -367,7 +409,7 @@ public class KubernetesExport extends Export {
         for (var map : kubeFragments) {
             var ymlFragment = KubernetesHelper.dumpYaml(map);
             var kind = map.get("kind").toString().toLowerCase();
-            safeCopy(new ByteArrayInputStream(ymlFragment.getBytes(StandardCharsets.UTF_8)),
+            ExportHelper.safeCopy(new ByteArrayInputStream(ymlFragment.getBytes(StandardCharsets.UTF_8)),
                     Paths.get(exportDir, "src/main/jkube", kind + ".yml"));
 
         }
@@ -378,7 +420,7 @@ public class KubernetesExport extends Export {
                 if (Files.exists(targetPath)) {
                     Files.writeString(targetPath, "%n%s".formatted(content), StandardOpenOption.APPEND);
                 } else {
-                    safeCopy(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)), targetPath);
+                    ExportHelper.safeCopy(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)), targetPath);
                 }
             } catch (Exception e) {
                 printer().printf("Failed to create configuration resource %s - %s%n",
@@ -391,7 +433,7 @@ public class KubernetesExport extends Export {
         return 0;
     }
 
-    protected Integer export(ExportBaseCommand cmd) throws Exception {
+    protected Integer export(Path exportBaseDir, ExportBaseCommand cmd) throws Exception {
         if (runtime == RuntimeType.quarkus) {
             cmd.pomTemplateName = "quarkus-kubernetes-pom.tmpl";
         }
@@ -401,7 +443,7 @@ public class KubernetesExport extends Export {
         if (runtime == RuntimeType.main) {
             cmd.pomTemplateName = "main-kubernetes-pom.tmpl";
         }
-        return super.export(cmd);
+        return super.export(exportBaseDir, cmd);
     }
 
     protected Traits getTraitSpec(String[] applicationProfileProperties, String[] applicationProperties) {
@@ -446,12 +488,6 @@ public class KubernetesExport extends Export {
             return imageGroup;
         }
 
-        if (gav != null) {
-            var groupId = parseMavenGav(gav).getGroupId();
-            var dotToks = groupId.split("\\.");
-            return dotToks[dotToks.length - 1];
-        }
-
         return null;
     }
 
@@ -482,28 +518,41 @@ public class KubernetesExport extends Export {
         return null;
     }
 
-    private void setContainerHealthPaths() {
-        // the camel-observability-services artifact is set in the pom template
+    private void setContainerHealthPaths(int port) {
+        // the camel-observability-services artifact is added as dependency if observe=true in run command
         // it renames the container health base path to /observe, so this has to be in the container health probes http path
         // only quarkus and sb runtimes, because there is no published health endpoints when using runtime=main
+        String probePort = port > 0 ? "" + port : "9876";
         if (RuntimeType.quarkus == runtime) {
             // jkube reads quarkus properties to set the container health probes path
+            buildProperties.add("jkube.enricher.jkube-healthcheck-quarkus.port=" + probePort);
             buildProperties.add("quarkus.smallrye-health.root-path=/observe/health");
+            addToApplicationProperties("quarkus.management.port=" + probePort);
         } else if (RuntimeType.springBoot == runtime) {
-            List<String> newProps = new ArrayList<>();
+            // addDependencies("org.springframework.boot:spring-boot-starter-actuator");
             // jkube reads spring-boot properties to set the kubernetes container health probes path
             // in this case, jkube reads from the application.properties and not from the build properties in pom.xml
-            newProps.add("management.endpoints.web.base-path=/observe");
-            // jkube uses the old property to enable the readiness/liveness probes
-            // TODO: rename this property once https://github.com/eclipse-jkube/jkube/issues/3690 is fixed
-            newProps.add("management.health.probes.enabled=true");
-            if (applicationProperties == null) {
-                applicationProperties = newProps.toArray(new String[newProps.size()]);
-            } else {
-                newProps.addAll(Arrays.asList(applicationProperties));
-                applicationProperties = newProps.toArray(new String[newProps.size()]);
-            }
+            addToApplicationProperties("management.endpoints.web.base-path=/observe",
+                    "management.server.port=" + probePort,
+                    // jkube uses the old property to enable the readiness/liveness probes
+                    // TODO: rename this property once https://github.com/eclipse-jkube/jkube/issues/3690 is fixed
+                    "management.health.probes.enabled=true");
+        } else if (RuntimeType.main == runtime) {
+            addToApplicationProperties("camel.management.port=" + probePort);
         }
+    }
+
+    // helper method to add parameters to the applicationProperties
+    // it takes care to resize the string array
+    private void addToApplicationProperties(String... lines) {
+        List<String> newProps = new ArrayList<>();
+        for (String line : lines) {
+            newProps.add(line);
+        }
+        if (applicationProperties != null) {
+            newProps.addAll(Arrays.asList(applicationProperties));
+        }
+        applicationProperties = newProps.toArray(new String[newProps.size()]);
     }
 
     private String extractImageGroup(String image) {
@@ -554,7 +603,6 @@ public class KubernetesExport extends Export {
         if (image != null) {
             return StringHelper.afterLast(image, ":");
         }
-
         return super.getVersion();
     }
 
@@ -562,10 +610,15 @@ public class KubernetesExport extends Export {
         this.applicationProperties = props;
     }
 
+    void setObserve(boolean observe) {
+        this.observe = observe;
+    }
+
     /**
      * Configurer used to customize internal options for the Export command.
      */
     public record ExportConfigurer(RuntimeType runtime,
+            Path exportBaseDir,
             String quarkusVersion,
             List<String> files,
             String name,
@@ -602,6 +655,7 @@ public class KubernetesExport extends Export {
             boolean quiet,
             boolean logging,
             String loggingLevel,
-            boolean verbose) {
+            boolean verbose,
+            boolean skipPlugins) {
     }
 }

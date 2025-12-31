@@ -21,10 +21,12 @@ public class GraphqlEndpointUriFactory extends org.apache.camel.support.componen
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(13);
+        Set<String> props = new HashSet<>(16);
         props.add("accessToken");
+        props.add("headerFilterStrategy");
+        props.add("httpClient");
         props.add("httpUri");
         props.add("jwtAuthorizationType");
         props.add("lazyStartProducer");
@@ -34,6 +36,7 @@ public class GraphqlEndpointUriFactory extends org.apache.camel.support.componen
         props.add("query");
         props.add("queryFile");
         props.add("queryHeader");
+        props.add("throwExceptionOnFailure");
         props.add("username");
         props.add("variables");
         props.add("variablesHeader");
@@ -43,7 +46,7 @@ public class GraphqlEndpointUriFactory extends org.apache.camel.support.componen
         secretProps.add("password");
         secretProps.add("username");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
-        MULTI_VALUE_PREFIXES = Collections.emptySet();
+        MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
     @Override
@@ -74,7 +77,7 @@ public class GraphqlEndpointUriFactory extends org.apache.camel.support.componen
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

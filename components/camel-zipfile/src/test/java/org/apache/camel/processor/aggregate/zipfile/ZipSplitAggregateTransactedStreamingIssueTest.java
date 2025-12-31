@@ -24,7 +24,6 @@ import org.apache.camel.dataformat.zipfile.ZipSplitter;
 import org.apache.camel.spring.spi.SpringTransactionPolicy;
 import org.apache.camel.test.junit5.CamelTestSupport;
 import org.h2.jdbcx.JdbcDataSource;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@Disabled("")
 public class ZipSplitAggregateTransactedStreamingIssueTest extends CamelTestSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(ZipSplitAggregateTransactedStreamingIssueTest.class);
@@ -78,7 +76,7 @@ public class ZipSplitAggregateTransactedStreamingIssueTest extends CamelTestSupp
                 getContext().getRegistry().bind("transacted", springTransactionPolicy);
                 getContext().getRegistry().bind("zipSplitter", new ZipSplitter());
 
-                from("direct:start").streamCache(false)
+                from("direct:start").streamCache(true)
                         .transacted("transacted")
                         .setBody().simple(zipArchiveWithTwoFiles)
                         .unmarshal().base64()

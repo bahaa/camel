@@ -122,11 +122,71 @@ public class DaprConstants {
     public static final String BINDING_NAME = HEADER_PREFIX + "BindingName";
     @Metadata(label = "producer", description = "The operation to perform on the binding", javaType = "String")
     public static final String BINDING_OPERATION = HEADER_PREFIX + "BindingOperation";
-    @Metadata(label = "producer", description = "List of keys for configuration operation", javaType = "List<String>")
+    @Metadata(label = "producer", description = "List of keys for configuration operation", javaType = "String")
     public static final String CONFIG_KEYS = HEADER_PREFIX + "ConfigKeys";
     @Metadata(label = "consumer", description = "The id for configuration change subscription", javaType = "String")
     public static final String SUBSCRIPTION_ID = HEADER_PREFIX + "SubscriptionId";
     @Metadata(label = "common", description = "The raw configuration update response",
               javaType = "Map<String, io.dapr.client.domain.ConfigurationItem")
     public static final String RAW_CONFIG_RESPONSE = HEADER_PREFIX + "RawConfigResponse";
+    @Metadata(label = "producer", description = "The lock operation to perform on the store. " +
+                                                "Required for DaprOperation.lock operation",
+              javaType = "LockOperation", defaultValue = "tryLock",
+              enums = "tryLock, unlock")
+    public static final String LOCK_OPERATION = HEADER_PREFIX + "LockOperation";
+    @Metadata(label = "producer", description = "The lock store name", javaType = "String")
+    public static final String STORE_NAME = HEADER_PREFIX + "StoreName";
+    @Metadata(label = "producer", description = "The resource Id for the lock", javaType = "String")
+    public static final String RESOURCE_ID = HEADER_PREFIX + "ResourceId";
+    @Metadata(label = "producer", description = "The lock owner identifier for the lock", javaType = "String")
+    public static final String LOCK_OWNER = HEADER_PREFIX + "LockOwner";
+    @Metadata(label = "producer", description = "The expiry time in seconds for the lock", javaType = "Integer")
+    public static final String EXPIRY_IN_SECONDS = HEADER_PREFIX + "ExpiryInSeconds";
+    @Metadata(label = "producer", description = "The workflow operation to perform." +
+                                                "Required for DaprOperation.workflow operation",
+              javaType = "WorkflowOperation", defaultValue = "scheduleNew",
+              enums = "scheduleNew")
+    public static final String WORKFLOW_OPERATION = HEADER_PREFIX + "WorkflowOperation";
+    @Metadata(label = "producer", description = "The FQCN of the class which implements io.dapr.workflows.Workflow",
+              javaType = "String")
+    public static final String WORKFLOW_CLASS = HEADER_PREFIX + "WorkflowClass";
+    @Metadata(label = "producer", description = "The version of the workflow to start", javaType = "String")
+    public static final String WORKFLOW_VERSION = HEADER_PREFIX + "WorkflowVersion";
+    @Metadata(label = "producer", description = "The instance ID of the workflow", javaType = "String")
+    public static final String WORKFLOW_INSTANCE_ID = HEADER_PREFIX + "WorkflowInstanceId";
+    @Metadata(label = "producer", description = "The start time of the new workflow", javaType = "Instant")
+    public static final String WORKFLOW_START_TIME = HEADER_PREFIX + "WorkflowStartTime";
+    @Metadata(label = "producer", description = "Reason for suspending/resuming the workflow instance", javaType = "String")
+    public static final String REASON = HEADER_PREFIX + "SuspendReason";
+    @Metadata(label = "producer", description = "The instance ID of the new scheduled workflow", javaType = "String")
+    public static final String NEW_WORKFLOW_INSTANCE_ID = HEADER_PREFIX + "NewWorkflowInstanceId";
+    @Metadata(label = "producer",
+              description = "Set true to fetch the workflow instance's inputs, outputs, and custom status, or false to omit",
+              javaType = "boolean")
+    public static final String GET_WORKFLOW_IO = HEADER_PREFIX + "GetWorkflowIO";
+    @Metadata(label = "producer", description = "The workflow name", javaType = "String")
+    public static final String WORKFLOW_NAME = HEADER_PREFIX + "WorkflowName";
+    @Metadata(label = "producer", description = "Gets the workflow instance's creation time in UTC", javaType = "Instant")
+    public static final String WORKFLOW_CREATED_AT = HEADER_PREFIX + "WorkflowCreatedAt";
+    @Metadata(label = "producer", description = "Gets the workflow instance's last updated time in UTC", javaType = "Instant")
+    public static final String WORKFLOW_UPDATED_AT = HEADER_PREFIX + "WorkflowUpdatedAt";
+    @Metadata(label = "producer", description = "Gets the workflow instance's serialized input, if any", javaType = "String")
+    public static final String WORKFLOW_SERIALIZED_INPUT = HEADER_PREFIX + "WorkflowSerializedInput";
+    @Metadata(label = "producer", description = "Gets the workflow instance's serialized output, if any", javaType = "String")
+    public static final String WORKFLOW_SERIALIZED_OUTPUT = HEADER_PREFIX + "WorkflowSerializedOutput";
+    @Metadata(label = "producer", description = "The failure details of the failed workflow instance or null",
+              javaType = "io.dapr.workflows.client.WorkflowFailureDetails")
+    public static final String WORKFLOW_FAILURE_DETAILS = HEADER_PREFIX + "WorkflowFailureDetails";
+    @Metadata(label = "producer", description = "Set true if the workflow existed and was in a running state otherwise false",
+              javaType = "boolean")
+    public static final String IS_WORKFLOW_RUNNING = HEADER_PREFIX + "IsWorkflowRunning";
+    @Metadata(label = "producer", description = "Set true if the workflow was in a terminal state; otherwise false",
+              javaType = "boolean")
+    public static final String IS_WORKFLOW_COMPLETED = HEADER_PREFIX + "IsWorkflowCompleted";
+    @Metadata(label = "producer", description = "The amount of time to wait for the workflow instance to start/complete",
+              javaType = "Duration")
+    public static final String TIMEOUT = HEADER_PREFIX + "Timeout";
+    @Metadata(label = "producer", description = "The name of the event. Event names are case-insensitive",
+              javaType = "String")
+    public static final String EVENT_NAME = HEADER_PREFIX + "EventName";
 }

@@ -37,18 +37,11 @@ You can append query options to the URI in the following format:
 `?options=value&option2=value&...`
 
 
-// component-configure options: START
-
-// component-configure options: END
-
 // component options: START
 include::partial$component-configure-options.adoc[]
 include::partial$component-endpoint-options.adoc[]
+include::partial$component-endpoint-headers.adoc[]
 // component options: END
-
-// endpoint options: START
-
-// endpoint options: END
 
 
 Required S3 component options
@@ -56,10 +49,6 @@ Required S3 component options
 You have to provide the amazonS3Client in the
 Registry or your accessKey and secretKey to access
 the https://aws.amazon.com/s3[Amazon's S3].
-
-// component headers: START
-include::partial$component-endpoint-headers.adoc[]
-// component headers: END
 
 == Usage
 
@@ -77,12 +66,31 @@ Camel-AWS2-S3 component provides the following operation on the producer side:
 
 - copyObject
 - deleteObject
+- deleteObjects
 - listBuckets
 - deleteBucket
 - listObjects
 - getObject (this will return an S3Object instance)
 - getObjectRange (this will return an S3Object instance)
 - createDownloadLink
+- createUploadLink
+- headBucket
+- headObject
+- restoreObject
+- getObjectTagging
+- putObjectTagging
+- deleteObjectTagging
+- getObjectAcl
+- putObjectAcl
+- createBucket
+- getBucketTagging
+- putBucketTagging
+- deleteBucketTagging
+- getBucketVersioning
+- putBucketVersioning
+- getBucketPolicy
+- putBucketPolicy
+- deleteBucketPolicy
 
 If you don't specify an operation, explicitly the producer will do:
 
@@ -307,6 +315,550 @@ Parameters (`accessKey`, `secretKey` and `region`) are mandatory for this operat
 
 NOTE: If checksum validations are enabled, the url will no longer be browser compatible because it adds a signed header that must be included in the HTTP request.
 
+- HeadBucket: this operation checks if a bucket exists and you have permission to access it
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start")
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=headBucket")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+This operation will check if the bucket _mycamelbucket_ exists and is accessible.
+
+- HeadObject: this operation retrieves metadata from an object without returning the object itself
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          exchange.getIn().setHeader(AWS2S3Constants.KEY, "camelKey");
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=headObject")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+This operation will return metadata about the object camelKey in the bucket _mycamelbucket_.
+
+- DeleteObjects: this operation deletes multiple objects from a bucket in a single request
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          List<String> keys = Arrays.asList("key1", "key2", "key3");
+          exchange.getIn().setHeader(AWS2S3Constants.KEYS_TO_DELETE, keys);
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=deleteObjects")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - process:
+          ref: myProcessor
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: deleteObjects
+--------------------------------------------------------------------------------
+
+This operation will delete the objects with keys key1, key2, and key3 from the bucket _mycamelbucket_.
+
+- CreateUploadLink: this operation will return an upload link through S3 Presigner
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          exchange.getIn().setHeader(AWS2S3Constants.KEY, "camelKey");
+      }
+  })
+  .to("aws2-s3://mycamelbucket?accessKey=xxx&secretKey=yyy&region=region&operation=createUploadLink")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - setHeader:
+          name: CamelAwsS3Key
+          constant: camelKey
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            accessKey: xxx
+            secretKey: yyy
+            region: region
+            operation: createUploadLink
+--------------------------------------------------------------------------------
+
+This operation will return an upload link url for uploading to the bucket _mycamelbucket_.
+
+- RestoreObject: this operation restores an archived object from Glacier storage
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          exchange.getIn().setHeader(AWS2S3Constants.KEY, "camelKey");
+          exchange.getIn().setHeader(AWS2S3Constants.RESTORE_DAYS, 1);
+          exchange.getIn().setHeader(AWS2S3Constants.RESTORE_TIER, "Expedited");
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=restoreObject")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - setHeader:
+          name: CamelAwsS3Key
+          constant: camelKey
+      - setHeader:
+          name: CamelAwsS3RestoreDays
+          constant: 1
+      - setHeader:
+          name: CamelAwsS3RestoreTier
+          constant: Expedited
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: restoreObject
+--------------------------------------------------------------------------------
+
+This operation will restore the archived object camelKey from Glacier for 1 day using expedited retrieval.
+
+- GetObjectTagging: this operation retrieves the tags associated with an object
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          exchange.getIn().setHeader(AWS2S3Constants.KEY, "camelKey");
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=getObjectTagging")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - setHeader:
+          name: CamelAwsS3Key
+          constant: camelKey
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: getObjectTagging
+--------------------------------------------------------------------------------
+
+This operation will return the tags for object camelKey in the bucket _mycamelbucket_.
+
+- PutObjectTagging: this operation sets tags on an object
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          Map<String, String> tags = new HashMap<>();
+          tags.put("Environment", "Production");
+          tags.put("Owner", "TeamA");
+          exchange.getIn().setHeader(AWS2S3Constants.KEY, "camelKey");
+          exchange.getIn().setHeader(AWS2S3Constants.OBJECT_TAGS, tags);
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=putObjectTagging")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - process:
+          ref: myProcessor
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: putObjectTagging
+--------------------------------------------------------------------------------
+
+This operation will set tags on the object camelKey in the bucket _mycamelbucket_.
+
+- DeleteObjectTagging: this operation deletes all tags from an object
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          exchange.getIn().setHeader(AWS2S3Constants.KEY, "camelKey");
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=deleteObjectTagging")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - setHeader:
+          name: CamelAwsS3Key
+          constant: camelKey
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: deleteObjectTagging
+--------------------------------------------------------------------------------
+
+This operation will delete all tags from the object camelKey in the bucket _mycamelbucket_.
+
+- GetObjectAcl: this operation retrieves the access control list (ACL) for an object
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          exchange.getIn().setHeader(AWS2S3Constants.KEY, "camelKey");
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=getObjectAcl")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - setHeader:
+          name: CamelAwsS3Key
+          constant: camelKey
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: getObjectAcl
+--------------------------------------------------------------------------------
+
+This operation will return the ACL for object camelKey in the bucket _mycamelbucket_.
+
+- PutObjectAcl: this operation sets the access control list (ACL) for an object
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          exchange.getIn().setHeader(AWS2S3Constants.KEY, "camelKey");
+          exchange.getIn().setHeader(AWS2S3Constants.CANNED_ACL, "PublicRead");
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=putObjectAcl")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - setHeader:
+          name: CamelAwsS3Key
+          constant: camelKey
+      - setHeader:
+          name: CamelAwsS3CannedAcl
+          constant: PublicRead
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: putObjectAcl
+--------------------------------------------------------------------------------
+
+This operation will set the ACL to public-read for object camelKey in the bucket _mycamelbucket_.
+
+- CreateBucket: this operation creates a new S3 bucket
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start")
+  .to("aws2-s3://mynewbucket?amazonS3Client=#amazonS3Client&operation=createBucket")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - to:
+          uri: aws2-s3://mynewbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: createBucket
+--------------------------------------------------------------------------------
+
+This operation will create a new bucket named _mynewbucket_ in the configured region.
+
+- GetBucketTagging: this operation retrieves the tags associated with a bucket
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start")
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=getBucketTagging")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: getBucketTagging
+--------------------------------------------------------------------------------
+
+This operation will return the tags for the bucket _mycamelbucket_.
+
+- PutBucketTagging: this operation sets tags on a bucket
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          Map<String, String> tags = new HashMap<>();
+          tags.put("Project", "CamelIntegration");
+          tags.put("CostCenter", "Engineering");
+          exchange.getIn().setHeader(AWS2S3Constants.BUCKET_TAGS, tags);
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=putBucketTagging")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - process:
+          ref: myProcessor
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: putBucketTagging
+--------------------------------------------------------------------------------
+
+This operation will set tags on the bucket _mycamelbucket_.
+
+- DeleteBucketTagging: this operation deletes all tags from a bucket
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start")
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=deleteBucketTagging")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: deleteBucketTagging
+--------------------------------------------------------------------------------
+
+This operation will delete all tags from the bucket _mycamelbucket_.
+
+- GetBucketVersioning: this operation retrieves the versioning configuration of a bucket
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start")
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=getBucketVersioning")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: getBucketVersioning
+--------------------------------------------------------------------------------
+
+This operation will return the versioning configuration for the bucket _mycamelbucket_.
+
+- PutBucketVersioning: this operation sets the versioning configuration of a bucket
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          exchange.getIn().setHeader(AWS2S3Constants.VERSIONING_STATUS, "Enabled");
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=putBucketVersioning")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - setHeader:
+          name: CamelAwsS3VersioningStatus
+          constant: Enabled
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: putBucketVersioning
+--------------------------------------------------------------------------------
+
+This operation will enable versioning on the bucket _mycamelbucket_.
+
+- GetBucketPolicy: this operation retrieves the policy of a bucket
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start")
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=getBucketPolicy")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: getBucketPolicy
+--------------------------------------------------------------------------------
+
+This operation will return the bucket policy for _mycamelbucket_ as a JSON string.
+
+- PutBucketPolicy: this operation sets the policy on a bucket
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start").process(new Processor() {
+
+      @Override
+      public void process(Exchange exchange) throws Exception {
+          String policy = "{"
+              + "\"Version\": \"2012-10-17\","
+              + "\"Statement\": [{"
+              + "\"Effect\": \"Allow\","
+              + "\"Principal\": \"*\","
+              + "\"Action\": \"s3:GetObject\","
+              + "\"Resource\": \"arn:aws:s3:::mycamelbucket/*\""
+              + "}]}";
+          exchange.getIn().setHeader(AWS2S3Constants.BUCKET_POLICY, policy);
+      }
+  })
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=putBucketPolicy")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - process:
+          ref: myProcessor
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: putBucketPolicy
+--------------------------------------------------------------------------------
+
+This operation will set a bucket policy on _mycamelbucket_.
+
+- DeleteBucketPolicy: this operation deletes the policy from a bucket
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("direct:start")
+  .to("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&operation=deleteBucketPolicy")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+[source,yaml]
+--------------------------------------------------------------------------------
+- from:
+    uri: direct:start
+    steps:
+      - to:
+          uri: aws2-s3://mycamelbucket
+          parameters:
+            amazonS3Client: "#amazonS3Client"
+            operation: deleteBucketPolicy
+--------------------------------------------------------------------------------
+
+This operation will delete the bucket policy from _mycamelbucket_.
+
 === AWS S3 Producer minimum permissions
 
 For making the producer work, you'll need at least PutObject and ListBuckets permissions. The following policy will be enough:
@@ -393,6 +945,8 @@ The upload will be completed when the batchSize has been completed or the batchM
 There are two possible naming strategies: progressive and random.
 With the progressive strategy, each file will have the name composed by keyName option and a progressive counter, and eventually the file extension (if any), while with the random strategy a UUID will be added after keyName and eventually the file extension will be appended.
 
+Additionally, streaming upload mode supports timestamp-based file grouping, which allows messages to be automatically grouped into time windows based on their timestamps.
+
 As an example:
 
 [source,java]
@@ -450,6 +1004,106 @@ from(kafka("topic1").brokers("localhost:9092"))
 
 In this case, the upload will be completed after 10 seconds.
 
+==== Timestamp Grouping
+
+The streaming upload mode also supports timestamp-based file grouping, which allows messages to be automatically grouped into time windows and written to the same S3 file based on their timestamps. This feature enables append-like behavior where messages with timestamps falling within the same time window are combined into a single file.
+
+To enable timestamp grouping, use the following configuration options:
+
+- `timestampGroupingEnabled`: Set to `true` to enable timestamp-based grouping (default: `false`)
+- `timestampWindowSizeMillis`: The size of the time window in milliseconds (default: `300000` = 5 minutes)
+- `timestampHeaderName`: The name of the message header containing the timestamp (default: `Exchange.MESSAGE_TIMESTAMP`)
+
+Messages are grouped based on their timestamps extracted from the specified header. The timestamp can be provided as:
+
+- Long: Unix timestamp in milliseconds
+- Date: Java Date object
+- String: String representation of Unix timestamp in milliseconds
+
+Files are automatically named using a timestamp-based pattern that includes the time window information.
+
+===== Example Configuration
+
+Basic timestamp grouping with 5-minute windows:
+
+[source,java]
+--------------------------------------------------------------------------------
+from("timer:messages?period=10000")
+    .setHeader(Exchange.MESSAGE_TIMESTAMP, simple("${date:now:timestamp}"))
+    .setBody(constant("Message with timestamp"))
+    .to("aws2-s3://my-bucket?streamingUploadMode=true"
+        + "&timestampGroupingEnabled=true"
+        + "&timestampWindowSizeMillis=300000"
+        + "&keyName=grouped-messages.txt");
+--------------------------------------------------------------------------------
+
+Custom window size (1 minute) with custom header name:
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:timestamped")
+    .setHeader("MyTimestamp", simple("${date:now:timestamp}"))
+    .setBody("Custom timestamped message")
+    .to("aws2-s3://my-bucket?streamingUploadMode=true"
+        + "&timestampGroupingEnabled=true"
+        + "&timestampWindowSizeMillis=60000"
+        + "&timestampHeaderName=MyTimestamp"
+        + "&keyName=custom-grouped.txt");
+--------------------------------------------------------------------------------
+
+Large files with multipart and timestamp grouping:
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:large-timestamped")
+    .setHeader(Exchange.MESSAGE_TIMESTAMP, simple("${date:now:timestamp}"))
+    .setBody("Large message content...")
+    .to("aws2-s3://my-bucket?streamingUploadMode=true"
+        + "&timestampGroupingEnabled=true"
+        + "&timestampWindowSizeMillis=1800000"  // 30 minutes
+        + "&multiPartUpload=true"
+        + "&partSize=5242880"  // 5MB parts
+        + "&keyName=large-grouped.txt");
+--------------------------------------------------------------------------------
+
+===== File Naming
+
+Files are automatically named using the following pattern:
+```
+{baseFileName}_{YYYYMMDD}_{HHMM}_{HHMM-HHMM}.{extension}
+```
+
+For time windows smaller than 1 minute, seconds precision is used:
+```
+{baseFileName}_{YYYYMMDD}_{HHMMSS}_{HHMMSS-HHMMSS}.{extension}
+```
+
+Example file names:
+- 5-minute window: `messages_20240101_0800_0800-0805.txt`
+- 1-minute window: `data_20240315_1430_1430-1431.log`
+- 5-second window: `events_20241225_000000_000000-000005.json`
+
+===== Time Window Examples
+
+With a 5-minute window (300000ms):
+- Window 1: 08:00:00 - 08:04:59 → `file_20240101_0800_0800-0805.txt`
+- Window 2: 08:05:00 - 08:09:59 → `file_20240101_0805_0805-0810.txt`
+- Window 3: 08:10:00 - 08:14:59 → `file_20240101_0810_0810-0815.txt`
+
+===== Fallback Behavior
+
+- If no timestamp header is found, the current system time is used
+- If the timestamp header contains invalid data, the current system time is used
+- Warning messages are logged when fallback behavior occurs
+
+===== Performance Considerations
+
+- Multiple concurrent time windows are supported
+- Each window maintains its own upload state
+- Memory usage scales with the number of active time windows
+- Completed windows are automatically cleaned up
+- Works with all existing streaming upload features (multipart uploads, timeouts, etc.)
+
 === Bucket Auto-creation
 
 With the option `autoCreateBucket` users are able to avoid the auto-creation of an S3 Bucket in case it doesn't exist. The default for this option is `false`.
@@ -487,6 +1141,56 @@ Taking the above example, you could do something like:
 In this case, the objects consumed will be moved to _myothercamelbucket_ bucket and deleted from the original one (because of deleteAfterRead set to true as default).
 
 So if the file name is test, in the _myothercamelbucket_ you should see a file called pre-test-suff.
+
+=== Additional Consumer Examples
+
+=== Consumer with prefix filtering
+
+You can configure the consumer to only process objects with a specific prefix:
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&prefix=processed/&delay=30000")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+This will only consume objects that start with "processed/" prefix from the _mycamelbucket_ bucket, with a 30-second polling delay.
+
+=== Consumer with custom polling and batch settings
+
+Configure custom polling intervals and batch sizes:
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&delay=60000&maxMessagesPerPoll=5&includeBody=false")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+This consumer polls every 60 seconds, processes up to 5 objects per poll, and doesn't include the object body in the message (only metadata).
+
+=== Consumer with file filtering and no deletion
+
+Configure the consumer to not delete files after reading and include specific file patterns:
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&deleteAfterRead=false&fileName=*.pdf")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+This consumer will read PDF files but won't delete them after processing.
+
+=== Consumer with done file pattern
+
+Use a done file pattern to ensure files are completely uploaded before processing:
+
+[source,java]
+--------------------------------------------------------------------------------
+  from("aws2-s3://mycamelbucket?amazonS3Client=#amazonS3Client&doneFileName=*.done")
+  .to("mock:result");
+--------------------------------------------------------------------------------
+
+This consumer will only process files when a corresponding .done file exists in the bucket.
 
 === Using the customer key as encryption
 
@@ -553,6 +1257,26 @@ camelContext.addComponent("aws2-s3", s3Component);
 --------------------------------------------------------------------------------
 
 Now your component will be used for all the operations implemented in camel routes.
+
+=== Note about using this component for storing and retrieving objects from/to Dell ECS (Elastic Cloud Solutions)
+
+For storing and retrieving objects from/to Dell ECS, both of the `forcePathStyle` and `overrideEndpoint` options need to be set to `true` and using the `uriEndpointOverride` you need to provide your own ECS endpoint. 
+
+[source,java]
+--------------------------------------------------------------------------------
+String awsBucketAccessKey = "your_access_key";
+String awsBucketSecretKey = "your_secret_key";
+
+S3Client s3Client = S3Client.builder().credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(awsBucketAccessKey, awsBucketSecretKey)))
+                .region(Region.US_EAST_1).build();
+
+AWS2S3Configuration configuration = new AWS2S3Configuration();
+configuration.setForcePathStyle(true);
+configuration.setOverrideEndpoint(true);
+configuration.setUriEndpointOverride("http://ecs1.emc.com:9020");
+--------------------------------------------------------------------------------
+
+For more details see https://www.dell.com/support/manuals/en-us/ecs-appliance-/ecs_pub_data_access_guide_3_3_to_3_6/using-the-java-amazon-sdk?guid=guid-149be134-6938-4cd7-9503-cf3ca9d23261&lang=en-us[their documentation].
 
 == Dependencies
 

@@ -48,6 +48,12 @@ public interface ManagedProcessorMBean extends ManagedPerformanceCounterMBean {
     @ManagedAttribute(description = "Processor Description")
     String getDescription();
 
+    @ManagedAttribute(description = "Processor Model Label")
+    String getModelLabel();
+
+    @ManagedAttribute(description = "Processor Note")
+    String getNote();
+
     @ManagedAttribute(description = "Processor Index")
     Integer getIndex();
 
@@ -57,11 +63,23 @@ public interface ManagedProcessorMBean extends ManagedPerformanceCounterMBean {
     @ManagedAttribute(description = "Source file Location")
     String getSourceLocation();
 
+    @ManagedAttribute(description = "Source file location (Short)")
+    String getSourceLocationShort();
+
     @ManagedAttribute(description = "Line number of this node in the source file (when loaded from a line number aware parser)")
     Integer getSourceLineNumber();
 
     @ManagedAttribute(description = "Whether this processor supports extended JMX information")
     Boolean getSupportExtendedInformation();
+
+    @ManagedAttribute(description = "Whether this processor is disabled")
+    Boolean getDisabled();
+
+    @ManagedOperation(description = "To enable this processor")
+    void enable();
+
+    @ManagedOperation(description = "To disable this processor")
+    void disable();
 
     @ManagedOperation(description = "Start Processor")
     void start() throws Exception;

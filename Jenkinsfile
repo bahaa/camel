@@ -28,6 +28,7 @@ pipeline {
 
     environment {
         MAVEN_SKIP_RC = true
+        DEVELOCITY_ACCESS_KEY = credentials('CAMEL_DEVELOCITY_ACCESS_KEY')
     }
 
     options {
@@ -35,6 +36,11 @@ pipeline {
             logRotator(artifactNumToKeepStr: '5', numToKeepStr: '10')
         )
         disableConcurrentBuilds()
+        throttleJobProperty(
+          categories: ['camel'],
+          throttleEnabled: true,
+          throttleOption: 'category'
+      )
 
         // This is required if you want to clean before build
         skipDefaultCheckout(true)
@@ -43,7 +49,7 @@ pipeline {
     parameters {
         booleanParam(name: 'VIRTUAL_THREAD', defaultValue: false, description: 'Perform the build using virtual threads')
         choice(name: 'PLATFORM_FILTER', choices: ['all', 'ppc64le', 's390x', 'ubuntu-avx'], description: 'Run on specific platform')
-        choice(name: 'JDK_FILTER', choices: ['all', 'jdk_17_latest', 'jdk_21_latest'], description: 'Run on specific jdk')
+        choice(name: 'JDK_FILTER', choices: ['all', 'jdk_17_latest', 'jdk_21_latest', 'jdk_25_latest'], description: 'Run on specific jdk')
     }
     agent none
     stages {
@@ -51,6 +57,9 @@ pipeline {
             matrix {
                 agent {
                     label "${PLATFORM}"
+                }
+                options {
+                    throttle(['camel'])
                 }
                 when { anyOf {
                     expression { params.PLATFORM_FILTER == 'all' }
@@ -61,7 +70,7 @@ pipeline {
                 axes {
                     axis {
                         name 'JDK_NAME'
-                        values 'jdk_17_latest', 'jdk_21_latest'
+                        values 'jdk_17_latest', 'jdk_21_latest', 'jdk_25_latest'
                     }
                     axis {
                         name 'PLATFORM'
@@ -89,6 +98,26 @@ pipeline {
                             values 's390x'
                         }
                     }
+                    exclude {
+                        axis {
+                            name 'JDK_NAME'
+                            values 'jdk_25_latest'
+                        }
+                        axis {
+                            name 'PLATFORM'
+                            values 'ppc64le'
+                        }
+                    }
+                    exclude {
+                        axis {
+                            name 'JDK_NAME'
+                            values 'jdk_25_latest'
+                        }
+                        axis {
+                            name 'PLATFORM'
+                            values 's390x'
+                        }
+                    }
                 }
                 tools {
                     jdk "${JDK_NAME}"
@@ -106,7 +135,7 @@ pipeline {
                         steps {
                             echo "Do Build for ${PLATFORM}-${JDK_NAME}"
                             sh 'java -version'
-                            sh "./mvnw -U $MAVEN_PARAMS -Dskip.camel.maven.plugin.tests -Darchetype.test.skip -Dmaven.test.skip.exec=true clean install"
+                            sh "./mvnw -U $MAVEN_PARAMS -Dskip.camel.maven.plugin.tests -Darchetype.test.skip -DskipTests clean install"
                         }
                     }
 

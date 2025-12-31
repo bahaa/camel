@@ -133,29 +133,12 @@ public interface GoogleDriveEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specifies the level of permissions you want a drive application to
+         * Specifies the level of permissions you want a calendar application to
          * have to a user account. See
-         * https://developers.google.com/drive/web/scopes for more info.
+         * https://developers.google.com/identity/protocols/googlescopes for
+         * more info. Multiple scopes can be separated by comma.
          * 
-         * The option is a: <code>java.util.List&lt;java.lang.String&gt;</code>
-         * type.
-         * 
-         * Group: common
-         * 
-         * @param scopes the value to set
-         * @return the dsl builder
-         */
-        default GoogleDriveEndpointConsumerBuilder scopes(List<java.lang.String> scopes) {
-            doSetProperty("scopes", scopes);
-            return this;
-        }
-        /**
-         * Specifies the level of permissions you want a drive application to
-         * have to a user account. See
-         * https://developers.google.com/drive/web/scopes for more info.
-         * 
-         * The option will be converted to a
-         * <code>java.util.List&lt;java.lang.String&gt;</code> type.
+         * The option is a: <code>java.lang.String</code> type.
          * 
          * Group: common
          * 
@@ -685,7 +668,7 @@ public interface GoogleDriveEndpointBuilderFactory {
             return this;
         }
         /**
-         * OAuth 2 refresh token. Using this, the Google Calendar component can
+         * OAuth 2 refresh token. Using this, the Google Drive component can
          * obtain a new accessToken whenever the current one expires - a
          * necessity if the application is long-lived.
          * 
@@ -981,29 +964,12 @@ public interface GoogleDriveEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specifies the level of permissions you want a drive application to
+         * Specifies the level of permissions you want a calendar application to
          * have to a user account. See
-         * https://developers.google.com/drive/web/scopes for more info.
+         * https://developers.google.com/identity/protocols/googlescopes for
+         * more info. Multiple scopes can be separated by comma.
          * 
-         * The option is a: <code>java.util.List&lt;java.lang.String&gt;</code>
-         * type.
-         * 
-         * Group: common
-         * 
-         * @param scopes the value to set
-         * @return the dsl builder
-         */
-        default GoogleDriveEndpointProducerBuilder scopes(List<java.lang.String> scopes) {
-            doSetProperty("scopes", scopes);
-            return this;
-        }
-        /**
-         * Specifies the level of permissions you want a drive application to
-         * have to a user account. See
-         * https://developers.google.com/drive/web/scopes for more info.
-         * 
-         * The option will be converted to a
-         * <code>java.util.List&lt;java.lang.String&gt;</code> type.
+         * The option is a: <code>java.lang.String</code> type.
          * 
          * Group: common
          * 
@@ -1044,7 +1010,7 @@ public interface GoogleDriveEndpointBuilderFactory {
             return this;
         }
         /**
-         * OAuth 2 refresh token. Using this, the Google Calendar component can
+         * OAuth 2 refresh token. Using this, the Google Drive component can
          * obtain a new accessToken whenever the current one expires - a
          * necessity if the application is long-lived.
          * 
@@ -1233,29 +1199,12 @@ public interface GoogleDriveEndpointBuilderFactory {
             return this;
         }
         /**
-         * Specifies the level of permissions you want a drive application to
+         * Specifies the level of permissions you want a calendar application to
          * have to a user account. See
-         * https://developers.google.com/drive/web/scopes for more info.
+         * https://developers.google.com/identity/protocols/googlescopes for
+         * more info. Multiple scopes can be separated by comma.
          * 
-         * The option is a: <code>java.util.List&lt;java.lang.String&gt;</code>
-         * type.
-         * 
-         * Group: common
-         * 
-         * @param scopes the value to set
-         * @return the dsl builder
-         */
-        default GoogleDriveEndpointBuilder scopes(List<java.lang.String> scopes) {
-            doSetProperty("scopes", scopes);
-            return this;
-        }
-        /**
-         * Specifies the level of permissions you want a drive application to
-         * have to a user account. See
-         * https://developers.google.com/drive/web/scopes for more info.
-         * 
-         * The option will be converted to a
-         * <code>java.util.List&lt;java.lang.String&gt;</code> type.
+         * The option is a: <code>java.lang.String</code> type.
          * 
          * Group: common
          * 
@@ -1296,7 +1245,7 @@ public interface GoogleDriveEndpointBuilderFactory {
             return this;
         }
         /**
-         * OAuth 2 refresh token. Using this, the Google Calendar component can
+         * OAuth 2 refresh token. Using this, the Google Drive component can
          * obtain a new accessToken whenever the current one expires - a
          * necessity if the application is long-lived.
          * 

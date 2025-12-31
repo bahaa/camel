@@ -36,18 +36,11 @@ You can append query options to the URI in the following format:
 `?options=value&option2=value&...`
 
 
-// component-configure options: START
-
-// component-configure options: END
-
 // component options: START
 include::partial$component-configure-options.adoc[]
 include::partial$component-endpoint-options.adoc[]
+include::partial$component-endpoint-headers.adoc[]
 // component options: END
-
-// endpoint options: START
-
-// endpoint options: END
 
 
 Required Bedrock component options
@@ -76,10 +69,6 @@ You have also the possibility of using Profile Credentials Provider, by specifyi
 Only one of static, default and profile credentials could be used at the same time.
 
 For more information about this you can look at https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/credentials.html[AWS credentials documentation]
-
-// component headers: START
-include::partial$component-endpoint-headers.adoc[]
-// component headers: END
 
 === Supported AWS Bedrock Models
 
@@ -688,6 +677,193 @@ Camel-AWS Bedrock component provides the following operation on the producer sid
 - invokeTextModel
 - invokeImageModel
 - invokeEmbeddingsModel
+- invokeTextModelStreaming
+- invokeImageModelStreaming
+- invokeEmbeddingsModelStreaming
+- converse
+- converseStream
+- applyGuardrail
+
+=== Streaming Support
+
+The streaming operations (`invokeTextModelStreaming`, `invokeImageModelStreaming`, `invokeEmbeddingsModelStreaming`) enable real-time streaming of model responses, providing lower latency and better user experience for interactive applications.
+
+==== Streaming Output Modes
+
+Two streaming modes are supported:
+
+*Complete Mode (default)*: Accumulates all chunks and returns the complete response as a single message. This is the simplest mode and behaves similarly to non-streaming operations, but with lower time-to-first-token.
+
+*Chunks Mode*: Emits each chunk as it arrives in a List. Useful for reactive streaming pipelines or when you need to process chunks individually.
+
+==== Streaming Configuration Options
+
+- `streamOutputMode`: Set to "complete" (default) or "chunks"
+- `includeStreamingMetadata`: Whether to include metadata headers (default: true)
+
+==== Streaming Metadata Headers
+
+When `includeStreamingMetadata` is true, the following headers are set:
+
+- `CamelAwsBedrockCompletionReason`: The reason the model stopped generating (e.g., "FINISH", "end_turn", "stop")
+- `CamelAwsBedrockTokenCount`: The number of tokens generated (if provided by the model)
+- `CamelAwsBedrockChunkCount`: The number of chunks received
+
+==== Supported Models for Streaming
+
+All text generation models support streaming:
+- Amazon Titan (all text models)
+- Anthropic Claude (all versions)
+- Meta Llama (all versions)
+- Mistral AI (all models)
+- Cohere Command models
+- Amazon Nova models
+
+=== Converse API Support
+
+The Converse API provides a unified, model-agnostic interface for conversational AI interactions with AWS Bedrock models. It offers several advantages over the legacy InvokeModel API:
+
+- *Unified Interface*: Single API across all supported models (Claude, Llama, Mistral, etc.)
+- *Multi-turn Conversations*: Native support for conversation history with user/assistant roles
+- *Tool Use & Function Calling*: Built-in support for tools and function calling
+- *System Prompts*: First-class support for system-level instructions
+- *Structured Responses*: Consistent response format across all models
+- *Streaming Support*: Real-time streaming with the `converseStream` operation
+
+==== Converse Operations
+
+Two operations are provided:
+
+*converse*: Standard request-response conversation
+[source]
+--------------------------------------------------------------------------------
+aws-bedrock://label?operation=converse&modelId=anthropic.claude-3-sonnet-20240229-v1:0
+--------------------------------------------------------------------------------
+
+*converseStream*: Streaming conversation with real-time chunk delivery
+[source]
+--------------------------------------------------------------------------------
+aws-bedrock://label?operation=converseStream&modelId=anthropic.claude-3-sonnet-20240229-v1:0
+--------------------------------------------------------------------------------
+
+==== Converse Configuration Options
+
+Converse API uses message headers for configuration:
+
+- `CamelAwsBedrockConverseMessages` (required): List of Message objects representing the conversation
+- `CamelAwsBedrockConverseSystem`: List of SystemContentBlock for system-level instructions
+- `CamelAwsBedrockConverseInferenceConfig`: InferenceConfiguration for temperature, maxTokens, etc.
+- `CamelAwsBedrockConverseToolConfig`: ToolConfiguration for function calling support
+- `CamelAwsBedrockConverseAdditionalFields`: Document for model-specific additional fields
+
+For streaming operations, you can also use:
+- `CamelAwsBedrockStreamOutputMode`: Set to "complete" (default) or "chunks"
+
+==== Converse Response Headers
+
+When a conversation completes, the following headers are set:
+
+- `CamelAwsBedrockConverseStopReason`: Why the model stopped (e.g., "end_turn", "max_tokens")
+- `CamelAwsBedrockConverseUsage`: TokenUsage object with input/output token counts
+- `CamelAwsBedrockConverseOutputMessage`: The complete Message object from the model
+- `CamelAwsBedrockChunkCount`: (streaming only) Number of chunks received
+
+==== Supported Models for Converse API
+
+The Converse API supports all modern foundation models on Bedrock:
+
+- Anthropic Claude 3 family (Haiku, Sonnet, Opus)
+- Anthropic Claude 3.5 family (Sonnet v2, Haiku)
+- Amazon Nova family (Micro, Lite, Pro)
+- Meta Llama 3.x models
+- Mistral AI models
+- Cohere Command R models
+
+NOTE: Legacy models (Claude 2.x, Claude Instant) are not supported by the Converse API. Use the `invokeTextModel` operation for those models.
+
+=== Guardrails Support
+
+AWS Bedrock Guardrails enable you to implement safeguards for your generative AI applications based on your use cases and responsible AI policies. Guardrails can filter harmful content, block sensitive topics, remove personally identifiable information (PII), and enhance content safety and privacy in generative AI applications.
+
+The Camel AWS Bedrock component provides comprehensive support for guardrails through:
+
+- *Converse API Integration*: Apply guardrails to conversational interactions
+- *Streaming Support*: Use guardrails with real-time streaming responses
+- *Standalone Validation*: Check content against guardrails without invoking a model
+- *Flexible Configuration*: Configure guardrails at endpoint level or per-message
+
+==== Guardrails Configuration Options
+
+*Endpoint-level Configuration* (applies to all requests):
+
+- `guardrailIdentifier`: The ID or ARN of the guardrail to apply
+- `guardrailVersion`: The version of the guardrail (default: "DRAFT")
+- `guardrailTrace`: Whether to return trace information (default: false)
+
+*Message-level Configuration* (per-message override via headers):
+
+- `CamelAwsBedrockGuardrailConfig`: GuardrailConfiguration object for converse operations
+- `CamelAwsBedrockGuardrailContent`: Content blocks for applyGuardrail operation
+- `CamelAwsBedrockGuardrailSource`: Source type - "INPUT" or "OUTPUT" for applyGuardrail
+
+==== Guardrails Operations
+
+*converse with Guardrails*: Apply guardrails to conversational model invocations
+
+[source]
+--------------------------------------------------------------------------------
+aws-bedrock://label?operation=converse&modelId=anthropic.claude-3-sonnet-20240229-v1:0
+    &guardrailIdentifier=abc123xyz&guardrailVersion=DRAFT&guardrailTrace=true
+--------------------------------------------------------------------------------
+
+*converseStream with Guardrails*: Apply guardrails to streaming conversations
+
+[source]
+--------------------------------------------------------------------------------
+aws-bedrock://label?operation=converseStream&modelId=anthropic.claude-3-sonnet-20240229-v1:0
+    &guardrailIdentifier=abc123xyz&guardrailVersion=DRAFT
+--------------------------------------------------------------------------------
+
+*applyGuardrail*: Standalone operation to validate content against a guardrail without invoking a model
+
+[source]
+--------------------------------------------------------------------------------
+aws-bedrock://label?operation=applyGuardrail&guardrailIdentifier=abc123xyz
+    &guardrailVersion=DRAFT
+--------------------------------------------------------------------------------
+
+==== Guardrails Response Headers
+
+When using guardrails, the following headers may be set in the response:
+
+- `CamelAwsBedrockGuardrailTrace`: Trace information from guardrail evaluation (when trace is enabled)
+- `CamelAwsBedrockGuardrailOutput`: Output content blocks from applyGuardrail
+- `CamelAwsBedrockGuardrailAssessments`: Detailed assessments from applyGuardrail
+- `CamelAwsBedrockGuardrailUsage`: Token usage for guardrail evaluation
+
+==== Creating a Guardrail in AWS
+
+Before using guardrails, you need to create and configure one in the AWS Bedrock console:
+
+1. Navigate to AWS Bedrock Console → Guardrails
+2. Click "Create guardrail"
+3. Configure filters:
+   - *Content filters*: Block harmful content (hate, violence, sexual, etc.)
+   - *Denied topics*: Block specific topics you define
+   - *Word filters*: Block or mask custom words/phrases
+   - *PII filters*: Detect and redact personally identifiable information
+4. Save and note your Guardrail ID (e.g., `abc123xyz`)
+
+==== Supported Models for Guardrails
+
+Guardrails work with all models that support the Converse API:
+
+- Anthropic Claude 3 family (Haiku, Sonnet, Opus)
+- Anthropic Claude 3.5 family (Sonnet v2, Haiku)
+- Amazon Nova family (Micro, Lite, Pro)
+- Meta Llama 3.x models
+- Mistral AI models
+- Cohere Command R models
 
 == Examples
 
@@ -797,6 +973,513 @@ and you can then send to the direct endpoint something like
 --------------------------------------------------------------------------------
 
 where template is a ProducerTemplate.
+
+- invokeTextModelStreaming (Complete Mode): this operation will invoke a model from Bedrock with streaming, accumulating the complete response.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:stream_complete")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=invokeTextModelStreaming&modelId=" + BedrockModels.TITAN_TEXT_EXPRESS_V1.model
+        + "&streamOutputMode=complete")
+    .to("log:response");
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:stream_complete", exchange -> {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode rootNode = mapper.createObjectNode();
+            rootNode.put("inputText", "Write a short poem about Apache Camel.");
+
+            ArrayNode stopSequences = mapper.createArrayNode();
+            stopSequences.add("User:");
+            ObjectNode childNode = mapper.createObjectNode();
+            childNode.put("maxTokenCount", 512);
+            childNode.put("stopSequences", stopSequences);
+            childNode.put("temperature", 0).put("topP", 1);
+
+            rootNode.put("textGenerationConfig", childNode);
+            exchange.getMessage().setBody(mapper.writer().writeValueAsString(rootNode));
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_CONTENT_TYPE, "application/json");
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_ACCEPT_CONTENT_TYPE, "application/json");
+        });
+
+        // Get the complete response
+        String response = result.getMessage().getBody(String.class);
+
+        // Get streaming metadata
+        Integer tokenCount = result.getMessage().getHeader(BedrockConstants.STREAMING_TOKEN_COUNT, Integer.class);
+        String completionReason = result.getMessage().getHeader(BedrockConstants.STREAMING_COMPLETION_REASON, String.class);
+        Integer chunkCount = result.getMessage().getHeader(BedrockConstants.STREAMING_CHUNK_COUNT, Integer.class);
+--------------------------------------------------------------------------------
+
+- invokeTextModelStreaming (Chunks Mode): this operation will invoke a model from Bedrock with streaming, emitting individual chunks.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:stream_chunks")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=invokeTextModelStreaming&modelId=" + BedrockModels.ANTROPHIC_CLAUDE_V35_2.model
+        + "&streamOutputMode=chunks")
+    .split(body())
+        .to("websocket:chat-output");  // Send each chunk to websocket
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:stream_chunks", exchange -> {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode rootNode = mapper.createObjectNode();
+
+            ArrayNode messages = mapper.createArrayNode();
+            ObjectNode message = mapper.createObjectNode();
+            message.put("role", "user");
+
+            ArrayNode content = mapper.createArrayNode();
+            ObjectNode contentBlock = mapper.createObjectNode();
+            contentBlock.put("type", "text");
+            contentBlock.put("text", "Explain Apache Camel in one sentence.");
+            content.add(contentBlock);
+
+            message.put("content", content);
+            messages.add(message);
+
+            rootNode.put("messages", messages);
+            rootNode.put("max_tokens", 200);
+            rootNode.put("anthropic_version", "bedrock-2023-05-31");
+
+            exchange.getMessage().setBody(mapper.writer().writeValueAsString(rootNode));
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_CONTENT_TYPE, "application/json");
+            exchange.getMessage().setHeader(BedrockConstants.MODEL_ACCEPT_CONTENT_TYPE, "application/json");
+        });
+
+        // Get the list of chunks
+        List<String> chunks = result.getMessage().getBody(List.class);
+
+        // Process each chunk
+        for (String chunk : chunks) {
+            System.out.println("Chunk: " + chunk);
+        }
+--------------------------------------------------------------------------------
+
+- converse: this operation uses the unified Converse API for model-agnostic conversations.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:converse")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=converse&modelId=" + BedrockModels.ANTROPHIC_CLAUDE_V3.model)
+    .to("log:response");
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:converse", exchange -> {
+            // Create a conversation message
+            List<software.amazon.awssdk.services.bedrockruntime.model.Message> messages = new ArrayList<>();
+            messages.add(software.amazon.awssdk.services.bedrockruntime.model.Message.builder()
+                    .role(software.amazon.awssdk.services.bedrockruntime.model.ConversationRole.USER)
+                    .content(software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
+                            .fromText("What is Apache Camel and what are its main features?"))
+                    .build());
+
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_MESSAGES, messages);
+
+            // Optional: Add inference configuration
+            software.amazon.awssdk.services.bedrockruntime.model.InferenceConfiguration inferenceConfig
+                    = software.amazon.awssdk.services.bedrockruntime.model.InferenceConfiguration.builder()
+                            .maxTokens(500)
+                            .temperature(0.7f)
+                            .build();
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_INFERENCE_CONFIG, inferenceConfig);
+
+            // Optional: Add system prompt
+            List<software.amazon.awssdk.services.bedrockruntime.model.SystemContentBlock> systemPrompt = new ArrayList<>();
+            systemPrompt.add(software.amazon.awssdk.services.bedrockruntime.model.SystemContentBlock
+                    .fromText("You are a helpful assistant that explains software concepts clearly and concisely."));
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_SYSTEM, systemPrompt);
+        });
+
+        // Get the response text
+        String response = result.getMessage().getBody(String.class);
+
+        // Get metadata from headers
+        String stopReason = result.getMessage().getHeader(BedrockConstants.CONVERSE_STOP_REASON, String.class);
+        software.amazon.awssdk.services.bedrockruntime.model.TokenUsage usage
+                = result.getMessage().getHeader(BedrockConstants.CONVERSE_USAGE,
+                        software.amazon.awssdk.services.bedrockruntime.model.TokenUsage.class);
+
+        System.out.println("Response: " + response);
+        System.out.println("Stop reason: " + stopReason);
+        System.out.println("Input tokens: " + usage.inputTokens());
+        System.out.println("Output tokens: " + usage.outputTokens());
+--------------------------------------------------------------------------------
+
+- converseStream (Complete Mode): this operation uses the Converse API with streaming, accumulating the complete response.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:converse_stream")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=converseStream&modelId=" + BedrockModels.ANTROPHIC_CLAUDE_V3.model)
+    .to("log:response");
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:converse_stream", exchange -> {
+            // Create a conversation message
+            List<software.amazon.awssdk.services.bedrockruntime.model.Message> messages = new ArrayList<>();
+            messages.add(software.amazon.awssdk.services.bedrockruntime.model.Message.builder()
+                    .role(software.amazon.awssdk.services.bedrockruntime.model.ConversationRole.USER)
+                    .content(software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
+                            .fromText("Explain the Enterprise Integration Patterns in three sentences."))
+                    .build());
+
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_MESSAGES, messages);
+            exchange.getMessage().setHeader(BedrockConstants.STREAM_OUTPUT_MODE, "complete");
+
+            // Optional: Add inference configuration
+            software.amazon.awssdk.services.bedrockruntime.model.InferenceConfiguration inferenceConfig
+                    = software.amazon.awssdk.services.bedrockruntime.model.InferenceConfiguration.builder()
+                            .maxTokens(300)
+                            .temperature(0.5f)
+                            .build();
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_INFERENCE_CONFIG, inferenceConfig);
+        });
+
+        // Get the complete streamed response
+        String response = result.getMessage().getBody(String.class);
+        Integer chunkCount = result.getMessage().getHeader(BedrockConstants.STREAMING_CHUNK_COUNT, Integer.class);
+
+        System.out.println("Response: " + response);
+        System.out.println("Received " + chunkCount + " chunks");
+--------------------------------------------------------------------------------
+
+- converseStream (Chunks Mode): this operation uses the Converse API with streaming, emitting individual chunks.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:converse_stream_chunks")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=converseStream&modelId=" + BedrockModels.ANTROPHIC_CLAUDE_V3.model)
+    .split(body())
+        .to("websocket:chat-output");  // Send each chunk to websocket
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:converse_stream_chunks", exchange -> {
+            // Create a conversation message
+            List<software.amazon.awssdk.services.bedrockruntime.model.Message> messages = new ArrayList<>();
+            messages.add(software.amazon.awssdk.services.bedrockruntime.model.Message.builder()
+                    .role(software.amazon.awssdk.services.bedrockruntime.model.ConversationRole.USER)
+                    .content(software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
+                            .fromText("Write a haiku about software integration."))
+                    .build());
+
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_MESSAGES, messages);
+            exchange.getMessage().setHeader(BedrockConstants.STREAM_OUTPUT_MODE, "chunks");
+        });
+
+        // Get the list of chunks
+        List<String> chunks = result.getMessage().getBody(List.class);
+
+        // Process each chunk as it was received
+        for (String chunk : chunks) {
+            System.out.println("Chunk: " + chunk);
+        }
+--------------------------------------------------------------------------------
+
+- Multi-turn Conversation with Converse API: demonstrates maintaining conversation history.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:conversation")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=converse&modelId=" + BedrockModels.ANTROPHIC_CLAUDE_V3.model)
+    .to("log:response");
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        // Maintain conversation history
+        List<software.amazon.awssdk.services.bedrockruntime.model.Message> conversationHistory = new ArrayList<>();
+
+        // First turn
+        conversationHistory.add(software.amazon.awssdk.services.bedrockruntime.model.Message.builder()
+                .role(software.amazon.awssdk.services.bedrockruntime.model.ConversationRole.USER)
+                .content(software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
+                        .fromText("What is Apache Camel?"))
+                .build());
+
+        Exchange result1 = template.send("direct:conversation", exchange -> {
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_MESSAGES,
+                    new ArrayList<>(conversationHistory));
+        });
+
+        // Add assistant's response to history
+        software.amazon.awssdk.services.bedrockruntime.model.Message assistantMessage
+                = result1.getMessage().getHeader(BedrockConstants.CONVERSE_OUTPUT_MESSAGE,
+                        software.amazon.awssdk.services.bedrockruntime.model.Message.class);
+        conversationHistory.add(assistantMessage);
+
+        // Second turn - follow-up question
+        conversationHistory.add(software.amazon.awssdk.services.bedrockruntime.model.Message.builder()
+                .role(software.amazon.awssdk.services.bedrockruntime.model.ConversationRole.USER)
+                .content(software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
+                        .fromText("Can you give me a simple example?"))
+                .build());
+
+        Exchange result2 = template.send("direct:conversation", exchange -> {
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_MESSAGES,
+                    new ArrayList<>(conversationHistory));
+        });
+
+        String followUpResponse = result2.getMessage().getBody(String.class);
+        System.out.println("Follow-up response: " + followUpResponse);
+--------------------------------------------------------------------------------
+
+=== Guardrails Examples
+
+- Converse with Guardrails (Endpoint Configuration): Apply guardrails configured at the endpoint level.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:converse_with_guardrails")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=converse&modelId=" + BedrockModels.ANTROPHIC_CLAUDE_V3.model
+        + "&guardrailIdentifier=abc123xyz&guardrailVersion=DRAFT&guardrailTrace=true")
+    .to("log:response");
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:converse_with_guardrails", exchange -> {
+            // Create a conversation message
+            List<software.amazon.awssdk.services.bedrockruntime.model.Message> messages = new ArrayList<>();
+            messages.add(software.amazon.awssdk.services.bedrockruntime.model.Message.builder()
+                    .role(software.amazon.awssdk.services.bedrockruntime.model.ConversationRole.USER)
+                    .content(software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
+                            .fromText("Tell me about Paris"))
+                    .build());
+
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_MESSAGES, messages);
+
+            // Optional: Add inference configuration
+            software.amazon.awssdk.services.bedrockruntime.model.InferenceConfiguration inferenceConfig
+                    = software.amazon.awssdk.services.bedrockruntime.model.InferenceConfiguration.builder()
+                            .maxTokens(200)
+                            .temperature(0.7f)
+                            .build();
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_INFERENCE_CONFIG, inferenceConfig);
+        });
+
+        // Get the response
+        String response = result.getMessage().getBody(String.class);
+
+        // Check if guardrail trace is available
+        software.amazon.awssdk.services.bedrockruntime.model.GuardrailTrace trace
+                = result.getMessage().getHeader(BedrockConstants.GUARDRAIL_TRACE,
+                        software.amazon.awssdk.services.bedrockruntime.model.GuardrailTrace.class);
+
+        if (trace != null) {
+            System.out.println("Guardrail evaluation: " + trace);
+        }
+--------------------------------------------------------------------------------
+
+- Converse with Guardrails (Header Configuration): Apply guardrails configured per-message via headers.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:converse_dynamic_guardrails")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=converse&modelId=" + BedrockModels.ANTROPHIC_CLAUDE_V3.model)
+    .to("log:response");
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:converse_dynamic_guardrails", exchange -> {
+            // Create a conversation message
+            List<software.amazon.awssdk.services.bedrockruntime.model.Message> messages = new ArrayList<>();
+            messages.add(software.amazon.awssdk.services.bedrockruntime.model.Message.builder()
+                    .role(software.amazon.awssdk.services.bedrockruntime.model.ConversationRole.USER)
+                    .content(software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
+                            .fromText("What is the capital of France?"))
+                    .build());
+
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_MESSAGES, messages);
+
+            // Configure guardrail via header (can be dynamic per message)
+            software.amazon.awssdk.services.bedrockruntime.model.GuardrailConfiguration guardrailConfig
+                    = software.amazon.awssdk.services.bedrockruntime.model.GuardrailConfiguration.builder()
+                            .guardrailIdentifier("abc123xyz")  // Can be determined at runtime
+                            .guardrailVersion("DRAFT")
+                            .trace(software.amazon.awssdk.services.bedrockruntime.model.GuardrailTrace.ENABLED)
+                            .build();
+            exchange.getMessage().setHeader(BedrockConstants.GUARDRAIL_CONFIG, guardrailConfig);
+        });
+
+        String response = result.getMessage().getBody(String.class);
+        System.out.println("Protected response: " + response);
+--------------------------------------------------------------------------------
+
+- Converse Stream with Guardrails: Apply guardrails to streaming conversations.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:stream_with_guardrails")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=converseStream&modelId=" + BedrockModels.ANTROPHIC_CLAUDE_V3.model
+        + "&guardrailIdentifier=abc123xyz&guardrailVersion=DRAFT")
+    .to("log:response");
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:stream_with_guardrails", exchange -> {
+            List<software.amazon.awssdk.services.bedrockruntime.model.Message> messages = new ArrayList<>();
+            messages.add(software.amazon.awssdk.services.bedrockruntime.model.Message.builder()
+                    .role(software.amazon.awssdk.services.bedrockruntime.model.ConversationRole.USER)
+                    .content(software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
+                            .fromText("Tell me a story about space exploration"))
+                    .build());
+
+            exchange.getMessage().setHeader(BedrockConstants.CONVERSE_MESSAGES, messages);
+            exchange.getMessage().setHeader(BedrockConstants.STREAM_OUTPUT_MODE, "complete");
+        });
+
+        String streamedResponse = result.getMessage().getBody(String.class);
+        System.out.println("Guardrail-protected stream response: " + streamedResponse);
+--------------------------------------------------------------------------------
+
+- Apply Guardrail: Validate content against a guardrail without invoking a model.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:validate_content")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=applyGuardrail&guardrailIdentifier=abc123xyz&guardrailVersion=DRAFT")
+    .to("log:validation_result");
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:validate_content", exchange -> {
+            // Create content blocks to check
+            List<software.amazon.awssdk.services.bedrockruntime.model.GuardrailContentBlock> content
+                    = new ArrayList<>();
+            content.add(software.amazon.awssdk.services.bedrockruntime.model.GuardrailContentBlock.builder()
+                    .text(software.amazon.awssdk.services.bedrockruntime.model.GuardrailTextBlock.builder()
+                            .text("This is the content I want to validate before sending to the model.")
+                            .build())
+                    .build());
+
+            exchange.getMessage().setHeader(BedrockConstants.GUARDRAIL_CONTENT, content);
+            exchange.getMessage().setHeader(BedrockConstants.GUARDRAIL_SOURCE, "INPUT");
+        });
+
+        // Get the action result (GUARDRAIL_INTERVENED or NONE)
+        String action = result.getMessage().getBody(String.class);
+
+        if ("GUARDRAIL_INTERVENED".equals(action)) {
+            System.out.println("Content was blocked by guardrail!");
+
+            // Get the assessments to see why it was blocked
+            List<?> assessments = result.getMessage().getHeader(BedrockConstants.GUARDRAIL_ASSESSMENTS, List.class);
+            System.out.println("Reasons: " + assessments);
+
+            // Get the filtered output
+            List<?> outputs = result.getMessage().getHeader(BedrockConstants.GUARDRAIL_OUTPUT, List.class);
+            System.out.println("Filtered content: " + outputs);
+        } else {
+            System.out.println("Content passed guardrail validation");
+        }
+--------------------------------------------------------------------------------
+
+- Apply Guardrail with POJO Request: Use the SDK request object directly for maximum control.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:validate_pojo")
+    .to("aws-bedrock://test?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=applyGuardrail&pojoRequest=true")
+    .to("log:validation_result");
+--------------------------------------------------------------------------------
+
+and you can then send to the direct endpoint something like
+
+[source,java]
+--------------------------------------------------------------------------------
+        final Exchange result = template.send("direct:validate_pojo", exchange -> {
+            // Create content blocks
+            List<software.amazon.awssdk.services.bedrockruntime.model.GuardrailContentBlock> content
+                    = new ArrayList<>();
+            content.add(software.amazon.awssdk.services.bedrockruntime.model.GuardrailContentBlock.builder()
+                    .text(software.amazon.awssdk.services.bedrockruntime.model.GuardrailTextBlock.builder()
+                            .text("User-generated content to validate")
+                            .build())
+                    .build());
+
+            // Build the complete request object
+            software.amazon.awssdk.services.bedrockruntime.model.ApplyGuardrailRequest request
+                    = software.amazon.awssdk.services.bedrockruntime.model.ApplyGuardrailRequest.builder()
+                            .guardrailIdentifier("abc123xyz")
+                            .guardrailVersion("DRAFT")
+                            .source(software.amazon.awssdk.services.bedrockruntime.model.GuardrailContentSource.INPUT)
+                            .content(content)
+                            .build();
+
+            exchange.getMessage().setBody(request);
+        });
+
+        String action = result.getMessage().getBody(String.class);
+        System.out.println("Validation result: " + action);
+--------------------------------------------------------------------------------
+
+- Content Moderation Pipeline: Combine guardrails with model invocation in a pipeline.
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:moderated_conversation")
+    // First, validate input with guardrail
+    .to("aws-bedrock://validate?useDefaultCredentialsProvider=true&region=us-east-1"
+        + "&operation=applyGuardrail&guardrailIdentifier=abc123xyz")
+    .choice()
+        .when(simple("${body} == 'GUARDRAIL_INTERVENED'"))
+            .log("Input blocked by guardrail")
+            .setBody(constant("Sorry, I cannot process this request."))
+        .otherwise()
+            // Input passed, proceed with model invocation
+            .to("aws-bedrock://converse?useDefaultCredentialsProvider=true&region=us-east-1"
+                + "&operation=converse&modelId=" + BedrockModels.ANTROPHIC_CLAUDE_V3.model
+                + "&guardrailIdentifier=abc123xyz")
+            .log("Model response: ${body}")
+    .end()
+    .to("mock:result");
+--------------------------------------------------------------------------------
 
 == Dependencies
 

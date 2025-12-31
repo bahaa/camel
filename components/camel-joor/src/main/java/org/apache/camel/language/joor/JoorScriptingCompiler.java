@@ -92,7 +92,7 @@ public class JoorScriptingCompiler extends ServiceSupport implements StaticServi
             // use work dir for classloader as it writes compiled classes to disk
             CompileStrategy cs = context.getCamelContextExtension().getContextPlugin(CompileStrategy.class);
             if (cs != null && cs.getWorkDir() != null) {
-                classLoader.setCompileDirectory(cs.getWorkDir());
+                classLoader.setCompileDirectory(cs.getWorkDir() + "/joor");
             }
         }
     }
@@ -100,7 +100,7 @@ public class JoorScriptingCompiler extends ServiceSupport implements StaticServi
     @Override
     protected void doStop() throws Exception {
         if (counter > 0) {
-            LOG.info("Java language compiled {} scripts in {} millis", counter, taken);
+            LOG.debug("Java language compiled {} scripts in {} millis", counter, taken);
         }
     }
 

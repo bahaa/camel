@@ -51,17 +51,32 @@ public interface DaprComponentBuilderFactory {
     interface DaprComponentBuilder extends ComponentBuilder<DaprComponent> {
     
         /**
+         * The Dapr Client.
+         * 
+         * The option is a: &lt;code&gt;io.dapr.client.DaprClient&lt;/code&gt;
+         * type.
+         * 
+         * Group: common
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder client(io.dapr.client.DaprClient client) {
+            doSetProperty("client", client);
+            return this;
+        }
+    
+        /**
          * List of keys for configuration operation.
          * 
-         * The option is a:
-         * &lt;code&gt;java.util.List&amp;lt;java.lang.String&amp;gt;&lt;/code&gt; type.
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
          * Group: common
          * 
          * @param configKeys the value to set
          * @return the dsl builder
          */
-        default DaprComponentBuilder configKeys(java.util.List<java.lang.String> configKeys) {
+        default DaprComponentBuilder configKeys(java.lang.String configKeys) {
             doSetProperty("configKeys", configKeys);
             return this;
         }
@@ -110,6 +125,22 @@ public interface DaprComponentBuilderFactory {
          */
         default DaprComponentBuilder contentType(java.lang.String contentType) {
             doSetProperty("contentType", contentType);
+            return this;
+        }
+    
+        /**
+         * The Dapr Preview Client.
+         * 
+         * The option is a:
+         * &lt;code&gt;io.dapr.client.DaprPreviewClient&lt;/code&gt; type.
+         * 
+         * Group: common
+         * 
+         * @param previewClient the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder previewClient(io.dapr.client.DaprPreviewClient previewClient) {
+            doSetProperty("previewClient", previewClient);
             return this;
         }
     
@@ -171,22 +202,6 @@ public interface DaprComponentBuilderFactory {
          */
         default DaprComponentBuilder bridgeErrorHandler(boolean bridgeErrorHandler) {
             doSetProperty("bridgeErrorHandler", bridgeErrorHandler);
-            return this;
-        }
-    
-        /**
-         * The client to consume messages by the consumer.
-         * 
-         * The option is a:
-         * &lt;code&gt;io.dapr.client.DaprPreviewClient&lt;/code&gt; type.
-         * 
-         * Group: consumer
-         * 
-         * @param previewClient the value to set
-         * @return the dsl builder
-         */
-        default DaprComponentBuilder previewClient(io.dapr.client.DaprPreviewClient previewClient) {
-            doSetProperty("previewClient", previewClient);
             return this;
         }
     
@@ -269,6 +284,54 @@ public interface DaprComponentBuilderFactory {
         }
     
         /**
+         * The name of the event. Event names are case-insensitive.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param eventName the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder eventName(java.lang.String eventName) {
+            doSetProperty("eventName", eventName);
+            return this;
+        }
+    
+        /**
+         * The expiry time in seconds for the lock.
+         * 
+         * The option is a: &lt;code&gt;java.lang.Integer&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param expiryInSeconds the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder expiryInSeconds(java.lang.Integer expiryInSeconds) {
+            doSetProperty("expiryInSeconds", expiryInSeconds);
+            return this;
+        }
+    
+        
+        /**
+         * Set true to fetch the workflow instance's inputs, outputs, and custom
+         * status, or false to omit.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: producer
+         * 
+         * @param getWorkflowIO the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder getWorkflowIO(boolean getWorkflowIO) {
+            doSetProperty("getWorkflowIO", getWorkflowIO);
+            return this;
+        }
+    
+        /**
          * HTTP method to use when invoking the service. Accepts verbs like GET,
          * POST, PUT, DELETE, etc. Creates a minimal HttpExtension with no
          * headers or query params. Takes precedence over verb.
@@ -327,6 +390,40 @@ public interface DaprComponentBuilderFactory {
             return this;
         }
     
+        
+        /**
+         * The lock operation to perform on the store. Required for
+         * DaprOperation.lock operation.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.apache.camel.component.dapr.LockOperation&lt;/code&gt; type.
+         * 
+         * Default: tryLock
+         * Group: producer
+         * 
+         * @param lockOperation the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder lockOperation(org.apache.camel.component.dapr.LockOperation lockOperation) {
+            doSetProperty("lockOperation", lockOperation);
+            return this;
+        }
+    
+        /**
+         * The lock owner identifier for the lock.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param lockOwner the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder lockOwner(java.lang.String lockOwner) {
+            doSetProperty("lockOwner", lockOwner);
+            return this;
+        }
+    
         /**
          * The name of the method or route to invoke on the target service.
          * 
@@ -339,6 +436,36 @@ public interface DaprComponentBuilderFactory {
          */
         default DaprComponentBuilder methodToInvoke(java.lang.String methodToInvoke) {
             doSetProperty("methodToInvoke", methodToInvoke);
+            return this;
+        }
+    
+        /**
+         * Reason for suspending/resuming the workflow instance.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param reason the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder reason(java.lang.String reason) {
+            doSetProperty("reason", reason);
+            return this;
+        }
+    
+        /**
+         * The resource Id for the lock.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param resourceId the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder resourceId(java.lang.String resourceId) {
+            doSetProperty("resourceId", resourceId);
             return this;
         }
     
@@ -409,6 +536,37 @@ public interface DaprComponentBuilderFactory {
             return this;
         }
     
+        /**
+         * The lock store name.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param storeName the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder storeName(java.lang.String storeName) {
+            doSetProperty("storeName", storeName);
+            return this;
+        }
+    
+        /**
+         * The amount of time to wait for the workflow instance to
+         * start/complete.
+         * 
+         * The option is a: &lt;code&gt;java.time.Duration&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param timeout the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder timeout(java.time.Duration timeout) {
+            doSetProperty("timeout", timeout);
+            return this;
+        }
+    
         
         /**
          * The HTTP verb to use for invoking the method.
@@ -423,6 +581,102 @@ public interface DaprComponentBuilderFactory {
          */
         default DaprComponentBuilder verb(java.lang.String verb) {
             doSetProperty("verb", verb);
+            return this;
+        }
+    
+        /**
+         * The FQCN of the class which implements io.dapr.workflows.Workflow.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param workflowClass the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder workflowClass(java.lang.String workflowClass) {
+            doSetProperty("workflowClass", workflowClass);
+            return this;
+        }
+    
+        /**
+         * The Dapr Workflow Client.
+         * 
+         * The option is a:
+         * &lt;code&gt;io.dapr.workflows.client.DaprWorkflowClient&lt;/code&gt;
+         * type.
+         * 
+         * Group: producer
+         * 
+         * @param workflowClient the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder workflowClient(io.dapr.workflows.client.DaprWorkflowClient workflowClient) {
+            doSetProperty("workflowClient", workflowClient);
+            return this;
+        }
+    
+        /**
+         * The instance ID of the workflow.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param workflowInstanceId the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder workflowInstanceId(java.lang.String workflowInstanceId) {
+            doSetProperty("workflowInstanceId", workflowInstanceId);
+            return this;
+        }
+    
+        
+        /**
+         * The workflow operation to perform. Required for
+         * DaprOperation.workflow operation.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.apache.camel.component.dapr.WorkflowOperation&lt;/code&gt; type.
+         * 
+         * Default: scheduleNew
+         * Group: producer
+         * 
+         * @param workflowOperation the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder workflowOperation(org.apache.camel.component.dapr.WorkflowOperation workflowOperation) {
+            doSetProperty("workflowOperation", workflowOperation);
+            return this;
+        }
+    
+        /**
+         * The start time of the new workflow.
+         * 
+         * The option is a: &lt;code&gt;java.time.Instant&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param workflowStartTime the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder workflowStartTime(java.time.Instant workflowStartTime) {
+            doSetProperty("workflowStartTime", workflowStartTime);
+            return this;
+        }
+    
+        /**
+         * The version of the workflow to start.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: producer
+         * 
+         * @param workflowVersion the value to set
+         * @return the dsl builder
+         */
+        default DaprComponentBuilder workflowVersion(java.lang.String workflowVersion) {
+            doSetProperty("workflowVersion", workflowVersion);
             return this;
         }
     
@@ -468,28 +722,44 @@ public interface DaprComponentBuilderFactory {
                 String name,
                 Object value) {
             switch (name) {
-            case "configKeys": getOrCreateConfiguration((DaprComponent) component).setConfigKeys((java.util.List) value); return true;
+            case "client": getOrCreateConfiguration((DaprComponent) component).setClient((io.dapr.client.DaprClient) value); return true;
+            case "configKeys": getOrCreateConfiguration((DaprComponent) component).setConfigKeys((java.lang.String) value); return true;
             case "configStore": getOrCreateConfiguration((DaprComponent) component).setConfigStore((java.lang.String) value); return true;
             case "configuration": ((DaprComponent) component).setConfiguration((org.apache.camel.component.dapr.DaprConfiguration) value); return true;
             case "contentType": getOrCreateConfiguration((DaprComponent) component).setContentType((java.lang.String) value); return true;
+            case "previewClient": getOrCreateConfiguration((DaprComponent) component).setPreviewClient((io.dapr.client.DaprPreviewClient) value); return true;
             case "pubSubName": getOrCreateConfiguration((DaprComponent) component).setPubSubName((java.lang.String) value); return true;
             case "topic": getOrCreateConfiguration((DaprComponent) component).setTopic((java.lang.String) value); return true;
             case "bridgeErrorHandler": ((DaprComponent) component).setBridgeErrorHandler((boolean) value); return true;
-            case "previewClient": getOrCreateConfiguration((DaprComponent) component).setPreviewClient((io.dapr.client.DaprPreviewClient) value); return true;
             case "bindingName": getOrCreateConfiguration((DaprComponent) component).setBindingName((java.lang.String) value); return true;
             case "bindingOperation": getOrCreateConfiguration((DaprComponent) component).setBindingOperation((java.lang.String) value); return true;
             case "concurrency": getOrCreateConfiguration((DaprComponent) component).setConcurrency((io.dapr.client.domain.StateOptions.Concurrency) value); return true;
             case "consistency": getOrCreateConfiguration((DaprComponent) component).setConsistency((io.dapr.client.domain.StateOptions.Consistency) value); return true;
             case "eTag": getOrCreateConfiguration((DaprComponent) component).setETag((java.lang.String) value); return true;
+            case "eventName": getOrCreateConfiguration((DaprComponent) component).setEventName((java.lang.String) value); return true;
+            case "expiryInSeconds": getOrCreateConfiguration((DaprComponent) component).setExpiryInSeconds((java.lang.Integer) value); return true;
+            case "getWorkflowIO": getOrCreateConfiguration((DaprComponent) component).setGetWorkflowIO((boolean) value); return true;
             case "httpExtension": getOrCreateConfiguration((DaprComponent) component).setHttpExtension((io.dapr.client.domain.HttpExtension) value); return true;
             case "key": getOrCreateConfiguration((DaprComponent) component).setKey((java.lang.String) value); return true;
             case "lazyStartProducer": ((DaprComponent) component).setLazyStartProducer((boolean) value); return true;
+            case "lockOperation": getOrCreateConfiguration((DaprComponent) component).setLockOperation((org.apache.camel.component.dapr.LockOperation) value); return true;
+            case "lockOwner": getOrCreateConfiguration((DaprComponent) component).setLockOwner((java.lang.String) value); return true;
             case "methodToInvoke": getOrCreateConfiguration((DaprComponent) component).setMethodToInvoke((java.lang.String) value); return true;
+            case "reason": getOrCreateConfiguration((DaprComponent) component).setReason((java.lang.String) value); return true;
+            case "resourceId": getOrCreateConfiguration((DaprComponent) component).setResourceId((java.lang.String) value); return true;
             case "secretStore": getOrCreateConfiguration((DaprComponent) component).setSecretStore((java.lang.String) value); return true;
             case "serviceToInvoke": getOrCreateConfiguration((DaprComponent) component).setServiceToInvoke((java.lang.String) value); return true;
             case "stateOperation": getOrCreateConfiguration((DaprComponent) component).setStateOperation((org.apache.camel.component.dapr.StateOperation) value); return true;
             case "stateStore": getOrCreateConfiguration((DaprComponent) component).setStateStore((java.lang.String) value); return true;
+            case "storeName": getOrCreateConfiguration((DaprComponent) component).setStoreName((java.lang.String) value); return true;
+            case "timeout": getOrCreateConfiguration((DaprComponent) component).setTimeout((java.time.Duration) value); return true;
             case "verb": getOrCreateConfiguration((DaprComponent) component).setVerb((java.lang.String) value); return true;
+            case "workflowClass": getOrCreateConfiguration((DaprComponent) component).setWorkflowClass((java.lang.String) value); return true;
+            case "workflowClient": getOrCreateConfiguration((DaprComponent) component).setWorkflowClient((io.dapr.workflows.client.DaprWorkflowClient) value); return true;
+            case "workflowInstanceId": getOrCreateConfiguration((DaprComponent) component).setWorkflowInstanceId((java.lang.String) value); return true;
+            case "workflowOperation": getOrCreateConfiguration((DaprComponent) component).setWorkflowOperation((org.apache.camel.component.dapr.WorkflowOperation) value); return true;
+            case "workflowStartTime": getOrCreateConfiguration((DaprComponent) component).setWorkflowStartTime((java.time.Instant) value); return true;
+            case "workflowVersion": getOrCreateConfiguration((DaprComponent) component).setWorkflowVersion((java.lang.String) value); return true;
             case "autowiredEnabled": ((DaprComponent) component).setAutowiredEnabled((boolean) value); return true;
             default: return false;
             }

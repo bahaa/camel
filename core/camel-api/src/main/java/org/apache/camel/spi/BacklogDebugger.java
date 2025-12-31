@@ -81,14 +81,19 @@ public interface BacklogDebugger extends StatefulService {
     void setLoggingLevel(String level);
 
     /**
-     * To enable the debugger
+     * To enable and start the debugger
      */
     void enableDebugger();
 
     /**
-     * To disable the debugger
+     * To disable and stop the debugger
      */
     void disableDebugger();
+
+    /**
+     * To configure whether the debugger should be enabled
+     */
+    void setEnabled(boolean enabled);
 
     /**
      * Whether the debugger is enabled
@@ -287,9 +292,19 @@ public interface BacklogDebugger extends StatefulService {
     void stepOver();
 
     /**
+     * To skip over (does not call the node) to next node when in single step mode.
+     */
+    void skipOver();
+
+    /**
      * Gets node ids for all current suspended exchanges at breakpoints
      */
     Set<String> getSuspendedBreakpointNodeIds();
+
+    /**
+     * Gets the exchange ids for all current suspended exchanges
+     */
+    Set<String> getSuspendedExchangeIds();
 
     /**
      * Gets the exchanged suspended at the given breakpoint id or null if there is none at that id.

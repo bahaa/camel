@@ -110,46 +110,55 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
     protected CookieStore cookieStore;
 
     // timeout
-    @Metadata(label = "timeout", defaultValue = "3 minutes",
-              description = "Returns the connection lease request timeout used when requesting"
+    @Metadata(label = "timeout", defaultValue = "" + 3 * 60 * 1000,
+              description = "Returns the connection lease request timeout (in millis) used when requesting"
                             + " a connection from the connection manager."
-                            + " A timeout value of zero is interpreted as a disabled timeout.",
-              javaType = "org.apache.hc.core5.util.Timeout")
-    protected Timeout connectionRequestTimeout = Timeout.ofMinutes(3);
-    @Metadata(label = "timeout", defaultValue = "3 minutes",
-              description = "Determines the timeout until a new connection is fully established."
-                            + " A timeout value of zero is interpreted as an infinite timeout.",
-              javaType = "org.apache.hc.core5.util.Timeout")
-    protected Timeout connectTimeout = Timeout.ofMinutes(3);
-    @Metadata(label = "timeout", defaultValue = "3 minutes",
-              description = "Determines the default socket timeout value for blocking I/O operations.",
-              javaType = "org.apache.hc.core5.util.Timeout")
-    protected Timeout soTimeout = Timeout.ofMinutes(3);
-    @Metadata(label = "timeout", defaultValue = "0",
-              description = "Determines the timeout until arrival of a response from the opposite"
+                            + " A timeout value of zero is interpreted as a disabled timeout.")
+    protected long connectionRequestTimeout = 3 * 60 * 1000L;
+    @Metadata(label = "timeout", defaultValue = "" + 3 * 60 * 1000,
+              description = "Determines the timeout (in millis) until a new connection is fully established."
+                            + " A timeout value of zero is interpreted as an infinite timeout.")
+    protected long connectTimeout = 3 * 60 * 1000L;
+    @Metadata(label = "timeout", defaultValue = "" + 3 * 60 * 1000,
+              description = "Determines the default socket timeout (in millis) value for blocking I/O operations.")
+    protected long soTimeout = 3 * 60 * 1000L;
+    @Metadata(label = "timeout",
+              description = "Determines the timeout (in millis) until arrival of a response from the opposite"
                             + " endpoint. A timeout value of zero is interpreted as an infinite timeout."
                             + " Please note that response timeout may be unsupported by HTTP transports "
-                            + "with message multiplexing.",
-              javaType = "org.apache.hc.core5.util.Timeout")
-    protected Timeout responseTimeout = Timeout.ofMilliseconds(0);
+                            + "with message multiplexing.")
+    protected long responseTimeout;
 
     // proxy
-    @Metadata(label = "producer,proxy", enums = "http,https", description = "Proxy authentication protocol scheme")
+    @Metadata(label = "producer,proxy", description = "Proxy server host")
+    protected String proxyHost;
+    @Metadata(label = "producer,proxy", description = "Proxy server port")
+    protected Integer proxyPort;
+    @Metadata(label = "producer,proxy", description = "Comma-separated list of hosts that should bypass the proxy. "
+                                                      + "Supports wildcards, e.g., localhost,*.example.com,192.168.*.")
+    protected String nonProxyHosts;
+    @Metadata(label = "producer,proxy", enums = "http,https",
+              description = "Proxy server authentication protocol scheme to use")
     protected String proxyAuthScheme;
     @Metadata(label = "producer,proxy", enums = "Basic,Digest,NTLM",
               description = "Proxy authentication method to use (NTLM is deprecated)")
     protected String proxyAuthMethod;
-    @Metadata(label = "producer,proxy", secret = true, description = "Proxy authentication username")
+    @Metadata(label = "producer,proxy", secret = true, description = "Proxy server username")
     protected String proxyAuthUsername;
-    @Metadata(label = "producer,proxy", secret = true, description = "Proxy authentication password")
+    @Metadata(label = "producer,proxy", secret = true, description = "Proxy server password")
     protected String proxyAuthPassword;
-    @Metadata(label = "producer,proxy", description = "Proxy authentication host")
+    @Deprecated
+    @Metadata(label = "producer,proxy", description = "Proxy server host")
     protected String proxyAuthHost;
-    @Metadata(label = "producer,proxy", description = "Proxy authentication port")
+    @Deprecated
+    @Metadata(label = "producer,proxy", description = "Proxy server port")
     protected Integer proxyAuthPort;
-    @Metadata(label = "producer,proxy", description = "Proxy authentication domain to use")
+    @Deprecated
+    @Metadata(label = "producer,proxy", description = "Proxy authentication domain to use with NTLM")
     protected String proxyAuthDomain;
-    @Metadata(label = "producer,proxy", description = "Proxy authentication domain (workstation name) to use with NTML")
+    @Deprecated
+    @Metadata(label = "producer,proxy",
+              description = "Proxy authentication domain (workstation name) to use with NTLM (NTLM is deprecated)")
     protected String proxyAuthNtHost;
 
     // options to the default created http connection manager
@@ -209,6 +218,9 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
     @Metadata(label = "producer",
               description = "To enable logging HTTP request and response. You can use a custom LoggingHttpActivityListener as httpActivityListener to control logging options.")
     protected boolean logHttpActivity;
+    @Metadata(label = "producer,advanced", defaultValue = "true",
+              description = "Whether the Content-Type header should automatic include charset for string based content.")
+    protected boolean contentTypeCharsetEnabled = true;
 
     public HttpComponent() {
     }
@@ -261,7 +273,11 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
                 "oauth2CachedTokensExpirationMarginSeconds",
                 long.class,
                 configDefaults.getOauth2CachedTokensExpirationMarginSeconds());
-
+        boolean useBodyAuthentication = getParameter(
+                parameters,
+                "oauth2BodyAuthentication",
+                boolean.class,
+                configDefaults.isOauth2BodyAuthentication());
         if (clientId != null && clientSecret != null && tokenEndpoint != null) {
             return CompositeHttpConfigurer.combineConfigurers(configurer,
                     new OAuth2ClientConfigurer(
@@ -272,7 +288,8 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
                             scope,
                             cacheTokens,
                             cachedTokensDefaultExpirySeconds,
-                            cachedTokensExpirationMarginSeconds));
+                            cachedTokensExpirationMarginSeconds,
+                            useBodyAuthentication));
         }
         return configurer;
     }
@@ -308,19 +325,21 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
     private HttpClientConfigurer configureHttpProxy(
             Map<String, Object> parameters, HttpClientConfigurer configurer, boolean secure,
             HttpCredentialsHelper credentialsProvider) {
+
+        String nonProxyhosts = getParameter(parameters, "nonProxyHosts", String.class, getNonProxyHosts());
         String proxyAuthScheme = getParameter(parameters, "proxyAuthScheme", String.class, getProxyAuthScheme());
         if (proxyAuthScheme == null) {
             // fallback and use either http or https depending on secure
             proxyAuthScheme = secure ? "https" : "http";
         }
+        // these are old names and are deprecated
         String proxyAuthHost = getParameter(parameters, "proxyAuthHost", String.class, getProxyAuthHost());
         Integer proxyAuthPort = getParameter(parameters, "proxyAuthPort", Integer.class, getProxyAuthPort());
-        // fallback to alternative option name
         if (proxyAuthHost == null) {
-            proxyAuthHost = getParameter(parameters, "proxyHost", String.class);
+            proxyAuthHost = getParameter(parameters, "proxyHost", String.class, getProxyHost());
         }
         if (proxyAuthPort == null) {
-            proxyAuthPort = getParameter(parameters, "proxyPort", Integer.class);
+            proxyAuthPort = getParameter(parameters, "proxyPort", Integer.class, getProxyPort());
         }
 
         if (proxyAuthHost != null && proxyAuthPort != null) {
@@ -336,10 +355,10 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
                         configurer,
                         new ProxyHttpClientConfigurer(
                                 proxyAuthHost, proxyAuthPort, proxyAuthScheme, proxyAuthUsername, proxyAuthPassword,
-                                proxyAuthDomain, proxyAuthNtHost, credentialsProvider));
+                                proxyAuthDomain, proxyAuthNtHost, credentialsProvider, nonProxyhosts));
             } else {
                 return CompositeHttpConfigurer.combineConfigurers(configurer,
-                        new ProxyHttpClientConfigurer(proxyAuthHost, proxyAuthPort, proxyAuthScheme));
+                        new ProxyHttpClientConfigurer(proxyAuthHost, proxyAuthPort, proxyAuthScheme, nonProxyhosts));
             }
         }
 
@@ -353,20 +372,23 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
 
         // timeout values can be configured on both component and endpoint level, where endpoint takes priority
         Timeout valConnectionRequestTimeout
-                = getAndRemoveParameter(parameters, "connectionRequestTimeout", Timeout.class, connectionRequestTimeout);
+                = getAndRemoveParameter(parameters, "connectionRequestTimeout", Timeout.class,
+                        Timeout.ofMilliseconds(connectionRequestTimeout));
         if (!Timeout.ofMinutes(3).equals(valConnectionRequestTimeout)) {
             httpClientOptions.put("connectionRequestTimeout", valConnectionRequestTimeout);
         }
-        Timeout valResponseTimeout = getAndRemoveParameter(parameters, "responseTimeout", Timeout.class, responseTimeout);
+        Timeout valResponseTimeout
+                = getAndRemoveParameter(parameters, "responseTimeout", Timeout.class, Timeout.ofMilliseconds(responseTimeout));
         if (!Timeout.ofMilliseconds(0).equals(valResponseTimeout)) {
             httpClientOptions.put("responseTimeout", valResponseTimeout);
         }
-        Timeout valConnectTimeout = getAndRemoveParameter(parameters, "connectTimeout", Timeout.class, connectTimeout);
+        Timeout valConnectTimeout
+                = getAndRemoveParameter(parameters, "connectTimeout", Timeout.class, Timeout.ofMilliseconds(connectTimeout));
         if (!Timeout.ofMinutes(3).equals(valConnectTimeout)) {
             httpClientOptions.put("connectTimeout", valConnectTimeout);
         }
         final Map<String, Object> httpConnectionOptions = new HashMap<>();
-        Timeout valSoTimeout = getAndRemoveParameter(parameters, "soTimeout", Timeout.class, soTimeout);
+        Timeout valSoTimeout = getAndRemoveParameter(parameters, "soTimeout", Timeout.class, Timeout.ofMilliseconds(soTimeout));
         if (!Timeout.ofMinutes(3).equals(valSoTimeout)) {
             httpConnectionOptions.put("soTimeout", valSoTimeout);
         }
@@ -438,10 +460,10 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
                 = createConnectionManager(parameters, sslContextParameters, httpConnectionOptions);
         final HttpClientBuilder clientBuilder = createHttpClientBuilder(uri, parameters, httpClientOptions);
         HttpEndpoint endpoint = new HttpEndpoint(endpointUriString, this, clientBuilder, localConnectionManager, configurer);
-        endpoint.setResponseTimeout(valResponseTimeout);
-        endpoint.setSoTimeout(valSoTimeout);
-        endpoint.setConnectTimeout(valConnectTimeout);
-        endpoint.setConnectionRequestTimeout(valConnectionRequestTimeout);
+        endpoint.setResponseTimeout(valResponseTimeout.toMilliseconds());
+        endpoint.setSoTimeout(valSoTimeout.toMilliseconds());
+        endpoint.setConnectTimeout(valConnectTimeout.toMilliseconds());
+        endpoint.setConnectionRequestTimeout(valConnectionRequestTimeout.toMilliseconds());
         endpoint.setCopyHeaders(copyHeaders);
         endpoint.setSkipControlHeaders(skipControlHeaders);
         endpoint.setSkipRequestHeaders(skipRequestHeaders);
@@ -450,6 +472,8 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         endpoint.setMuteException(muteException);
         endpoint.setHttpActivityListener(httpActivityListener);
         endpoint.setLogHttpActivity(logHttpActivity);
+        endpoint.setContentTypeCharsetEnabled(contentTypeCharsetEnabled);
+        endpoint.setUseSystemProperties(this.useSystemProperties);
 
         // configure the endpoint with the common configuration from the component
         if (getHttpConfiguration() != null) {
@@ -813,7 +837,7 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         this.cookieStore = cookieStore;
     }
 
-    public Timeout getConnectionRequestTimeout() {
+    public long getConnectionRequestTimeout() {
         return connectionRequestTimeout;
     }
 
@@ -826,11 +850,11 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
      * Default: 3 minutes
      * </p>
      */
-    public void setConnectionRequestTimeout(Timeout connectionRequestTimeout) {
+    public void setConnectionRequestTimeout(long connectionRequestTimeout) {
         this.connectionRequestTimeout = connectionRequestTimeout;
     }
 
-    public Timeout getConnectTimeout() {
+    public long getConnectTimeout() {
         return connectTimeout;
     }
 
@@ -844,11 +868,11 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
      * Default: 3 minutes
      * </p>
      */
-    public void setConnectTimeout(Timeout connectTimeout) {
+    public void setConnectTimeout(long connectTimeout) {
         this.connectTimeout = connectTimeout;
     }
 
-    public Timeout getSoTimeout() {
+    public long getSoTimeout() {
         return soTimeout;
     }
 
@@ -858,11 +882,11 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
      * Default: 3 minutes
      * </p>
      */
-    public void setSoTimeout(Timeout soTimeout) {
+    public void setSoTimeout(long soTimeout) {
         this.soTimeout = soTimeout;
     }
 
-    public Timeout getResponseTimeout() {
+    public long getResponseTimeout() {
         return responseTimeout;
     }
 
@@ -878,8 +902,24 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
      * Default: {@code 0}
      * </p>
      */
-    public void setResponseTimeout(Timeout responseTimeout) {
+    public void setResponseTimeout(long responseTimeout) {
         this.responseTimeout = responseTimeout;
+    }
+
+    public String getProxyHost() {
+        return proxyHost;
+    }
+
+    public void setProxyHost(String proxyHost) {
+        this.proxyHost = proxyHost;
+    }
+
+    public Integer getProxyPort() {
+        return proxyPort;
+    }
+
+    public void setProxyPort(Integer proxyPort) {
+        this.proxyPort = proxyPort;
     }
 
     public String getProxyAuthScheme() {
@@ -914,18 +954,22 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
         this.proxyAuthPassword = proxyAuthPassword;
     }
 
+    @Deprecated
     public String getProxyAuthHost() {
         return proxyAuthHost;
     }
 
+    @Deprecated
     public void setProxyAuthHost(String proxyAuthHost) {
         this.proxyAuthHost = proxyAuthHost;
     }
 
+    @Deprecated
     public Integer getProxyAuthPort() {
         return proxyAuthPort;
     }
 
+    @Deprecated
     public void setProxyAuthPort(Integer proxyAuthPort) {
         this.proxyAuthPort = proxyAuthPort;
     }
@@ -1072,6 +1116,22 @@ public class HttpComponent extends HttpCommonComponent implements RestProducerFa
 
     public void setLogHttpActivity(boolean logHttpActivity) {
         this.logHttpActivity = logHttpActivity;
+    }
+
+    public boolean isContentTypeCharsetEnabled() {
+        return contentTypeCharsetEnabled;
+    }
+
+    public void setContentTypeCharsetEnabled(boolean contentTypeCharsetEnabled) {
+        this.contentTypeCharsetEnabled = contentTypeCharsetEnabled;
+    }
+
+    public String getNonProxyHosts() {
+        return this.nonProxyHosts;
+    }
+
+    public void setNonProxyHosts(String nonProxyHosts) {
+        this.nonProxyHosts = nonProxyHosts;
     }
 
     @Override

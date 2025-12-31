@@ -14,18 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.camel.dsl.jbang.core.commands.kubernetes;
 
+import java.io.File;
 import java.io.FileFilter;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.Stack;
+import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 import io.fabric8.kubernetes.api.model.Pod;
@@ -38,7 +43,9 @@ import io.vertx.core.file.FileSystemOptions;
 import org.apache.camel.CamelContext;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.commands.CommandHelper;
+import org.apache.camel.dsl.jbang.core.commands.RunHelper;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.BaseTrait;
+import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.MountTrait;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.TraitHelper;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.model.Traits;
 import org.apache.camel.dsl.jbang.core.common.Printer;
@@ -59,15 +66,17 @@ import static org.apache.camel.dsl.jbang.core.commands.kubernetes.KubernetesHelp
 @CommandLine.Command(name = "run", description = "Run Camel application on Kubernetes", sortOptions = false)
 public class KubernetesRun extends KubernetesBaseCommand {
 
-    @CommandLine.Parameters(description = "The Camel file(s) to run.",
-                            arity = "0..9", paramLabel = "<files>")
-    String[] filePaths;
+    @CommandLine.Parameters(description = "The Camel file(s) to run. If no files specified then application.properties is used as source for which files to run.",
+                            arity = "0..9", paramLabel = "<files>", parameterConsumer = FilesConsumer.class)
+    Path[] filePaths; // Defined only for file path completion; the field never used
+
+    public List<String> files = new ArrayList<>();
 
     @CommandLine.Option(names = { "--service-account" }, description = "The service account used to run the application.")
     String serviceAccount;
 
-    @CommandLine.Option(names = { "--property" },
-                        description = "Add a runtime property or properties file from a path, a config map or a secret (syntax: [my-key=my-value|file:/path/to/my-conf.properties|[configmap|secret]:name]).")
+    @CommandLine.Option(names = { "--prop", "--property" },
+                        description = "Add a runtime property or properties from a file (syntax: [my-key=my-value|file:/path/to/my-conf.properties|/path/to/my-conf.properties].")
     String[] properties;
 
     @CommandLine.Option(names = { "--config" },
@@ -145,11 +154,13 @@ public class KubernetesRun extends KubernetesBaseCommand {
     String imageGroup;
 
     @CommandLine.Option(names = { "--image-builder" }, defaultValue = "jib",
-                        description = "The image builder used to build the container image (e.g. docker, jib, podman).")
+                        description = "The image builder used to build the container image (e.g. docker, jib, s2i).")
     String imageBuilder = "jib";
 
     @CommandLine.Option(names = { "--cluster-type" },
-                        description = "The target cluster type. Special configurations may be applied to different cluster types such as Kind or Minikube.")
+                        completionCandidates = ClusterTypeCompletionCandidates.class,
+                        converter = ClusterTypeConverter.class,
+                        description = "The target cluster type (${COMPLETION-CANDIDATES}). Special configurations may be applied to different cluster types such as Kind or Minikube.")
     String clusterType = "Kubernetes";
 
     @CommandLine.Option(names = { "--image-build" }, defaultValue = "true",
@@ -165,7 +176,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
     String[] imagePlatforms;
 
     @CommandLine.Option(names = { "--base-image" },
-                        description = "The base image that is used to build the container image from (default is eclipse-temurin:<java-version>).")
+                        description = "The base image that is used to build the container image from (default is mirror.gcr.io/library/eclipse-temurin:<java-version>).")
     String baseImage;
 
     @CommandLine.Option(names = { "--registry-mirror" },
@@ -174,7 +185,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
 
     // Export base options
 
-    @CommandLine.Option(names = { "--repos" },
+    @CommandLine.Option(names = { "--repo", "--repos" },
                         description = "Additional maven repositories (Use commas to separate multiple repositories)")
     String repositories;
 
@@ -220,8 +231,8 @@ public class KubernetesRun extends KubernetesBaseCommand {
                         description = "Whether downloading JARs from ASF Maven Snapshot repository is enabled")
     boolean mavenApacheSnapshotEnabled = true;
 
-    @CommandLine.Option(names = { "--java-version" }, description = "Java version", defaultValue = "17")
-    String javaVersion = "17";
+    @CommandLine.Option(names = { "--java-version" }, description = "Java version", defaultValue = "21")
+    String javaVersion = "21";
 
     @CommandLine.Option(names = { "--camel-version" },
                         description = "To export using a different Camel version than the default version.")
@@ -271,36 +282,83 @@ public class KubernetesRun extends KubernetesBaseCommand {
                         description = "Disable automatic cluster type detection and automatic settings for cluster.")
     boolean disableAuto = false;
 
+    @CommandLine.Option(names = { "--skip-plugins" }, defaultValue = "false",
+                        description = "Skip plugins during export")
+    boolean skipPlugins = false;
+
     // DevMode/Reload state
     private CamelContext devModeContext;
     private Thread devModeShutdownTask;
     private int devModeReloadCount;
 
     private KubernetesPodLogs reusablePodLogs;
-
     private Printer quietPrinter;
+    private Traits computedTraits;
 
     public KubernetesRun(CamelJBangMain main) {
         this(main, null);
     }
 
-    public KubernetesRun(CamelJBangMain main, String[] files) {
+    public KubernetesRun(CamelJBangMain main, List<String> files) {
         super(main);
-        filePaths = files;
+        if (files != null) {
+            this.files.addAll(files);
+        }
         projectNameSuppliers.add(() -> projectNameFromImage(() -> image));
         projectNameSuppliers.add(() -> projectNameFromGav(() -> gav));
-        projectNameSuppliers.add(() -> projectNameFromFilePath(() -> firstFilePath()));
+        projectNameSuppliers.add(() -> projectNameFromFilePath(this::firstFilePath));
     }
 
     private String firstFilePath() {
-        return filePaths != null && filePaths.length > 0 ? filePaths[0] : null;
+        return !files.isEmpty() ? files.get(0) : null;
     }
 
     public Integer doCall() throws Exception {
         String projectName = getProjectName();
+        computedTraits = TraitHelper.parseTraits(traits);
+
+        Path baseDir = Path.of(".");
+        if (files.size() == 1) {
+            String name = FileUtil.stripTrailingSeparator(files.get(0));
+            if (getScheme(name) == null) {
+                Path first = Path.of(name);
+                if (Files.isDirectory(first)) {
+                    baseDir = first;
+                    RunHelper.dirToFiles(name, files);
+                }
+            }
+        }
+        // merge the properties from files
+        if (properties != null) {
+            List<String> definiteProperties = new ArrayList<>();
+            for (String p : properties) {
+                if (p.startsWith("file:") || p.contains(File.separator)) {
+                    String filename = p.startsWith("file:") ? p.substring("file:".length()) : p;
+                    File f = new File(filename);
+                    if (f.exists()) {
+                        Properties prop = new Properties();
+                        try (FileInputStream input = new FileInputStream(f)) {
+                            prop.load(input);
+                        }
+                        prop.forEach((k, v) -> definiteProperties.add(k + "=" + v));
+                    }
+                } else {
+                    definiteProperties.add(p);
+                }
+            }
+            properties = definiteProperties.toArray(new String[definiteProperties.size()]);
+        }
+        // when user sets configuration or resources from configmap/secret
+        // the projected properties files must be set in the app runtime
+        setPropertiesLocation();
 
         String workingDir = getIndexedWorkingDir(projectName);
-        KubernetesExport export = configureExport(workingDir);
+        KubernetesExport export = configureExport(workingDir, baseDir);
+        boolean cronEnabled = computedTraits.getCronjob() != null && computedTraits.getCronjob().getEnabled();
+        if (cronEnabled) {
+            // disable observability-services as CronJob doesn't use the container probes
+            export.setObserve(false);
+        }
         int exit = export.export();
         if (exit != 0) {
             printer().printErr("Project export failed!");
@@ -308,8 +366,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
         }
 
         if (output != null) {
-            Traits ptraits = TraitHelper.parseTraits(traits);
-            boolean ksvcEnabled = ptraits.getKnativeService() != null && ptraits.getKnativeService().getEnabled();
+            boolean ksvcEnabled = computedTraits.getKnativeService() != null && computedTraits.getKnativeService().getEnabled();
 
             exit = buildProjectOutput(workingDir);
             if (exit != 0) {
@@ -357,7 +414,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
         }
 
         if (dev) {
-            setupDevMode(projectName, workingDir);
+            setupDevMode(projectName, workingDir, baseDir);
         }
 
         if (dev || logs) {
@@ -368,19 +425,20 @@ public class KubernetesRun extends KubernetesBaseCommand {
     }
 
     private String getIndexedWorkingDir(String projectName) {
-        var workingDir = RUN_PLATFORM_DIR + "/" + projectName;
+        var workingDir = RUN_PLATFORM_DIR + File.separator + projectName;
         if (devModeReloadCount > 0) {
             workingDir += "-%03d".formatted(devModeReloadCount);
         }
         return workingDir;
     }
 
-    private KubernetesExport configureExport(String workingDir) {
+    private KubernetesExport configureExport(String workingDir, Path baseDir) {
         detectCluster();
         KubernetesExport.ExportConfigurer configurer = new KubernetesExport.ExportConfigurer(
                 runtime,
+                baseDir,
                 quarkusVersion,
-                List.of(filePaths),
+                files,
                 name,
                 gav,
                 repositories,
@@ -415,7 +473,8 @@ public class KubernetesRun extends KubernetesBaseCommand {
                 (quiet || output != null),
                 true,
                 "info",
-                verbose);
+                verbose,
+                skipPlugins);
         KubernetesExport export = new KubernetesExport(getMain(), configurer);
 
         export.image = image;
@@ -441,7 +500,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
         return export;
     }
 
-    private void setupDevMode(String projectName, String workingDir) throws Exception {
+    private void setupDevMode(String projectName, String workingDir, Path baseDir) throws Exception {
         String firstPath = firstFilePath();
 
         String watchDir = ".";
@@ -452,7 +511,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
                 watchDir = filePath;
             }
 
-            filter = pathname -> Arrays.stream(filePaths)
+            filter = pathname -> files.stream()
                     .map(FileUtil::stripPath)
                     .anyMatch(name -> name.equals(pathname.getName()));
         }
@@ -470,7 +529,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
 
                 // Re-export updated project
                 //
-                KubernetesExport export = configureExport(reloadWorkingDir);
+                KubernetesExport export = configureExport(reloadWorkingDir, baseDir);
                 int exit = export.export();
                 if (exit != 0) {
                     printer().printErr("Project (re)export failed for: %s".formatted(reloadWorkingDir));
@@ -503,7 +562,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
                 // Recursively setup --dev mode for updated project
                 //
                 Runtime.getRuntime().removeShutdownHook(devModeShutdownTask);
-                setupDevMode(projectName, reloadWorkingDir);
+                setupDevMode(projectName, reloadWorkingDir, baseDir);
 
                 printer().printf("Project reloaded: %s%n", reloadWorkingDir);
             }
@@ -597,7 +656,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
             args.add("--quiet");
         }
         args.add("--file");
-        args.add(workingDir);
+        args.add(new File(workingDir, "pom.xml").getAbsolutePath());
 
         if (!ObjectHelper.isEmpty(namespace)) {
             args.add("-Djkube.namespace=%s".formatted(namespace));
@@ -609,8 +668,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
         // suppress maven transfer progress
         args.add("-ntp");
 
-        Traits ptraits = TraitHelper.parseTraits(traits);
-        if (ptraits.getKnativeService() != null && ptraits.getKnativeService().getEnabled()) {
+        if (computedTraits.getKnativeService() != null && computedTraits.getKnativeService().getEnabled()) {
             // by default jkube creates a Deployment manifest and it doesn't support knative controller yet.
             // however when knative-service is enabled the knative-service trait generates a src/main/jkube/service.yml
             // and there is no need for the regular Deployment as the knative Service manifest, once deployed
@@ -661,7 +719,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
         // suppress maven transfer progress
         args.add("-ntp");
         args.add("--file");
-        args.add(workingDir);
+        args.add(new File(workingDir, "pom.xml").getAbsolutePath());
 
         if (!imageBuild) {
             args.add("-Djkube.skip.build=true");
@@ -678,8 +736,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
 
         boolean isOpenshift = ClusterType.OPENSHIFT.isEqualTo(clusterType);
         var prefix = isOpenshift ? "oc" : "k8s";
-        Traits ptraits = TraitHelper.parseTraits(traits);
-        if (ptraits.getKnativeService() != null && ptraits.getKnativeService().getEnabled()) {
+        if (computedTraits.getKnativeService() != null && computedTraits.getKnativeService().getEnabled()) {
             // by default jkube creates a Deployment manifest and it doesn't support knative controller yet.
             // however when knative-service is enabled the knative-service trait generates a src/main/jkube/service.yml
             // and there is no need for the regular Deployment as the knative Service manifest, once deployed
@@ -715,7 +772,11 @@ public class KubernetesRun extends KubernetesBaseCommand {
         // wait for that process to exit as we run in foreground
         int exit = p.waitFor();
         if (exit != 0) {
-            printer().printErr("Deployment to %s failed!".formatted(clusterType));
+            String msg = "Deployment to %s failed!";
+            if (!verbose) {
+                msg += " (use --verbose for more details)";
+            }
+            printer().printErr(msg.formatted(clusterType));
             return exit;
         }
 
@@ -725,7 +786,7 @@ public class KubernetesRun extends KubernetesBaseCommand {
     private void detectCluster() {
         if (!disableAuto) {
             if (verbose) {
-                printer().print("Automatic kubernetes cluster detection... ");
+                printer().print("Automatic Kubernetes cluster detection... ");
             }
             ClusterType cluster = KubernetesHelper.discoverClusterType();
             this.clusterType = cluster.name();
@@ -737,6 +798,74 @@ public class KubernetesRun extends KubernetesBaseCommand {
                 printer().println(this.clusterType);
             }
         }
+    }
+
+    /*
+     * When a configmap/secret is projected as a properties file and mounted into the running pod
+     * and the properties file must be set at runtime to be discovered by the camel runtime
+     * with the camel.component.properties.location property.
+     * This is only for the --config parameter as the --resource are for any file type, not configurations.
+     */
+    private void setPropertiesLocation() {
+        if (configs != null) {
+            StringJoiner propertiesLocation = new StringJoiner(",");
+            for (String c : configs) {
+                if (c.startsWith("configmap:")) {
+                    String name = c.substring("configmap:".length());
+                    // in case the user has set a property to filter from the configmap, the "name" var is
+                    // the configmap name and the projected file.
+                    if (name.contains("/")) {
+                        propertiesLocation.add("file:" + MountTrait.CONF_DIR + MountTrait.CONFIGMAPS + "/" + name);
+                    } else {
+                        // we have to inspect the configmap and retrieve the key names, as they are
+                        // mapped to the mounted file names.
+                        Set<String> configmapKeys = retrieveConfigmapKeys(name);
+                        configmapKeys.forEach(key -> propertiesLocation
+                                .add("file:" + MountTrait.CONF_DIR + MountTrait.CONFIGMAPS + "/" + name + "/" + key));
+                    }
+                } else if (c.startsWith("secret:")) {
+                    String name = c.substring("secret:".length());
+                    if (name.contains("/")) {
+                        propertiesLocation.add("file:" + MountTrait.CONF_DIR + MountTrait.SECRETS + "/" + name);
+                    } else {
+                        Set<String> secretKeys = retrieveSecretKeys(name);
+                        secretKeys.forEach(key -> propertiesLocation
+                                .add("file:" + MountTrait.CONF_DIR + MountTrait.SECRETS + "/" + name + "/" + key));
+                    }
+                }
+            }
+            if (propertiesLocation.length() > 0) {
+                List<String> definiteProperties = new ArrayList<>();
+                definiteProperties.add("camel.component.properties.ignore-missing-location=true");
+                definiteProperties.add("camel.component.properties.location=" + propertiesLocation);
+                if (properties != null && properties.length > 0) {
+                    for (String s : properties) {
+                        definiteProperties.add(s);
+                    }
+                }
+                properties = definiteProperties.toArray(new String[definiteProperties.size()]);
+            }
+        }
+    }
+
+    private Set<String> retrieveConfigmapKeys(String name) {
+        KubernetesClient client = client();
+        String ns = "default";
+        if (namespace != null || client.getNamespace() != null) {
+            ns = namespace != null ? namespace : client.getNamespace();
+        }
+        Map<String, String> data = client.configMaps().inNamespace(ns).withName(name).get().getData();
+        return data.keySet();
+    }
+
+    private Set<String> retrieveSecretKeys(String name) {
+        KubernetesClient client = client();
+        String ns = "default";
+        if (namespace != null || client.getNamespace() != null) {
+            ns = namespace != null ? namespace : client.getNamespace();
+        }
+        Map<String, String> data = client.secrets().inNamespace(ns).withName(name).get().getData();
+        return data.keySet();
     }
 
     @Override
@@ -751,4 +880,13 @@ public class KubernetesRun extends KubernetesBaseCommand {
         }
         return super.printer();
     }
+
+    static class FilesConsumer extends ParameterConsumer<KubernetesRun> {
+        @Override
+        protected void doConsumeParameters(Stack<String> args, KubernetesRun cmd) {
+            String arg = args.pop();
+            cmd.files.add(arg);
+        }
+    }
+
 }

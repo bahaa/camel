@@ -19,10 +19,11 @@ package org.apache.camel.test.infra.cassandra.services;
 import org.apache.camel.spi.annotations.InfraService;
 import org.apache.camel.test.infra.cassandra.common.CassandraProperties;
 import org.apache.camel.test.infra.common.LocalPropertyResolver;
+import org.apache.camel.test.infra.common.services.ContainerEnvironmentUtil;
 import org.apache.camel.test.infra.common.services.ContainerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.CassandraContainer;
+import org.testcontainers.cassandra.CassandraContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -44,6 +45,10 @@ public class CassandraLocalContainerInfraService implements CassandraInfraServic
 
     public CassandraLocalContainerInfraService(String imageName) {
         container = initContainer(imageName);
+        String name = ContainerEnvironmentUtil.containerName(CassandraLocalContainerInfraService.this.getClass());
+        if (name != null) {
+            container.withCreateContainerCmdModifier(cmd -> cmd.withName(name));
+        }
     }
 
     public CassandraLocalContainerInfraService(CassandraContainer container) {
@@ -51,7 +56,19 @@ public class CassandraLocalContainerInfraService implements CassandraInfraServic
     }
 
     protected CassandraContainer initContainer(String imageName) {
-        return new CassandraContainer(DockerImageName.parse(imageName).asCompatibleSubstituteFor("cassandra"));
+        class CassandraContainerWithFixedPort extends CassandraContainer {
+            public CassandraContainerWithFixedPort(boolean fixedPort) {
+                super(DockerImageName.parse(imageName).asCompatibleSubstituteFor("cassandra"));
+
+                if (fixedPort) {
+                    addFixedExposedPort(9042, 9042);
+                } else {
+                    withExposedPorts(9042);
+                }
+            }
+        }
+
+        return new CassandraContainerWithFixedPort(ContainerEnvironmentUtil.isFixedPort(this.getClass()));
     }
 
     @Override
@@ -71,7 +88,7 @@ public class CassandraLocalContainerInfraService implements CassandraInfraServic
 
     @Override
     public int port() {
-        return container.getMappedPort(CassandraContainer.CQL_PORT);
+        return container.getContactPoint().getPort();
     }
 
     @Override

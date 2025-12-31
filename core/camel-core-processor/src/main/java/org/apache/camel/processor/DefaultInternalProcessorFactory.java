@@ -19,6 +19,7 @@ package org.apache.camel.processor;
 import org.apache.camel.AsyncProcessor;
 import org.apache.camel.AsyncProducer;
 import org.apache.camel.CamelContext;
+import org.apache.camel.CamelContextAware;
 import org.apache.camel.Channel;
 import org.apache.camel.Endpoint;
 import org.apache.camel.Predicate;
@@ -32,25 +33,19 @@ import org.apache.camel.spi.InterceptSendToEndpoint;
 import org.apache.camel.spi.InternalProcessor;
 import org.apache.camel.spi.InternalProcessorFactory;
 import org.apache.camel.spi.SharedInternalProcessor;
-import org.apache.camel.spi.UnitOfWork;
 import org.apache.camel.spi.annotations.JdkService;
 
 @JdkService(InternalProcessorFactory.FACTORY)
 public class DefaultInternalProcessorFactory implements InternalProcessorFactory {
 
+    @Override
     public InternalProcessor addUnitOfWorkProcessorAdvice(CamelContext camelContext, Processor processor, Route route) {
         CamelInternalProcessor internal = new CamelInternalProcessor(camelContext, processor);
         internal.addAdvice(new CamelInternalProcessor.UnitOfWorkProcessorAdvice(route, camelContext));
         return internal;
     }
 
-    public InternalProcessor addChildUnitOfWorkProcessorAdvice(
-            CamelContext camelContext, Processor processor, Route route, UnitOfWork parent) {
-        CamelInternalProcessor internal = new CamelInternalProcessor(camelContext, processor);
-        internal.addAdvice(new CamelInternalProcessor.ChildUnitOfWorkProcessorAdvice(route, camelContext, parent));
-        return internal;
-    }
-
+    @Override
     public SharedInternalProcessor createSharedCamelInternalProcessor(CamelContext camelContext) {
         return new SharedCamelInternalProcessor(
                 camelContext, new CamelInternalProcessor.UnitOfWorkProcessorAdvice(null, camelContext));
@@ -60,17 +55,41 @@ public class DefaultInternalProcessorFactory implements InternalProcessorFactory
         return new DefaultChannel(camelContext);
     }
 
+    @Override
     public AsyncProducer createInterceptSendToEndpointProcessor(
             InterceptSendToEndpoint endpoint, Endpoint delegate, AsyncProducer producer, boolean skip, Predicate onWhen) {
         return new InterceptSendToEndpointProcessor(endpoint, delegate, producer, skip, onWhen);
     }
 
+    @Override
     public AsyncProcessor createWrapProcessor(Processor processor, Processor wrapped) {
         return new WrapProcessor(processor, wrapped);
     }
 
+    @Override
     public AsyncProducer createUnitOfWorkProducer(Producer producer) {
         return new UnitOfWorkProducer(producer);
     }
 
+    @Override
+    public AsyncProducer createAsyncProducer(Endpoint endpoint) throws Exception {
+        AsyncProducer answer = endpoint.createAsyncProducer();
+        CamelContextAware.trySetCamelContext(answer, endpoint.getCamelContext());
+        // is auto mocked intercepting enabled?
+        if (!endpoint.getCamelContext().getCamelContextExtension().getAutoMockInterceptStrategies().isEmpty()) {
+            answer = new AutoMockInterceptProducer(answer);
+        }
+        return answer;
+    }
+
+    @Override
+    public Producer createProducer(Endpoint endpoint) throws Exception {
+        Producer answer = endpoint.createProducer();
+        CamelContextAware.trySetCamelContext(answer, endpoint.getCamelContext());
+        // is auto mocked intercepting enabled?
+        if (!endpoint.getCamelContext().getCamelContextExtension().getAutoMockInterceptStrategies().isEmpty()) {
+            answer = new AutoMockInterceptProducer(answer);
+        }
+        return answer;
+    }
 }

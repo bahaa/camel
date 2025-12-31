@@ -35,7 +35,7 @@ import org.junit.jupiter.api.condition.EnabledIf;
 @DisabledIfSystemProperty(named = "ci.env.name", matches = ".*",
                           disabledReason = "Requires too much network resources")
 @EnabledIf("isDockerAvailable")
-class KubernetesCommandTest extends KubernetesBaseTest {
+class KubernetesCommandTest extends KubernetesBaseTestSupport {
 
     @Test
     public void shouldResolvePlugin() {
@@ -47,7 +47,7 @@ class KubernetesCommandTest extends KubernetesBaseTest {
     @Test
     public void shouldPrintKubernetesManifest() {
         CamelJBangMain.run(createMain(), "kubernetes", "run", "classpath:route.yaml",
-                "--image-group", "camel-test", "--output", "yaml");
+                "--disable-auto=true", "--image-group", "camel-test", "--output", "yaml");
 
         List<HasMetadata> resources = kubernetesClient.load(getKubernetesManifestAsStream(printer.getOutput())).items();
         Assertions.assertEquals(2, resources.size());

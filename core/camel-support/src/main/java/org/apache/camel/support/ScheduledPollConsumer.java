@@ -33,7 +33,6 @@ import org.apache.camel.PollingConsumerPollingStrategy;
 import org.apache.camel.Processor;
 import org.apache.camel.Suspendable;
 import org.apache.camel.health.HealthCheck;
-import org.apache.camel.health.HealthCheckAware;
 import org.apache.camel.spi.HttpResponseAware;
 import org.apache.camel.spi.PollingConsumerPollStrategy;
 import org.apache.camel.spi.ScheduledPollConsumerScheduler;
@@ -47,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * A useful base class for any consumer which is polling based
  */
 public abstract class ScheduledPollConsumer extends DefaultConsumer
-        implements Runnable, Suspendable, PollingConsumerPollingStrategy, HealthCheckAware {
+        implements Runnable, Suspendable, PollingConsumerPollingStrategy {
 
     private static final Logger LOG = LoggerFactory.getLogger(ScheduledPollConsumer.class);
 
@@ -72,7 +71,7 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
     private Map<String, Object> schedulerProperties;
 
     // state during running
-    private volatile boolean polling;
+    private final AtomicInteger pollingCounter = new AtomicInteger();
     private final AtomicInteger backoffCounter = new AtomicInteger();
     private final AtomicLong idleCounter = new AtomicLong();
     private final AtomicLong errorCounter = new AtomicLong();
@@ -200,7 +199,7 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
                     }
 
                     // mark we are polling which should also include the begin/poll/commit
-                    polling = true;
+                    pollingCounter.incrementAndGet();
                     try {
                         boolean begin = pollStrategy.begin(this, getEndpoint());
                         if (begin) {
@@ -233,7 +232,7 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
                             LOG.debug("Cannot begin polling as pollStrategy returned false: {}", pollStrategy);
                         }
                     } finally {
-                        polling = false;
+                        pollingCounter.decrementAndGet();
                     }
                 }
 
@@ -322,7 +321,7 @@ public abstract class ScheduledPollConsumer extends DefaultConsumer
      * Whether polling is currently in progress
      */
     public boolean isPolling() {
-        return polling;
+        return pollingCounter.get() > 0;
     }
 
     public ScheduledPollConsumerScheduler getScheduler() {

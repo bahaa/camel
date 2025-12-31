@@ -34,10 +34,10 @@ import org.apache.camel.spi.EndpointUtilizationStatistics;
 import org.apache.camel.spi.HeadersMapFactory;
 import org.apache.camel.spi.IdAware;
 import org.apache.camel.spi.NormalizedEndpointUri;
+import org.apache.camel.spi.OptimisedComponentResolver;
 import org.apache.camel.spi.ProducerCache;
 import org.apache.camel.spi.RouteIdAware;
 import org.apache.camel.spi.SendDynamicAware;
-import org.apache.camel.support.AsyncProcessorSupport;
 import org.apache.camel.support.EndpointHelper;
 import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.support.cache.DefaultProducerCache;
@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
  *
  * @see org.apache.camel.processor.SendProcessor
  */
-public class SendDynamicProcessor extends AsyncProcessorSupport implements IdAware, RouteIdAware, CamelContextAware {
+public class SendDynamicProcessor extends BaseProcessorSupport implements IdAware, RouteIdAware, CamelContextAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(SendDynamicProcessor.class);
 
@@ -376,8 +376,10 @@ public class SendDynamicProcessor extends AsyncProcessorSupport implements IdAwa
     @Override
     protected void doStart() throws Exception {
         // ensure the component is started
-        if (autoStartupComponents && scheme != null) {
-            camelContext.getComponent(scheme);
+        if (autoStartupComponents && scheme != null && uri != null) {
+            OptimisedComponentResolver resolver
+                    = camelContext.getCamelContextExtension().getContextPlugin(OptimisedComponentResolver.class);
+            resolver.resolveComponent(uri);
         }
 
         if (producerCache == null) {

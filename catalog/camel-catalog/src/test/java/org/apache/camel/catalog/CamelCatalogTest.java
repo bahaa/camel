@@ -212,6 +212,18 @@ public class CamelCatalogTest {
     public void testMain() {
         String schema = catalog.mainJsonSchema();
         assertNotNull(schema);
+
+        var model = catalog.mainModel();
+        assertNotNull(model);
+    }
+
+    @Test
+    public void testJBang() {
+        String schema = catalog.jbangJsonSchema();
+        assertNotNull(schema);
+
+        var model = catalog.jbangModel();
+        assertNotNull(model);
     }
 
     @Test
@@ -924,6 +936,17 @@ public class CamelCatalogTest {
     }
 
     @Test
+    public void testListBeansAsJson() throws Exception {
+        String json = catalog.listBeansAsJson();
+        assertNotNull(json);
+
+        // validate we can parse the json
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode tree = mapper.readTree(json);
+        assertNotNull(tree);
+    }
+
+    @Test
     public void testSummaryAsJson() throws Exception {
         String json = catalog.summaryAsJson();
         assertNotNull(json);
@@ -1127,6 +1150,18 @@ public class CamelCatalogTest {
         result = catalog.validateLanguageExpression(null, "jsonpath?unpackArray=true", "$.store.book[?(@.price < 10)]");
         assertTrue(result.isSuccess());
         assertEquals("$.store.book[?(@.price < 10)]", result.getText());
+    }
+
+    @Test
+    public void testValidateJQLanguage() {
+        LanguageValidationResult result = catalog.validateLanguagePredicate(null, "jq", ".foo == \"bar\"");
+        assertTrue(result.isSuccess());
+        assertEquals(".foo == \"bar\"", result.getText());
+
+        result = catalog.validateLanguageExpression(null, "jq", ". ^^+ [{\"array\": body()}]");
+        assertFalse(result.isSuccess());
+        assertEquals(". ^^+ [{\"array\": body()}]", result.getText());
+        assertEquals("Cannot compile query: . ^^+ [{\"array\": body()}]", result.getError());
     }
 
     @Test
@@ -1639,6 +1674,26 @@ public class CamelCatalogTest {
         assertEquals("ZipAggregationStrategy", model.getName());
         assertEquals("org.apache.camel.processor.aggregate.zipfile.ZipAggregationStrategy", model.getJavaType());
         assertEquals(7, model.getOptions().size());
+    }
+
+    @Test
+    public void testSimpleFunctions() {
+        LanguageModel model = catalog.languageModel("simple");
+        assertNotNull(model);
+
+        assertTrue(model.getFunctions().size() > 50);
+
+        assertEquals("body", model.getFunctions().get(0).getConstantName());
+        assertEquals("${", model.getFunctions().get(0).getPrefix());
+        assertEquals("}", model.getFunctions().get(0).getSuffix());
+        assertEquals("The message body", model.getFunctions().get(0).getDescription());
+
+        assertEquals("pretty(exp)", model.getFunctions().get(36).getConstantName());
+        assertEquals("${", model.getFunctions().get(36).getPrefix());
+        assertEquals("}", model.getFunctions().get(36).getSuffix());
+        assertEquals(
+                "Converts the expression to a String, and attempts to pretty print if JSon or XML, otherwise the expression is returned as the String value.",
+                model.getFunctions().get(36).getDescription());
     }
 
 }

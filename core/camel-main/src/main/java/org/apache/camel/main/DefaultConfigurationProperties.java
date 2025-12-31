@@ -84,6 +84,7 @@ public abstract class DefaultConfigurationProperties<T> {
     private boolean logExhaustedMessageBody;
     private String logName;
     private String logLanguage;
+    private String additionalSensitiveKeywords;
     private boolean autoStartup = true;
     private String autoStartupExcludePattern;
     private boolean allowUseOriginalMessage;
@@ -129,6 +130,9 @@ public abstract class DefaultConfigurationProperties<T> {
     @Metadata(defaultValue = "true")
     private boolean routesReloadRemoveAllRoutes = true;
     private boolean routesReloadRestartDuration;
+    private String groovyScriptPattern = "classpath:camel-groovy/*,classpath:camel-groovy-compiled/*";
+    @Metadata(label = "advanced")
+    private boolean groovyPreloadCompiled;
     @Metadata(defaultValue = "default", enums = "default,prototype,pooled")
     private String exchangeFactory = "default";
     private int exchangeFactoryCapacity = 100;
@@ -319,12 +323,14 @@ public abstract class DefaultConfigurationProperties<T> {
     }
 
     /**
-     * Directory to load additional configuration files that contains configuration values that takes precedence over
-     * any other configuration. This can be used to refer to files that may have secret configuration that has been
-     * mounted on the file system for containers.
+     * Directory to load additional properties files that contains configurations that takes precedence (except for
+     * camel.main.xxx configurations).
      *
-     * You can specify a pattern to load from sub directories and a name pattern such as /var/app/secret/*.properties,
-     * multiple directories can be separated by comma.
+     * This can be used to refer to files that may have secret configuration that has been mounted on the file system
+     * for containers.
+     *
+     * You can specify a pattern to load from file-system (not classpath) and a name pattern such as
+     * /var/app/secret/*.properties, multiple directories can be separated by comma.
      */
     public void setFileConfigurations(String fileConfigurations) {
         this.fileConfigurations = fileConfigurations;
@@ -782,6 +788,18 @@ public abstract class DefaultConfigurationProperties<T> {
      */
     public void setLogLanguage(String logLanguage) {
         this.logLanguage = logLanguage;
+    }
+
+    public String getAdditionalSensitiveKeywords() {
+        return additionalSensitiveKeywords;
+    }
+
+    /**
+     * Camel comes with a default set of sensitive keywords which are automatically masked. This option allows to add
+     * additional custom keywords to be masked as well. Multiple keywords can be separated by comma.
+     */
+    public void setAdditionalSensitiveKeywords(String additionalSensitiveKeywords) {
+        this.additionalSensitiveKeywords = additionalSensitiveKeywords;
     }
 
     public boolean isAutoStartup() {
@@ -1394,6 +1412,36 @@ public abstract class DefaultConfigurationProperties<T> {
         this.jmxUpdateRouteEnabled = jmxUpdateRouteEnabled;
     }
 
+    public String getGroovyScriptPattern() {
+        return groovyScriptPattern;
+    }
+
+    /**
+     * Directories to scan for groovy source to be pre-compiled. For example: scripts/*.groovy will scan inside the
+     * classpath folder scripts for all groovy source files.
+     *
+     * By default, sources are scanned from the classpath, but you can prefix with file: to use file system.
+     *
+     * The directories are using Ant-path style pattern, and multiple directories can be specified separated by comma.
+     *
+     * This requires having camel-groovy JAR on the classpath.
+     */
+    public void setGroovyScriptPattern(String groovyScriptPattern) {
+        this.groovyScriptPattern = groovyScriptPattern;
+    }
+
+    public boolean isGroovyPreloadCompiled() {
+        return groovyPreloadCompiled;
+    }
+
+    /**
+     * Whether to preload existing compiled Groovy sources from the compileWorkDir option on startup. This can be
+     * enabled to avoid compiling sources that already has been compiled during a build phase.
+     */
+    public void setGroovyPreloadCompiled(boolean groovyPreloadCompiled) {
+        this.groovyPreloadCompiled = groovyPreloadCompiled;
+    }
+
     public String getExchangeFactory() {
         return exchangeFactory;
     }
@@ -1632,6 +1680,18 @@ public abstract class DefaultConfigurationProperties<T> {
      */
     public void setStartupRecorderDir(String startupRecorderDir) {
         this.startupRecorderDir = startupRecorderDir;
+    }
+
+    public String getCloudPropertiesLocation() {
+        return cloudPropertiesLocation;
+    }
+
+    /**
+     * Sets the locations (comma separated values) where to find properties configuration as defined for cloud native
+     * environments such as Kubernetes. You should only scan text based mounted configuration.
+     */
+    public void setCloudPropertiesLocation(String cloudPropertiesLocation) {
+        this.cloudPropertiesLocation = cloudPropertiesLocation;
     }
 
     // fluent builders
@@ -2080,6 +2140,15 @@ public abstract class DefaultConfigurationProperties<T> {
      */
     public T withLogLanguage(String logLanguage) {
         this.logLanguage = logLanguage;
+        return (T) this;
+    }
+
+    /**
+     * Camel comes with a default set of sensitive keywords which are automatically masked. This option allows to add
+     * additional custom keywords to be masked as well. Multiple keywords can be separated by comma.
+     */
+    public T withAdditionalSensitiveKeywords(String additionalSensitiveKeywords) {
+        this.additionalSensitiveKeywords = additionalSensitiveKeywords;
         return (T) this;
     }
 
@@ -2756,16 +2825,28 @@ public abstract class DefaultConfigurationProperties<T> {
         return (T) this;
     }
 
-    public String getCloudPropertiesLocation() {
-        return cloudPropertiesLocation;
+    /**
+     * Directories to scan for groovy source to be pre-compiled. For example: scripts/*.groovy will scan inside the
+     * classpath folder scripts for all groovy source files.
+     *
+     * By default, sources are scanned from the classpath, but you can prefix with file: to use file system.
+     *
+     * The directories are using Ant-path style pattern, and multiple directories can be specified separated by comma.
+     *
+     * This requires having camel-groovy JAR on the classpath.
+     */
+    public T withGroovyScriptPattern(String groovyScriptPattern) {
+        this.groovyScriptPattern = groovyScriptPattern;
+        return (T) this;
     }
 
     /**
-     * Sets the locations (comma separated values) where to find properties configuration as defined for cloud native
-     * environments such as Kubernetes. You should only scan text based mounted configuration.
+     * Whether to preload existing compiled Groovy sources from the compileWorkDir option on startup. This can be
+     * enabled to avoid compiling sources that already has been compiled during a build phase.
      */
-    public void setCloudPropertiesLocation(String cloudPropertiesLocation) {
-        this.cloudPropertiesLocation = cloudPropertiesLocation;
+    public T withGroovyPreloadCompiled(boolean groovyPreloadCompiled) {
+        this.groovyPreloadCompiled = groovyPreloadCompiled;
+        return (T) this;
     }
 
     /**

@@ -51,6 +51,7 @@ public abstract class BaseOptionModel {
     protected boolean supportFileReference;
     protected boolean largeInput;
     protected String inputLanguage;
+    protected boolean important;
 
     // todo: move this as a helper method
     protected boolean newGroup; // special for documentation rendering
@@ -303,6 +304,14 @@ public abstract class BaseOptionModel {
         this.inputLanguage = inputLanguage;
     }
 
+    public boolean isImportant() {
+        return important;
+    }
+
+    public void setImportant(boolean important) {
+        this.important = important;
+    }
+
     public String getShortGroup() {
         if (group != null && group.endsWith(" (advanced)")) {
             return group.substring(0, group.length() - 11);
@@ -338,6 +347,17 @@ public abstract class BaseOptionModel {
         String text = Strings.wrapCamelCaseWords(name, watermark, "{zwsp}");
         // ensure the option name starts with lower-case
         return Character.toLowerCase(text.charAt(0)) + text.substring(1);
+    }
+
+    public Object resolveDefaultValue() {
+        // special for boolean as the value should then not be a string
+        if ("boolean".equals(type) || "java.lang.Boolean".equals(javaType)) {
+            return defaultValue != null && "true".equalsIgnoreCase(defaultValue.toString());
+        }
+        if (defaultValue != null && "integer".equals(type) && !defaultValue.toString().isBlank()) {
+            return Long.parseLong(defaultValue.toString());
+        }
+        return defaultValue;
     }
 
     @Override

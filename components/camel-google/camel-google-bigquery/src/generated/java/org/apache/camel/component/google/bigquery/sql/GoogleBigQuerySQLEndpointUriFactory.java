@@ -21,18 +21,20 @@ public class GoogleBigQuerySQLEndpointUriFactory extends org.apache.camel.suppor
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(6);
+        Set<String> props = new HashSet<>(8);
         props.add("connectionFactory");
         props.add("lazyStartProducer");
+        props.add("outputType");
+        props.add("pageSize");
         props.add("pageToken");
         props.add("projectId");
         props.add("queryString");
         props.add("serviceAccountKey");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         SECRET_PROPERTY_NAMES = Collections.emptySet();
-        MULTI_VALUE_PREFIXES = Collections.emptySet();
+        MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
     @Override
@@ -64,7 +66,7 @@ public class GoogleBigQuerySQLEndpointUriFactory extends org.apache.camel.suppor
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

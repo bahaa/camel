@@ -87,8 +87,12 @@ public class PrepareCamelMainMojo extends AbstractGeneratorMojo {
             String javaType = f.getType().getQualifiedName();
             String sourceType = clazz.getQualifiedName();
             String defaultValue = f.getStringInitializer();
+            boolean secret = false;
+            boolean required = false;
             if (as != null) {
                 defaultValue = as.getStringValue("defaultValue");
+                secret = "true".equals(as.getStringValue("secret"));
+                required = "true".equals(as.getStringValue("required"));
             }
             if (defaultValue != null && defaultValue.startsWith("new ")) {
                 // skip constructors
@@ -102,15 +106,14 @@ public class PrepareCamelMainMojo extends AbstractGeneratorMojo {
                 String desc = setter.getJavaDoc().getFullText();
                 boolean deprecated
                         = clazz.getAnnotation(Deprecated.class) != null || setter.getAnnotation(Deprecated.class) != null;
-                String type = fromMainToType(javaType);
                 MainModel.MainOptionModel model = new MainModel.MainOptionModel();
                 model.setName(name);
-                model.setType(type);
                 model.setJavaType(javaType);
                 model.setDescription(JavadocHelper.sanitizeDescription(desc, false));
                 model.setSourceType(sourceType);
-                model.setDefaultValue(asDefaultValue(type, defaultValue));
                 model.setDeprecated(deprecated);
+                model.setSecret(secret);
+                model.setRequired(required);
                 List<String> enums = null;
                 // add known enums
                 if ("org.apache.camel.LoggingLevel".equals(javaType)) {
@@ -131,29 +134,14 @@ public class PrepareCamelMainMojo extends AbstractGeneratorMojo {
                     }
                 }
                 model.setEnums(enums);
+                String type = MojoHelper.getType(javaType, enums != null && !enums.isEmpty(), false);
+                model.setType(type);
+                model.setDefaultValue(asDefaultValue(type, defaultValue));
                 answer.add(model);
             }
         });
 
         return answer;
-    }
-
-    private static String fromMainToType(String type) {
-        if ("boolean".equals(type) || "java.lang.Boolean".equals(type)) {
-            return "boolean";
-        } else if ("int".equals(type) || "java.lang.Integer".equals(type)) {
-            return "integer";
-        } else if ("long".equals(type) || "java.lang.Long".equals(type)) {
-            return "integer";
-        } else if ("float".equals(type) || "java.lang.Float".equals(type)) {
-            return "number";
-        } else if ("double".equals(type) || "java.lang.Double".equals(type)) {
-            return "number";
-        } else if ("string".equals(type) || "java.lang.String".equals(type)) {
-            return "string";
-        } else {
-            return "object";
-        }
     }
 
     private static Object asDefaultValue(String type, String defaultValue) {
@@ -215,6 +203,8 @@ public class PrepareCamelMainMojo extends AbstractGeneratorMojo {
                     prefix = "camel.vault.ibm.";
                 } else if (file.getName().contains("SpringCloudConfig")) {
                     prefix = "camel.vault.springConfig.";
+                } else if (file.getName().contains("CyberArkVault")) {
+                    prefix = "camel.vault.cyberark.";
                 } else if (file.getName().contains("Health")) {
                     prefix = "camel.health.";
                 } else if (file.getName().contains("StartupCondition")) {
@@ -227,6 +217,8 @@ public class PrepareCamelMainMojo extends AbstractGeneratorMojo {
                     prefix = "camel.opentelemetry.";
                 } else if (file.getName().contains("TelemetryDev")) {
                     prefix = "camel.telemetryDev.";
+                } else if (file.getName().contains("MdcConfigurationProperties")) {
+                    prefix = "camel.mdc.";
                 } else if (file.getName().contains("Metrics")) {
                     prefix = "camel.metrics.";
                 } else if (file.getName().contains("HttpServer")) {
@@ -347,6 +339,16 @@ public class PrepareCamelMainMojo extends AbstractGeneratorMojo {
             throw new MojoFailureException("Error parsing file " + ibmVaultConfig + " due " + e.getMessage(), e);
         }
 
+        File cyberarkVaultConfig
+                = new File(camelApiDir, "src/main/java/org/apache/camel/vault/CyberArkVaultConfiguration.java");
+        try {
+            List<MainModel.MainOptionModel> model = parseConfigurationSource(cyberarkVaultConfig);
+            model.forEach(m -> m.setName("camel.vault.cyberark." + m.getName()));
+            data.addAll(model);
+        } catch (Exception e) {
+            throw new MojoFailureException("Error parsing file " + cyberarkVaultConfig + " due " + e.getMessage(), e);
+        }
+
         // lets sort so they are always ordered (but camel.main in top)
         data.sort((o1, o2) -> {
             if (o1.getName().startsWith("camel.main.") && !o2.getName().startsWith("camel.main.")) {
@@ -428,6 +430,10 @@ public class PrepareCamelMainMojo extends AbstractGeneratorMojo {
                     new MainGroupModel(
                             "camel.vault.ibm", "Camel IBM Secrets Manager Vault configurations",
                             "org.apache.camel.vault.IBMSecretsManagerVaultConfiguration"));
+            model.getGroups().add(
+                    new MainGroupModel(
+                            "camel.vault.cyberark", "Camel CyberArk Conjur Vault configurations",
+                            "org.apache.camel.vault.CyberArkVaultConfiguration"));
             model.getGroups().add(new MainGroupModel(
                     "camel.opentelemetry", "Camel OpenTelemetry configurations",
                     "org.apache.camel.main.OtelConfigurationProperties"));
@@ -437,6 +443,9 @@ public class PrepareCamelMainMojo extends AbstractGeneratorMojo {
             model.getGroups().add(new MainGroupModel(
                     "camel.telemetryDev", "Camel Telemetry Dev configurations",
                     "org.apache.camel.main.TelemetryDevConfigurationProperties"));
+            model.getGroups().add(new MainGroupModel(
+                    "camel.mdc", "Camel MDC configurations",
+                    "org.apache.camel.main.MdcConfigurationProperties"));
             model.getGroups().add(new MainGroupModel(
                     "camel.metrics", "Camel Micrometer Metrics configurations",
                     "org.apache.camel.main.MetricsConfigurationProperties"));

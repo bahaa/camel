@@ -45,7 +45,6 @@ import org.apache.camel.ExchangePropertyKey;
 import org.apache.camel.Message;
 import org.apache.camel.Processor;
 import org.apache.camel.Suspendable;
-import org.apache.camel.SuspendableService;
 import org.apache.camel.attachment.AttachmentMessage;
 import org.apache.camel.attachment.CamelFileDataSource;
 import org.apache.camel.component.platform.http.PlatformHttpEndpoint;
@@ -60,6 +59,7 @@ import org.apache.camel.util.MimeTypeHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.camel.component.platform.http.vertx.VertxPlatformHttpRouter.PLATFORM_HTTP_ROUTER_NAME_ZERO;
 import static org.apache.camel.component.platform.http.vertx.VertxPlatformHttpSupport.isFormUrlEncoded;
 import static org.apache.camel.component.platform.http.vertx.VertxPlatformHttpSupport.isMultiPartFormData;
 import static org.apache.camel.component.platform.http.vertx.VertxPlatformHttpSupport.populateCamelHeaders;
@@ -71,7 +71,7 @@ import static org.apache.camel.util.CollectionHelper.appendEntry;
  * based on Vert.x Web.
  */
 public class VertxPlatformHttpConsumer extends DefaultConsumer
-        implements PlatformHttpConsumer, Suspendable, SuspendableService {
+        implements PlatformHttpConsumer, Suspendable {
     private static final Logger LOGGER = LoggerFactory.getLogger(VertxPlatformHttpConsumer.class);
     private static final Pattern PATH_PARAMETER_PATTERN = Pattern.compile("\\{([^/}]+)\\}");
 
@@ -112,6 +112,13 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
         methods = Method.parseList(getEndpoint().getHttpMethodRestrict());
         path = configureEndpointPath(getEndpoint());
         router = VertxPlatformHttpRouter.lookup(getEndpoint().getCamelContext(), routerName);
+        if (router == null) {
+            // dynamic assigned port number, then lookup using -0
+            router = VertxPlatformHttpRouter.lookup(getEndpoint().getCamelContext(), PLATFORM_HTTP_ROUTER_NAME_ZERO);
+        }
+        if (router == null) {
+            throw new IllegalArgumentException("No PlatformHttpEngine created and setup in registry with name: " + routerName);
+        }
         if (!getEndpoint().isHttpProxy() && getEndpoint().isUseStreaming()) {
             httpRequestBodyHandler = new StreamingHttpRequestBodyHandler(router.bodyHandler());
         } else if (!getEndpoint().isHttpProxy() && !getEndpoint().isUseBodyHandler()) {
@@ -142,16 +149,18 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
             methods.forEach(m -> newRoute.method(HttpMethod.valueOf(m.name())));
         }
 
-        if (getEndpoint().getConsumes() != null) {
-            //comma separated contentTypes has to be registered one by one
-            for (String c : getEndpoint().getConsumes().split(",")) {
-                newRoute.consumes(c);
+        if (getEndpoint().getComponent().isServerRequestValidation()) {
+            if (getEndpoint().getConsumes() != null) {
+                //comma separated contentTypes has to be registered one by one
+                for (String c : getEndpoint().getConsumes().split(",")) {
+                    newRoute.consumes(c);
+                }
             }
-        }
-        if (getEndpoint().getProduces() != null) {
-            //comma separated contentTypes has to be registered one by one
-            for (String p : getEndpoint().getProduces().split(",")) {
-                newRoute.produces(p);
+            if (getEndpoint().getProduces() != null) {
+                //comma separated contentTypes has to be registered one by one
+                for (String p : getEndpoint().getProduces().split(",")) {
+                    newRoute.produces(p);
+                }
             }
         }
 

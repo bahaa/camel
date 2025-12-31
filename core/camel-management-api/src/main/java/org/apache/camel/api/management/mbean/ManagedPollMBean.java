@@ -21,7 +21,7 @@ import javax.management.openmbean.TabularData;
 import org.apache.camel.api.management.ManagedAttribute;
 import org.apache.camel.api.management.ManagedOperation;
 
-public interface ManagedPollMBean extends ManagedProcessorMBean, ManagedExtendedInformation {
+public interface ManagedPollMBean extends ManagedProcessorMBean, ManagedExtendedInformation, ManagedDestinationAware {
 
     @ManagedAttribute(description = "Destination as Endpoint URI",
                       mask = true)

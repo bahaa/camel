@@ -22,12 +22,12 @@ Software. We specialize in helping our clients to realize new projects
 and support the delivery of the project from end to end.
 
 
-== https://integrationmadeeasy.com[Dovetail]
+== https://fluxygen.com[Fluxygen]
 
-https://integrationmadeeasy.com[Dovetail] is a company based in the Netherlands.
+https://fluxygen.com[Fluxygen] is a company based in the Netherlands.
 It offers a low-code integration platform based on Apache Camel, Apache ActiveMQ and
-https://assimbly.org[Assimbly]. The aim is to make integration as easy as possible.
-We provide cloud services, support and training.
+https://assimbly.org[Assimbly]. The aim is to make integration as easy as possible, 
+and enable businesses to automate processes. We also provide cloud services, support and training.
 
 
 == http://ibm.biz/OSSupport[IBM]
@@ -62,10 +62,9 @@ https://www.redhat.com/en/services/consulting[consulting], and
 https://developers.redhat.com/products/redhat-build-of-camel/overview[a developer community].
 
 == https://www.randoli.io[Randoli]
-We provide consulting and implementation of Microservices as well as modernization support for legacy applications using Springboot + Camel or Quarkus + Camel.
-https://randoli.io/services/
-https://randoli.io/case-studies/case-study-postal-tech-company-modernization
-https://www.redhat.com/rhdc/managed-files/cl-randoli-partner-case-study-f31836pr-202211-en_0.pdf
+
+We provide consulting and implementation of Microservices as well as modernization support for legacy applications using Spring Boot + Camel or Quarkus + Camel.
+
 
 == https://riverlog.com/systemintegration/esb-model-and-camel-based-systems-integration[RiverLog]
 

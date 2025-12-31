@@ -87,22 +87,23 @@ public class RouteOnDemandReloadStrategy extends RouteWatcherReloadStrategy {
 
     protected void doOnReload(Object source) throws Exception {
         List<Resource> properties = new ArrayList<>();
+        List<Resource> groovy = new ArrayList<>();
         List<Resource> routes = new ArrayList<>();
 
-        File dir = new File(getFolder());
-        for (Path path : ResourceHelper.findInFileSystem(dir.toPath(), getPattern())) {
-            Resource res = ResourceHelper.resolveResource(getCamelContext(), "file:" + path.toString());
-            String ext = FileUtil.onlyExt(path.getFileName().toString());
+        for (Resource res : findReloadedResources(source)) {
+            String ext = FileUtil.onlyExt(res.getLocation());
             if ("properties".equals(ext)) {
                 properties.add(res);
+            } else if ("groovy".equals(ext)) {
+                groovy.add(res);
             } else {
                 routes.add(res);
             }
         }
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("On-demand reload scanned {} files (properties: {}, routes: {})",
-                    properties.size() + routes.size(), properties.size(), routes.size());
+            LOG.debug("On-demand reload scanned {} files (properties: {}, routes: {}, groovy: {})",
+                    properties.size() + routes.size(), properties.size(), routes.size(), groovy.size());
         }
 
         // reload properties first
@@ -110,14 +111,37 @@ public class RouteOnDemandReloadStrategy extends RouteWatcherReloadStrategy {
         for (Resource res : properties) {
             reloaded |= onPropertiesReload(res, false);
         }
-        boolean removeEverything = routes.isEmpty();
+        for (Resource res : groovy) {
+            reloaded |= onGroovyReload(res, false);
+        }
+        boolean removeEverything = isRemoveEverything(routes);
         if (reloaded || !routes.isEmpty()) {
             // trigger routes to also reload if properties was reloaded
             onRouteReload(routes, removeEverything);
         } else {
             // rare situation where all routes are deleted
-            onRouteReload(null, removeEverything);
+            onRemoveEverything(removeEverything);
         }
+    }
+
+    protected boolean isRemoveEverything(List<Resource> routes) {
+        return routes.isEmpty();
+    }
+
+    protected void onRemoveEverything(boolean removeEverything) {
+        onRouteReload(null, removeEverything);
+    }
+
+    protected List<Resource> findReloadedResources(Object source) throws Exception {
+        List<Resource> answer = new ArrayList<>();
+
+        File dir = new File(getFolder());
+        for (Path path : ResourceHelper.findInFileSystem(dir.toPath(), getPattern())) {
+            Resource res = ResourceHelper.resolveResource(getCamelContext(), "file:" + path.toString());
+            answer.add(res);
+        }
+
+        return answer;
     }
 
 }

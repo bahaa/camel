@@ -24,15 +24,17 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>components</artifactId>
-        <version>4.14.0-SNAPSHOT</version>
+        <version>4.17.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-stomp</artifactId>
     <packaging>jar</packaging>
-    <name>Camel :: Stomp</name>
+    <name>Camel :: Stomp (Deprecated)</name>
     <description>Camel Stomp client</description>
 
     <properties>
+        <!-- Make use of native access during test execution only -->
+        <camel.surefire.fork.additional-vmargs>--enable-native-access=ALL-UNNAMED</camel.surefire.fork.additional-vmargs>
     </properties>
 
     <dependencies>

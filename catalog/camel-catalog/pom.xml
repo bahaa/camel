@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>catalog</artifactId>
-        <version>4.14.0-SNAPSHOT</version>
+        <version>4.17.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-catalog</artifactId>
@@ -104,6 +104,12 @@
             <artifactId>camel-jsonpath</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- for testing jq language -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-jq</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- for testing groovy language -->
         <dependency>
             <groupId>org.apache.camel</groupId>
@@ -153,6 +159,8 @@
                             <goal>update-sensitive-helper</goal>
                             <!-- update mime-types in camel-util -->
                             <goal>update-mime-type-helper</goal>
+                            <!-- update important headers in camel-util -->
+                            <goal>update-important-header-helper</goal>
                             <!-- update names in camel-main -->
                             <goal>update-main-helper</goal>
                             <!-- update test-infra metadata -->

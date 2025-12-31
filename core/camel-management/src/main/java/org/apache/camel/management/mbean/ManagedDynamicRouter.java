@@ -37,13 +37,17 @@ import org.apache.camel.util.URISupport;
 
 @ManagedResource(description = "Managed DynamicRouter")
 public class ManagedDynamicRouter extends ManagedProcessor implements ManagedDynamicRouterMBean {
-    private final DynamicRouter processor;
+
     private String uri;
     private boolean sanitize;
 
     public ManagedDynamicRouter(CamelContext context, DynamicRouter processor, DynamicRouterDefinition<?> definition) {
         super(context, processor, definition);
-        this.processor = processor;
+    }
+
+    @Override
+    public DynamicRouter getProcessor() {
+        return (DynamicRouter) super.getProcessor();
     }
 
     @Override
@@ -64,9 +68,14 @@ public class ManagedDynamicRouter extends ManagedProcessor implements ManagedDyn
     @Override
     public void reset() {
         super.reset();
-        if (processor.getEndpointUtilizationStatistics() != null) {
-            processor.getEndpointUtilizationStatistics().clear();
+        if (getProcessor().getEndpointUtilizationStatistics() != null) {
+            getProcessor().getEndpointUtilizationStatistics().clear();
         }
+    }
+
+    @Override
+    public String getDestination() {
+        return uri;
     }
 
     @Override
@@ -86,17 +95,17 @@ public class ManagedDynamicRouter extends ManagedProcessor implements ManagedDyn
 
     @Override
     public String getUriDelimiter() {
-        return processor.getUriDelimiter();
+        return getProcessor().getUriDelimiter();
     }
 
     @Override
     public Integer getCacheSize() {
-        return processor.getCacheSize();
+        return getProcessor().getCacheSize();
     }
 
     @Override
     public Boolean isIgnoreInvalidEndpoints() {
-        return processor.isIgnoreInvalidEndpoints();
+        return getProcessor().isIgnoreInvalidEndpoints();
     }
 
     @Override
@@ -104,7 +113,7 @@ public class ManagedDynamicRouter extends ManagedProcessor implements ManagedDyn
         try {
             TabularData answer = new TabularDataSupport(CamelOpenMBeanTypes.endpointsUtilizationTabularType());
 
-            EndpointUtilizationStatistics stats = processor.getEndpointUtilizationStatistics();
+            EndpointUtilizationStatistics stats = getProcessor().getEndpointUtilizationStatistics();
             if (stats != null) {
                 for (Map.Entry<String, Long> entry : stats.getStatistics().entrySet()) {
                     CompositeType ct = CamelOpenMBeanTypes.endpointsUtilizationCompositeType();

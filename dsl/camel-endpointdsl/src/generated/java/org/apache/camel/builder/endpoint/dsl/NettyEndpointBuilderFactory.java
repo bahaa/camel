@@ -602,36 +602,6 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * Client side certificate keystore to be used for encryption.
-         * 
-         * The option is a: <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param keyStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointConsumerBuilder keyStoreFile(java.io.File keyStoreFile) {
-            doSetProperty("keyStoreFile", keyStoreFile);
-            return this;
-        }
-        /**
-         * Client side certificate keystore to be used for encryption.
-         * 
-         * The option will be converted to a <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param keyStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointConsumerBuilder keyStoreFile(String keyStoreFile) {
-            doSetProperty("keyStoreFile", keyStoreFile);
-            return this;
-        }
-        /**
          * Keystore format to be used for payload encryption. Defaults to JKS if
          * not set.
          * 
@@ -698,8 +668,8 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * Password setting to use in order to encrypt/decrypt payloads sent
-         * using SSH.
+         * Password to use for the keyStore and trustStore. The same password
+         * must be configured for both resources.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -855,36 +825,6 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * Server side certificate keystore to be used for encryption.
-         * 
-         * The option is a: <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param trustStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointConsumerBuilder trustStoreFile(java.io.File trustStoreFile) {
-            doSetProperty("trustStoreFile", trustStoreFile);
-            return this;
-        }
-        /**
-         * Server side certificate keystore to be used for encryption.
-         * 
-         * The option will be converted to a <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param trustStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointConsumerBuilder trustStoreFile(String trustStoreFile) {
-            doSetProperty("trustStoreFile", trustStoreFile);
-            return this;
-        }
-        /**
          * Server side certificate keystore to be used for encryption. Is loaded
          * by default from classpath, but you can prefix with classpath:, file:,
          * or http: to load the resource from different systems.
@@ -913,6 +853,21 @@ public interface NettyEndpointBuilderFactory {
                 EndpointConsumerBuilder {
         default NettyEndpointConsumerBuilder basic() {
             return (NettyEndpointConsumerBuilder) this;
+        }
+        /**
+         * When using UDP then this option can be used to specify a network
+         * interface by its name, such as eth0 to join a multicast group.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common (advanced)
+         * 
+         * @param networkInterface the value to set
+         * @return the dsl builder
+         */
+        default AdvancedNettyEndpointConsumerBuilder networkInterface(String networkInterface) {
+            doSetProperty("networkInterface", networkInterface);
+            return this;
         }
         /**
          * Allows to configure a backlog for netty consumer (server). Note the
@@ -1222,21 +1177,6 @@ public interface NettyEndpointBuilderFactory {
          */
         default AdvancedNettyEndpointConsumerBuilder nettyServerBootstrapFactory(String nettyServerBootstrapFactory) {
             doSetProperty("nettyServerBootstrapFactory", nettyServerBootstrapFactory);
-            return this;
-        }
-        /**
-         * When using UDP then this option can be used to specify a network
-         * interface by its name, such as eth0 to join a multicast group.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: consumer (advanced)
-         * 
-         * @param networkInterface the value to set
-         * @return the dsl builder
-         */
-        default AdvancedNettyEndpointConsumerBuilder networkInterface(String networkInterface) {
-            doSetProperty("networkInterface", networkInterface);
             return this;
         }
         /**
@@ -2404,36 +2344,6 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * Client side certificate keystore to be used for encryption.
-         * 
-         * The option is a: <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param keyStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointProducerBuilder keyStoreFile(java.io.File keyStoreFile) {
-            doSetProperty("keyStoreFile", keyStoreFile);
-            return this;
-        }
-        /**
-         * Client side certificate keystore to be used for encryption.
-         * 
-         * The option will be converted to a <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param keyStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointProducerBuilder keyStoreFile(String keyStoreFile) {
-            doSetProperty("keyStoreFile", keyStoreFile);
-            return this;
-        }
-        /**
          * Keystore format to be used for payload encryption. Defaults to JKS if
          * not set.
          * 
@@ -2468,8 +2378,8 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * Password setting to use in order to encrypt/decrypt payloads sent
-         * using SSH.
+         * Password to use for the keyStore and trustStore. The same password
+         * must be configured for both resources.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -2625,36 +2535,6 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * Server side certificate keystore to be used for encryption.
-         * 
-         * The option is a: <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param trustStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointProducerBuilder trustStoreFile(java.io.File trustStoreFile) {
-            doSetProperty("trustStoreFile", trustStoreFile);
-            return this;
-        }
-        /**
-         * Server side certificate keystore to be used for encryption.
-         * 
-         * The option will be converted to a <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param trustStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointProducerBuilder trustStoreFile(String trustStoreFile) {
-            doSetProperty("trustStoreFile", trustStoreFile);
-            return this;
-        }
-        /**
          * Server side certificate keystore to be used for encryption. Is loaded
          * by default from classpath, but you can prefix with classpath:, file:,
          * or http: to load the resource from different systems.
@@ -2683,6 +2563,21 @@ public interface NettyEndpointBuilderFactory {
             return (NettyEndpointProducerBuilder) this;
         }
 
+        /**
+         * When using UDP then this option can be used to specify a network
+         * interface by its name, such as eth0 to join a multicast group.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common (advanced)
+         * 
+         * @param networkInterface the value to set
+         * @return the dsl builder
+         */
+        default AdvancedNettyEndpointProducerBuilder networkInterface(String networkInterface) {
+            doSetProperty("networkInterface", networkInterface);
+            return this;
+        }
         /**
          * To use a custom ClientInitializerFactory.
          * 
@@ -4104,36 +3999,6 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * Client side certificate keystore to be used for encryption.
-         * 
-         * The option is a: <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param keyStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointBuilder keyStoreFile(java.io.File keyStoreFile) {
-            doSetProperty("keyStoreFile", keyStoreFile);
-            return this;
-        }
-        /**
-         * Client side certificate keystore to be used for encryption.
-         * 
-         * The option will be converted to a <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param keyStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointBuilder keyStoreFile(String keyStoreFile) {
-            doSetProperty("keyStoreFile", keyStoreFile);
-            return this;
-        }
-        /**
          * Keystore format to be used for payload encryption. Defaults to JKS if
          * not set.
          * 
@@ -4168,8 +4033,8 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * Password setting to use in order to encrypt/decrypt payloads sent
-         * using SSH.
+         * Password to use for the keyStore and trustStore. The same password
+         * must be configured for both resources.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -4325,36 +4190,6 @@ public interface NettyEndpointBuilderFactory {
             return this;
         }
         /**
-         * Server side certificate keystore to be used for encryption.
-         * 
-         * The option is a: <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param trustStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointBuilder trustStoreFile(java.io.File trustStoreFile) {
-            doSetProperty("trustStoreFile", trustStoreFile);
-            return this;
-        }
-        /**
-         * Server side certificate keystore to be used for encryption.
-         * 
-         * The option will be converted to a <code>java.io.File</code> type.
-         * 
-         * Group: security
-         * 
-         * @param trustStoreFile the value to set
-         * @return the dsl builder
-         */
-        @Deprecated
-        default NettyEndpointBuilder trustStoreFile(String trustStoreFile) {
-            doSetProperty("trustStoreFile", trustStoreFile);
-            return this;
-        }
-        /**
          * Server side certificate keystore to be used for encryption. Is loaded
          * by default from classpath, but you can prefix with classpath:, file:,
          * or http: to load the resource from different systems.
@@ -4386,6 +4221,21 @@ public interface NettyEndpointBuilderFactory {
             return (NettyEndpointBuilder) this;
         }
 
+        /**
+         * When using UDP then this option can be used to specify a network
+         * interface by its name, such as eth0 to join a multicast group.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common (advanced)
+         * 
+         * @param networkInterface the value to set
+         * @return the dsl builder
+         */
+        default AdvancedNettyEndpointBuilder networkInterface(String networkInterface) {
+            doSetProperty("networkInterface", networkInterface);
+            return this;
+        }
         /**
          * Only used for TCP when transferExchange is true. When set to true,
          * serializable objects in headers and properties will be added to the

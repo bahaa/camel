@@ -21,9 +21,9 @@ public class SalesforceEndpointUriFactory extends org.apache.camel.support.compo
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(69);
+        Set<String> props = new HashSet<>(73);
         props.add("allOrNone");
         props.add("apexMethod");
         props.add("apexQueryParams");
@@ -33,6 +33,10 @@ public class SalesforceEndpointUriFactory extends org.apache.camel.support.compo
         props.add("batchId");
         props.add("bridgeErrorHandler");
         props.add("compositeMethod");
+        props.add("consumerWorkerPoolEnabled");
+        props.add("consumerWorkerPoolExecutorService");
+        props.add("consumerWorkerPoolMaxSize");
+        props.add("consumerWorkerPoolSize");
         props.add("contentType");
         props.add("defaultReplayId");
         props.add("eventName");
@@ -95,7 +99,7 @@ public class SalesforceEndpointUriFactory extends org.apache.camel.support.compo
         props.add("updateTopic");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         SECRET_PROPERTY_NAMES = Collections.emptySet();
-        MULTI_VALUE_PREFIXES = Collections.emptySet();
+        MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
     @Override
@@ -127,7 +131,7 @@ public class SalesforceEndpointUriFactory extends org.apache.camel.support.compo
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

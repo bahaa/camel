@@ -23,7 +23,7 @@
   <parent>
     <artifactId>camel-ai-parent</artifactId>
     <groupId>org.apache.camel</groupId>
-    <version>4.14.0-SNAPSHOT</version>
+    <version>4.17.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>camel-neo4j</artifactId>
@@ -36,9 +36,7 @@
     <camel.surefire.parallel.factor>4</camel.surefire.parallel.factor>
 
     <!-- Neo4j is not available on these platforms -->
-    <skipITs.ppc64le>true</skipITs.ppc64le>
     <skipITs.s390x>true</skipITs.s390x>
-    <skipTests.ppc64le>true</skipTests.ppc64le>
     <skipTests.s390x>true</skipTests.s390x>
   </properties>
 
@@ -46,6 +44,10 @@
     <dependency>
       <groupId>org.apache.camel</groupId>
       <artifactId>camel-support</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-jackson</artifactId>
     </dependency>
     <dependency>
       <groupId>dev.langchain4j</groupId>

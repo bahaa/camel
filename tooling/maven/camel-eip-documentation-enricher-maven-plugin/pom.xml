@@ -23,14 +23,14 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>maven-plugins</artifactId>
-        <version>4.14.0-SNAPSHOT</version>
+        <version>4.17.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-eip-documentation-enricher-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
 
-    <name>Camel :: Maven Plugins :: Camel EIP Documentation Enricher Plugin</name>
-    <description>Adds documentation to camel xsd schema</description>
+    <name>Camel :: Maven Plugins :: XML DSL Doc Enricher</name>
+    <description>Adds documentation to Camel XSD schema</description>
 
     <properties>
         <camel.surefire.fork.additional-vmargs>--add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED</camel.surefire.fork.additional-vmargs>
@@ -62,7 +62,7 @@
         <dependency>
             <groupId>org.apache.maven.plugin-tools</groupId>
             <artifactId>maven-plugin-annotations</artifactId>
-            <version>3.15.1</version>
+            <version>3.15.2</version>
             <scope>provided</scope>
         </dependency>
 

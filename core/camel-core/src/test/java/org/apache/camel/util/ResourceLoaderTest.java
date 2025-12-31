@@ -26,6 +26,7 @@ import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.camel.MyFoo;
 import org.apache.camel.TestSupport;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.engine.DefaultResourceLoader;
@@ -95,18 +96,33 @@ public class ResourceLoaderTest extends TestSupport {
     @Test
     public void testLoadClasspathDefault() throws Exception {
         try (DefaultCamelContext context = new DefaultCamelContext()) {
-            Resource resource = PluginHelper.getResourceLoader(context).resolveResource("log4j2.properties");
-
-            // need to be started as it triggers the fallback
-            // resolver
+            // need to be started as it triggers the fallback resolver
             context.start();
 
+            Resource resource = PluginHelper.getResourceLoader(context).resolveResource("log4j2.properties");
             try (InputStream is = resource.getInputStream()) {
                 assertNotNull(is);
 
                 String text = context.getTypeConverter().convertTo(String.class, is);
                 assertNotNull(text);
                 assertTrue(text.contains("rootLogger"));
+            }
+        }
+    }
+
+    @Test
+    public void testLoadFileDefault() throws Exception {
+        try (DefaultCamelContext context = new DefaultCamelContext()) {
+            // need to be started as it triggers the fallback resolver
+            context.start();
+
+            Resource resource = PluginHelper.getResourceLoader(context).resolveResource("src/test/data/bar.xml");
+            try (InputStream is = resource.getInputStream()) {
+                assertNotNull(is);
+
+                String text = context.getTypeConverter().convertTo(String.class, is);
+                assertNotNull(text);
+                assertTrue(text.contains("<hello>bar</hello>"));
             }
         }
     }
@@ -339,4 +355,20 @@ public class ResourceLoaderTest extends TestSupport {
             assertEquals(raw, content);
         }
     }
+
+    @Test
+    public void testLoadSource() throws Exception {
+        DefaultCamelContext context = new DefaultCamelContext();
+        Resource resource
+                = PluginHelper.getResourceLoader(context).resolveResource("source:" + MyFoo.class.getName() + "?test=true");
+
+        try (InputStream is = resource.getInputStream()) {
+            assertNotNull(is);
+
+            String content = context.getTypeConverter().convertTo(String.class, is);
+            assertNotNull(content);
+            assertTrue(content.contains("public class MyFoo {"));
+        }
+    }
+
 }

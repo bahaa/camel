@@ -16,7 +16,9 @@
  */
 package org.apache.camel.component.aws2.s3;
 
+import org.apache.camel.Exchange;
 import org.apache.camel.RuntimeCamelException;
+import org.apache.camel.component.aws.common.AwsCommonConfiguration;
 import org.apache.camel.component.aws2.s3.stream.AWSS3NamingStrategyEnum;
 import org.apache.camel.component.aws2.s3.stream.AWSS3RestartingPolicyEnum;
 import org.apache.camel.spi.Metadata;
@@ -27,7 +29,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 @UriParams
-public class AWS2S3Configuration implements Cloneable {
+public class AWS2S3Configuration implements Cloneable, AwsCommonConfiguration {
 
     private String bucketName;
     @UriParam(label = "advanced")
@@ -143,13 +145,21 @@ public class AWS2S3Configuration implements Cloneable {
     private long streamingUploadTimeout;
     @UriParam(defaultValue = "override", label = "producer")
     private AWSS3RestartingPolicyEnum restartingPolicy = AWSS3RestartingPolicyEnum.override;
+    @UriParam(label = "producer")
+    private boolean timestampGroupingEnabled;
+    @UriParam(defaultValue = "300000", label = "producer")
+    private long timestampWindowSizeMillis = 300000; // 5 minutes default
+    @UriParam(defaultValue = "CamelMessageTimestamp", label = "producer")
+    private String timestampHeaderName = Exchange.MESSAGE_TIMESTAMP;
 
     public long getPartSize() {
         return partSize;
     }
 
     /**
-     * Set up the partSize which is used in multipart upload, the default size is 25M.
+     * Set up the partSize which is used in multipart upload, the default size is 25 MB.
+     *
+     * The minimum size in AWS is 5 MB.
      *
      * Camel will only do multipart uploads for files that are larger than the part-size thresholds. Files that are
      * smaller will be uploaded in a single operation.
@@ -577,7 +587,7 @@ public class AWS2S3Configuration implements Cloneable {
         this.useDefaultCredentialsProvider = useDefaultCredentialsProvider;
     }
 
-    public Boolean isUseDefaultCredentialsProvider() {
+    public boolean isUseDefaultCredentialsProvider() {
         return useDefaultCredentialsProvider;
     }
 
@@ -791,6 +801,41 @@ public class AWS2S3Configuration implements Cloneable {
      */
     public void setConditionalWritesEnabled(boolean conditionalWritesEnabled) {
         this.conditionalWritesEnabled = conditionalWritesEnabled;
+    }
+
+    public boolean isTimestampGroupingEnabled() {
+        return timestampGroupingEnabled;
+    }
+
+    /**
+     * Enable timestamp-based grouping of messages into time windows for file creation. When enabled, messages are
+     * grouped by their timestamp header into time windows.
+     */
+    public void setTimestampGroupingEnabled(boolean timestampGroupingEnabled) {
+        this.timestampGroupingEnabled = timestampGroupingEnabled;
+    }
+
+    public long getTimestampWindowSizeMillis() {
+        return timestampWindowSizeMillis;
+    }
+
+    /**
+     * The size of the time window in milliseconds for timestamp-based grouping. Messages within the same time window
+     * will be written to the same file. Default is 300000 (5 minutes).
+     */
+    public void setTimestampWindowSizeMillis(long timestampWindowSizeMillis) {
+        this.timestampWindowSizeMillis = timestampWindowSizeMillis;
+    }
+
+    public String getTimestampHeaderName() {
+        return timestampHeaderName;
+    }
+
+    /**
+     * The name of the message header containing the timestamp for grouping. Default is "CamelMessageTimestamp".
+     */
+    public void setTimestampHeaderName(String timestampHeaderName) {
+        this.timestampHeaderName = timestampHeaderName;
     }
 
     public AWS2S3Configuration copy() {

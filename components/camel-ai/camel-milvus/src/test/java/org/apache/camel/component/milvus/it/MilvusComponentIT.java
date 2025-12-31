@@ -35,8 +35,8 @@ import io.milvus.param.highlevel.dml.SearchSimpleParam;
 import io.milvus.param.highlevel.dml.response.SearchResponse;
 import io.milvus.param.index.CreateIndexParam;
 import org.apache.camel.Exchange;
-import org.apache.camel.component.milvus.Milvus;
 import org.apache.camel.component.milvus.MilvusAction;
+import org.apache.camel.component.milvus.MilvusHeaders;
 import org.apache.camel.component.milvus.MilvusTestSupport;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.*;
@@ -80,7 +80,7 @@ public class MilvusComponentIT extends MilvusTestSupport {
                 .build();
 
         Exchange result = fluentTemplate.to("milvus:test")
-                .withHeader(Milvus.Headers.ACTION, MilvusAction.CREATE_COLLECTION)
+                .withHeader(MilvusHeaders.ACTION, MilvusAction.CREATE_COLLECTION)
                 .withBody(
                         createCollectionReq)
                 .request(Exchange.class);
@@ -100,7 +100,7 @@ public class MilvusComponentIT extends MilvusTestSupport {
                 .build();
 
         Exchange result = fluentTemplate.to("milvus:test")
-                .withHeader(Milvus.Headers.ACTION, MilvusAction.CREATE_INDEX)
+                .withHeader(MilvusHeaders.ACTION, MilvusAction.CREATE_INDEX)
                 .withBody(
                         createAgeIndexParam)
                 .request(Exchange.class);
@@ -119,7 +119,7 @@ public class MilvusComponentIT extends MilvusTestSupport {
                 .build();
 
         result = fluentTemplate.to("milvus:test")
-                .withHeader(Milvus.Headers.ACTION, MilvusAction.CREATE_INDEX)
+                .withHeader(MilvusHeaders.ACTION, MilvusAction.CREATE_INDEX)
                 .withBody(
                         createVectorIndexParam)
                 .request(Exchange.class);
@@ -146,7 +146,7 @@ public class MilvusComponentIT extends MilvusTestSupport {
                 .build();
 
         Exchange result = fluentTemplate.to("milvus:test")
-                .withHeader(Milvus.Headers.ACTION, MilvusAction.INSERT)
+                .withHeader(MilvusHeaders.ACTION, MilvusAction.INSERT)
                 .withBody(
                         insertParam)
                 .request(Exchange.class);
@@ -173,13 +173,14 @@ public class MilvusComponentIT extends MilvusTestSupport {
                 .build();
 
         Exchange result = fluentTemplate.to("milvus:test")
-                .withHeader(Milvus.Headers.ACTION, MilvusAction.UPSERT)
+                .withHeader(MilvusHeaders.ACTION, MilvusAction.UPSERT)
                 .withBody(
                         upsertParam)
                 .request(Exchange.class);
 
+        // we cannot upsert as we lack userID field
         assertThat(result).isNotNull();
-        assertThat(result.getException()).message().isEqualTo("Upsert don't support autoID==True, collection: test");
+        Assertions.assertTrue(result.isFailed());
     }
 
     @Test
@@ -196,14 +197,14 @@ public class MilvusComponentIT extends MilvusTestSupport {
                 .build();
 
         Exchange result = fluentTemplate.to("milvus:test")
-                .withHeader(Milvus.Headers.ACTION, MilvusAction.SEARCH)
+                .withHeader(MilvusHeaders.ACTION, MilvusAction.SEARCH)
                 .withBody(
                         searchSimpleParam)
                 .request(Exchange.class);
 
         assertThat(result).isNotNull();
         assertThat(result.getException()).isNull();
-        assertThat(result.getMessage().getBody(SearchResponse.class).rowRecords.size() == 2);
+        assertThat(result.getMessage().getBody(SearchResponse.class).getRowRecords().size() == 2);
     }
 
     @Test
@@ -217,7 +218,7 @@ public class MilvusComponentIT extends MilvusTestSupport {
                 .build();
 
         Exchange result = fluentTemplate.to("milvus:test")
-                .withHeader(Milvus.Headers.ACTION, MilvusAction.QUERY)
+                .withHeader(MilvusHeaders.ACTION, MilvusAction.QUERY)
                 .withBody(
                         searchSimpleParam)
                 .request(Exchange.class);
@@ -236,7 +237,7 @@ public class MilvusComponentIT extends MilvusTestSupport {
                 .build();
 
         Exchange result = fluentTemplate.to("milvus:test")
-                .withHeader(Milvus.Headers.ACTION, MilvusAction.DELETE)
+                .withHeader(MilvusHeaders.ACTION, MilvusAction.DELETE)
                 .withBody(
                         delete)
                 .request(Exchange.class);
@@ -255,14 +256,14 @@ public class MilvusComponentIT extends MilvusTestSupport {
                 .build();
 
         result = fluentTemplate.to("milvus:test")
-                .withHeader(Milvus.Headers.ACTION, MilvusAction.SEARCH)
+                .withHeader(MilvusHeaders.ACTION, MilvusAction.SEARCH)
                 .withBody(
                         searchSimpleParam)
                 .request(Exchange.class);
 
         assertThat(result).isNotNull();
         assertThat(result.getException()).isNull();
-        assertThat(result.getMessage().getBody(SearchResponse.class).rowRecords.size() == 0);
+        assertThat(result.getMessage().getBody(SearchResponse.class).getRowRecords().size() == 0);
     }
 
     private List<List<Float>> generateFloatVectors(int count) {

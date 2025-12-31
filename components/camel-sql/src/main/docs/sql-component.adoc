@@ -114,21 +114,12 @@ In the file, you can use multi-lines and format the SQL as you wish.
 And also use comments such as the – dash line.
 
 
-// component-configure options: START
-
-// component-configure options: END
-
 // component options: START
 include::partial$component-configure-options.adoc[]
 include::partial$component-endpoint-options.adoc[]
+include::partial$component-endpoint-headers.adoc[]
 // component options: END
 
-// endpoint options: START
-
-// endpoint options: END
-// component headers: START
-include::partial$component-endpoint-headers.adoc[]
-// component headers: END
 
 == Usage
 
@@ -370,6 +361,27 @@ from projects
 where project in (:#in:${body})
 order by id
 ----
+
+=== Using another database / DataSource
+
+The producer supports to use a different `javax.sql.DataSource` than the default configured on the component,
+to make it possible to dynamic query another database. This requires to specify a header in the `Exchange` that contains
+the custom data source.
+
+For example in the code snippet below, we set the header `CamelSqlDataSource` with a custom `javax.sql.DataSource` instance.
+
+[source,java]
+----
+DataSource custom = ...
+
+from("direct:query")
+    .setHeader("CamelSqlDataSource", custom)
+    .to("sql:query.sql")
+    .to("bean:processData");
+----
+
+NOTE: Remember to remove the header if you use SQL component later during routing and don't want to keep using the custom
+data source.
 
 === Using the JDBC-based idempotent repository
 

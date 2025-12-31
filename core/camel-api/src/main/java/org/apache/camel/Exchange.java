@@ -69,16 +69,17 @@ public interface Exchange extends VariableAware {
 
     String AUTHENTICATION = "CamelAuthentication";
     String AUTHENTICATION_FAILURE_POLICY_ID = "CamelAuthenticationFailurePolicyId";
-    @Deprecated(since = "2.20.0")
-    String ACCEPT_CONTENT_TYPE = "CamelAcceptContentType";
-    @Metadata(label = "aggregate", description = "Number of exchanges that was grouped together.", javaType = "int")
+
+    @Metadata(label = "aggregate", description = "Number of exchanges that was grouped together.", javaType = "int",
+              important = true)
     String AGGREGATED_SIZE = "CamelAggregatedSize";
     @Metadata(label = "aggregate", description = "The time in millis this group will timeout", javaType = "long")
     String AGGREGATED_TIMEOUT = "CamelAggregatedTimeout";
     @Metadata(label = "aggregate", description = "Enum that tell how this group was completed",
               enums = "consumer,force,interval,predicate,size,strategy,timeout", javaType = "String")
     String AGGREGATED_COMPLETED_BY = "CamelAggregatedCompletedBy";
-    @Metadata(label = "aggregate", description = "The correlation key for this aggregation group", javaType = "String")
+    @Metadata(label = "aggregate", description = "The correlation key for this aggregation group", javaType = "String",
+              important = true)
     String AGGREGATED_CORRELATION_KEY = "CamelAggregatedCorrelationKey";
     String AGGREGATED_COLLECTION_GUARD = "CamelAggregatedCollectionGuard";
     String AGGREGATION_STRATEGY = "CamelAggregationStrategy";
@@ -110,11 +111,10 @@ public interface Exchange extends VariableAware {
     String CHARSET_NAME = "CamelCharsetName";
     @Deprecated(since = "4.5.0")
     String CIRCUIT_BREAKER_STATE = "CamelCircuitBreakerState";
-    @Deprecated(since = "3.1.0")
-    String CREATED_TIMESTAMP = "CamelCreatedTimestamp";
     String CLAIM_CHECK_REPOSITORY = "CamelClaimCheckRepository";
     String CONTENT_ENCODING = "Content-Encoding";
     String CONTENT_LENGTH = "Content-Length";
+    @Metadata(important = true)
     String CONTENT_TYPE = "Content-Type";
     String COOKIE_HANDLER = "CamelCookieHandler";
     String CORRELATION_ID = "CamelCorrelationId";
@@ -126,13 +126,13 @@ public interface Exchange extends VariableAware {
 
     String DATASET_INDEX = "CamelDataSetIndex";
     String DEFAULT_CHARSET_PROPERTY = "org.apache.camel.default.charset";
+    String DEBUGGER_SELF_TIME = "CamelDebuggerSelfTime";
     String DESTINATION_OVERRIDE_URL = "CamelDestinationOverrideUrl";
     String DISABLE_HTTP_STREAM_CACHE = "CamelDisableHttpStreamCache";
     @Metadata(label = "idempotentConsumer",
               description = "Whether this exchange is a duplicate detected by the Idempotent Consumer EIP",
               javaType = "boolean")
     String DUPLICATE_MESSAGE = "CamelDuplicateMessage";
-
     String DOCUMENT_BUILDER_FACTORY = "CamelDocumentBuilderFactory";
 
     @Metadata(label = "doCatch,doFinally,errorHandler,onException",
@@ -143,10 +143,6 @@ public interface Exchange extends VariableAware {
     String EVALUATE_EXPRESSION_RESULT = "CamelEvaluateExpressionResult";
     String ERRORHANDLER_BRIDGE = "CamelErrorHandlerBridge";
     String ERRORHANDLER_CIRCUIT_DETECTED = "CamelErrorHandlerCircuitDetected";
-    @Deprecated(since = "3.1.0")
-    String ERRORHANDLER_HANDLED = "CamelErrorHandlerHandled";
-    @Deprecated(since = "3.1.0")
-    String EXTERNAL_REDELIVERED = "CamelExternalRedelivered";
     @Deprecated(since = "4.0.0")
     String FAILURE_HANDLED = "CamelFailureHandled";
     @Metadata(label = "doCatch,doFinally,errorHandler,onException",
@@ -160,6 +156,7 @@ public interface Exchange extends VariableAware {
     String FATAL_FALLBACK_ERROR_HANDLER = "CamelFatalFallbackErrorHandler";
     String FILE_CONTENT_TYPE = "CamelFileContentType";
     String FILE_LOCAL_WORK_PATH = "CamelFileLocalWorkPath";
+    @Metadata(important = true)
     String FILE_NAME = "CamelFileName";
     String FILE_NAME_ONLY = "CamelFileNameOnly";
     String FILE_NAME_PRODUCED = "CamelFileNameProduced";
@@ -174,8 +171,6 @@ public interface Exchange extends VariableAware {
     String FILE_LOCK_RANDOM_ACCESS_FILE = "CamelFileLockRandomAccessFile";
     String FILE_LOCK_CHANNEL_FILE = "CamelFileLockChannelFile";
     String FILE_EXCHANGE_FILE = "CamelFileExchangeFile";
-    @Deprecated(since = "3.9.0")
-    String FILTER_MATCHED = "CamelFilterMatched";
     String FILTER_NON_XML_CHARS = "CamelFilterNonXmlChars";
 
     String GROUPED_EXCHANGE = "CamelGroupedExchange";
@@ -190,6 +185,7 @@ public interface Exchange extends VariableAware {
     String HTTP_PROTOCOL_VERSION = "CamelHttpProtocolVersion";
     String HTTP_QUERY = "CamelHttpQuery";
     String HTTP_RAW_QUERY = "CamelHttpRawQuery";
+    @Metadata(important = true)
     String HTTP_RESPONSE_CODE = "CamelHttpResponseCode";
     String HTTP_RESPONSE_TEXT = "CamelHttpResponseText";
     String HTTP_URI = "CamelHttpUri";
@@ -214,8 +210,8 @@ public interface Exchange extends VariableAware {
               javaType = "String")
     String INTERCEPTED_ROUTE_ID = "CamelInterceptedRouteId";
     String INTERCEPT_SEND_TO_ENDPOINT_WHEN_MATCHED = "CamelInterceptSendToEndpointWhenMatched";
-    @Deprecated(since = "3.1.0")
-    String INTERRUPTED = "CamelInterrupted";
+
+    String JPA_ENTITY_MANAGER = "CamelEntityManager";
 
     String LANGUAGE_SCRIPT = "CamelLanguageScript";
     String LOG_DEBUG_BODY_MAX_CHARS = "CamelLogDebugBodyMaxChars";
@@ -245,9 +241,6 @@ public interface Exchange extends VariableAware {
     @Metadata(label = "multicast", description = "Whether this Exchange is the last.", javaType = "boolean")
     String MULTICAST_COMPLETE = "CamelMulticastComplete";
 
-    @Deprecated(since = "3.1.0")
-    String NOTIFY_EVENT = "CamelNotifyEvent";
-
     @Metadata(label = "onCompletion",
               description = "Flag to mark that this exchange is currently being executed as onCompletion", javaType = "boolean")
     String ON_COMPLETION = "CamelOnCompletion";
@@ -255,6 +248,7 @@ public interface Exchange extends VariableAware {
     String OFFSET = "CamelOffset";
     String OVERRULE_FILE_NAME = "CamelOverruleFileName";
 
+    @Deprecated(since = "4.14.0")
     String PARENT_UNIT_OF_WORK = "CamelParentUnitOfWork";
     String STREAM_CACHE_UNIT_OF_WORK = "CamelStreamCacheUnitOfWork";
 
@@ -264,45 +258,37 @@ public interface Exchange extends VariableAware {
     String REDELIVERED = "CamelRedelivered";
     String REDELIVERY_COUNTER = "CamelRedeliveryCounter";
     String REDELIVERY_MAX_COUNTER = "CamelRedeliveryMaxCounter";
-    @Deprecated(since = "3.1.0")
-    String REDELIVERY_EXHAUSTED = "CamelRedeliveryExhausted";
     String REDELIVERY_DELAY = "CamelRedeliveryDelay";
     String REST_HTTP_URI = "CamelRestHttpUri";
     String REST_HTTP_QUERY = "CamelRestHttpQuery";
     String REST_OPENAPI = "CamelRestOpenAPI";
-    @Deprecated(since = "3.1.0")
-    String ROLLBACK_ONLY = "CamelRollbackOnly";
-    @Deprecated(since = "3.1.0")
-    String ROLLBACK_ONLY_LAST = "CamelRollbackOnlyLast";
-    @Deprecated(since = "3.1.0")
-    String ROUTE_STOP = "CamelRouteStop";
 
     // Long running action (saga): using "Long-Running-Action" as header value allows sagas
     // to be propagated to any remote system supporting the LRA framework
     String SAGA_LONG_RUNNING_ACTION = "Long-Running-Action";
-    @Deprecated(since = "3.15.0")
-    String SAXPARSER_FACTORY = "CamelSAXParserFactory";
     String SCHEDULER_POLLED_MESSAGES = "CamelSchedulerPolledMessages";
-    @Deprecated(since = "3.15.0")
-    String SOAP_ACTION = "CamelSoapAction";
     String SKIP_GZIP_ENCODING = "CamelSkipGzipEncoding";
+    String SKIP_OVER = "CamelSkipOver";
     String SKIP_WWW_FORM_URLENCODED = "CamelSkipWwwFormUrlEncoding";
     @Metadata(label = "routingSlip", description = "The endpoint uri of this routing slip", javaType = "String")
     String SLIP_ENDPOINT = "CamelSlipEndpoint";
     String SLIP_PRODUCER = "CamelSlipProducer";
     @Metadata(label = "split",
               description = "A split counter that increases for each Exchange being split. The counter starts from 0.",
-              javaType = "int")
+              javaType = "int",
+              important = true)
     String SPLIT_INDEX = "CamelSplitIndex";
     @Metadata(label = "split", description = "Whether this Exchange is the last.", javaType = "boolean")
     String SPLIT_COMPLETE = "CamelSplitComplete";
     @Metadata(label = "split",
               description = "The total number of Exchanges that was split. This property is not applied for stream based splitting, except for the very last message because then Camel knows the total size.",
-              javaType = "int")
+              javaType = "int",
+              important = true)
     String SPLIT_SIZE = "CamelSplitSize";
     @Metadata(label = "step", description = "The id of the Step EIP", javaType = "String")
     String STEP_ID = "CamelStepId";
 
+    @Metadata(important = true)
     String TIMER_COUNTER = "CamelTimerCounter";
     String TIMER_FIRED_TIME = "CamelTimerFiredTime";
     String TIMER_NAME = "CamelTimerName";
@@ -320,10 +306,6 @@ public interface Exchange extends VariableAware {
     String TRACE_EVENT_TIMESTAMP = "CamelTraceEventTimestamp";
     @Deprecated(since = "4.0.0")
     String TRACE_EVENT_EXCHANGE = "CamelTraceEventExchange";
-    @Deprecated(since = "3.15.0")
-    String TRACING_HEADER_FORMAT = "CamelTracingHeaderFormat";
-    @Deprecated(since = "3.15.0")
-    String TRACING_OUTPUT_FORMAT = "CamelTracingOutputFormat";
     String TRANSACTION_CONTEXT_DATA = "CamelTransactionContextData";
     String TRY_ROUTE_BLOCK = "TryRouteBlock";
     String TRANSFER_ENCODING = "Transfer-Encoding";
@@ -795,7 +777,7 @@ public interface Exchange extends VariableAware {
     /**
      * Gets the timestamp in millis when this exchange was created.
      *
-     * @see Message#getMessageTimestamp()
+     * @see Clock#getCreated()
      */
     @Deprecated(since = "4.4.0")
     long getCreated();

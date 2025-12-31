@@ -51,7 +51,7 @@ public class HttpProxyAndBasicAuthTest extends BaseHttpTest {
                 .setCanonicalHostName("localhost").setHttpProcessor(getBasicHttpProcessor())
                 .setConnectionReuseStrategy(getConnectionReuseStrategy()).setResponseFactory(getHttpResponseFactory())
                 .setSslContext(getSSLContext())
-                .registerVirtual("authtest.org", "*", new ProxyAndBasicAuthenticationValidationHandler(
+                .register("authtest.org", "*", new ProxyAndBasicAuthenticationValidationHandler(
                         GET.name(),
                         null, null, getExpectedContent(), user, password, proxyUser, proxyPassword))
                 .create();
@@ -81,8 +81,8 @@ public class HttpProxyAndBasicAuthTest extends BaseHttpTest {
 
     @Test
     public void httpGetWithProxyAndUser() {
-        Exchange exchange = template.request("http://authtest.org" + "?proxyAuthHost=localhost"
-                                             + "&proxyAuthPort=" + proxy.getLocalPort()
+        Exchange exchange = template.request("http://authtest.org" + "?proxyHost=localhost"
+                                             + "&proxyPort=" + proxy.getLocalPort()
                                              + "&proxyAuthUsername=" + proxyUser + "&proxyAuthPassword=" + proxyPassword
                                              + "&authUsername=" + user + "&authPassword=" + password,
                 exchange1 -> {

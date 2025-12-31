@@ -54,7 +54,7 @@ public class PrepareCamelMainDocMojo extends AbstractGeneratorMojo {
     protected File docDocDir;
 
     /**
-     * The documentation directory
+     * The metadata file
      */
     @Parameter(defaultValue = "${project.basedir}/src/generated/resources/META-INF/camel-main-configuration-metadata.json")
     protected File mainJsonFile;

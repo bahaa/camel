@@ -2,11 +2,14 @@
 package org.apache.camel.dataformat.parquet.avro;
 
 import javax.annotation.processing.Generated;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.spi.ExtendedPropertyConfigurerGetter;
+import org.apache.camel.spi.PropertyConfigurerGetter;
+import org.apache.camel.spi.ConfigurerStrategy;
 import org.apache.camel.spi.GeneratedPropertyConfigurer;
+import org.apache.camel.util.CaseInsensitiveMap;
 import org.apache.camel.support.component.PropertyConfigurerSupport;
 
 /**
@@ -14,19 +17,61 @@ import org.apache.camel.support.component.PropertyConfigurerSupport;
  */
 @Generated("org.apache.camel.maven.packaging.PackageDataFormatMojo")
 @SuppressWarnings("unchecked")
-public class ParquetAvroDataFormatConfigurer extends PropertyConfigurerSupport implements GeneratedPropertyConfigurer {
+public class ParquetAvroDataFormatConfigurer extends org.apache.camel.support.component.PropertyConfigurerSupport implements GeneratedPropertyConfigurer, ExtendedPropertyConfigurerGetter {
+
+    private static final Map<String, Object> ALL_OPTIONS;
+    static {
+        Map<String, Object> map = new CaseInsensitiveMap();
+        map.put("CompressionCodecName", org.apache.parquet.hadoop.metadata.CompressionCodecName.class);
+        map.put("LazyLoad", boolean.class);
+        map.put("UnmarshalType", java.lang.Class.class);
+        ALL_OPTIONS = map;
+    }
 
     @Override
-    public boolean configure(CamelContext camelContext, Object target, String name, Object value, boolean ignoreCase) {
-        ParquetAvroDataFormat dataformat = (ParquetAvroDataFormat) target;
+    public boolean configure(CamelContext camelContext, Object obj, String name, Object value, boolean ignoreCase) {
+        ParquetAvroDataFormat target = (ParquetAvroDataFormat) obj;
         switch (ignoreCase ? name.toLowerCase() : name) {
-        case "unmarshaltype":
-        case "unmarshalType": dataformat.setUnmarshalType(property(camelContext, java.lang.Class.class, value)); return true;
+        case "compressioncodecname":
+        case "compressionCodecName": target.setCompressionCodecName(property(camelContext, org.apache.parquet.hadoop.metadata.CompressionCodecName.class, value)); return true;
         case "lazyload":
-        case "lazyLoad": dataformat.setLazyLoad(property(camelContext, boolean.class, value)); return true;
+        case "lazyLoad": target.setLazyLoad(property(camelContext, boolean.class, value)); return true;
+        case "unmarshaltype":
+        case "unmarshalType": target.setUnmarshalType(property(camelContext, java.lang.Class.class, value)); return true;
         default: return false;
         }
     }
 
+    @Override
+    public Map<String, Object> getAllOptions(Object target) {
+        return ALL_OPTIONS;
+    }
+
+    @Override
+    public Class<?> getOptionType(String name, boolean ignoreCase) {
+        switch (ignoreCase ? name.toLowerCase() : name) {
+        case "compressioncodecname":
+        case "compressionCodecName": return org.apache.parquet.hadoop.metadata.CompressionCodecName.class;
+        case "lazyload":
+        case "lazyLoad": return boolean.class;
+        case "unmarshaltype":
+        case "unmarshalType": return java.lang.Class.class;
+        default: return null;
+        }
+    }
+
+    @Override
+    public Object getOptionValue(Object obj, String name, boolean ignoreCase) {
+        ParquetAvroDataFormat target = (ParquetAvroDataFormat) obj;
+        switch (ignoreCase ? name.toLowerCase() : name) {
+        case "compressioncodecname":
+        case "compressionCodecName": return target.getCompressionCodecName();
+        case "lazyload":
+        case "lazyLoad": return target.isLazyLoad();
+        case "unmarshaltype":
+        case "unmarshalType": return target.getUnmarshalType();
+        default: return null;
+        }
+    }
 }
 

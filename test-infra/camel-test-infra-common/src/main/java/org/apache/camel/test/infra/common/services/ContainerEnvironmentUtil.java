@@ -17,6 +17,12 @@
 
 package org.apache.camel.test.infra.common.services;
 
+import java.util.List;
+import java.util.Objects;
+
+import com.github.dockerjava.api.model.Version;
+import com.github.dockerjava.api.model.VersionComponent;
+import org.apache.camel.spi.annotations.InfraService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.DockerClientFactory;
@@ -52,18 +58,76 @@ public final class ContainerEnvironmentUtil {
         return dockerAvailable;
     }
 
+    public static boolean isPodman() {
+        try {
+            Version version = DockerClientFactory.instance().client().versionCmd().exec();
+            List<VersionComponent> components = version.getComponents();
+            if (components != null) {
+                return components.stream()
+                        .map(VersionComponent::getName)
+                        .filter(Objects::nonNull)
+                        .map(String::toLowerCase)
+                        .anyMatch(name -> name.contains("podman"));
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to determine container engine type", e);
+        }
+
+        return false;
+    }
+
     public static void configureContainerStartup(GenericContainer<?> container, String property, int defaultValue) {
         int startupAttempts = Integer.valueOf(System.getProperty(property, String.valueOf(defaultValue)));
         container.setStartupAttempts(startupAttempts);
     }
 
-    public static boolean isFixedPort(Class cls) {
+    /**
+     * Determines if a service class should use fixed ports (for Camel JBang compatibility) or random ports (for
+     * testcontainer isolation).
+     *
+     * Services implementing an interface with "InfraService" in the name are considered to be intended for use with
+     * Camel JBang and will use fixed default ports.
+     *
+     * @param  cls the service class to check
+     * @return     true if the service should use fixed ports, false for random ports
+     */
+    public static boolean isFixedPort(@SuppressWarnings("rawtypes") Class cls) {
         for (Class<?> i : cls.getInterfaces()) {
             if (i.getName().contains("InfraService")) {
+                LOG.debug("Service {} will use fixed ports (detected InfraService interface: {})",
+                        cls.getSimpleName(), i.getSimpleName());
                 return true;
             }
         }
 
+        LOG.debug("Service {} will use random ports (no InfraService interface detected)", cls.getSimpleName());
         return false;
+    }
+
+    public static String containerName(Class cls) {
+        InfraService annotation = findAnnotation(cls);
+        String name = null;
+        if (annotation != null) {
+            name = "camel-" + annotation.serviceAlias()[0];
+            if (annotation.serviceImplementationAlias().length > 0) {
+                name += "-" + annotation.serviceImplementationAlias()[0];
+            }
+        } else {
+            LOG.warn("InfraService annotation not Found to determine container name alias.");
+        }
+        return name;
+    }
+
+    private static InfraService findAnnotation(Class cls) {
+        InfraService annotation = (InfraService) cls.getAnnotation(InfraService.class);
+        Class targetClass = cls;
+        while (annotation == null && targetClass.getSuperclass() != null) {
+            targetClass = targetClass.getSuperclass();
+            annotation = (InfraService) targetClass.getAnnotation(InfraService.class);
+            if (annotation != null) {
+                break;
+            }
+        }
+        return annotation;
     }
 }

@@ -21,9 +21,9 @@ public class PahoEndpointUriFactory extends org.apache.camel.support.component.E
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
-    private static final Set<String> MULTI_VALUE_PREFIXES;
+    private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(32);
+        Set<String> props = new HashSet<>(33);
         props.add("automaticReconnect");
         props.add("bridgeErrorHandler");
         props.add("brokerUrl");
@@ -39,6 +39,7 @@ public class PahoEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("httpsHostnameVerificationEnabled");
         props.add("keepAliveInterval");
         props.add("lazyStartProducer");
+        props.add("manualAcksEnabled");
         props.add("maxInflight");
         props.add("maxReconnectDelay");
         props.add("mqttVersion");
@@ -61,7 +62,7 @@ public class PahoEndpointUriFactory extends org.apache.camel.support.component.E
         secretProps.add("password");
         secretProps.add("userName");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
-        MULTI_VALUE_PREFIXES = Collections.emptySet();
+        MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
     @Override
@@ -92,7 +93,7 @@ public class PahoEndpointUriFactory extends org.apache.camel.support.component.E
     }
 
     @Override
-    public Set<String> multiValuePrefixes() {
+    public Map<String, String> multiValuePrefixes() {
         return MULTI_VALUE_PREFIXES;
     }
 

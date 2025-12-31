@@ -80,7 +80,7 @@ public class CatalogDoc extends CamelCommand {
                         defaultValue = "io.quarkus.platform")
     String quarkusGroupId = "io.quarkus.platform";
 
-    @CommandLine.Option(names = { "--repos" },
+    @CommandLine.Option(names = { "--repo", "--repos" },
                         description = "Additional maven repositories for download on-demand (Use commas to separate multiple repositories)")
     String repos;
 
@@ -99,12 +99,13 @@ public class CatalogDoc extends CamelCommand {
     String filter;
 
     @CommandLine.Option(names = { "--header" },
-                        description = "Whether to display component message headers", defaultValue = "true")
+                        description = "Whether to display component message headers", defaultValue = "false")
     boolean headers;
 
     @CommandLine.Option(names = {
-            "--kamelets-version" }, description = "Apache Camel Kamelets version", defaultValue = "4.12.0")
-    String kameletsVersion;
+            "--kamelets-version" }, description = "Apache Camel Kamelets version",
+                        defaultValue = RuntimeType.KAMELETS_VERSION)
+    String kameletsVersion = RuntimeType.KAMELETS_VERSION;
 
     CamelCatalog catalog;
 
@@ -144,7 +145,7 @@ public class CatalogDoc extends CamelCommand {
         }
 
         if (prefix == null || "kamelet".equals(prefix)) {
-            KameletModel km = KameletCatalogHelper.loadKameletModel(name, kameletsVersion);
+            KameletModel km = KameletCatalogHelper.loadKameletModel(name, kameletsVersion, repos);
             if (km != null) {
                 docKamelet(km);
                 return 0;
@@ -185,7 +186,8 @@ public class CatalogDoc extends CamelCommand {
             boolean kamelet = name.endsWith("-sink") || name.endsWith("-source") || name.endsWith("-action");
             if (kamelet) {
                 // kamelet names
-                suggestions = SuggestSimilarHelper.didYouMean(KameletCatalogHelper.findKameletNames(kameletsVersion), name);
+                suggestions
+                        = SuggestSimilarHelper.didYouMean(KameletCatalogHelper.findKameletNames(kameletsVersion, repos), name);
             } else {
                 // assume its a component
                 suggestions = SuggestSimilarHelper.didYouMean(findComponentNames(catalog), name);
@@ -199,7 +201,7 @@ public class CatalogDoc extends CamelCommand {
         } else {
             List<String> suggestions = switch (prefix) {
                 case "kamelet" ->
-                    SuggestSimilarHelper.didYouMean(KameletCatalogHelper.findKameletNames(kameletsVersion), name);
+                    SuggestSimilarHelper.didYouMean(KameletCatalogHelper.findKameletNames(kameletsVersion, repos), name);
                 case "component" -> SuggestSimilarHelper.didYouMean(findComponentNames(catalog), name);
                 case "dataformat" -> SuggestSimilarHelper.didYouMean(catalog.findDataFormatNames(), name);
                 case "language" -> SuggestSimilarHelper.didYouMean(catalog.findLanguageNames(), name);
@@ -253,6 +255,9 @@ public class CatalogDoc extends CamelCommand {
                 }
                 if (v != null) {
                     printer().println("        <version>" + v + "</version>");
+                }
+                if (gav.getScope() != null) {
+                    printer().println("        <scope>" + gav.getScope() + "</scope>");
                 }
                 printer().println("    </dependency>");
             }
@@ -429,9 +434,15 @@ public class CatalogDoc extends CamelCommand {
         printer().println("");
 
         if (headers && !cm.getEndpointHeaders().isEmpty()) {
-            printer().printf("The %s component supports (total: %s) message headers, which are listed below.%n%n",
-                    cm.getName(), cm.getEndpointHeaders().size());
-            printer().println(AsciiTable.getTable(AsciiTable.FANCY_ASCII, cm.getEndpointHeaders(), Arrays.asList(
+            filtered = filter(filter, cm.getEndpointHeaders());
+            total1 = cm.getEndpointHeaders().size();
+            total2 = filtered.size();
+            if (total1 == total2) {
+                printer().printf("Message headers (total: %s):%n", total1);
+            } else {
+                printer().printf("Message headers (total: %s match-filter: %s):%n", total1, total2);
+            }
+            printer().println(AsciiTable.getTable(AsciiTable.FANCY_ASCII, filtered, Arrays.asList(
                     new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).minWidth(20)
                             .maxWidth(35, OverflowBehaviour.NEWLINE)
                             .with(this::getName),

@@ -261,8 +261,6 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
                             if (LOG.isDebugEnabled()) {
                                 LOG.debug("Http responseCode: {}", responseCode);
                             }
-                            populateResponseCode(exchange.getOut(), httpResponse, responseCode);
-
                             if (!throwException) {
                                 // if we do not use failed exception then populate response for all response codes
                                 HttpProducer.this.populateResponse(exchange, httpRequest, httpResponse, strategy, responseCode);
@@ -279,6 +277,9 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
                                     HttpProducer.this.populateResponse(exchange, httpRequest, httpResponse, strategy,
                                             responseCode);
                                 } else {
+                                    // also store response code when throwing exception
+                                    populateResponseCode(exchange.getMessage(), httpResponse, responseCode);
+
                                     // operation failed so populate exception to throw
                                     throw HttpProducer.this.populateHttpOperationFailedException(exchange, httpRequest,
                                             httpResponse, responseCode);
@@ -354,9 +355,12 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
             Exchange exchange, HttpUriRequest httpRequest, ClassicHttpResponse httpResponse,
             HeaderFilterStrategy strategy, int responseCode)
             throws IOException, ClassNotFoundException {
+
+        Message answer = exchange.getOut();
+        populateResponseCode(answer, httpResponse, responseCode);
+
         // We just make the out message is not create when extractResponseBody throws exception
         Object response = extractResponseBody(httpResponse, exchange, getEndpoint().isIgnoreResponseBody());
-        Message answer = exchange.getOut();
         answer.setBody(response);
 
         if (!getEndpoint().isSkipResponseHeaders()) {
@@ -786,18 +790,19 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
                         // so we only do an instanceof check and accept String if the body is really a String
                         // do not fallback to use the default charset as it can influence the request
                         // (for example application/x-www-form-urlencoded forms being sent)
-                        String charset = ExchangeHelper.getCharsetName(exchange, false);
-                        if (charset == null && contentType != null) {
-                            // okay try to get the charset from the content-type
-                            Charset cs = contentType.getCharset();
-                            if (cs != null) {
-                                charset = cs.name();
+                        if (getEndpoint().isContentTypeCharsetEnabled()) {
+                            String charset = ExchangeHelper.getCharsetName(exchange, false);
+                            if (charset == null && contentType != null) {
+                                // okay try to get the charset from the content-type
+                                Charset cs = contentType.getCharset();
+                                if (cs != null) {
+                                    charset = cs.name();
+                                }
                             }
-                        }
-
-                        // sync contentType.charset and charset
-                        if (contentType != null && contentType.getCharset() == null && charset != null) {
-                            contentType = ContentType.parse(contentType + ";charset=" + charset);
+                            // sync contentType.charset and charset
+                            if (contentType != null && contentType.getCharset() == null && charset != null) {
+                                contentType = ContentType.parse(contentType + ";charset=" + charset);
+                            }
                         }
 
                         if (multipart) {

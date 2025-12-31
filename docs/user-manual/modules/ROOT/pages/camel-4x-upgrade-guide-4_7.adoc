@@ -4,6 +4,13 @@ This document is for helping you upgrade your Apache Camel application
 from Camel 4.x to 4.y. For example, if you are upgrading Camel 4.0 to 4.2, then you should follow the guides
 from both 4.0 to 4.1 and 4.1 to 4.2.
 
+[NOTE]
+====
+https://github.com/apache/camel-upgrade-recipes/[The Camel Upgrade Recipes project] provides automated assistance for some common migration tasks.
+Note that manual migration is still required.
+See the xref:camel-upgrade-recipes-tool.adoc[documentation] page for details.
+====
+
 == Upgrading Camel 4.6 to 4.7
 
 === API changes
@@ -37,7 +44,7 @@ The `SupervisingRouteController` has now been pre-configured to report `DOWN` du
 giving up starting a route. It is the `UnhealthyOnExhausted` and `UnhealthyOnRestarting` options that have been changed to be default `true`.
 To have previous behavior, you can set these options to `false`.
 
-== camel-cloud
+=== camel-cloud
 
 The camel-cloud component has been deprecated.
 

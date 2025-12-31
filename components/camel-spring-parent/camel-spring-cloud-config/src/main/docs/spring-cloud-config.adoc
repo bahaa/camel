@@ -6,8 +6,6 @@
 :since: 4.12
 :supportlevel: Stable
 :tabs-sync-option:
-//Manually maintained attributes
-:group: Spring
 
 *Since Camel {since}*
 

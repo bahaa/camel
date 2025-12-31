@@ -148,8 +148,7 @@ public class QueueReplyManager extends ReplyManagerSupport {
             String replyToSelectorName = endpoint.getReplyToDestinationSelectorName();
             if (replyToSelectorName != null) {
                 // create a random selector value we will use for the reply queue
-                // NOSONAR
-                replyToSelectorValue = "ID:" + new BigInteger(24 * 8, new Random()).toString(16);
+                replyToSelectorValue = "ID:" + new BigInteger(24 * 8, new Random()).toString(16); // NOSONAR
                 String fixedMessageSelector = replyToSelectorName + "='" + replyToSelectorValue + "'";
                 answer = new SharedQueueSimpleMessageListenerContainer(endpoint, fixedMessageSelector);
                 log.debug("Using shared queue: {} with fixed message selector [{}] as reply listener: {}",
@@ -231,8 +230,7 @@ public class QueueReplyManager extends ReplyManagerSupport {
             String replyToSelectorName = endpoint.getReplyToDestinationSelectorName();
             if (replyToSelectorName != null) {
                 // create a random selector value we will use for the reply queue
-                // NOSONAR
-                replyToSelectorValue = "ID:" + new BigInteger(24 * 8, new Random()).toString(16);
+                replyToSelectorValue = "ID:" + new BigInteger(24 * 8, new Random()).toString(16); // NOSONAR
                 String fixedMessageSelector = replyToSelectorName + "='" + replyToSelectorValue + "'";
                 answer = new SharedQueueMessageListenerContainer(endpoint, fixedMessageSelector);
                 log.debug("Using shared queue: {} with fixed message selector [{}] as reply listener: {}",
@@ -240,6 +238,9 @@ public class QueueReplyManager extends ReplyManagerSupport {
             } else {
                 // use a dynamic message selector which will select the message we want to receive as reply
                 MessageSelectorCreator dynamicMessageSelector = new MessageSelectorCreator(correlation);
+                if (endpoint.getConfiguration().getReplyCorrelationProperty() != null) {
+                    dynamicMessageSelector.setCorrelationProperty(endpoint.getConfiguration().getReplyCorrelationProperty());
+                }
                 answer = new SharedQueueMessageListenerContainer(endpoint, dynamicMessageSelector);
                 log.debug("Using shared queue: {} with dynamic message selector as reply listener: {}", endpoint.getReplyTo(),
                         answer);

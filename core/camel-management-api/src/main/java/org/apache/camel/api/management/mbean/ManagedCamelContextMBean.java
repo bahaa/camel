@@ -73,6 +73,9 @@ public interface ManagedCamelContextMBean extends ManagedPerformanceCounterMBean
     @ManagedAttribute(description = "HeadersMapFactory class name")
     String getHeadersMapFactoryClassName();
 
+    @ManagedAttribute(description = "Additional sensitive keywords (such as passwords) that should be masked when logging")
+    String getAdditionalSensitiveKeywords();
+
     /**
      * Gets the value of a CamelContext global option
      *
@@ -219,8 +222,14 @@ public interface ManagedCamelContextMBean extends ManagedPerformanceCounterMBean
     @ManagedOperation(description = "Dumps the routes as XML")
     String dumpRoutesAsXml(boolean resolvePlaceholders, boolean generatedIds) throws Exception;
 
+    @ManagedOperation(description = "Dumps the routes as XML")
+    String dumpRoutesAsXml(boolean resolvePlaceholders, boolean generatedIds, boolean sourceLocation) throws Exception;
+
     @ManagedOperation(description = "Dumps the CamelContext and routes stats as XML")
     String dumpRoutesStatsAsXml(boolean fullStats, boolean includeProcessors) throws Exception;
+
+    @ManagedOperation(description = "Dumps the CamelContext and routes stats as JSon")
+    String dumpRouteStatsAsJSon(boolean fullStats, boolean includeProcessors) throws Exception;
 
     @ManagedOperation(description = "Dumps the CamelContext and routes and steps stats as XML")
     String dumpStepStatsAsXml(boolean fullStats) throws Exception;
@@ -242,6 +251,10 @@ public interface ManagedCamelContextMBean extends ManagedPerformanceCounterMBean
 
     @ManagedOperation(description = "Dumps the routes as YAML")
     String dumpRoutesAsYaml(boolean resolvePlaceholders, boolean uriAsParameters, boolean generatedIds) throws Exception;
+
+    @ManagedOperation(description = "Dumps the routes as YAML")
+    String dumpRoutesAsYaml(boolean resolvePlaceholders, boolean uriAsParameters, boolean generatedIds, boolean sourceLocation)
+            throws Exception;
 
     /**
      * Creates the endpoint by the given uri
@@ -290,5 +303,11 @@ public interface ManagedCamelContextMBean extends ManagedPerformanceCounterMBean
      */
     @ManagedOperation(description = "The names of the data formats currently registered")
     Set<String> dataFormatNames() throws Exception;
+
+    @ManagedOperation(description = "Current ids of all the routes")
+    Set<String> routeIds();
+
+    @ManagedOperation(description = "Current route group names of all the routes (is empty if there are no route groups assigned)")
+    Set<String> routeGroups();
 
 }

@@ -43,22 +43,11 @@ google-pubsub://project-id:destinationName?[options]
 Destination Name can be either a topic or a subscription name.
 
 
-// component-configure options: START
-
-// component-configure options: END
-
 // component options: START
 include::partial$component-configure-options.adoc[]
 include::partial$component-endpoint-options.adoc[]
-// component options: END
-
-// endpoint options: START
-
-// endpoint options: END
-
-// component headers: START
 include::partial$component-endpoint-headers.adoc[]
-// component headers: END
+// component options: END
 
 == Usage
 
@@ -109,22 +98,6 @@ It is up for the route to convert/unmarshall the contents.
 By default, this component acquires credentials using `GoogleCredentials.getApplicationDefault()`.
 This behavior can be disabled by setting _authenticate_ option to `false`, in which case requests to Google API will be made without authentication details. This is only desirable when developing against an emulator.
 This behavior can be altered by supplying a path to a service account key file.
-
-=== Rollback and Redelivery
-
-The rollback for Google PubSub relies on the idea of the Acknowledgement Deadline - the time period where Google PubSub expects to receive the acknowledgement.
-If the acknowledgement has not been received, the message is redelivered.
-
-Google provides an API to extend the deadline for a message.
-
-More information in https://cloud.google.com/pubsub/docs/subscriber#ack_deadline[Google PubSub Documentation]
-
-So, rollback is effectively a deadline extension API call with zero value - i.e., deadline is reached now, and the message can
-be redelivered to the next consumer.
-
-It is possible to delay the message redelivery by setting the acknowledgement deadline explicitly for the rollback by
-setting the message header `GooglePubsubConstants.ACK_DEADLINE` to the value in seconds.
-
 
 include::spring-boot:partial$starter.adoc[]
 
