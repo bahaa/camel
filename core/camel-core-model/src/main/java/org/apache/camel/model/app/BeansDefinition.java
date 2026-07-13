@@ -48,12 +48,14 @@ import org.apache.camel.spi.annotations.ExternalSchemaElement;
  * Important this is only supported when using XML DSL with camel-xml-io-dsl. This is NOT for the classic old Spring XML
  * DSL used by Camel 1.x/2.x.
  */
-@Metadata(label = "configuration")
+@Metadata(label = "configuration",
+          description = "Container element for defining beans, routes, and other elements using XML DSL with camel-xml-io-dsl")
 @XmlRootElement(name = "beans")
 @XmlType(propOrder = {
         "componentScanning",
         "beans",
         "springOrBlueprintBeans",
+        "sslContextParameters",
         "dataFormats",
         "restConfigurations",
         "rests",
@@ -68,11 +70,13 @@ public class BeansDefinition {
     // This class is not meant to be used with Camel Java DSL, but it's needed to generate XML Schema and MX parser methods
 
     @XmlElement(name = "component-scan")
+    @Metadata(description = "Component scanning that can auto-discover Camel route builders from the classpath.")
     private List<ComponentScanDefinition> componentScanning = new ArrayList<>();
 
     // this is a place for <bean> element definition, without conflicting with <bean> elements referring
     // to "bean processors"
     @XmlElement(name = "bean")
+    @Metadata(description = "List of bean definitions to be registered in the Camel registry.")
     private List<BeanFactoryDefinition> beans = new ArrayList<>();
 
     // support for legacy spring <beans> and blueprint <bean> files to be parsed and loaded
@@ -93,31 +97,39 @@ public class BeansDefinition {
     // initially we'll be supporting only these elements which are parsed by
     // org.apache.camel.dsl.xml.io.XmlRoutesBuilderLoader in camel-xml-io-dsl
 
+    @XmlElement(name = "sslContextParameters")
+    @Metadata(description = "SSL/TLS context parameters configuration.")
+    private List<SSLContextParametersDefinition> sslContextParameters = new ArrayList<>();
+
     @XmlElementWrapper(name = "dataFormats")
     @XmlElement(name = "dataFormat")
     @DslProperty(name = "dataFormats") // yaml-dsl
     @Description("Camel data formats")
+    @Metadata(description = "Camel data formats.")
     private List<DataFormatDefinition> dataFormats;
     @XmlElement(name = "restConfiguration")
+    @Metadata(description = "Camel Rest DSL configuration.")
     private List<RestConfigurationDefinition> restConfigurations = new ArrayList<>();
     @XmlElement(name = "rest")
+    @Metadata(description = "Camel Rest DSL services.")
     private List<RestDefinition> rests = new ArrayList<>();
     @XmlElement(name = "routeConfiguration")
+    @Metadata(description = "Camel route configurations.")
     private List<RouteConfigurationDefinition> routeConfigurations = new ArrayList<>();
     @XmlElement(name = "routeTemplate")
+    @Metadata(description = "Camel route templates.")
     private List<RouteTemplateDefinition> routeTemplates = new ArrayList<>();
     @XmlElement(name = "templatedRoute")
+    @Metadata(description = "Camel routes to be created from route templates.")
     private List<TemplatedRouteDefinition> templatedRoutes = new ArrayList<>();
     @XmlElement(name = "route")
+    @Metadata(description = "Camel routes.")
     private List<RouteDefinition> routes = new ArrayList<>();
 
     public List<ComponentScanDefinition> getComponentScanning() {
         return componentScanning;
     }
 
-    /**
-     * Component scanning that can auto-discover Camel route builders from the classpath.
-     */
     public void setComponentScanning(List<ComponentScanDefinition> componentScanning) {
         this.componentScanning = componentScanning;
     }
@@ -126,32 +138,40 @@ public class BeansDefinition {
         return beans;
     }
 
-    /**
-     * List of bean
-     */
     public void setBeans(List<BeanFactoryDefinition> beans) {
         this.beans = beans;
     }
 
+    /**
+     * @deprecated use standard Camel XML DSL (camel-xml-io) instead of legacy Spring/Blueprint XML. This feature will
+     *             be removed in a future release.
+     */
+    @Deprecated(since = "4.22")
     public List<Element> getSpringOrBlueprintBeans() {
         return springOrBlueprintBeans;
     }
 
     /**
-     * Support for legacy Spring beans and Blueprint bean files to be parsed and loaded for migration and tooling
-     * effort.
+     * @deprecated use standard Camel XML DSL (camel-xml-io) instead of legacy Spring/Blueprint XML. This feature will
+     *             be removed in a future release.
      */
+    @Deprecated(since = "4.22")
     public void setSpringOrBlueprintBeans(List<Element> springOrBlueprintBeans) {
         this.springOrBlueprintBeans = springOrBlueprintBeans;
+    }
+
+    public List<SSLContextParametersDefinition> getSslContextParameters() {
+        return sslContextParameters;
+    }
+
+    public void setSslContextParameters(List<SSLContextParametersDefinition> sslContextParameters) {
+        this.sslContextParameters = sslContextParameters;
     }
 
     public List<RestConfigurationDefinition> getRestConfigurations() {
         return restConfigurations;
     }
 
-    /**
-     * Camel Rest DSL Configuration
-     */
     public void setRestConfigurations(List<RestConfigurationDefinition> restConfigs) {
         this.restConfigurations = restConfigs;
     }
@@ -160,9 +180,6 @@ public class BeansDefinition {
         return rests;
     }
 
-    /**
-     * Camel Rest DSL
-     */
     public void setRests(List<RestDefinition> rests) {
         this.rests = rests;
     }
@@ -171,9 +188,6 @@ public class BeansDefinition {
         return routeConfigurations;
     }
 
-    /**
-     * Camel route configurations
-     */
     public void setRouteConfigurations(List<RouteConfigurationDefinition> routeConfigurations) {
         this.routeConfigurations = routeConfigurations;
     }
@@ -182,9 +196,6 @@ public class BeansDefinition {
         return routeTemplates;
     }
 
-    /**
-     * Camel route templates
-     */
     public void setRouteTemplates(List<RouteTemplateDefinition> routeTemplates) {
         this.routeTemplates = routeTemplates;
     }
@@ -193,9 +204,6 @@ public class BeansDefinition {
         return templatedRoutes;
     }
 
-    /**
-     * Camel routes to be created from template
-     */
     public void setTemplatedRoutes(List<TemplatedRouteDefinition> templatedRoutes) {
         this.templatedRoutes = templatedRoutes;
     }
@@ -204,9 +212,6 @@ public class BeansDefinition {
         return routes;
     }
 
-    /**
-     * Camel routes
-     */
     public void setRoutes(List<RouteDefinition> routes) {
         this.routes = routes;
     }
@@ -215,9 +220,6 @@ public class BeansDefinition {
         return dataFormats;
     }
 
-    /**
-     * Camel data formats
-     */
     public void setDataFormats(List<DataFormatDefinition> dataFormats) {
         this.dataFormats = dataFormats;
     }

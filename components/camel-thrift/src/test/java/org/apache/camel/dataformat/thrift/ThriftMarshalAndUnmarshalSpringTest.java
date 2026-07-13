@@ -22,13 +22,13 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.thrift.generated.Operation;
 import org.apache.camel.dataformat.thrift.generated.Work;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ThriftMarshalAndUnmarshalSpringTest extends CamelSpringTestSupport {
     private static final String WORK_TEST_COMMENT = "This is a test thrift data";
@@ -58,17 +58,14 @@ public class ThriftMarshalAndUnmarshalSpringTest extends CamelSpringTestSupport 
 
     @Test
     public void testMarshalAndUnmarshalWithDSL3() {
-        try {
-            context.addRoutes(new RouteBuilder() {
-                @Override
-                public void configure() {
-                    from("direct:unmarshalC").unmarshal().thrift(new CamelException("wrong instance")).to("mock:reverse");
-                }
-            });
-            fail("Expect the exception here");
-        } catch (Exception ex) {
-            assertTrue(ex instanceof FailedToCreateRouteException, "Expect FailedToCreateRouteException");
-        }
+        Exception ex = assertThrows(Exception.class,
+                () -> context.addRoutes(new RouteBuilder() {
+                    @Override
+                    public void configure() {
+                        from("direct:unmarshalC").unmarshal().thrift(new CamelException("wrong instance")).to("mock:reverse");
+                    }
+                }));
+        assertTrue(ex instanceof FailedToCreateRouteException, "Expect FailedToCreateRouteException");
     }
 
     private void marshalAndUnmarshal(String inURI, String outURI) throws Exception {

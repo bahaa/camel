@@ -16,13 +16,21 @@
  */
 package org.apache.camel.component.docling;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Endpoint;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.Component;
 import org.apache.camel.support.DefaultComponent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Component for integrating with Docling document processing library.
@@ -30,8 +38,16 @@ import org.apache.camel.support.DefaultComponent;
 @Component("docling")
 public class DoclingComponent extends DefaultComponent {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DoclingComponent.class);
+
     @Metadata
     DoclingConfiguration configuration;
+
+    // Shared across all producers so that SUBMIT_ASYNC_CONVERSION and CHECK_CONVERSION_STATUS
+    // (which may resolve to different endpoints/producers) can see each other's tasks.
+    private final Map<String, AsyncTaskEntry> pendingAsyncTasks = new ConcurrentHashMap<>();
+    private final AtomicLong taskIdCounter = new AtomicLong();
+    private ScheduledExecutorService cleanupExecutor;
 
     public DoclingComponent() {
         this(null);
@@ -40,6 +56,28 @@ public class DoclingComponent extends DefaultComponent {
     public DoclingComponent(CamelContext context) {
         super(context);
         this.configuration = new DoclingConfiguration();
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+
+        // Start scheduled cleanup task for expired async tasks
+        long ttl = configuration.getAsyncTaskTtl();
+        // Run cleanup every 10% of TTL, with a 1 second minimum to bound the polling rate.
+        // The cleanup is cheap when no tasks have expired (early return), so a low minimum is safe.
+        long cleanupInterval = Math.max(ttl / 10, 1000);
+
+        cleanupExecutor = getCamelContext().getExecutorServiceManager()
+                .newScheduledThreadPool(this, "DoclingAsyncTaskCleanup", 1);
+
+        cleanupExecutor.scheduleWithFixedDelay(
+                this::cleanupExpiredTasks,
+                cleanupInterval,
+                cleanupInterval,
+                TimeUnit.MILLISECONDS);
+
+        LOG.debug("Started async task cleanup with TTL={}ms, cleanup interval={}ms", ttl, cleanupInterval);
     }
 
     @Override
@@ -59,6 +97,68 @@ public class DoclingComponent extends DefaultComponent {
      */
     public void setConfiguration(DoclingConfiguration configuration) {
         this.configuration = configuration;
+    }
+
+    Map<String, AsyncTaskEntry> getPendingAsyncTasks() {
+        return pendingAsyncTasks;
+    }
+
+    AtomicLong getTaskIdCounter() {
+        return taskIdCounter;
+    }
+
+    /**
+     * Cleanup expired async tasks based on configured TTL. Runs periodically in background to prevent memory leaks.
+     */
+    private void cleanupExpiredTasks() {
+        if (pendingAsyncTasks.isEmpty()) {
+            return;
+        }
+
+        long ttl = configuration.getAsyncTaskTtl();
+        long now = System.currentTimeMillis();
+        List<String> expiredTaskIds = new ArrayList<>();
+
+        // Identify expired tasks
+        for (Map.Entry<String, AsyncTaskEntry> entry : pendingAsyncTasks.entrySet()) {
+            AsyncTaskEntry taskEntry = entry.getValue();
+            long age = now - taskEntry.getCreatedAtMs();
+
+            if (age > ttl) {
+                expiredTaskIds.add(entry.getKey());
+            }
+        }
+
+        // Remove expired tasks
+        for (String taskId : expiredTaskIds) {
+            AsyncTaskEntry removed = pendingAsyncTasks.remove(taskId);
+            if (removed != null) {
+                // Cancel the future if still pending
+                removed.getFuture().cancel(true);
+                LOG.debug("Evicted expired async task: {} (age: {}ms, TTL: {}ms)",
+                        taskId, removed.getAgeMs(), ttl);
+            }
+        }
+
+        if (!expiredTaskIds.isEmpty()) {
+            LOG.debug("Cleaned up {} expired async tasks (current map size: {})",
+                    expiredTaskIds.size(), pendingAsyncTasks.size());
+        }
+    }
+
+    @Override
+    protected void doStop() throws Exception {
+        // Shutdown cleanup executor
+        if (cleanupExecutor != null) {
+            getCamelContext().getExecutorServiceManager().shutdownGraceful(cleanupExecutor);
+            cleanupExecutor = null;
+            LOG.debug("Stopped async task cleanup executor");
+        }
+
+        // Cancel and clear all pending tasks
+        pendingAsyncTasks.forEach((id, entry) -> entry.getFuture().cancel(true));
+        pendingAsyncTasks.clear();
+        super.doStop();
     }
 
 }

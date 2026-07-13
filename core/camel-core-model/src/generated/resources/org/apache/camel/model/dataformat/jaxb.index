@@ -18,6 +18,7 @@ FhirXmlDataFormat
 FlatpackDataFormat
 ForyDataFormat
 GrokDataFormat
+GroovyJSonDataFormat
 GroovyXmlDataFormat
 GzipDeflaterDataFormat
 HL7DataFormat
@@ -30,6 +31,7 @@ JsonDataFormat
 JsonLibrary
 LZFDataFormat
 MimeMultipartDataFormat
+OcsfDataFormat
 PGPDataFormat
 PQCDataFormat
 ParquetAvroDataFormat

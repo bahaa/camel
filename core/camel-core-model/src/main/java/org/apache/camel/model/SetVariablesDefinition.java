@@ -16,6 +16,7 @@
  */
 package org.apache.camel.model;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,14 +35,16 @@ import org.apache.camel.spi.Metadata;
 /**
  * Allows setting multiple variables at the same time.
  */
-@Metadata(label = "eip,transformation")
+@Metadata(label = "eip,messaging,transformation",
+          description = "Sets multiple variables at once, each computed by its own expression")
 @XmlRootElement(name = "setVariables")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SetVariablesDefinition extends ProcessorDefinition<SetVariablesDefinition> {
 
     /** This is provided to support XML and YAML DSL */
     @XmlElementRef(name = "variables")
-    private List<SetVariableDefinition> variables = new java.util.ArrayList<>();
+    @Metadata(description = "The variables to set on the exchange.")
+    private List<SetVariableDefinition> variables = new ArrayList<>();
 
     public SetVariablesDefinition() {
     }

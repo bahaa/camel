@@ -35,15 +35,20 @@ import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
+import dev.langchain4j.model.chat.request.json.JsonStringSchema;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.FinishReason;
 import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.output.TokenUsage;
 import org.apache.camel.Exchange;
 import org.apache.camel.InvalidPayloadException;
+import org.apache.camel.Message;
 import org.apache.camel.TypeConverter;
 import org.apache.camel.component.langchain4j.tools.spec.CamelToolExecutorCache;
 import org.apache.camel.component.langchain4j.tools.spec.CamelToolSpecification;
 import org.apache.camel.support.DefaultProducer;
+import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +61,8 @@ public class LangChain4jToolsProducer extends DefaultProducer {
     private ChatModel chatModel;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private ToolSearchTool toolSearchTool;
 
     public LangChain4jToolsProducer(LangChain4jToolsEndpoint endpoint) {
         super(endpoint);
@@ -80,6 +87,11 @@ public class LangChain4jToolsProducer extends DefaultProducer {
         super.doStart();
         this.chatModel = this.endpoint.getConfiguration().getChatModel();
         ObjectHelper.notNull(chatModel, "chatModel");
+
+        // Initialize the tool search tool
+        final CamelToolExecutorCache toolCache = CamelToolExecutorCache.getInstance();
+        String[] tags = TagsHelper.splitTags(endpoint.getTags());
+        this.toolSearchTool = new ToolSearchTool(toolCache, tags);
     }
 
     private void populateResponse(String response, Exchange exchange) {
@@ -110,20 +122,62 @@ public class LangChain4jToolsProducer extends DefaultProducer {
             return null;
         }
 
+        final Exchange baseline = ExchangeHelper.createCopy(exchange, true);
+
+        int totalInputTokens = 0;
+        int totalOutputTokens = 0;
+        int totalTokens = 0;
+        FinishReason lastFinishReason = null;
+
         // First talk to the model to get the tools to be called
         int i = 0;
         do {
             LOG.debug("Starting iteration {}", i);
-            final Response<AiMessage> response = chatWithLLM(chatMessages, toolPair, exchange);
+            final ChatResponse chatResponse = chatWithLLM(chatMessages, toolPair, exchange);
+
+            // Accumulate token usage across iterations
+            if (chatResponse.tokenUsage() != null) {
+                TokenUsage usage = chatResponse.tokenUsage();
+                if (usage.inputTokenCount() != null) {
+                    totalInputTokens += usage.inputTokenCount();
+                }
+                if (usage.outputTokenCount() != null) {
+                    totalOutputTokens += usage.outputTokenCount();
+                }
+                if (usage.totalTokenCount() != null) {
+                    totalTokens += usage.totalTokenCount();
+                }
+            }
+            if (chatResponse.finishReason() != null) {
+                lastFinishReason = chatResponse.finishReason();
+            }
+
+            final Response<AiMessage> response = Response.from(chatResponse.aiMessage());
             if (isDoneExecuting(response)) {
+                populateTokenUsageHeaders(lastFinishReason, totalInputTokens, totalOutputTokens, totalTokens, exchange);
                 return extractAiResponse(response);
             }
 
             // Only invoke the tools ... the response will be computed on the next loop
-            invokeTools(chatMessages, exchange, response, toolPair);
+            invokeTools(chatMessages, exchange, response, toolPair, baseline);
             LOG.debug("Finished iteration {}", i);
             i++;
         } while (true);
+    }
+
+    private void populateTokenUsageHeaders(
+            FinishReason finishReason, int inputTokens, int outputTokens, int totalTokens, Exchange exchange) {
+        Message message = exchange.getMessage();
+
+        if (finishReason != null) {
+            message.setHeader(LangChain4jToolsHeaders.FINISH_REASON, finishReason);
+        }
+
+        if (inputTokens > 0 || outputTokens > 0 || totalTokens > 0) {
+            message.setHeader(LangChain4jToolsHeaders.INPUT_TOKEN_COUNT, inputTokens);
+            message.setHeader(LangChain4jToolsHeaders.OUTPUT_TOKEN_COUNT, outputTokens);
+            message.setHeader(LangChain4jToolsHeaders.TOTAL_TOKEN_COUNT, totalTokens);
+        }
     }
 
     private boolean isDoneExecuting(Response<AiMessage> response) {
@@ -144,23 +198,46 @@ public class LangChain4jToolsProducer extends DefaultProducer {
     }
 
     private void invokeTools(
-            List<ChatMessage> chatMessages, Exchange exchange, Response<AiMessage> response, ToolPair toolPair) {
+            List<ChatMessage> chatMessages, Exchange exchange, Response<AiMessage> response, ToolPair toolPair,
+            Exchange baseline) {
         int i = 0;
         List<ToolExecutionRequest> toolExecutionRequests = response.content().toolExecutionRequests();
         for (ToolExecutionRequest toolExecutionRequest : toolExecutionRequests) {
             String toolName = toolExecutionRequest.name();
             LOG.info("Invoking tool {} ({}) of {}", i, toolName, toolExecutionRequests.size());
 
+            // Check if this is the ToolSearchTool
+            if (ToolSearchTool.TOOL_NAME.equals(toolName)) {
+                handleToolSearchToolInvocation(toolExecutionRequest, chatMessages, exchange);
+                i++;
+                continue;
+            }
+
             final CamelToolSpecification camelToolSpecification = toolPair.callableTools().stream()
                     .filter(c -> c.getToolSpecification().name().equals(toolName)).findFirst().get();
 
+            final Exchange toolExchange = ExchangeHelper.createCopy(baseline, true);
+
             try {
                 TypeConverter typeConverter = endpoint.getCamelContext().getTypeConverter();
+
+                // Get declared parameters from tool specification to filter incoming fields
+                Set<String> declaredParams = Set.of();
+                JsonObjectSchema paramSchema = camelToolSpecification.getToolSpecification().parameters();
+                if (paramSchema != null && paramSchema.properties() != null) {
+                    declaredParams = paramSchema.properties().keySet();
+                }
+                final Set<String> allowedParams = declaredParams;
 
                 // Map Json to Header
                 JsonNode jsonNode = objectMapper.readValue(toolExecutionRequest.arguments(), JsonNode.class);
                 jsonNode.fieldNames()
                         .forEachRemaining(name -> {
+                            if (!allowedParams.contains(name)) {
+                                LOG.warn("Skipping undeclared tool argument '{}' for tool '{}'",
+                                        name, toolName);
+                                return;
+                            }
                             final JsonNode value = jsonNode.get(name);
                             Object headerValue;
 
@@ -180,22 +257,77 @@ public class LangChain4jToolsProducer extends DefaultProducer {
                                 headerValue = value;
                             }
 
-                            exchange.getMessage().setHeader(name, headerValue);
+                            toolExchange.getMessage().setHeader(name, headerValue);
                         });
 
                 // Execute the consumer route
 
-                camelToolSpecification.getConsumer().getProcessor().process(exchange);
+                camelToolSpecification.getConsumer().getProcessor().process(toolExchange);
                 i++;
             } catch (Exception e) {
                 // How to handle this exception?
-                exchange.setException(e);
+                toolExchange.setException(e);
             }
+
+            ExchangeHelper.copyResults(exchange, toolExchange);
 
             chatMessages.add(new ToolExecutionResultMessage(
                     toolExecutionRequest.id(),
                     toolExecutionRequest.name(),
-                    exchange.getIn().getBody(String.class)));
+                    toolExchange.getIn().getBody(String.class)));
+        }
+
+        // Clear route stop flag after all tools so it does not leak
+        // into the calling route and prevent subsequent steps from executing
+        exchange.setRouteStop(false);
+    }
+
+    /**
+     * Handles the invocation of the ToolSearchTool
+     *
+     * @param toolExecutionRequest the tool execution request
+     * @param chatMessages         the chat messages
+     * @param exchange             the exchange
+     */
+    private void handleToolSearchToolInvocation(
+            ToolExecutionRequest toolExecutionRequest, List<ChatMessage> chatMessages, Exchange exchange) {
+        try {
+            // Validate arguments
+            String arguments = toolExecutionRequest.arguments();
+            if (arguments == null || arguments.trim().isEmpty()) {
+                LOG.warn("ToolSearchTool invoked with null or empty arguments");
+                chatMessages.add(new ToolExecutionResultMessage(
+                        toolExecutionRequest.id(),
+                        toolExecutionRequest.name(),
+                        "No search criteria provided. Please specify tags to search for tools."));
+                return;
+            }
+
+            // Parse the arguments
+            JsonNode jsonNode = objectMapper.readValue(arguments, JsonNode.class);
+            String tags = jsonNode.has("tags") ? jsonNode.get("tags").asText() : "";
+
+            LOG.debug("ToolSearchTool searching for tags: {}", tags);
+
+            // Search for tools
+            List<CamelToolSpecification> matchingTools = toolSearchTool.searchTools(tags);
+
+            // Format the result for the LLM
+            String result = ToolSearchTool.formatToolsForLLM(matchingTools);
+
+            // Add the result to chat messages
+            chatMessages.add(new ToolExecutionResultMessage(
+                    toolExecutionRequest.id(),
+                    toolExecutionRequest.name(),
+                    result));
+
+            LOG.info("ToolSearchTool found {} matching tools for tags: {}", matchingTools.size(), tags);
+        } catch (Exception e) {
+            LOG.error("Error executing ToolSearchTool", e);
+            chatMessages.add(new ToolExecutionResultMessage(
+                    toolExecutionRequest.id(),
+                    toolExecutionRequest.name(),
+                    "Error searching for tools: " + e.getMessage()));
         }
     }
 
@@ -207,7 +339,7 @@ public class LangChain4jToolsProducer extends DefaultProducer {
      * @param  toolPair     the toolPair containing the available tools to be called
      * @return              the response provided by the model
      */
-    private Response<AiMessage> chatWithLLM(List<ChatMessage> chatMessages, ToolPair toolPair, Exchange exchange) {
+    private ChatResponse chatWithLLM(List<ChatMessage> chatMessages, ToolPair toolPair, Exchange exchange) {
 
         ChatRequest.Builder requestBuilder = ChatRequest.builder()
                 .messages(chatMessages);
@@ -223,17 +355,15 @@ public class LangChain4jToolsProducer extends DefaultProducer {
         // generate response
         ChatResponse chatResponse = this.chatModel.chat(chatRequest);
 
-        // Convert ChatResponse to Response<AiMessage> for compatibility
         AiMessage aiMessage = chatResponse.aiMessage();
-        Response<AiMessage> response = Response.from(aiMessage);
 
-        if (!response.content().hasToolExecutionRequests()) {
+        if (!aiMessage.hasToolExecutionRequests()) {
             exchange.getMessage().setHeader(LangChain4jTools.NO_TOOLS_CALLED_HEADER, Boolean.TRUE);
-            return response;
+            return chatResponse;
         }
 
-        chatMessages.add(response.content());
-        return response;
+        chatMessages.add(aiMessage);
+        return chatResponse;
     }
 
     /**
@@ -264,12 +394,36 @@ public class LangChain4jToolsProducer extends DefaultProducer {
             }
         }
 
+        // Add the ToolSearchTool if there are searchable tools
+        if (toolCache.hasSearchableTools()) {
+            ToolSpecification searchToolSpec = createToolSearchToolSpecification();
+            toolSpecifications.add(searchToolSpec);
+        }
+
         if (toolSpecifications.isEmpty()) {
             exchange.getMessage().setHeader(LangChain4jTools.NO_TOOLS_CALLED_HEADER, Boolean.TRUE);
             return null;
         }
 
         return new ToolPair(toolSpecifications, callableTools);
+    }
+
+    /**
+     * Creates the ToolSpecification for the native ToolSearchTool
+     *
+     * @return the tool specification
+     */
+    private ToolSpecification createToolSearchToolSpecification() {
+        return ToolSpecification.builder()
+                .name(ToolSearchTool.TOOL_NAME)
+                .description(ToolSearchTool.TOOL_DESCRIPTION)
+                .parameters(JsonObjectSchema.builder()
+                        .addProperty("tags", JsonStringSchema.builder()
+                                .description(
+                                        "Comma-separated list of tags to search for tools. Examples: 'users', 'email,users', 'database'. Leave empty to see all available searchable tools.")
+                                .build())
+                        .build())
+                .build();
     }
 
     /**

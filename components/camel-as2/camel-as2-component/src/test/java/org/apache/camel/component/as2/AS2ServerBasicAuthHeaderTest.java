@@ -31,6 +31,7 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.http.common.HttpMessage;
 import org.apache.camel.test.AvailablePortFinder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,38 +43,43 @@ public class AS2ServerBasicAuthHeaderTest extends AbstractAS2ITSupport {
 
     private static final String MDN_USER_NAME = "camel";
     private static final String MDN_PASSWORD = "rider";
-    private static final int JETTY_PORT = AvailablePortFinder.getNextAvailable();
-    private static final String EDI_MESSAGE = "UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'\n"
-                                              + "UNH+00000000000117+INVOIC:D:97B:UN'\n"
-                                              + "BGM+380+342459+9'\n"
-                                              + "DTM+3:20060515:102'\n"
-                                              + "RFF+ON:521052'\n"
-                                              + "NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'\n"
-                                              + "NAD+SE+005435656::16++GENERAL WIDGET COMPANY'\n"
-                                              + "CUX+1:USD'\n"
-                                              + "LIN+1++157870:IN'\n"
-                                              + "IMD+F++:::WIDGET'\n"
-                                              + "QTY+47:1020:EA'\n"
-                                              + "ALI+US'\n"
-                                              + "MOA+203:1202.58'\n"
-                                              + "PRI+INV:1.179'\n"
-                                              + "LIN+2++157871:IN'\n"
-                                              + "IMD+F++:::DIFFERENT WIDGET'\n"
-                                              + "QTY+47:20:EA'\n"
-                                              + "ALI+JP'\n"
-                                              + "MOA+203:410'\n"
-                                              + "PRI+INV:20.5'\n"
-                                              + "UNS+S'\n"
-                                              + "MOA+39:2137.58'\n"
-                                              + "ALC+C+ABG'\n"
-                                              + "MOA+8:525'\n"
-                                              + "UNT+23+00000000000117'\n"
-                                              + "UNZ+1+00000000000778'\n";
+    @RegisterExtension
+    AvailablePortFinder.Port targetPort = AvailablePortFinder.find();
+    @RegisterExtension
+    AvailablePortFinder.Port jettyPort = AvailablePortFinder.find();
+    private static final String EDI_MESSAGE = """
+            UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'
+            UNH+00000000000117+INVOIC:D:97B:UN'
+            BGM+380+342459+9'
+            DTM+3:20060515:102'
+            RFF+ON:521052'
+            NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'
+            NAD+SE+005435656::16++GENERAL WIDGET COMPANY'
+            CUX+1:USD'
+            LIN+1++157870:IN'
+            IMD+F++:::WIDGET'
+            QTY+47:1020:EA'
+            ALI+US'
+            MOA+203:1202.58'
+            PRI+INV:1.179'
+            LIN+2++157871:IN'
+            IMD+F++:::DIFFERENT WIDGET'
+            QTY+47:20:EA'
+            ALI+JP'
+            MOA+203:410'
+            PRI+INV:20.5'
+            UNS+S'
+            MOA+39:2137.58'
+            ALC+C+ABG'
+            MOA+8:525'
+            UNT+23+00000000000117'
+            UNZ+1+00000000000778'
+            """;
 
     // verify that the jetty server receives a Basic Auth header
     @Test
     public void serverRouteWithBasicAuthConfig() throws Exception {
-        clientSend("/basic", "http://localhost:" + JETTY_PORT + "/receiptsWithBasicAuth");
+        clientSend("/basic", "http://localhost:" + jettyPort.getPort() + "/receiptsWithBasicAuth");
 
         MockEndpoint mockEndpoint = getMockEndpoint("mock:as2RcvRcptMsgs");
         mockEndpoint.expectedMinimumMessageCount(1);
@@ -97,7 +103,7 @@ public class AS2ServerBasicAuthHeaderTest extends AbstractAS2ITSupport {
                         MDN_USER_NAME, MDN_PASSWORD))
                         .to("mock:as2RcvMsgs");
 
-                from("jetty:http://localhost:" + JETTY_PORT + "/receiptsWithBasicAuth")
+                from("jetty:http://localhost:" + jettyPort.getPort() + "/receiptsWithBasicAuth")
                         .process(basicHeaderProc)
                         .to("mock:as2RcvRcptMsgs");
             }
@@ -115,7 +121,12 @@ public class AS2ServerBasicAuthHeaderTest extends AbstractAS2ITSupport {
 
     private AS2ClientConnection getAs2ClientConnection() throws IOException {
         return new AS2ClientConnection(
-                "1.1", "Camel AS2 Endpoint", "example.org", "localhost", 8889, Duration.ofSeconds(5),
+                "1.1", "Camel AS2 Endpoint", "example.org", "localhost", targetPort.getPort(), Duration.ofSeconds(5),
                 Duration.ofSeconds(5), 5, Duration.ofMinutes(15), null, null);
+    }
+
+    @Override
+    protected void customizeConfiguration(AS2Configuration configuration) {
+        configuration.setServerPortNumber(targetPort.getPort());
     }
 }

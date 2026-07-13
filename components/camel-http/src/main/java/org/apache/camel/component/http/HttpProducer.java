@@ -45,9 +45,9 @@ import org.apache.camel.TypeConverter;
 import org.apache.camel.WrappedFile;
 import org.apache.camel.component.http.helper.HttpMethodHelper;
 import org.apache.camel.http.base.HttpOperationFailedException;
+import org.apache.camel.http.base.HttpProtocolHeaderFilterStrategy;
 import org.apache.camel.http.base.cookie.CookieHandler;
 import org.apache.camel.http.common.HttpHelper;
-import org.apache.camel.http.common.HttpProtocolHeaderFilterStrategy;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.support.DefaultProducer;
 import org.apache.camel.support.ExchangeHelper;
@@ -64,7 +64,6 @@ import org.apache.camel.util.UnsafeUriCharactersEncoder;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
 import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
-import org.apache.hc.client5.http.protocol.HttpClientContext;
 import org.apache.hc.client5.http.utils.URIUtils;
 import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.ContentType;
@@ -72,6 +71,7 @@ import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HeaderElements;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpException;
+import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.HttpVersion;
 import org.apache.hc.core5.http.io.HttpClientResponseHandler;
@@ -81,8 +81,8 @@ import org.apache.hc.core5.http.io.entity.FileEntity;
 import org.apache.hc.core5.http.io.entity.InputStreamEntity;
 import org.apache.hc.core5.http.io.entity.NullEntity;
 import org.apache.hc.core5.http.io.entity.StringEntity;
-import org.apache.hc.core5.http.protocol.BasicHttpContext;
 import org.apache.hc.core5.http.protocol.HttpContext;
+import org.apache.hc.core5.http.protocol.HttpCoreContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -239,7 +239,6 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
         if (getEndpoint().isPreserveHostHeader()) {
             String hostHeader = exchange.getIn().getHeader(HttpConstants.HTTP_HEADER_HOST, String.class);
             if (hostHeader != null) {
-                //HttpClient 4 will check to see if the Host header is present, and use it if it is, see org.apache.http.protocol.RequestTargetHost in httpcore
                 httpRequest.setHeader(HttpConstants.HTTP_HEADER_HOST, hostHeader);
             }
         }
@@ -261,6 +260,10 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
                             if (LOG.isDebugEnabled()) {
                                 LOG.debug("Http responseCode: {}", responseCode);
                             }
+                            // httpclient 5.6+ auto-decompresses but no longer removes the stale
+                            // Content-Encoding, Content-Length, and Content-MD5 headers.
+                            // Strip them here to restore the 5.5.2 invariant for all downstream code.
+                            removeStaleCompressionHeaders(httpResponse);
                             if (!throwException) {
                                 // if we do not use failed exception then populate response for all response codes
                                 HttpProducer.this.populateResponse(exchange, httpRequest, httpResponse, strategy, responseCode);
@@ -485,12 +488,7 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
             Exchange exchange, HttpHost httpHost, HttpUriRequest httpRequest, HttpClientResponseHandler<T> handler)
             throws IOException, HttpException {
         // use a local context per execution
-        HttpContext localContext;
-        if (httpContext != null) {
-            localContext = new BasicHttpContext(httpContext);
-        } else {
-            localContext = HttpClientContext.create();
-        }
+        HttpContext localContext = new HttpCoreContext(httpContext);
         if (getEndpoint().getHttpActivityListener() != null) {
             localContext.setAttribute("org.apache.camel.Exchange", exchange);
             localContext.setAttribute("org.apache.hc.core5.http.HttpHost", httpHost);
@@ -520,6 +518,21 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
     }
 
     /**
+     * httpclient 5.6+ auto-decompresses response bodies but no longer strips the stale Content-Encoding, Content-Length
+     * (compressed byte count), and Content-MD5 headers. Remove them here so every downstream reader sees the same
+     * invariant as 5.5.2.
+     */
+    private static void removeStaleCompressionHeaders(ClassicHttpResponse httpResponse) {
+        HttpEntity entity = httpResponse.getEntity();
+        if (entity != null && entity.getContentEncoding() == null
+                && httpResponse.containsHeader(Exchange.CONTENT_ENCODING)) {
+            httpResponse.removeHeaders(Exchange.CONTENT_ENCODING);
+            httpResponse.removeHeaders(Exchange.CONTENT_LENGTH);
+            httpResponse.removeHeaders(HttpHeaders.CONTENT_MD5);
+        }
+    }
+
+    /**
      * Extracts the response from the method as a InputStream.
      */
     protected Object extractResponseBody(
@@ -535,8 +548,7 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
             return null;
         }
 
-        Header header = httpResponse.getFirstHeader(HttpConstants.CONTENT_ENCODING);
-        String contentEncoding = header != null ? header.getValue() : null;
+        String contentEncoding = entity.getContentEncoding();
 
         final boolean gzipEncoding = exchange.getProperty(Exchange.SKIP_GZIP_ENCODING, Boolean.FALSE, Boolean.class);
         if (!gzipEncoding) {
@@ -544,7 +556,7 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
         }
         // Honor the character encoding
         String contentType = null;
-        header = httpResponse.getFirstHeader("content-type");
+        Header header = httpResponse.getFirstHeader("content-type");
         if (header != null) {
             contentType = header.getValue();
             // find the charset and set it to the Exchange
@@ -560,7 +572,8 @@ public class HttpProducer extends DefaultProducer implements LineNumberAware {
         if (contentType != null && contentType.equals(HttpConstants.CONTENT_TYPE_JAVA_SERIALIZED_OBJECT)) {
             // only deserialize java if allowed
             if (getEndpoint().getComponent().isAllowJavaSerializedObject() || getEndpoint().isTransferException()) {
-                return HttpHelper.deserializeJavaObjectFromStream(is, exchange.getContext());
+                return HttpHelper.deserializeJavaObjectFromStream(is, exchange.getContext(),
+                        getEndpoint().getComponent().getDeserializationFilter());
             } else {
                 // empty response
                 return null;

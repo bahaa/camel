@@ -23,8 +23,9 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.itest.utils.extensions.JmsServiceExtension;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 @CamelSpringTest
 @ContextConfiguration
+@Timeout(60)
 public class JmsToHttpTXWithOnExceptionAndNoTransactionErrorHandlerConfiguredTest {
     @RegisterExtension
     public static JmsServiceExtension jmsServiceExtension = JmsServiceExtension.createExtension();

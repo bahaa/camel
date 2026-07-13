@@ -737,9 +737,11 @@ public class ExpressionClauseSupport<T> implements ExpressionFactoryAware, Predi
     /**
      * Evaluates a compiled simple expression
      *
-     * @param  text the expression to be evaluated
-     * @return      the builder to continue processing the DSL
+     * @param      text the expression to be evaluated
+     * @return          the builder to continue processing the DSL
+     * @deprecated      use {@link #simple(String)} instead
      */
+    @Deprecated(since = "4.19")
     public T csimple(String text) {
         return expression(new CSimpleExpression(text));
     }
@@ -747,10 +749,12 @@ public class ExpressionClauseSupport<T> implements ExpressionFactoryAware, Predi
     /**
      * Evaluates a compiled simple expression
      *
-     * @param  text       the expression to be evaluated
-     * @param  resultType the return type expected by the expression
-     * @return            the builder to continue processing the DSL
+     * @param      text       the expression to be evaluated
+     * @param      resultType the return type expected by the expression
+     * @return                the builder to continue processing the DSL
+     * @deprecated            use {@link #simple(String, Class)} instead
      */
+    @Deprecated(since = "4.19")
     public T csimple(String text, Class<?> resultType) {
         CSimpleExpression exp = new CSimpleExpression(text);
         exp.setResultType(resultType);
@@ -770,6 +774,36 @@ public class ExpressionClauseSupport<T> implements ExpressionFactoryAware, Predi
     /**
      * Evaluates a <a href="http://camel.apache.org/simple.html">Simple expression</a>
      *
+     * @param  text   the expression to be evaluated
+     * @param  pretty format pretty (only XML or JSon output supported)
+     * @return        the builder to continue processing the DSL
+     */
+    public T simple(String text, boolean pretty) {
+        SimpleExpression expression = new SimpleExpression(text);
+        expression.setPretty(Boolean.toString(pretty));
+        expression(expression);
+        return result;
+    }
+
+    /**
+     * Evaluates a <a href="http://camel.apache.org/simple.html">Simple expression</a>
+     *
+     * @param  text       the expression to be evaluated
+     * @param  pretty     format pretty (only XML or JSon output supported)
+     * @param  trimResult whether to trim the result from the simple language
+     * @return            the builder to continue processing the DSL
+     */
+    public T simple(String text, boolean pretty, boolean trimResult) {
+        SimpleExpression expression = new SimpleExpression(text);
+        expression.setPretty(Boolean.toString(pretty));
+        expression.setTrimResult(Boolean.toString(trimResult));
+        expression(expression);
+        return result;
+    }
+
+    /**
+     * Evaluates a <a href="http://camel.apache.org/simple.html">Simple expression</a>
+     *
      * @param  text       the expression to be evaluated
      * @param  resultType the result type
      * @return            the builder to continue processing the DSL
@@ -777,6 +811,39 @@ public class ExpressionClauseSupport<T> implements ExpressionFactoryAware, Predi
     public T simple(String text, Class<?> resultType) {
         SimpleExpression expression = new SimpleExpression(text);
         expression.setResultType(resultType);
+        expression(expression);
+        return result;
+    }
+
+    /**
+     * Evaluates a <a href="http://camel.apache.org/simple.html">Simple expression</a>
+     *
+     * @param  text       the expression to be evaluated
+     * @param  resultType the result type
+     * @param  pretty     format pretty (only XML or JSon output supported)
+     * @return            the builder to continue processing the DSL
+     */
+    public T simple(String text, Class<?> resultType, boolean pretty) {
+        SimpleExpression expression = new SimpleExpression(text);
+        expression.setResultType(resultType);
+        expression.setPretty(Boolean.toString(pretty));
+        expression(expression);
+        return result;
+    }
+
+    /**
+     * Evaluates a <a href="http://camel.apache.org/simple.html">Simple expression</a>
+     *
+     * @param  text       the expression to be evaluated
+     * @param  resultType the result type
+     * @param  pretty     format pretty (only XML or JSon output supported)
+     * @param  trimResult whether to trim the result from the simple language
+     * @return            the builder to continue processing the DSL
+     */
+    public T simple(String text, Class<?> resultType, boolean pretty, boolean trimResult) {
+        SimpleExpression expression = new SimpleExpression(text);
+        expression.setResultType(resultType);
+        expression.setPretty(Boolean.toString(pretty));
         expression(expression);
         return result;
     }
@@ -839,7 +906,9 @@ public class ExpressionClauseSupport<T> implements ExpressionFactoryAware, Predi
     public T tokenize(String token, boolean regex) {
         TokenizerExpression expression = new TokenizerExpression();
         expression.setToken(token);
-        expression.setRegex(Boolean.toString(regex));
+        if (regex) {
+            expression.setRegex("true");
+        }
         expression(expression);
         return result;
     }
@@ -855,7 +924,9 @@ public class ExpressionClauseSupport<T> implements ExpressionFactoryAware, Predi
     public T tokenize(String token, boolean regex, int group) {
         TokenizerExpression expression = new TokenizerExpression();
         expression.setToken(token);
-        expression.setRegex(Boolean.toString(regex));
+        if (regex) {
+            expression.setRegex("true");
+        }
         expression.setGroup(Integer.toString(group));
         expression(expression);
         return result;
@@ -873,7 +944,9 @@ public class ExpressionClauseSupport<T> implements ExpressionFactoryAware, Predi
     public T tokenize(String token, boolean regex, int group, boolean skipFirst) {
         TokenizerExpression expression = new TokenizerExpression();
         expression.setToken(token);
-        expression.setRegex(Boolean.toString(regex));
+        if (regex) {
+            expression.setRegex("true");
+        }
         expression.setSkipFirst(Boolean.toString(skipFirst));
         expression.setGroup(Integer.toString(group));
         expression.setSkipFirst(Boolean.toString(skipFirst));
@@ -893,7 +966,9 @@ public class ExpressionClauseSupport<T> implements ExpressionFactoryAware, Predi
     public T tokenize(String token, boolean regex, String group, boolean skipFirst) {
         TokenizerExpression expression = new TokenizerExpression();
         expression.setToken(token);
-        expression.setRegex(Boolean.toString(regex));
+        if (regex) {
+            expression.setRegex("true");
+        }
         expression.setSkipFirst(Boolean.toString(skipFirst));
         expression.setGroup(group);
         expression.setSkipFirst(Boolean.toString(skipFirst));

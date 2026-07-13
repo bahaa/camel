@@ -39,11 +39,15 @@ class RestTest extends YamlTestSupport {
                     type: ${MockRestConsumerFactory.name}
                 - restConfiguration:
                     component: "servlet"
-                    contextPath: "/foo"       
+                    contextPath: "/foo"
+                    dataFormatProperty:
+                      - key: "contentTypeHeader"
+                        value: "false"
             """
         then:
             context.restConfiguration.component == 'servlet'
             context.restConfiguration.contextPath == '/foo'
+            context.restConfiguration.dataFormatProperties["contentTypeHeader"] == "false"
     }
 
     def "load rest (to)"() {
@@ -185,7 +189,7 @@ class RestTest extends YamlTestSupport {
             def rloc = 'classpath:/rest-dsl/generated-rest-dsl.yaml'
             def rdsl = PluginHelper.getResourceLoader(context).resolveResource(rloc)
         when:
-            loadRoutes rdsl
+            loadRoutes(rdsl)
         then:
             context.restDefinitions != null
             !context.restDefinitions.isEmpty()

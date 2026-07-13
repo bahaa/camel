@@ -37,7 +37,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class VertxPlatformHttpStreamingTest {
-
     @Test
     void testStreamingWithStringRequestAndResponseBody() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -51,7 +50,7 @@ public class VertxPlatformHttpStreamingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             String requestBody = "Vert.x Platform HTTP";
             given()
@@ -81,7 +80,7 @@ public class VertxPlatformHttpStreamingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .body(testFile.toFile())
@@ -107,7 +106,7 @@ public class VertxPlatformHttpStreamingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .contentType(ContentType.URLENC)
@@ -134,7 +133,7 @@ public class VertxPlatformHttpStreamingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .contentType(ContentType.URLENC)
@@ -154,7 +153,7 @@ public class VertxPlatformHttpStreamingTest {
         Path testFile = Files.createTempFile("platform-http-testing", "txt");
         Files.writeString(testFile, content);
 
-        final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext(configuration -> {
+        final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext(0, configuration -> {
             VertxPlatformHttpServerConfiguration.BodyHandler bodyHandler
                     = new VertxPlatformHttpServerConfiguration.BodyHandler();
             // turn on file uploads
@@ -172,7 +171,7 @@ public class VertxPlatformHttpStreamingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .multiPart(testFile.toFile())
@@ -203,7 +202,7 @@ public class VertxPlatformHttpStreamingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             InputStream response = given()
                     .body(new FileInputStream(input.toFile()))
@@ -247,7 +246,7 @@ public class VertxPlatformHttpStreamingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .get("/streaming")
@@ -276,7 +275,7 @@ public class VertxPlatformHttpStreamingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .get("/streaming")

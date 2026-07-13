@@ -16,13 +16,15 @@
  */
 package org.apache.camel.openapi;
 
+import java.io.File;
+
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import org.apache.camel.BindToRegistry;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.engine.DefaultClassResolver;
 import org.apache.camel.model.rest.RestParamType;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
@@ -45,7 +47,7 @@ public class RestOpenApiReaderFileResponseModelTest extends CamelTestSupport {
             public void configure() {
                 rest("/hello").consumes("application/json").produces("application/octet-stream").get("/pdf/{name}").description("Saying hi").param().name("name")
                     .type(RestParamType.path).dataType("string").description("Who is it").example("Donald Duck").endParam().responseMessage().code(200)
-                    .message("A document as reply").responseModel(java.io.File.class).endResponseMessage().to("log:hi");
+                    .message("A document as reply").responseModel(File.class).endResponseMessage().to("log:hi");
             }
         };
     }

@@ -50,9 +50,6 @@ public class WireTapReifier extends ToDynamicReifier<WireTapDefinition<?>> {
             throw new IllegalArgumentException("WireTap does not support variableReceive");
         }
 
-        // must use InOnly for WireTap
-        definition.setPattern(ExchangePattern.InOnly.name());
-
         // executor service is mandatory for wire tap
         boolean shutdownThreadPool = willCreateNewThreadPool(definition, true);
         ExecutorService threadPool = getConfiguredExecutorService("WireTap", definition, true);
@@ -68,7 +65,11 @@ public class WireTapReifier extends ToDynamicReifier<WireTapDefinition<?>> {
         // route templates should pre parse uri as they have dynamic values as part of their template parameters
         RouteDefinition rd = ProcessorDefinitionHelper.getRoute(definition);
         if (rd != null && rd.isTemplate() != null && rd.isTemplate()) {
+            String rawUri = uri;
             uri = EndpointHelper.resolveEndpointUriPropertyPlaceholders(camelContext, uri);
+            if (isOptionalUriAndNotResolved(camelContext, rawUri)) {
+                return null;
+            }
         }
 
         SendDynamicProcessor dynamicSendProcessor = null;
@@ -79,6 +80,8 @@ public class WireTapReifier extends ToDynamicReifier<WireTapDefinition<?>> {
         if (dynamic && simple || invalid) {
             // dynamic or ignore-invalid so we need the dynamic send processor
             dynamicSendProcessor = (SendDynamicProcessor) super.createProcessor();
+            // must use InOnly pattern
+            dynamicSendProcessor.setPattern(ExchangePattern.InOnly);
         } else {
             // static so we can use a plain send processor
             Endpoint endpoint = CamelContextHelper.resolveEndpoint(camelContext, uri, null);
@@ -100,8 +103,7 @@ public class WireTapReifier extends ToDynamicReifier<WireTapDefinition<?>> {
         boolean isCopy = parseBoolean(definition.getCopy(), true);
 
         WireTapProcessor answer = new WireTapProcessor(
-                dynamicSendProcessor, target, uri,
-                parse(ExchangePattern.class, definition.getPattern()), isCopy,
+                dynamicSendProcessor, target, uri, isCopy,
                 threadPool, shutdownThreadPool, dynamic);
         answer.setDisabled(isDisabled(camelContext, definition));
         Processor prepare = definition.getOnPrepareProcessor();

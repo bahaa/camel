@@ -35,9 +35,10 @@ import org.apache.camel.component.langchain4j.agent.api.AgentWithoutMemory;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.infra.ollama.services.OllamaService;
 import org.apache.camel.test.infra.ollama.services.OllamaServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -63,23 +64,23 @@ public class LangChain4jAgentMcpToolsIT extends CamelTestSupport {
 
     protected ChatModel chatModel;
 
-    static OllamaService OLLAMA = ModelHelper.hasEnvironmentConfiguration()
-            ? null
-            : OllamaServiceFactory.createSingletonService();
+    @RegisterExtension
+    static OllamaService OLLAMA = OllamaServiceFactory.createSingletonService();
 
     @Override
     protected void setupResources() throws Exception {
         super.setupResources();
-        chatModel = OLLAMA != null ? ModelHelper.loadChatModel(OLLAMA) : ModelHelper.loadFromEnv();
+        chatModel = ModelHelper.loadChatModel(OLLAMA);
 
-        // Initialize tempDirPat
-        tempDirPath = tempDir.toString();
+        // Initialize tempDirPath - use toRealPath() to resolve symlinks (e.g., /var -> /private/var on macOS)
+        // This is needed because the MCP filesystem server resolves symlinks internally
+        tempDirPath = tempDir.toRealPath().toString();
 
         // Create test file directly
         try {
             Path testFile = tempDir.resolve("camel-mcp-test.txt");
             Files.write(testFile, TEST_FILE_CONTENT.getBytes());
-            testFilePath = testFile.toString();
+            testFilePath = testFile.toRealPath().toString();
         } catch (IOException e) {
             throw new RuntimeException("Failed to create test file", e);
         }
@@ -123,7 +124,8 @@ public class LangChain4jAgentMcpToolsIT extends CamelTestSupport {
         mockEndpoint.expectedMessageCount(1);
 
         String response = template.requestBody("direct:chat",
-                "Use your available tools to tell me what is the content of camel-mcp-test.txt file?", String.class);
+                "Use your available tools to tell me what is the content of the file at " + testFilePath + " ?",
+                String.class);
 
         mockEndpoint.assertIsSatisfied();
         assertNotNull(response, "AI response should not be null");
@@ -154,7 +156,8 @@ public class LangChain4jAgentMcpToolsIT extends CamelTestSupport {
         BiPredicate<McpClient, ToolSpecification> securityFilter = (client, toolSpec) -> {
             String toolName = toolSpec.name().toLowerCase();
             // Only allow read operations for safety
-            return toolName.contains("read") || toolName.contains("list") || toolName.contains("get");
+            return toolName.contains("search") || toolName.contains("read") || toolName.contains("list")
+                    || toolName.contains("get");
         };
 
         // Create agent configuration with MCP clients and filter

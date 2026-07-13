@@ -30,7 +30,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.cxf.common.CXFTestSupport;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.wsdl_first.Person;
 import org.apache.camel.wsdl_first.PersonService;
 import org.apache.camel.wsdl_first.UnknownPersonFault;
@@ -44,8 +44,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit test to verify CxfConsumer to generate SOAP fault in PAYLOAD mode
@@ -99,14 +99,9 @@ public class CxfConsumerPayloadFaultTest extends CamelTestSupport {
         personId.value = "";
         Holder<String> ssn = new Holder<>();
         Holder<String> name = new Holder<>();
-        Throwable t = null;
-        try {
-            client.getPerson(personId, ssn, name);
-            fail("expect UnknownPersonFault");
-        } catch (UnknownPersonFault e) {
-            t = e;
-            assertEquals("", e.getFaultInfo().getPersonId(), "Get the wrong fault detail");
-        }
+        UnknownPersonFault t = assertThrows(UnknownPersonFault.class,
+                () -> client.getPerson(personId, ssn, name));
+        assertEquals("", t.getFaultInfo().getPersonId(), "Get the wrong fault detail");
 
         assertNotNull(t);
         assertTrue(t instanceof UnknownPersonFault);

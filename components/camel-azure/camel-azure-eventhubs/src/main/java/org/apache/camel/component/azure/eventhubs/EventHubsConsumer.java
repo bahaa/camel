@@ -16,7 +16,9 @@
  */
 package org.apache.camel.component.azure.eventhubs;
 
-import java.util.Timer;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.azure.messaging.eventhubs.EventProcessorClient;
@@ -26,7 +28,9 @@ import org.apache.camel.AsyncCallback;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.Processor;
+import org.apache.camel.ShutdownRunningTask;
 import org.apache.camel.component.azure.eventhubs.client.EventHubsClientFactory;
+import org.apache.camel.spi.ShutdownAware;
 import org.apache.camel.spi.Synchronization;
 import org.apache.camel.support.DefaultConsumer;
 import org.slf4j.Logger;
@@ -35,7 +39,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.camel.component.azure.eventhubs.EventHubsConstants.COMPLETED_BY_SIZE;
 import static org.apache.camel.component.azure.eventhubs.EventHubsConstants.COMPLETED_BY_TIMEOUT;
 
-public class EventHubsConsumer extends DefaultConsumer {
+public class EventHubsConsumer extends DefaultConsumer implements ShutdownAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(EventHubsConsumer.class);
 
@@ -43,20 +47,24 @@ public class EventHubsConsumer extends DefaultConsumer {
     private EventProcessorClient processorClient;
 
     private final AtomicInteger processedEvents;
-    private final Timer timer;
-
-    private EventHubsCheckpointUpdaterTimerTask lastTask;
+    private final AtomicInteger pendingExchanges = new AtomicInteger();
+    private ScheduledExecutorService scheduledExecutorService;
+    private ScheduledFuture<?> lastScheduledTask;
+    private EventHubsCheckpointUpdaterTask lastTask;
 
     public EventHubsConsumer(final EventHubsEndpoint endpoint, final Processor processor) {
         super(endpoint, processor);
 
         this.processedEvents = new AtomicInteger();
-        this.timer = new Timer();
     }
 
     @Override
     protected void doStart() throws Exception {
         super.doStart();
+
+        // create scheduled executor for checkpoint updates
+        scheduledExecutorService = getEndpoint().getCamelContext().getExecutorServiceManager()
+                .newScheduledThreadPool(this, "EventHubsCheckpoint", 1);
 
         // create the client
         processorClient = EventHubsClientFactory.createEventProcessorClient(getConfiguration(),
@@ -69,13 +77,44 @@ public class EventHubsConsumer extends DefaultConsumer {
     @Override
     protected void doStop() throws Exception {
         if (processorClient != null) {
-            // shutdown the client
+            // stop accepting new messages but keep the connection open
+            // so that in-flight exchanges can still complete
             processorClient.stop();
-            processorClient = null;
         }
 
         // shutdown camel consumer
         super.doStop();
+    }
+
+    @Override
+    protected void doShutdown() throws Exception {
+        processorClient = null;
+
+        // shutdown scheduled executor after all in-flight exchanges have completed
+        if (scheduledExecutorService != null) {
+            getEndpoint().getCamelContext().getExecutorServiceManager().shutdownGraceful(scheduledExecutorService);
+            scheduledExecutorService = null;
+        }
+
+        super.doShutdown();
+    }
+
+    @Override
+    public boolean deferShutdown(ShutdownRunningTask shutdownRunningTask) {
+        if (processorClient != null) {
+            processorClient.stop();
+        }
+        return true;
+    }
+
+    @Override
+    public int getPendingExchangesSize() {
+        return pendingExchanges.get();
+    }
+
+    @Override
+    public void prepareShutdown(boolean suspendOnly, boolean forced) {
+        // noop
     }
 
     public EventHubsConfiguration getConfiguration() {
@@ -122,20 +161,30 @@ public class EventHubsConsumer extends DefaultConsumer {
     }
 
     private void onEventListener(final EventContext eventContext) {
+        pendingExchanges.incrementAndGet();
+
         final Exchange exchange = createAzureEventHubExchange(eventContext);
 
         // add exchange callback
         exchange.getExchangeExtension().addOnCompletion(new Synchronization() {
             @Override
             public void onComplete(Exchange exchange) {
-                // we update the consumer offsets
-                processCommit(exchange, eventContext);
+                try {
+                    // we update the consumer offsets
+                    processCommit(exchange, eventContext);
+                } finally {
+                    pendingExchanges.decrementAndGet();
+                }
             }
 
             @Override
             public void onFailure(Exchange exchange) {
-                // we do nothing here
-                processRollback(exchange);
+                try {
+                    // we do nothing here
+                    processRollback(exchange);
+                } finally {
+                    pendingExchanges.decrementAndGet();
+                }
             }
         });
         // use default consumer callback
@@ -159,10 +208,12 @@ public class EventHubsConsumer extends DefaultConsumer {
      * @param exchange the exchange
      */
     private void processCommit(final Exchange exchange, final EventContext eventContext) {
-        if (lastTask == null || System.currentTimeMillis() > lastTask.scheduledExecutionTime()) {
-            lastTask = new EventHubsCheckpointUpdaterTimerTask(eventContext, processedEvents);
+        if (lastTask == null || lastTask.isExpired()) {
+            lastTask = new EventHubsCheckpointUpdaterTask(eventContext, processedEvents);
             // delegate the checkpoint update to a dedicated Thread
-            timer.schedule(lastTask, getConfiguration().getCheckpointBatchTimeout());
+            long timeout = getConfiguration().getCheckpointBatchTimeout();
+            lastTask.setScheduledTime(System.currentTimeMillis() + timeout);
+            lastScheduledTask = scheduledExecutorService.schedule(lastTask, timeout, TimeUnit.MILLISECONDS);
         } else {
             // updates the eventContext to use for the offset to be the most accurate
             lastTask.setEventContext(eventContext);
@@ -174,8 +225,8 @@ public class EventHubsConsumer extends DefaultConsumer {
                 processedEvents.set(0);
                 exchange.getIn().setHeader(EventHubsConstants.CHECKPOINT_UPDATED_BY, COMPLETED_BY_SIZE);
                 LOG.debug("eventhub consumer batch size of reached");
-                if (lastTask != null) {
-                    lastTask.cancel();
+                if (lastScheduledTask != null) {
+                    lastScheduledTask.cancel(false);
                 }
                 eventContext.updateCheckpointAsync()
                         .subscribe(unused -> LOG.debug("Processed one event..."),
@@ -183,14 +234,14 @@ public class EventHubsConsumer extends DefaultConsumer {
                                 () -> {
                                     LOG.debug("Checkpoint updated.");
                                 });
-            } else if (System.currentTimeMillis() >= lastTask.scheduledExecutionTime()) {
+            } else if (lastTask != null && lastTask.isExpired()) {
                 exchange.getIn().setHeader(EventHubsConstants.CHECKPOINT_UPDATED_BY, COMPLETED_BY_TIMEOUT);
                 LOG.debug("eventhub consumer batch timeout reached");
             } else {
                 LOG.debug("neither eventhub consumer batch size of {}/{} nor batch timeout reached yet", cnt,
                         getConfiguration().getCheckpointBatchSize());
             }
-            // we assume that the timer task has done the update by its side
+            // we assume that the scheduled task has done the update by its side
         } catch (Exception ex) {
             getExceptionHandler().handleException("Error occurred during updating the checkpoint. This exception is ignored.",
                     exchange, ex);

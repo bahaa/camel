@@ -33,6 +33,7 @@ import org.apache.camel.Route;
 import org.apache.camel.Traceable;
 import org.apache.camel.spi.IdAware;
 import org.apache.camel.spi.RouteIdAware;
+import org.apache.camel.spi.StepIdAware;
 import org.apache.camel.spi.SynchronizationRouteAware;
 import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.support.SynchronizationAdapter;
@@ -46,13 +47,14 @@ import static org.apache.camel.util.ObjectHelper.notNull;
 /**
  * Processor implementing <a href="http://camel.apache.org/oncompletion.html">onCompletion</a>.
  */
-public class OnCompletionProcessor extends BaseProcessorSupport implements Traceable, IdAware, RouteIdAware {
+public class OnCompletionProcessor extends BaseProcessorSupport implements Traceable, IdAware, RouteIdAware, StepIdAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(OnCompletionProcessor.class);
 
     private final CamelContext camelContext;
     private String id;
     private String routeId;
+    private String stepId;
     private final Processor processor;
     private final ExecutorService executorService;
     private final boolean shutdownExecutorService;
@@ -131,6 +133,16 @@ public class OnCompletionProcessor extends BaseProcessorSupport implements Trace
     @Override
     public void setRouteId(String routeId) {
         this.routeId = routeId;
+    }
+
+    @Override
+    public String getStepId() {
+        return stepId;
+    }
+
+    @Override
+    public void setStepId(String stepId) {
+        this.stepId = stepId;
     }
 
     @Override
@@ -215,6 +227,7 @@ public class OnCompletionProcessor extends BaseProcessorSupport implements Trace
      * @param  exchange the current exchange
      * @return          the exchange to be routed in onComplete
      */
+    @SuppressWarnings("deprecation")
     protected Exchange prepareExchange(Exchange exchange) {
         Exchange answer;
 
@@ -288,6 +301,7 @@ public class OnCompletionProcessor extends BaseProcessorSupport implements Trace
             };
         }
 
+        @SuppressWarnings("deprecation")
         @Override
         public void onComplete(final Exchange exchange) {
             if (shouldSkip(exchange, onFailureOnly)) {
@@ -302,6 +316,7 @@ public class OnCompletionProcessor extends BaseProcessorSupport implements Trace
                     LOG.debug("Processing onComplete: {}", copy);
                     doProcess(processor, copy);
                 };
+                // Deprecated since 4.19.0
                 task = prepareMDCParallelTask(camelContext, task);
                 executorService.submit(task);
             } else {
@@ -311,6 +326,7 @@ public class OnCompletionProcessor extends BaseProcessorSupport implements Trace
             }
         }
 
+        @SuppressWarnings("deprecation")
         @Override
         public void onFailure(final Exchange exchange) {
             if (shouldSkip(exchange, onCompleteOnly)) {
@@ -333,6 +349,7 @@ public class OnCompletionProcessor extends BaseProcessorSupport implements Trace
                     // restore exception after processing
                     copy.setException(original);
                 };
+                // Deprecated since 4.19.0
                 task = prepareMDCParallelTask(camelContext, task);
                 executorService.submit(task);
             } else {
@@ -427,6 +444,7 @@ public class OnCompletionProcessor extends BaseProcessorSupport implements Trace
                     // NO-OP
                 }
 
+                @SuppressWarnings("deprecation")
                 @Override
                 public void onAfterRoute(Route route, Exchange exchange) {
                     LOG.debug("onAfterRoute from Route {}", route.getRouteId());
@@ -461,6 +479,7 @@ public class OnCompletionProcessor extends BaseProcessorSupport implements Trace
                             LOG.debug("Processing onAfterRoute: {}", copy);
                             doProcess(processor, copy);
                         };
+                        // Deprecated since 4.19.0
                         task = prepareMDCParallelTask(camelContext, task);
                         executorService.submit(task);
                     } else {

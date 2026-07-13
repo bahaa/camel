@@ -21,31 +21,71 @@ public class OpenAIEndpointUriFactory extends org.apache.camel.support.component
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(17);
+        Set<String> props = new HashSet<>(48);
+        props.add("additionalBodyProperty");
+        props.add("additionalResponseHeader");
         props.add("apiKey");
+        props.add("audioLanguage");
+        props.add("audioModel");
+        props.add("audioPrompt");
+        props.add("audioResponseFormat");
+        props.add("audioTemperature");
+        props.add("audioTimestampGranularities");
+        props.add("autoToolExecution");
         props.add("baseUrl");
         props.add("conversationHistoryProperty");
         props.add("conversationMemory");
         props.add("developerMessage");
+        props.add("dimensions");
+        props.add("embeddingModel");
+        props.add("encodingFormat");
         props.add("jsonSchema");
         props.add("lazyStartProducer");
         props.add("maxTokens");
+        props.add("maxToolIterations");
+        props.add("mcpProtocolVersions");
+        props.add("mcpReconnect");
+        props.add("mcpServer");
+        props.add("mcpTimeout");
         props.add("model");
+        props.add("oauthProfile");
         props.add("operation");
         props.add("outputClass");
+        props.add("sslContextParameters");
+        props.add("sslEndpointAlgorithm");
+        props.add("sslKeyPassword");
+        props.add("sslKeymanagerAlgorithm");
+        props.add("sslKeystoreLocation");
+        props.add("sslKeystorePassword");
+        props.add("sslKeystoreType");
+        props.add("sslProtocol");
+        props.add("sslTrustmanagerAlgorithm");
+        props.add("sslTruststoreLocation");
+        props.add("sslTruststorePassword");
+        props.add("sslTruststoreType");
         props.add("storeFullResponse");
         props.add("streaming");
+        props.add("stripThinking");
         props.add("systemMessage");
         props.add("temperature");
         props.add("topP");
         props.add("userMessage");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
-        Set<String> secretProps = new HashSet<>(1);
+        Set<String> secretProps = new HashSet<>(4);
         secretProps.add("apiKey");
+        secretProps.add("sslKeyPassword");
+        secretProps.add("sslKeystorePassword");
+        secretProps.add("sslTruststorePassword");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
-        MULTI_VALUE_PREFIXES = Collections.emptyMap();
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
+        Map<String, String> prefixes = new HashMap<>(3);
+        prefixes.put("additionalBodyProperty", "additionalBodyProperty.");
+        prefixes.put("additionalResponseHeader", "additionalResponseHeader.");
+        prefixes.put("mcpServer", "mcpServer.");
+        MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
     }
 
     @Override
@@ -73,6 +113,11 @@ public class OpenAIEndpointUriFactory extends org.apache.camel.support.component
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

@@ -19,6 +19,7 @@ package org.apache.camel.component.mllp;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.Consumer;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
@@ -26,9 +27,8 @@ import org.apache.camel.builder.NotifyBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.impl.DefaultCamelContext;
-import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.junit.rule.mllp.MllpClientResource;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,6 +61,9 @@ public abstract class TcpServerConsumerAcknowledgementTestSupport extends CamelT
 
     @Override
     protected void doPostSetup() throws Exception {
+        Consumer consumer = context.getRoute("mllp-test-receiver-route").getConsumer();
+        mllpClient.setMllpPort(((MllpTcpServerConsumer) consumer).getLocalPort());
+
         result.expectedMessageCount(0);
         complete.expectedMessageCount(0);
         failure.expectedMessageCount(0);
@@ -68,6 +71,7 @@ public abstract class TcpServerConsumerAcknowledgementTestSupport extends CamelT
         ackGenerationEx.expectedMessageCount(0);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected CamelContext createCamelContext() throws Exception {
         DefaultCamelContext context = (DefaultCamelContext) super.createCamelContext();
@@ -81,7 +85,6 @@ public abstract class TcpServerConsumerAcknowledgementTestSupport extends CamelT
     @Override
     protected RouteBuilder createRouteBuilder() {
         mllpClient.setMllpHost("localhost");
-        mllpClient.setMllpPort(AvailablePortFinder.getNextAvailable());
 
         return new RouteBuilder() {
             int connectTimeout = 500;
@@ -110,7 +113,7 @@ public abstract class TcpServerConsumerAcknowledgementTestSupport extends CamelT
                         .to("mock://on-failure-only");
 
                 fromF("mllp://%s:%d?bridgeErrorHandler=%b&autoAck=%b&exchangePattern=%s&connectTimeout=%d&receiveTimeout=%d",
-                        mllpClient.getMllpHost(), mllpClient.getMllpPort(), isBridgeErrorHandler(), isAutoAck(),
+                        mllpClient.getMllpHost(), 0, isBridgeErrorHandler(), isAutoAck(),
                         exchangePattern(), connectTimeout, responseTimeout)
                         .routeId(routeId)
                         .to(result);

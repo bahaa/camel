@@ -24,6 +24,7 @@ import java.util.Map;
 
 import io.opentelemetry.api.trace.SpanKind;
 
+@Deprecated(since = "4.19.0")
 public class SpanTestData {
 
     private String label;
@@ -35,7 +36,6 @@ public class SpanTestData {
     private final List<String> logMessages = new ArrayList<>();
     private final Map<String, String> tags = new HashMap<>();
     private final ArrayList<SpanTestData> children = new ArrayList<>();
-    private final Map<String, String> baggage = new HashMap<>();
 
     public String getLabel() {
         return label;

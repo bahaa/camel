@@ -21,7 +21,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * Unit test for Mail subject support.
  */
 public class MailSubjectTest extends CamelTestSupport {
-    private static final MailboxUser james2 = Mailbox.getOrCreateUser("james2", "secret");
+    private static final MailboxUser james2 = Mailbox.getOrCreateUser("MailSubjectTest-james2", "secret");
     private String subject = "Camel rocks";
 
     @Test
@@ -56,7 +56,8 @@ public class MailSubjectTest extends CamelTestSupport {
         return new RouteBuilder() {
             public void configure() {
                 // START SNIPPET: e1
-                from("direct:a").setHeader("subject", constant(subject)).to(james2.uriPrefix(Protocol.smtp));
+                from("direct:a").setHeader("subject", constant(subject))
+                        .to(james2.uriPrefix(Protocol.smtp) + "&useHeaderSubject=true");
                 // END SNIPPET: e1
 
                 from(james2.uriPrefix(Protocol.imap) + "&initialDelay=100&delay=100").to("mock:result");

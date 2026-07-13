@@ -40,9 +40,9 @@ public class SmppConfiguration implements Cloneable {
     private String host = "localhost";
     @UriPath(defaultValue = "2775")
     private Integer port = 2775;
-    @UriParam(label = "security", defaultValue = "smppclient", secret = true)
+    @UriParam(label = "security", defaultValue = "smppclient", security = "secret")
     private String systemId = "smppclient";
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String password;
     @UriParam(label = "common", defaultValue = "")
     private String systemType = "";
@@ -102,7 +102,7 @@ public class SmppConfiguration implements Cloneable {
     private Integer httpProxyPort = 3128;
     @UriParam(label = "proxy")
     private String httpProxyUsername;
-    @UriParam(label = "proxy")
+    @UriParam(label = "proxy", security = "secret")
     private String httpProxyPassword;
     @UriParam(label = "proxy")
     private Map<String, String> proxyHeaders;

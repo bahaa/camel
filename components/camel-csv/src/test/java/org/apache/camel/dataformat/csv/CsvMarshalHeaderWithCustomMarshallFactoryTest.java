@@ -38,7 +38,7 @@ import org.apache.camel.RoutesBuilder;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.support.ObjectHelper;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.junit.jupiter.api.Test;
@@ -139,8 +139,7 @@ public class CsvMarshalHeaderWithCustomMarshallFactoryTest extends CamelTestSupp
         public void marshal(Exchange exchange, Object object, OutputStream outputStream) throws IOException {
             lock.lock();
             try {
-                if (object instanceof Map) {
-                    Map map = (Map) object;
+                if (object instanceof Map map) {
                     printer.printRecord(getMapRecordValues(map));
                 } else {
                     Iterator<Map<String, String>> it = (Iterator<Map<String, String>>) ObjectHelper.createIterator(object);

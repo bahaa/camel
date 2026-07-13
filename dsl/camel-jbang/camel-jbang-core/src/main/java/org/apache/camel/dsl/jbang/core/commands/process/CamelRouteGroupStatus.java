@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.github.freva.asciitable.AsciiTable;
 import com.github.freva.asciitable.Column;
@@ -32,11 +33,16 @@ import org.apache.camel.support.PatternHelper;
 import org.apache.camel.util.TimeUtils;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
+import org.apache.camel.util.json.Jsoner;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "route-group", description = "Get status of Camel route groups",
-         sortOptions = false, showDefaultValues = true)
+         sortOptions = false, showDefaultValues = true,
+         footer = {
+                 "%nExamples:",
+                 "  camel get route-group",
+                 "  camel get route-group --watch" })
 public class CamelRouteGroupStatus extends ProcessWatchCommand {
 
     public static class PidNameAgeGroupCompletionCandidates implements Iterable<String> {
@@ -93,6 +99,9 @@ public class CamelRouteGroupStatus extends ProcessWatchCommand {
                             return;
                         }
                         JsonArray array = (JsonArray) root.get("routeGroups");
+                        if (array == null) {
+                            return;
+                        }
                         for (int i = 0; i < array.size(); i++) {
                             JsonObject o = (JsonObject) array.get(i);
                             Row row = new Row();
@@ -167,9 +176,6 @@ public class CamelRouteGroupStatus extends ProcessWatchCommand {
                             if (mean > 0 && (row.mean == null || Long.parseLong(row.mean) < mean)) {
                                 add = false;
                             }
-                            if (limit > 0 && rows.size() >= limit) {
-                                add = false;
-                            }
                             if (add && filter != null) {
                                 boolean match = false;
                                 for (String f : filter) {
@@ -194,6 +200,10 @@ public class CamelRouteGroupStatus extends ProcessWatchCommand {
         // sort rows
         rows.sort(this::sortRow);
 
+        if (limit > 0 && rows.size() > limit) {
+            rows.subList(limit, rows.size()).clear();
+        }
+
         if (!rows.isEmpty()) {
             printTable(rows);
         }
@@ -202,6 +212,30 @@ public class CamelRouteGroupStatus extends ProcessWatchCommand {
     }
 
     protected void printTable(List<Row> rows) {
+        if (jsonOutput) {
+            printer().println(Jsoner.serialize(rows.stream().map(r -> {
+                JsonObject jo = new JsonObject();
+                jo.put("pid", r.pid);
+                jo.put("name", r.name);
+                jo.put("group", getGroup(r));
+                jo.put("routes", r.size);
+                jo.put("status", r.state);
+                jo.put("age", r.age);
+                jo.put("coverage", getCoverage(r));
+                jo.put("throughput", getThroughput(r));
+                jo.put("total", r.total);
+                jo.put("failed", r.failed);
+                jo.put("inflight", r.inflight);
+                jo.put("mean", r.mean);
+                jo.put("min", r.min);
+                jo.put("max", r.max);
+                jo.put("last", r.last);
+                jo.put("delta", getDelta(r));
+                jo.put("sinceLast", getSinceLast(r));
+                return jo;
+            }).collect(Collectors.toList())));
+            return;
+        }
         printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
                 new Column().header("PID").headerAlign(HorizontalAlign.CENTER).with(r -> r.pid),
                 new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).maxWidth(30, OverflowBehaviour.ELLIPSIS_RIGHT)
@@ -240,7 +274,7 @@ public class CamelRouteGroupStatus extends ProcessWatchCommand {
             case "name":
                 return o1.name.compareToIgnoreCase(o2.name) * negate;
             case "group":
-                return o1.name.compareToIgnoreCase(o2.group) * negate;
+                return o1.group.compareToIgnoreCase(o2.group) * negate;
             case "age":
                 return Long.compare(o1.uptime, o2.uptime) * negate;
             default:

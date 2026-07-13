@@ -127,7 +127,7 @@ public class AS2ServerManagerIT extends AS2ServerManagerITBase {
         assertEquals(AS2_NAME, request.getFirstHeader(AS2Header.AS2_TO).getValue(), "Unexpected AS2 to value");
         assertTrue(request.getFirstHeader(AS2Header.MESSAGE_ID).getValue().endsWith(CLIENT_FQDN + ">"),
                 "Unexpected message id value");
-        assertEquals(TARGET_HOST + ":" + TARGET_PORT, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
+        assertEquals(TARGET_HOST + ":" + targetPort, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
                 "Unexpected target host value");
         assertEquals(USER_AGENT, request.getFirstHeader(AS2Header.USER_AGENT).getValue(), "Unexpected user agent value");
         assertNotNull(request.getFirstHeader(AS2Header.DATE), "Date value missing");
@@ -204,7 +204,7 @@ public class AS2ServerManagerIT extends AS2ServerManagerITBase {
         assertEquals(AS2_NAME, request.getFirstHeader(AS2Header.AS2_TO).getValue(), "Unexpected AS2 to value");
         assertTrue(request.getFirstHeader(AS2Header.MESSAGE_ID).getValue().endsWith(CLIENT_FQDN + ">"),
                 "Unexpected message id value");
-        assertEquals(TARGET_HOST + ":" + TARGET_PORT, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
+        assertEquals(TARGET_HOST + ":" + targetPort, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
                 "Unexpected target host value");
         assertEquals(USER_AGENT, request.getFirstHeader(AS2Header.USER_AGENT).getValue(), "Unexpected user agent value");
         assertNotNull(request.getFirstHeader(AS2Header.DATE), "Date value missing");
@@ -239,10 +239,10 @@ public class AS2ServerManagerIT extends AS2ServerManagerITBase {
                 "EDI message does not match");
     }
 
-    private static AS2ClientConnection getAs2ClientConnection() throws IOException {
+    private AS2ClientConnection getAs2ClientConnection() throws IOException {
         AS2ClientConnection clientConnection
                 = new AS2ClientConnection(
-                        AS2_VERSION, USER_AGENT, CLIENT_FQDN, TARGET_HOST, TARGET_PORT, HTTP_SOCKET_TIMEOUT,
+                        AS2_VERSION, USER_AGENT, CLIENT_FQDN, TARGET_HOST, targetPort, HTTP_SOCKET_TIMEOUT,
                         HTTP_CONNECTION_TIMEOUT, HTTP_CONNECTION_POOL_SIZE, HTTP_CONNECTION_POOL_TTL, clientSslContext,
                         null);
         return clientConnection;
@@ -303,7 +303,7 @@ public class AS2ServerManagerIT extends AS2ServerManagerITBase {
         assertEquals(AS2_NAME, request.getFirstHeader(AS2Header.AS2_TO).getValue(), "Unexpected AS2 to value");
         assertTrue(request.getFirstHeader(AS2Header.MESSAGE_ID).getValue().endsWith(CLIENT_FQDN + ">"),
                 "Unexpected message id value");
-        assertEquals(TARGET_HOST + ":" + TARGET_PORT, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
+        assertEquals(TARGET_HOST + ":" + targetPort, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
                 "Unexpected target host value");
         assertEquals(USER_AGENT, request.getFirstHeader(AS2Header.USER_AGENT).getValue(), "Unexpected user agent value");
         assertNotNull(request.getFirstHeader(AS2Header.DATE), "Date value missing");
@@ -382,7 +382,7 @@ public class AS2ServerManagerIT extends AS2ServerManagerITBase {
         assertEquals(AS2_NAME, request.getFirstHeader(AS2Header.AS2_TO).getValue(), "Unexpected AS2 to value");
         assertTrue(request.getFirstHeader(AS2Header.MESSAGE_ID).getValue().endsWith(CLIENT_FQDN + ">"),
                 "Unexpected message id value");
-        assertEquals(TARGET_HOST + ":" + TARGET_PORT, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
+        assertEquals(TARGET_HOST + ":" + targetPort, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
                 "Unexpected target host value");
         assertEquals(USER_AGENT, request.getFirstHeader(AS2Header.USER_AGENT).getValue(), "Unexpected user agent value");
         assertNotNull(request.getFirstHeader(AS2Header.DATE), "Date value missing");
@@ -428,7 +428,7 @@ public class AS2ServerManagerIT extends AS2ServerManagerITBase {
 
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
 
-        kpg.initialize(1024, new SecureRandom());
+        kpg.initialize(2048, new SecureRandom());
         String hackerIssueDN = "O=Hackers Unlimited Ltd., C=US";
         var hackerIssueKP = kpg.generateKeyPair();
         var hackerissueCert = Utils.makeCertificate(
@@ -473,7 +473,7 @@ public class AS2ServerManagerIT extends AS2ServerManagerITBase {
         assertEquals(AS2_NAME, request.getFirstHeader(AS2Header.AS2_TO).getValue(), "Unexpected AS2 to value");
         assertTrue(request.getFirstHeader(AS2Header.MESSAGE_ID).getValue().endsWith(CLIENT_FQDN + ">"),
                 "Unexpected message id value");
-        assertEquals(TARGET_HOST + ":" + TARGET_PORT, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
+        assertEquals(TARGET_HOST + ":" + targetPort, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
                 "Unexpected target host value");
         assertEquals(USER_AGENT, request.getFirstHeader(AS2Header.USER_AGENT).getValue(), "Unexpected user agent value");
         assertNotNull(request.getFirstHeader(AS2Header.DATE), "Date value missing");
@@ -624,8 +624,8 @@ public class AS2ServerManagerIT extends AS2ServerManagerITBase {
     @Override
     protected CamelContext createCamelContext() throws Exception {
         CamelContext context = super.createCamelContext();
-        this.clientSslContext = setupClientContext(context);
-        this.serverSslContext = setupClientContext(context);
+        clientSslContext = setupClientContext(context);
+        serverSslContext = setupClientContext(context);
         AS2Component as2Component = (AS2Component) context.getComponent("as2");
         AS2Configuration configuration = as2Component.getConfiguration();
         configuration.setSslContext(serverSslContext);

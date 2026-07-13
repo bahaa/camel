@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/classes/api_activity",
+  "title": "ApiActivity",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.ApiActivity",
+  "description": "ApiActivity event class.",
+  "extends": {
+    "$ref": "OcsfEvent.json"
+  },
+  "properties": {
+    "src_endpoint": {
+      "$ref": "NetworkEndpoint.json"
+    },
+    "http_response": {
+      "$ref": "HttpResponse.json"
+    },
+    "actor": {
+      "$ref": "Actor.json"
+    },
+    "dst_endpoint": {
+      "$ref": "NetworkEndpoint.json"
+    },
+    "resources": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "ResourceDetails.json"
+      }
+    },
+    "http_request": {
+      "$ref": "HttpRequest.json"
+    },
+    "api": {
+      "$ref": "Api.json"
+    },
+    "raw_data_size": {
+      "type": "integer",
+      "title": "Raw Data Size"
+    },
+    "raw_data_hash": {
+      "$ref": "Fingerprint.json"
+    },
+    "enrichments": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Enrichment.json"
+      }
+    }
+  }
+}

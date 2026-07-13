@@ -44,6 +44,8 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
     private String databaseSslfactory;
     @UriParam(label = LABEL_NAME)
     private int snapshotFetchSize;
+    @UriParam(label = LABEL_NAME, defaultValue = "1")
+    private int snapshotMaxThreadsMultiplier = 1;
     @UriParam(label = LABEL_NAME)
     private String openlineageIntegrationJobTags;
     @UriParam(label = LABEL_NAME, defaultValue = "10s", javaType = "java.time.Duration")
@@ -84,6 +86,8 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
     private long retriableRestartConnectorWaitMs = 10000;
     @UriParam(label = LABEL_NAME, defaultValue = "0ms", javaType = "java.time.Duration")
     private long snapshotDelayMs = 0;
+    @UriParam(label = LABEL_NAME, defaultValue = "io.debezium.relational.ConcurrentMapTableMappingStorage")
+    private String memoryManagementTablesClass = "io.debezium.relational.ConcurrentMapTableMappingStorage";
     @UriParam(label = LABEL_NAME, defaultValue = "4s", javaType = "java.time.Duration")
     private long executorShutdownTimeoutMs = 4000;
     @UriParam(label = LABEL_NAME, defaultValue = "false")
@@ -110,6 +114,8 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
     private String snapshotIncludeCollectionList;
     @UriParam(label = LABEL_NAME, defaultValue = "false")
     private boolean snapshotModeConfigurationBasedStartStream = false;
+    @UriParam(label = LABEL_NAME, defaultValue = "true")
+    private boolean statisticsMetricsEnabled = true;
     @UriParam(label = LABEL_NAME, defaultValue = "false")
     private boolean slotDropOnStop = false;
     @UriParam(label = LABEL_NAME, defaultValue = "5s", javaType = "java.time.Duration")
@@ -128,6 +134,8 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
     private String snapshotModeCustomName;
     @UriParam(label = LABEL_NAME, defaultValue = "none")
     private String schemaNameAdjustmentMode = "none";
+    @UriParam(label = LABEL_NAME, defaultValue = "io.debezium.relational.ConcurrentMapTableMappingStorage")
+    private String memoryManagementSchemasClass = "io.debezium.relational.ConcurrentMapTableMappingStorage";
     @UriParam(label = LABEL_NAME)
     private String tableIncludeList;
     @UriParam(label = LABEL_NAME)
@@ -195,8 +203,8 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
     private int maxQueueSize = 8192;
     @UriParam(label = LABEL_NAME, defaultValue = "warn")
     private String guardrailCollectionsLimitAction = "warn";
-    @UriParam(label = LABEL_NAME, defaultValue = ".*secret$|.*password$|.*sasl\\.jaas\\.config$|.*basic\\.auth\\.user\\.info|.*registry\\.auth\\.client-secret")
-    private String customSanitizePattern = ".*secret$|.*password$|.*sasl\\.jaas\\.config$|.*basic\\.auth\\.user\\.info|.*registry\\.auth\\.client-secret";
+    @UriParam(label = LABEL_NAME, defaultValue = ".*secret$|.*password$|.*sasl\\.jaas\\.config$|.*basic\\.auth\\.user\\.info|.*registry\\.auth\\.client-secret|.*credentials\\.json$")
+    private String customSanitizePattern = ".*secret$|.*password$|.*sasl\\.jaas\\.config$|.*basic\\.auth\\.user\\.info|.*registry\\.auth\\.client-secret|.*credentials\\.json$";
     @UriParam(label = LABEL_NAME, defaultValue = "json")
     private String hstoreHandlingMode = "json";
     @UriParam(label = LABEL_NAME)
@@ -455,6 +463,22 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
 
     public int getSnapshotFetchSize() {
         return snapshotFetchSize;
+    }
+
+    /**
+     * The factor used to scale the number of snapshot chunks per table. The
+     * default behavior is to take 'row_count/snapshot.max.threads' to compute
+     * the number of rows per chunks. This may not be ideal for larger tables,
+     * and using the multiplier, the formula is adjusted to increase the number
+     * of chunks by using 'row_count/(snapshot.max.threads *
+     * snapshot.max.threads.multiplier).
+     */
+    public void setSnapshotMaxThreadsMultiplier(int snapshotMaxThreadsMultiplier) {
+        this.snapshotMaxThreadsMultiplier = snapshotMaxThreadsMultiplier;
+    }
+
+    public int getSnapshotMaxThreadsMultiplier() {
+        return snapshotMaxThreadsMultiplier;
     }
 
     /**
@@ -734,6 +758,22 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
     }
 
     /**
+     * The fully-qualified class name of the storage implementation for table
+     * metadata. The class must implement
+     * io.debezium.relational.TableMappingStorage<io.debezium.relational.Table>.
+     * Defaults to io.debezium.relational.ConcurrentMapTableMappingStorage for
+     * in-memory storage.
+     */
+    public void setMemoryManagementTablesClass(
+            String memoryManagementTablesClass) {
+        this.memoryManagementTablesClass = memoryManagementTablesClass;
+    }
+
+    public String getMemoryManagementTablesClass() {
+        return memoryManagementTablesClass;
+    }
+
+    /**
      * The maximum time in milliseconds to wait for task executor to shut down.
      */
     public void setExecutorShutdownTimeoutMs(long executorShutdownTimeoutMs) {
@@ -912,6 +952,19 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
     }
 
     /**
+     * Enable to collect various kind of statistics, like latencies in record
+     * processing, and derived data like quantiles. By default collecting
+     * statistics is enabled.
+     */
+    public void setStatisticsMetricsEnabled(boolean statisticsMetricsEnabled) {
+        this.statisticsMetricsEnabled = statisticsMetricsEnabled;
+    }
+
+    public boolean isStatisticsMetricsEnabled() {
+        return statisticsMetricsEnabled;
+    }
+
+    /**
      * Whether or not to drop the logical replication slot when the connector
      * finishes orderly. By default the replication is kept so that on restart
      * progress can resume from the last recorded location
@@ -1035,6 +1088,20 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
 
     public String getSchemaNameAdjustmentMode() {
         return schemaNameAdjustmentMode;
+    }
+
+    /**
+     * The fully-qualified class name of the storage implementation for schema
+     * metadata. The class must implement
+     * io.debezium.relational.TableMappingStorage<io.debezium.relational.TableSchema>. Defaults to io.debezium.relational.ConcurrentMapTableMappingStorage for in-memory storage.
+     */
+    public void setMemoryManagementSchemasClass(
+            String memoryManagementSchemasClass) {
+        this.memoryManagementSchemasClass = memoryManagementSchemasClass;
+    }
+
+    public String getMemoryManagementSchemasClass() {
+        return memoryManagementSchemasClass;
     }
 
     /**
@@ -1700,7 +1767,11 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
      * use microseconds precision; 'connect' always represents time, date, and
      * timestamp values using Kafka Connect's built-in representations for Time,
      * Date, and Timestamp, which uses millisecond precision regardless of the
-     * database columns' precision.
+     * database columns' precision; 'isostring' represents time, date, and
+     * timestamp values as ISO-8601 formatted strings at the UTC time zone;
+     * 'microseconds' always represents time, date, and timestamp values using
+     * microsecond precision; 'nanoseconds' always represents time, date, and
+     * timestamp values using nanosecond precision.
      */
     public void setTimePrecisionMode(String timePrecisionMode) {
         this.timePrecisionMode = timePrecisionMode;
@@ -1825,6 +1896,7 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
         addPropertyIfNotNull(configBuilder, "converters", converters);
         addPropertyIfNotNull(configBuilder, "database.sslfactory", databaseSslfactory);
         addPropertyIfNotNull(configBuilder, "snapshot.fetch.size", snapshotFetchSize);
+        addPropertyIfNotNull(configBuilder, "snapshot.max.threads.multiplier", snapshotMaxThreadsMultiplier);
         addPropertyIfNotNull(configBuilder, "openlineage.integration.job.tags", openlineageIntegrationJobTags);
         addPropertyIfNotNull(configBuilder, "snapshot.lock.timeout.ms", snapshotLockTimeoutMs);
         addPropertyIfNotNull(configBuilder, "database.dbname", databaseDbname);
@@ -1845,6 +1917,7 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
         addPropertyIfNotNull(configBuilder, "openlineage.integration.config.file.path", openlineageIntegrationConfigFilePath);
         addPropertyIfNotNull(configBuilder, "retriable.restart.connector.wait.ms", retriableRestartConnectorWaitMs);
         addPropertyIfNotNull(configBuilder, "snapshot.delay.ms", snapshotDelayMs);
+        addPropertyIfNotNull(configBuilder, "memory.management.tables.class", memoryManagementTablesClass);
         addPropertyIfNotNull(configBuilder, "executor.shutdown.timeout.ms", executorShutdownTimeoutMs);
         addPropertyIfNotNull(configBuilder, "snapshot.mode.configuration.based.snapshot.on.data.error", snapshotModeConfigurationBasedSnapshotOnDataError);
         addPropertyIfNotNull(configBuilder, "schema.history.internal.file.filename", schemaHistoryInternalFileFilename);
@@ -1858,6 +1931,7 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
         addPropertyIfNotNull(configBuilder, "schema.exclude.list", schemaExcludeList);
         addPropertyIfNotNull(configBuilder, "snapshot.include.collection.list", snapshotIncludeCollectionList);
         addPropertyIfNotNull(configBuilder, "snapshot.mode.configuration.based.start.stream", snapshotModeConfigurationBasedStartStream);
+        addPropertyIfNotNull(configBuilder, "statistics.metrics.enabled", statisticsMetricsEnabled);
         addPropertyIfNotNull(configBuilder, "slot.drop.on.stop", slotDropOnStop);
         addPropertyIfNotNull(configBuilder, "signal.poll.interval.ms", signalPollIntervalMs);
         addPropertyIfNotNull(configBuilder, "notification.enabled.channels", notificationEnabledChannels);
@@ -1867,6 +1941,7 @@ public class PostgresConnectorEmbeddedDebeziumConfiguration
         addPropertyIfNotNull(configBuilder, "notification.sink.topic.name", notificationSinkTopicName);
         addPropertyIfNotNull(configBuilder, "snapshot.mode.custom.name", snapshotModeCustomName);
         addPropertyIfNotNull(configBuilder, "schema.name.adjustment.mode", schemaNameAdjustmentMode);
+        addPropertyIfNotNull(configBuilder, "memory.management.schemas.class", memoryManagementSchemasClass);
         addPropertyIfNotNull(configBuilder, "table.include.list", tableIncludeList);
         addPropertyIfNotNull(configBuilder, "slot.stream.params", slotStreamParams);
         addPropertyIfNotNull(configBuilder, "streaming.delay.ms", streamingDelayMs);

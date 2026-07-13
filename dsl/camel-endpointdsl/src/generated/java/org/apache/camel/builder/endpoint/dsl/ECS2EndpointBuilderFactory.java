@@ -589,7 +589,7 @@ public interface ECS2EndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final ECS2HeaderNameBuilder INSTANCE = new ECS2HeaderNameBuilder();
+        public static final ECS2HeaderNameBuilder INSTANCE = new ECS2HeaderNameBuilder();
 
         /**
          * The operation we want to perform.
@@ -626,6 +626,42 @@ public interface ECS2EndpointBuilderFactory {
          */
         public String awsECSClusterName() {
             return "CamelAwsECSClusterName";
+        }
+        /**
+         * The token for the next set of results.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: listClusters
+         * 
+         * @return the name of the header {@code AwsECSNextToken}.
+         */
+        public String awsECSNextToken() {
+            return "CamelAwsECSNextToken";
+        }
+        /**
+         * Whether the response has more results (is truncated).
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: listClusters
+         * 
+         * @return the name of the header {@code AwsECSIsTruncated}.
+         */
+        public String awsECSIsTruncated() {
+            return "CamelAwsECSIsTruncated";
+        }
+        /**
+         * The ARN of the cluster.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: createCluster describeCluster deleteCluster
+         * 
+         * @return the name of the header {@code AwsECSClusterArn}.
+         */
+        public String awsECSClusterArn() {
+            return "CamelAwsECSClusterArn";
         }
     }
     static ECS2EndpointBuilder endpointBuilder(String componentName, String path) {

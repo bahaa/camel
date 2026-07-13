@@ -143,6 +143,25 @@ public interface KafkaComponentBuilderFactory {
     
         
         /**
+         * The period of time in milliseconds after which we force a refresh of
+         * metadata even if we haven't seen any partition leadership changes to
+         * proactively discover any new brokers or partitions.
+         * 
+         * The option is a: &lt;code&gt;java.lang.Integer&lt;/code&gt; type.
+         * 
+         * Default: 300000
+         * Group: common
+         * 
+         * @param metadataMaxAgeMs the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder metadataMaxAgeMs(java.lang.Integer metadataMaxAgeMs) {
+            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
+            return this;
+        }
+    
+        
+        /**
          * The maximum amount of time in milliseconds to wait when reconnecting
          * to a broker that has repeatedly failed to connect. If provided, the
          * backoff per host will increase exponentially for each consecutive
@@ -582,6 +601,46 @@ public interface KafkaComponentBuilderFactory {
          */
         default KafkaComponentBuilder groupInstanceId(java.lang.String groupInstanceId) {
             doSetProperty("groupInstanceId", groupInstanceId);
+            return this;
+        }
+    
+        
+        /**
+         * The consumer group protocol to use. The classic protocol uses the
+         * traditional partition assignment and rebalancing mechanism. The
+         * consumer protocol enables the new KIP-848 consumer rebalance protocol
+         * which provides faster and more efficient rebalancing. When set to
+         * consumer, classic-only properties (heartbeatIntervalMs,
+         * sessionTimeoutMs, partitionAssignor) are automatically excluded from
+         * the consumer configuration.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: classic
+         * Group: consumer
+         * 
+         * @param groupProtocol the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder groupProtocol(java.lang.String groupProtocol) {
+            doSetProperty("groupProtocol", groupProtocol);
+            return this;
+        }
+    
+        /**
+         * The name of the server-side assignor to use when group.protocol is
+         * set to consumer. If not specified, the group coordinator will use the
+         * default assignor configured on the broker (group.consumer.assignors).
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: consumer
+         * 
+         * @param groupRemoteAssignor the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder groupRemoteAssignor(java.lang.String groupRemoteAssignor) {
+            doSetProperty("groupRemoteAssignor", groupRemoteAssignor);
             return this;
         }
     
@@ -1286,6 +1345,7 @@ public interface KafkaComponentBuilderFactory {
             return this;
         }
     
+        
         /**
          * The producer groups together any records that arrive in between
          * request transmissions into a single, batched, request. Normally, this
@@ -1308,6 +1368,7 @@ public interface KafkaComponentBuilderFactory {
          * 
          * The option is a: &lt;code&gt;java.lang.Integer&lt;/code&gt; type.
          * 
+         * Default: 5
          * Group: producer
          * 
          * @param lingerMs the value to set
@@ -1382,25 +1443,6 @@ public interface KafkaComponentBuilderFactory {
          */
         default KafkaComponentBuilder maxRequestSize(java.lang.Integer maxRequestSize) {
             doSetProperty("maxRequestSize", maxRequestSize);
-            return this;
-        }
-    
-        
-        /**
-         * The period of time in milliseconds after which we force a refresh of
-         * metadata even if we haven't seen any partition leadership changes to
-         * proactively discover any new brokers or partitions.
-         * 
-         * The option is a: &lt;code&gt;java.lang.Integer&lt;/code&gt; type.
-         * 
-         * Default: 300000
-         * Group: producer
-         * 
-         * @param metadataMaxAgeMs the value to set
-         * @return the dsl builder
-         */
-        default KafkaComponentBuilder metadataMaxAgeMs(java.lang.Integer metadataMaxAgeMs) {
-            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
             return this;
         }
     
@@ -2093,6 +2135,87 @@ public interface KafkaComponentBuilderFactory {
         }
     
         /**
+         * OAuth client ID. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: security
+         * 
+         * @param oauthClientId the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder oauthClientId(java.lang.String oauthClientId) {
+            doSetProperty("oauthClientId", oauthClientId);
+            return this;
+        }
+    
+        /**
+         * OAuth client secret. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: security
+         * 
+         * @param oauthClientSecret the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder oauthClientSecret(java.lang.String oauthClientSecret) {
+            doSetProperty("oauthClientSecret", oauthClientSecret);
+            return this;
+        }
+    
+        /**
+         * OAuth scope. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: security
+         * 
+         * @param oauthScope the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder oauthScope(java.lang.String oauthScope) {
+            doSetProperty("oauthScope", oauthScope);
+            return this;
+        }
+    
+        /**
+         * OAuth token endpoint URI. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: security
+         * 
+         * @param oauthTokenEndpointUri the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder oauthTokenEndpointUri(java.lang.String oauthTokenEndpointUri) {
+            doSetProperty("oauthTokenEndpointUri", oauthTokenEndpointUri);
+            return this;
+        }
+    
+        /**
+         * Simplified authentication type to use. This provides an easier way to
+         * configure Kafka authentication without manually setting
+         * securityProtocol, saslMechanism, and saslJaasConfig. When set, the
+         * appropriate security settings are automatically derived. Note: This
+         * is optional. You can still use the traditional approach with explicit
+         * securityProtocol, saslMechanism, and saslJaasConfig properties.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.apache.camel.component.kafka.security.KafkaAuthType&lt;/code&gt; type.
+         * 
+         * Group: security
+         * 
+         * @param saslAuthType the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder saslAuthType(org.apache.camel.component.kafka.security.KafkaAuthType saslAuthType) {
+            doSetProperty("saslAuthType", saslAuthType);
+            return this;
+        }
+    
+        /**
          * Expose the kafka sasl.jaas.config parameter Example:
          * org.apache.kafka.common.security.plain.PlainLoginModule required
          * username=USERNAME password=PASSWORD;.
@@ -2141,6 +2264,38 @@ public interface KafkaComponentBuilderFactory {
          */
         default KafkaComponentBuilder saslMechanism(java.lang.String saslMechanism) {
             doSetProperty("saslMechanism", saslMechanism);
+            return this;
+        }
+    
+        /**
+         * Password for SASL authentication. Used when saslAuthType is set to
+         * PLAIN, SCRAM_SHA_256, or SCRAM_SHA_512.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: security
+         * 
+         * @param saslPassword the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder saslPassword(java.lang.String saslPassword) {
+            doSetProperty("saslPassword", saslPassword);
+            return this;
+        }
+    
+        /**
+         * Username for SASL authentication. Used when saslAuthType is set to
+         * PLAIN, SCRAM_SHA_256, or SCRAM_SHA_512.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: security
+         * 
+         * @param saslUsername the value to set
+         * @return the dsl builder
+         */
+        default KafkaComponentBuilder saslUsername(java.lang.String saslUsername) {
+            doSetProperty("saslUsername", saslUsername);
             return this;
         }
     
@@ -2479,6 +2634,7 @@ public interface KafkaComponentBuilderFactory {
             case "clientId": getOrCreateConfiguration((KafkaComponent) component).setClientId((java.lang.String) value); return true;
             case "configuration": ((KafkaComponent) component).setConfiguration((org.apache.camel.component.kafka.KafkaConfiguration) value); return true;
             case "headerFilterStrategy": getOrCreateConfiguration((KafkaComponent) component).setHeaderFilterStrategy((org.apache.camel.spi.HeaderFilterStrategy) value); return true;
+            case "metadataMaxAgeMs": getOrCreateConfiguration((KafkaComponent) component).setMetadataMaxAgeMs((java.lang.Integer) value); return true;
             case "reconnectBackoffMaxMs": getOrCreateConfiguration((KafkaComponent) component).setReconnectBackoffMaxMs((java.lang.Integer) value); return true;
             case "retryBackoffMaxMs": getOrCreateConfiguration((KafkaComponent) component).setRetryBackoffMaxMs((java.lang.Integer) value); return true;
             case "retryBackoffMs": getOrCreateConfiguration((KafkaComponent) component).setRetryBackoffMs((java.lang.Integer) value); return true;
@@ -2500,6 +2656,8 @@ public interface KafkaComponentBuilderFactory {
             case "fetchWaitMaxMs": getOrCreateConfiguration((KafkaComponent) component).setFetchWaitMaxMs((java.lang.Integer) value); return true;
             case "groupId": getOrCreateConfiguration((KafkaComponent) component).setGroupId((java.lang.String) value); return true;
             case "groupInstanceId": getOrCreateConfiguration((KafkaComponent) component).setGroupInstanceId((java.lang.String) value); return true;
+            case "groupProtocol": getOrCreateConfiguration((KafkaComponent) component).setGroupProtocol((java.lang.String) value); return true;
+            case "groupRemoteAssignor": getOrCreateConfiguration((KafkaComponent) component).setGroupRemoteAssignor((java.lang.String) value); return true;
             case "headerDeserializer": getOrCreateConfiguration((KafkaComponent) component).setHeaderDeserializer((org.apache.camel.component.kafka.serde.KafkaHeaderDeserializer) value); return true;
             case "heartbeatIntervalMs": getOrCreateConfiguration((KafkaComponent) component).setHeartbeatIntervalMs((java.lang.Integer) value); return true;
             case "keyDeserializer": getOrCreateConfiguration((KafkaComponent) component).setKeyDeserializer((java.lang.String) value); return true;
@@ -2538,7 +2696,6 @@ public interface KafkaComponentBuilderFactory {
             case "maxBlockMs": getOrCreateConfiguration((KafkaComponent) component).setMaxBlockMs((java.lang.Integer) value); return true;
             case "maxInFlightRequest": getOrCreateConfiguration((KafkaComponent) component).setMaxInFlightRequest((java.lang.Integer) value); return true;
             case "maxRequestSize": getOrCreateConfiguration((KafkaComponent) component).setMaxRequestSize((java.lang.Integer) value); return true;
-            case "metadataMaxAgeMs": getOrCreateConfiguration((KafkaComponent) component).setMetadataMaxAgeMs((java.lang.Integer) value); return true;
             case "metricReporters": getOrCreateConfiguration((KafkaComponent) component).setMetricReporters((java.lang.String) value); return true;
             case "metricsSampleWindowMs": getOrCreateConfiguration((KafkaComponent) component).setMetricsSampleWindowMs((java.lang.Integer) value); return true;
             case "noOfMetricsSample": getOrCreateConfiguration((KafkaComponent) component).setNoOfMetricsSample((java.lang.Integer) value); return true;
@@ -2574,9 +2731,16 @@ public interface KafkaComponentBuilderFactory {
             case "kerberosPrincipalToLocalRules": getOrCreateConfiguration((KafkaComponent) component).setKerberosPrincipalToLocalRules((java.lang.String) value); return true;
             case "kerberosRenewJitter": getOrCreateConfiguration((KafkaComponent) component).setKerberosRenewJitter((java.lang.Double) value); return true;
             case "kerberosRenewWindowFactor": getOrCreateConfiguration((KafkaComponent) component).setKerberosRenewWindowFactor((java.lang.Double) value); return true;
+            case "oauthClientId": getOrCreateConfiguration((KafkaComponent) component).setOauthClientId((java.lang.String) value); return true;
+            case "oauthClientSecret": getOrCreateConfiguration((KafkaComponent) component).setOauthClientSecret((java.lang.String) value); return true;
+            case "oauthScope": getOrCreateConfiguration((KafkaComponent) component).setOauthScope((java.lang.String) value); return true;
+            case "oauthTokenEndpointUri": getOrCreateConfiguration((KafkaComponent) component).setOauthTokenEndpointUri((java.lang.String) value); return true;
+            case "saslAuthType": getOrCreateConfiguration((KafkaComponent) component).setSaslAuthType((org.apache.camel.component.kafka.security.KafkaAuthType) value); return true;
             case "saslJaasConfig": getOrCreateConfiguration((KafkaComponent) component).setSaslJaasConfig((java.lang.String) value); return true;
             case "saslKerberosServiceName": getOrCreateConfiguration((KafkaComponent) component).setSaslKerberosServiceName((java.lang.String) value); return true;
             case "saslMechanism": getOrCreateConfiguration((KafkaComponent) component).setSaslMechanism((java.lang.String) value); return true;
+            case "saslPassword": getOrCreateConfiguration((KafkaComponent) component).setSaslPassword((java.lang.String) value); return true;
+            case "saslUsername": getOrCreateConfiguration((KafkaComponent) component).setSaslUsername((java.lang.String) value); return true;
             case "securityProtocol": getOrCreateConfiguration((KafkaComponent) component).setSecurityProtocol((java.lang.String) value); return true;
             case "sslCipherSuites": getOrCreateConfiguration((KafkaComponent) component).setSslCipherSuites((java.lang.String) value); return true;
             case "sslContextParameters": getOrCreateConfiguration((KafkaComponent) component).setSslContextParameters((org.apache.camel.support.jsse.SSLContextParameters) value); return true;

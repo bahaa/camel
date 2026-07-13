@@ -591,7 +591,7 @@ public interface MQ2EndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final MQ2HeaderNameBuilder INSTANCE = new MQ2HeaderNameBuilder();
+        public static final MQ2HeaderNameBuilder INSTANCE = new MQ2HeaderNameBuilder();
 
         /**
          * The operation we want to perform.
@@ -728,6 +728,54 @@ public interface MQ2EndpointBuilderFactory {
          */
         public String awsMQBrokerPubliclyAccessible() {
             return "CamelAwsMQBrokerPubliclyAccessible";
+        }
+        /**
+         * The token for the next set of results.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: listBrokers
+         * 
+         * @return the name of the header {@code AwsMQNextToken}.
+         */
+        public String awsMQNextToken() {
+            return "CamelAwsMQNextToken";
+        }
+        /**
+         * Whether the response has more results (is truncated).
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: listBrokers
+         * 
+         * @return the name of the header {@code AwsMQIsTruncated}.
+         */
+        public String awsMQIsTruncated() {
+            return "CamelAwsMQIsTruncated";
+        }
+        /**
+         * The Amazon Resource Name (ARN) of the broker.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: createBroker
+         * 
+         * @return the name of the header {@code AwsMQBrokerArn}.
+         */
+        public String awsMQBrokerArn() {
+            return "CamelAwsMQBrokerArn";
+        }
+        /**
+         * The state of the broker.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: describeBroker
+         * 
+         * @return the name of the header {@code AwsMQBrokerState}.
+         */
+        public String awsMQBrokerState() {
+            return "CamelAwsMQBrokerState";
         }
     }
     static MQ2EndpointBuilder endpointBuilder(String componentName, String path) {

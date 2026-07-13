@@ -48,7 +48,6 @@ import org.apache.camel.ManagementStatisticsLevel;
 import org.apache.camel.Route;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.ServiceStatus;
-import org.apache.camel.TimerListener;
 import org.apache.camel.api.management.ManagedResource;
 import org.apache.camel.api.management.mbean.CamelOpenMBeanTypes;
 import org.apache.camel.api.management.mbean.ManagedProcessorMBean;
@@ -71,7 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ManagedResource(description = "Managed Route")
-public class ManagedRoute extends ManagedPerformanceCounter implements TimerListener, ManagedRouteMBean {
+public class ManagedRoute extends ManagedPerformanceCounter implements ManagedRouteMBean {
 
     public static final String VALUE_UNKNOWN = "Unknown";
 
@@ -85,7 +84,6 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
     protected final String sourceLocationShort;
     protected final CamelContext context;
     private final LoadTriplet load = new LoadTriplet();
-    private final LoadThroughput thp = new LoadThroughput();
     private final String jmxDomain;
 
     public ManagedRoute(CamelContext context, Route route) {
@@ -105,6 +103,9 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
         boolean enabled
                 = context.getManagementStrategy().getManagementAgent().getStatisticsLevel() != ManagementStatisticsLevel.Off;
         setStatisticsEnabled(enabled);
+        if (context.getManagementStrategy().getManagementAgent().getStatisticsLevel().isExtended()) {
+            initExtendedStatistics();
+        }
     }
 
     public Route getRoute() {
@@ -313,20 +314,9 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
     }
 
     @Override
-    public String getThroughput() {
-        double d = thp.getThroughput();
-        if (Double.isNaN(d)) {
-            // empty string if load statistics is disabled
-            return "";
-        } else {
-            return String.format("%.2f", d);
-        }
-    }
-
-    @Override
     public void onTimer() {
+        super.onTimer();
         load.update(getInflightExchanges());
-        thp.update(getExchangesTotal());
     }
 
     @Override
@@ -495,6 +485,28 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
     }
 
     @Override
+    public String dumpRouteAsJava() throws Exception {
+        return dumpRouteAsJava(false);
+    }
+
+    @Override
+    public String dumpRouteAsJava(boolean resolvePlaceholders) throws Exception {
+        return dumpRouteAsJava(resolvePlaceholders, true);
+    }
+
+    @Override
+    public String dumpRouteAsJava(boolean resolvePlaceholders, boolean generatedIds) throws Exception {
+        String id = route.getId();
+        RouteDefinition def = context.getCamelContextExtension().getContextPlugin(Model.class).getRouteDefinition(id);
+        if (def != null) {
+            return PluginHelper.getModelToJavaDumper(context).dumpModelAsJava(context, def, resolvePlaceholders,
+                    generatedIds);
+        }
+
+        return null;
+    }
+
+    @Override
     public String dumpRouteStatsAsXml(boolean fullStats, boolean includeProcessors) throws Exception {
         // in this logic we need to calculate the accumulated processing time for the processor in the route
         // and hence why the logic is a bit more complicated to do this, as we need to calculate that from
@@ -542,7 +554,7 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
                     sb.append("    <processorStat")
                             .append(String.format(
                                     " id=\"%s\" index=\"%s\" state=\"%s\" disabled=\"%s\" sourceLineNumber=\"%s\"",
-                                    processor.getProcessorId(), processor.getIndex(), processor.getState(),
+                                    escapeXml(processor.getProcessorId()), processor.getIndex(), processor.getState(),
                                     processor.getDisabled(), line));
                     // do we have an accumulated time then append that
                     Long accTime = accumulatedTimes.get(processor.getProcessorId());
@@ -564,11 +576,11 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
         }
 
         StringBuilder answer = new StringBuilder();
-        answer.append("<routeStat").append(String.format(" id=\"%s\"", route.getId()))
+        answer.append("<routeStat").append(String.format(" id=\"%s\"", escapeXml(route.getId())))
                 .append(String.format(" state=\"%s\"", getState()))
                 .append(String.format(" uptime=\"%s\"", getUptimeMillis()));
         if (getRouteGroup() != null) {
-            answer.append(String.format(" group=\"%s\"", getRouteGroup()));
+            answer.append(String.format(" group=\"%s\"", escapeXml(getRouteGroup())));
         }
         if (sourceLocation != null) {
             answer.append(String.format(" sourceLocation=\"%s\"", getSourceLocation()));
@@ -725,7 +737,7 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
                 int line = step.getSourceLineNumber() != null ? step.getSourceLineNumber() : -1;
                 sb.append("    <stepStat")
                         .append(String.format(" id=\"%s\" index=\"%s\" state=\"%s\" sourceLineNumber=\"%s\"",
-                                step.getProcessorId(),
+                                escapeXml(step.getProcessorId()),
                                 step.getIndex(), step.getState(), line));
                 // use substring as we only want the attributes
                 sb.append(" ").append(step.dumpStatsAsXml(fullStats).substring(7)).append("\n");
@@ -734,11 +746,11 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
         sb.append("  </stepStats>\n");
 
         StringBuilder answer = new StringBuilder();
-        answer.append("<routeStat").append(String.format(" id=\"%s\"", route.getId()))
+        answer.append("<routeStat").append(String.format(" id=\"%s\"", escapeXml(route.getId())))
                 .append(String.format(" state=\"%s\"", getState()))
                 .append(String.format(" uptime=\"%s\"", getUptimeMillis()));
         if (getRouteGroup() != null) {
-            answer.append(String.format(" group=\"%s\"", getRouteGroup()));
+            answer.append(String.format(" group=\"%s\"", escapeXml(getRouteGroup())));
         }
         if (sourceLocation != null) {
             answer.append(String.format(" sourceLocation=\"%s\"", getSourceLocation()));
@@ -794,7 +806,7 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
                 sb.append("\n    <routeLocation")
                         .append(String.format(
                                 " routeId=\"%s\" id=\"%s\" index=\"%s\" sourceLocation=\"%s\" sourceLineNumber=\"%s\"/>",
-                                route.getRouteId(), id, 0, location, line));
+                                escapeXml(route.getRouteId()), id, 0, location, line));
             }
             for (ManagedProcessorMBean processor : processors) {
                 // the step must belong to this route
@@ -804,7 +816,8 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
                     sb.append("\n    <routeLocation")
                             .append(String.format(
                                     " routeId=\"%s\" id=\"%s\" index=\"%s\" sourceLocation=\"%s\" sourceLineNumber=\"%s\"/>",
-                                    route.getRouteId(), processor.getProcessorId(), processor.getIndex(), location, line));
+                                    escapeXml(route.getRouteId()), escapeXml(processor.getProcessorId()), processor.getIndex(),
+                                    location, line));
                 }
             }
         }
@@ -816,7 +829,6 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
     public void reset(boolean includeProcessors) throws Exception {
         reset();
         load.reset();
-        thp.reset();
 
         // and now reset all processors for this route
         if (includeProcessors) {
@@ -1009,4 +1021,12 @@ public class ManagedRoute extends ManagedPerformanceCounter implements TimerList
             return o1.getIndex().compareTo(o2.getIndex());
         }
     }
+
+    private static String escapeXml(String text) {
+        return text
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+    }
+
 }

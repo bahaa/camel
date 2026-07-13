@@ -34,6 +34,8 @@ public abstract class DefaultConfigurationProperties<T> {
 
     private String name;
     private String description;
+    @Metadata(enums = "dev,test,prod")
+    private String profile;
     @Metadata(defaultValue = "Default", enums = "Verbose,Default,Brief,Oneline,Off")
     private StartupSummaryLevel startupSummaryLevel;
     private int durationMaxSeconds;
@@ -55,8 +57,11 @@ public abstract class DefaultConfigurationProperties<T> {
     private int consumerTemplateCacheSize = 1000;
     private boolean loadTypeConverters;
     private boolean loadHealthChecks;
+    @Metadata(security = "insecure:dev")
     private boolean devConsoleEnabled;
     private boolean modeline;
+    @Metadata(defaultValue = "true")
+    private boolean yamlDslCompactNotationWarn = true;
     private int logDebugMaxChars;
     private boolean streamCachingEnabled = true;
     private String streamCachingAllowClasses;
@@ -66,11 +71,15 @@ public abstract class DefaultConfigurationProperties<T> {
     private String streamCachingSpoolCipher;
     private long streamCachingSpoolThreshold;
     private int streamCachingSpoolUsedHeapMemoryThreshold;
+    @Metadata(defaultValue = "Max", enums = "Committed,Max")
     private String streamCachingSpoolUsedHeapMemoryLimit;
     private boolean streamCachingAnySpoolRules;
+    @Metadata(label = "advanced")
+    private String streamCachingSpoolRules;
     private int streamCachingBufferSize;
     private boolean streamCachingRemoveSpoolDirectoryWhenStopping = true;
     private boolean streamCachingStatisticsEnabled;
+    private boolean messageSizeEnabled;
     private boolean typeConverterStatisticsEnabled;
     private boolean tracing;
     private boolean tracingStandby;
@@ -106,7 +115,9 @@ public abstract class DefaultConfigurationProperties<T> {
     private boolean jmxManagementRegisterRoutesCreateByKamelet;
     private boolean jmxManagementRegisterRoutesCreateByTemplate = true;
     private boolean camelEventsTimestampEnabled;
+    @Deprecated(since = "4.19.0")
     private boolean useMdcLogging;
+    @Deprecated(since = "4.19.0")
     private String mdcLoggingKeysPattern;
     private String threadNamePattern;
     private String routeFilterIncludePattern;
@@ -137,7 +148,7 @@ public abstract class DefaultConfigurationProperties<T> {
     private String exchangeFactory = "default";
     private int exchangeFactoryCapacity = 100;
     private boolean exchangeFactoryStatisticsEnabled;
-    @Metadata(enums = "xml,yaml")
+    @Metadata(enums = "xml,yaml,json,png")
     private String dumpRoutes;
     private String dumpRoutesInclude = "routes";
     private boolean dumpRoutesLog = true;
@@ -179,6 +190,23 @@ public abstract class DefaultConfigurationProperties<T> {
      */
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getProfile() {
+        return profile;
+    }
+
+    /**
+     * Camel profile to use when running.
+     *
+     * The dev profile is for development, which enables a set of additional developer focus functionality, tracing,
+     * debugging, and gathering additional runtime statistics that are useful during development. However, those
+     * additional features has a slight overhead cost, and are not enabled for production profile.
+     *
+     * The default profile is prod.
+     */
+    public void setProfile(String profile) {
+        this.profile = profile;
     }
 
     public StartupSummaryLevel getStartupSummaryLevel() {
@@ -421,17 +449,30 @@ public abstract class DefaultConfigurationProperties<T> {
     }
 
     /**
-     * Whether to support JBang style //DEPS to specify additional dependencies when running Camel JBang
+     * Whether to support JBang style //DEPS to specify additional dependencies when running Camel CLI
      */
     public boolean isModeline() {
         return modeline;
     }
 
     /**
-     * Whether to support JBang style //DEPS to specify additional dependencies when running Camel JBang
+     * Whether to support JBang style //DEPS to specify additional dependencies when running Camel CLI
      */
     public void setModeline(boolean modeline) {
         this.modeline = modeline;
+    }
+
+    public boolean isYamlDslCompactNotationWarn() {
+        return yamlDslCompactNotationWarn;
+    }
+
+    /**
+     * Whether to log a WARN when YAML DSL routes use compact (shorthand) notation instead of the canonical
+     * (explicit/normalized) form. The canonical style is recommended as it is more tooling and AI friendly. Use Camel
+     * CLI to normalize existing routes: camel validate normalize &lt;file&gt;
+     */
+    public void setYamlDslCompactNotationWarn(boolean yamlDslCompactNotationWarn) {
+        this.yamlDslCompactNotationWarn = yamlDslCompactNotationWarn;
     }
 
     public int getLogDebugMaxChars() {
@@ -584,6 +625,18 @@ public abstract class DefaultConfigurationProperties<T> {
         this.streamCachingAnySpoolRules = streamCachingAnySpoolRules;
     }
 
+    public String getStreamCachingSpoolRules() {
+        return streamCachingSpoolRules;
+    }
+
+    /**
+     * Sets custom rules (org.apache.camel.spi.StreamCachingStrategy.SpoolRule) for deciding when to spool to disk.
+     * Multiple rules can be separated by comma.
+     */
+    public void setStreamCachingSpoolRules(String streamCachingSpoolRules) {
+        this.streamCachingSpoolRules = streamCachingSpoolRules;
+    }
+
     public int getStreamCachingBufferSize() {
         return streamCachingBufferSize;
     }
@@ -617,6 +670,20 @@ public abstract class DefaultConfigurationProperties<T> {
      */
     public void setStreamCachingStatisticsEnabled(boolean streamCachingStatisticsEnabled) {
         this.streamCachingStatisticsEnabled = streamCachingStatisticsEnabled;
+    }
+
+    public boolean isMessageSizeEnabled() {
+        return messageSizeEnabled;
+    }
+
+    /**
+     * Sets whether message size observation is enabled (default is false).
+     *
+     * When enabled, Camel will compute the size of message body and headers (in bytes) per endpoint (for both IN and
+     * OUT directions) and make this available via JMX MBeans (min/max/mean body size and headers size).
+     */
+    public void setMessageSizeEnabled(boolean messageSizeEnabled) {
+        this.messageSizeEnabled = messageSizeEnabled;
     }
 
     public boolean isTypeConverterStatisticsEnabled() {
@@ -1081,17 +1148,20 @@ public abstract class DefaultConfigurationProperties<T> {
         this.camelEventsTimestampEnabled = camelEventsTimestampEnabled;
     }
 
+    @Deprecated(since = "4.19.0")
     public boolean isUseMdcLogging() {
         return useMdcLogging;
     }
 
     /**
-     * To turn on MDC logging
+     * To turn on MDC logging (deprecated, use camel-mdc component instead)
      */
+    @Deprecated(since = "4.19.0")
     public void setUseMdcLogging(boolean useMdcLogging) {
         this.useMdcLogging = useMdcLogging;
     }
 
+    @Deprecated(since = "4.19.0")
     public String getMdcLoggingKeysPattern() {
         return mdcLoggingKeysPattern;
     }
@@ -1106,7 +1176,10 @@ public abstract class DefaultConfigurationProperties<T> {
      *
      * 1. exact match, returns true 2. wildcard match (pattern ends with a * and the name starts with the pattern),
      * returns true 3. regular expression match, returns true 4. otherwise returns false
+     *
+     * Deprecated, use camel-mdc component instead
      */
+    @Deprecated(since = "4.19.0")
     public void setMdcLoggingKeysPattern(String mdcLoggingKeysPattern) {
         this.mdcLoggingKeysPattern = mdcLoggingKeysPattern;
     }
@@ -1486,12 +1559,21 @@ public abstract class DefaultConfigurationProperties<T> {
 
     /**
      * If dumping is enabled then Camel will during startup dump all loaded routes (incl rests and route templates)
-     * represented as XML/YAML DSL into the log. This is intended for trouble shooting or to assist during development.
+     * represented as XML, YAML, or Java DSL into the log. This is intended for trouble shooting or to assist during
+     * development.
      *
      * Sensitive information that may be configured in the route endpoints could potentially be included in the dump
      * output and is therefore not recommended being used for production usage.
      *
-     * This requires to have camel-xml-io/camel-yaml-io on the classpath to be able to dump the routes as XML/YAML.
+     * This requires to have camel-xml-io/camel-yaml-io/camel-java-io on the classpath to be able to dump the routes as
+     * XML/YAML/Java.
+     *
+     * You can also use JSon which dumps the route structure in JSon. The JSon does not represent Camel DSL but it
+     * useful for tooling to understand the structure of the routes and how EIPs are nested together.
+     *
+     * You can also use png to save route diagrams as PNG image files either all combined in a single file (default
+     * camel-route-diagrams.png) or to a given folder, where routes are grouped by source file name(s) and saved as
+     * corresponding .png files. This requires to have camel-diagram on the classpath to be able to render PNG diagrams.
      */
     public void setDumpRoutes(String dumpRoutes) {
         this.dumpRoutes = dumpRoutes;
@@ -1714,6 +1796,20 @@ public abstract class DefaultConfigurationProperties<T> {
     }
 
     /**
+     * Camel profile to use when running.
+     *
+     * The dev profile is for development, which enables a set of additional developer focus functionality, tracing,
+     * debugging, and gathering additional runtime statistics that are useful during development. However, those
+     * additional features has a slight overhead cost, and are not enabled for production profile.
+     *
+     * The default profile is prod.
+     */
+    public T withProfile(String profile) {
+        this.profile = profile;
+        return (T) this;
+    }
+
+    /**
      * To specify for how long time in seconds to keep running the JVM before automatic terminating the JVM. You can use
      * this to run Camel for a short while.
      */
@@ -1865,10 +1961,19 @@ public abstract class DefaultConfigurationProperties<T> {
     }
 
     /**
-     * Whether to support JBang style //DEPS to specify additional dependencies when running Camel JBang
+     * Whether to support JBang style //DEPS to specify additional dependencies when running Camel CLI
      */
     public T withModeline(boolean modeline) {
         this.modeline = modeline;
+        return (T) this;
+    }
+
+    /**
+     * Whether to log a WARN when YAML DSL routes use compact (shorthand) notation instead of the canonical
+     * (explicit/normalized) form.
+     */
+    public T withYamlDslCompactNotationWarn(boolean yamlDslCompactNotationWarn) {
+        this.yamlDslCompactNotationWarn = yamlDslCompactNotationWarn;
         return (T) this;
     }
 
@@ -2000,6 +2105,15 @@ public abstract class DefaultConfigurationProperties<T> {
     }
 
     /**
+     * Sets custom rules (org.apache.camel.spi.StreamCachingStrategy.SpoolRule) for deciding when to spool to disk.
+     * Multiple rules can be separated by comma.
+     */
+    public T withStreamCachingAnySpoolRules(String streamCachingSpoolRules) {
+        this.streamCachingSpoolRules = streamCachingSpoolRules;
+        return (T) this;
+    }
+
+    /**
      * Sets the stream caching buffer size to use when allocating in-memory buffers used for in-memory stream caches.
      *
      * The default size is 4096.
@@ -2022,6 +2136,17 @@ public abstract class DefaultConfigurationProperties<T> {
      */
     public T withStreamCachingStatisticsEnabled(boolean streamCachingStatisticsEnabled) {
         this.streamCachingStatisticsEnabled = streamCachingStatisticsEnabled;
+        return (T) this;
+    }
+
+    /**
+     * Sets whether message size observation is enabled (default is false).
+     *
+     * When enabled, Camel will compute the size of message body and headers (in bytes) per endpoint (for both IN and
+     * OUT directions) and make this available via JMX MBeans (min/max/mean body size and headers size).
+     */
+    public T withMessageSizeEnabled(boolean messageSizeEnabled) {
+        this.messageSizeEnabled = messageSizeEnabled;
         return (T) this;
     }
 
@@ -2366,6 +2491,7 @@ public abstract class DefaultConfigurationProperties<T> {
     /**
      * To turn on MDC logging
      */
+    @Deprecated(since = "4.19.0")
     public T withUseMdcLogging(boolean useMdcLogging) {
         this.useMdcLogging = useMdcLogging;
         return (T) this;
@@ -2474,6 +2600,7 @@ public abstract class DefaultConfigurationProperties<T> {
      * 1. exact match, returns true 2. wildcard match (pattern ends with a * and the name starts with the pattern),
      * returns true 3. regular expression match, returns true 4. otherwise returns false
      */
+    @Deprecated(since = "4.19.0")
     public T withMdcLoggingKeysPattern(String mdcLoggingKeysPattern) {
         this.mdcLoggingKeysPattern = mdcLoggingKeysPattern;
         return (T) this;
@@ -2662,12 +2789,21 @@ public abstract class DefaultConfigurationProperties<T> {
 
     /**
      * If dumping is enabled then Camel will during startup dump all loaded routes (incl rests and route templates)
-     * represented as XML/YAML DSL into the log. This is intended for trouble shooting or to assist during development.
+     * represented as XML, YAML, or Java DSL into the log. This is intended for trouble shooting or to assist during
+     * development.
      *
      * Sensitive information that may be configured in the route endpoints could potentially be included in the dump
      * output and is therefore not recommended being used for production usage.
      *
-     * This requires to have camel-xml-io/camel-yaml-io on the classpath to be able to dump the routes as XML/YAML.
+     * This requires to have camel-xml-io/camel-yaml-io/camel-java-io on the classpath to be able to dump the routes as
+     * XML/YAML/Java.
+     *
+     * You can also use JSon which dumps the route structure in JSon. The JSon does not represent Camel DSL but it
+     * useful for tooling to understand the structure of the routes and how EIPs are nested together.
+     *
+     * You can also use png to save route diagrams as PNG image files either all combined in a single file (default
+     * camel-route-diagrams.png) or to a given folder, where routes are grouped by source file name(s) and saved as
+     * corresponding .png files. This requires to have camel-diagram on the classpath to be able to render PNG diagrams.
      */
     public T withDumpRoutes(String dumpRoutes) {
         this.dumpRoutes = dumpRoutes;

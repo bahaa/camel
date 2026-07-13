@@ -19,14 +19,22 @@ package org.apache.camel.component.leveldb.serializer;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.support.DefaultExchangeHolder;
+import org.apache.camel.util.ClassLoadingAwareObjectInputStream;
 
 public class DefaultLevelDBSerializer extends AbstractLevelDBSerializer {
+
+    // Keys are always serialized as a java.lang.String (see serializeKey). Restrict key deserialization
+    // to String only and apply JEP-290 graph-shape limits as defense-in-depth, consistent with the
+    // ObjectInputFilter applied on the exchange deserialization path.
+    private static final String KEY_DESERIALIZATION_FILTER
+            = "java.lang.String;maxdepth=2;maxrefs=100;maxbytes=1048576;!*";
 
     @Override
     public byte[] serializeKey(String key) throws IOException {
@@ -40,6 +48,7 @@ public class DefaultLevelDBSerializer extends AbstractLevelDBSerializer {
     @Override
     public String deserializeKey(byte[] buffer) throws IOException {
         try (final ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(buffer))) {
+            ois.setObjectInputFilter(ObjectInputFilter.Config.createFilter(KEY_DESERIALIZATION_FILTER));
             return (String) ois.readObject();
         } catch (ClassNotFoundException e) {
             //this should not happen because serialized content should be String
@@ -67,6 +76,22 @@ public class DefaultLevelDBSerializer extends AbstractLevelDBSerializer {
             } catch (ClassNotFoundException e) {
                 //this should not happen because serialized content should be byte[]
                 throw new IllegalStateException("Content has to be serialized String.", e);
+            }
+        });
+    }
+
+    @Override
+    public Exchange deserializeExchange(CamelContext camelContext, byte[] buffer, String deserializationFilter)
+            throws IOException, ClassNotFoundException {
+        return deserializeExchange(camelContext, buffer, b -> {
+            ClassLoader classLoader = camelContext.getApplicationContextClassLoader();
+            try (final ObjectInputStream ois = new ClassLoadingAwareObjectInputStream(
+                    classLoader,
+                    new ByteArrayInputStream(buffer))) {
+                ois.setObjectInputFilter(ObjectInputFilter.Config.createFilter(deserializationFilter));
+                return (DefaultExchangeHolder) ois.readObject();
+            } catch (ClassNotFoundException e) {
+                throw new IOException("Failed to deserialize exchange", e);
             }
         });
     }

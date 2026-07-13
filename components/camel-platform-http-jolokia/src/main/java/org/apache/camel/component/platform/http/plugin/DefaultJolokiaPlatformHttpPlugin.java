@@ -16,6 +16,7 @@
  */
 package org.apache.camel.component.platform.http.plugin;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
@@ -25,13 +26,11 @@ import java.util.Map;
 
 import javax.management.RuntimeMBeanException;
 
-import io.netty.buffer.ByteBufInputStream;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.impl.Arguments;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.impl.Utils;
 import org.apache.camel.CamelContext;
@@ -39,6 +38,7 @@ import org.apache.camel.spi.annotations.JdkService;
 import org.apache.camel.support.ObjectHelper;
 import org.apache.camel.support.service.ServiceSupport;
 import org.apache.camel.util.ReflectionHelper;
+import org.jolokia.core.api.LogHandler;
 import org.jolokia.server.core.config.ConfigKey;
 import org.jolokia.server.core.config.StaticConfiguration;
 import org.jolokia.server.core.http.HttpRequestHandler;
@@ -47,7 +47,6 @@ import org.jolokia.server.core.restrictor.DenyAllRestrictor;
 import org.jolokia.server.core.restrictor.RestrictorFactory;
 import org.jolokia.server.core.service.JolokiaServiceManagerFactory;
 import org.jolokia.server.core.service.api.JolokiaServiceManager;
-import org.jolokia.server.core.service.api.LogHandler;
 import org.jolokia.server.core.service.api.Restrictor;
 import org.jolokia.server.core.util.NetworkUtil;
 import org.jolokia.service.jmx.LocalRequestHandler;
@@ -186,8 +185,10 @@ public class DefaultJolokiaPlatformHttpPlugin extends ServiceSupport implements 
                                 getParams(req.params()));
                     }
                 } else {
-                    Arguments.require(routingContext.body() != null, "Missing body");
-                    InputStream inputStream = new ByteBufInputStream(routingContext.body().buffer().getByteBuf());
+                    if (routingContext.body() == null) {
+                        throw new IllegalArgumentException("Missing body");
+                    }
+                    InputStream inputStream = new ByteArrayInputStream(routingContext.body().buffer().getBytes());
                     Method m = ReflectionHelper.findMethod(requestHandler.getClass(), "handlePostRequest", String.class,
                             InputStream.class, String.class, Map.class);
                     if (m != null) {
@@ -200,8 +201,8 @@ public class DefaultJolokiaPlatformHttpPlugin extends ServiceSupport implements 
                 try {
                     Method m = ReflectionHelper.findMethod(requestHandler.getClass(), "handleThrowable", Throwable.class);
                     if (m != null) {
-                        json = ObjectHelper.invokeMethodSafe(m, requestHandler, exp instanceof RuntimeMBeanException
-                                ? ((RuntimeMBeanException) exp).getTargetException() : exp);
+                        json = ObjectHelper.invokeMethodSafe(m, requestHandler, exp instanceof RuntimeMBeanException rmbe
+                                ? rmbe.getTargetException() : exp);
                     }
                 } catch (Exception e) {
                     // ignore

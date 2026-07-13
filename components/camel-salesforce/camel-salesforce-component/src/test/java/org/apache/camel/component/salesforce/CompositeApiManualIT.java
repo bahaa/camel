@@ -35,10 +35,10 @@ import org.apache.camel.component.salesforce.api.dto.composite.SObjectCompositeR
 import org.apache.camel.component.salesforce.api.utils.Version;
 import org.apache.camel.component.salesforce.dto.generated.Account;
 import org.apache.camel.component.salesforce.dto.generated.Line_Item__c;
-import org.apache.camel.test.junit5.params.Parameter;
-import org.apache.camel.test.junit5.params.Parameterized;
-import org.apache.camel.test.junit5.params.Parameters;
-import org.apache.camel.test.junit5.params.Test;
+import org.apache.camel.test.junit6.params.Parameter;
+import org.apache.camel.test.junit6.params.Parameterized;
+import org.apache.camel.test.junit6.params.Parameters;
+import org.apache.camel.test.junit6.params.Test;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -247,7 +247,7 @@ public class CompositeApiManualIT extends AbstractSalesforceTestBase {
                 from("direct:deleteBatchAccounts")
                         .to("salesforce:query?sObjectClass=" + Accounts.class.getName()
                             + "&sObjectQuery=SELECT Id FROM Account WHERE Name = 'Account created from Composite batch API'")
-                        .split(simple("${body.records}")).setHeader("sObjectId", simple("${body.id}"))
+                        .split(simple("${body.records}")).setHeader("CamelSalesforceSObjectId", simple("${body.id}"))
                         .to("salesforce:deleteSObject?sObjectName=Account").end();
             }
         };

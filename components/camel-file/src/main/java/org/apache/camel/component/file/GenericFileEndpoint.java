@@ -46,6 +46,7 @@ import org.apache.camel.support.processor.idempotent.MemoryIdempotentRepository;
 import org.apache.camel.support.service.ServiceHelper;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.IOHelper;
+import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StringHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,10 +157,12 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
                                                          + "will be thrown. If the `fileExist` option is set to 'Override', then the file will be truncated, and "
                                                          + "if set to `append` the file will remain unchanged.")
     protected boolean allowNullBody;
-    @UriParam(label = "producer", defaultValue = "true", description = "Used for jailing (restricting) writing files "
-                                                                       + "to the starting directory (and sub) only. This is enabled by default to not allow Camel to write files "
-                                                                       + "to outside directories (to be more secured out of the box). You can turn this off to allow writing "
-                                                                       + "files to directories outside the starting directory, such as parent or root folders.")
+    @UriParam(label = "common", defaultValue = "true", description = "Used for jailing (restricting) writing files "
+                                                                     + "to the starting directory (and sub) only. This is enabled by default to not allow Camel to write files "
+                                                                     + "to outside directories (to be more secured out of the box). You can turn this off to allow writing "
+                                                                     + "files to directories outside the starting directory, such as parent or root folders. For consumers "
+                                                                     + "that use a localWorkDirectory, this also restricts the downloaded files to stay within the configured "
+                                                                     + "localWorkDirectory.")
     protected boolean jailStartingDirectory = true;
     @UriParam(label = "producer", description = "Used to append characters (text) after writing files. This can for "
                                                 + "example be used to add new lines or other separators when writing and appending new files or existing files. <p/> "
@@ -168,10 +171,12 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
     protected String appendChars;
     @UriParam(label = "producer",
               enums = "MD2,MD5,SHA_1,SHA_224,SHA_256,SHA_384,SHA_512,SHA_512_224,SHA_512_256,SHA3_224,SHA3_256,SHA3_384,SHA3_512",
-              description = "If provided, then Camel will write a checksum file when the original file has been written. The checksum file"
-                            + " will contain the checksum created with the provided algorithm for the original file. The checksum file will"
-                            + " always be written in the same folder as the original file.")
+              description = "If provided, then Camel will calculate a checksum from the file that has been written, and store the result in the CamelFileChecksum header.")
     protected String checksumFileAlgorithm;
+    @UriParam(label = "producer", defaultValue = "true",
+              description = "If checksumFileAlgorithm has been configured then this option controls whether to write a checksum file as well or not."
+                            + " The checksum file will always be written in the same folder as the original file.")
+    protected boolean checksumWriteFile = true;
 
     // consumer options
 
@@ -187,7 +192,7 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
                                                          + "org.apache.camel.spi.IdempotentRepository. The in-progress repository is used to account the current in "
                                                          + "progress files being consumed. By default a memory based repository is used.")
     protected IdempotentRepository inProgressRepository
-            = MemoryIdempotentRepository.memoryIdempotentRepository(DEFAULT_IN_PROGRESS_CACHE_SIZE);
+            = MemoryIdempotentRepository.memoryIdempotentRepositoryFifo(DEFAULT_IN_PROGRESS_CACHE_SIZE);
     @UriParam(label = "consumer,advanced", description = "When consuming, a local work directory can be used to "
                                                          + "store the remote file content directly in local files, to avoid loading the content into memory. This "
                                                          + "is beneficial, if you consume a very big remote file and thus can conserve memory.")
@@ -200,11 +205,15 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
     protected boolean recursive;
     @UriParam(label = "consumer", description = "If true, the file will be deleted after it is processed successfully.")
     protected boolean delete;
-    @UriParam(label = "consumer", description = "When pre-sort is enabled then the consumer will sort the file and "
-                                                + "directory names during polling,  that was retrieved from the file system. You may want to do this in "
-                                                + "case you need to operate on the files  in a sorted order. The pre-sort is executed before the consumer "
-                                                + "starts to filter, and accept files  to process by Camel. This option is default=false meaning disabled.")
-    protected boolean preSort;
+    @UriParam(label = "consumer", enums = "true,false,name,-name,modified,-modified,size,-size",
+              description = "When pre-sort is enabled then the consumer will sort the file and "
+                            + "directory names during polling, that was retrieved from the file system. You may want to do this in "
+                            + "case you need to operate on the files in a sorted order. The pre-sort is executed before the consumer "
+                            + "starts to filter, and accept files to process by Camel. This option is default=false meaning disabled. "
+                            + "The following values are supported: name (sort by file name), modified (sort by last-modified timestamp), "
+                            + "size (sort by file size). To sort in descending (reverse) order, prefix the value with a minus sign "
+                            + "(e.g., -modified to sort newest first). The value true is an alias for name (backward compatible).")
+    protected String preSort;
     @UriParam(label = "consumer,filter", description = "To define a maximum messages to gather per poll. By default "
                                                        + "no maximum is set. Can be used to set a limit of e.g. 1000 to avoid when starting up the server that "
                                                        + "there are thousands of files. Set a value of 0 or negative to disabled it. Notice: If this option is "
@@ -710,17 +719,24 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
         this.excludeExt = excludeExt;
     }
 
-    public boolean isPreSort() {
+    public String getPreSort() {
         return preSort;
+    }
+
+    public boolean isPreSort() {
+        return preSort != null && !preSort.isBlank() && !"false".equalsIgnoreCase(preSort);
     }
 
     /**
      * When pre-sort is enabled then the consumer will sort the file and directory names during polling, that was
      * retrieved from the file system. You may want to do this in case you need to operate on the files in a sorted
      * order. The pre-sort is executed before the consumer starts to filter, and accept files to process by Camel. This
-     * option is default=false meaning disabled.
+     * option is default=false meaning disabled. The following values are supported: name (sort by file name), modified
+     * (sort by last-modified timestamp), size (sort by file size). To sort in descending (reverse) order, prefix the
+     * value with a minus sign (e.g., -modified to sort newest first). The value true is an alias for name (backward
+     * compatible).
      */
-    public void setPreSort(boolean preSort) {
+    public void setPreSort(String preSort) {
         this.preSort = preSort;
     }
 
@@ -1500,7 +1516,7 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
 
     /**
      * A pluggable in-progress repository org.apache.camel.spi.IdempotentRepository. The in-progress repository is used
-     * to account the current in progress files being consumed. By default a memory based repository is used.
+     * to account the current in progress files being consumed. By default, a memory based repository is used.
      */
     public void setInProgressRepository(IdempotentRepository inProgressRepository) {
         this.inProgressRepository = inProgressRepository;
@@ -1613,13 +1629,16 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
         return checksumFileAlgorithm;
     }
 
-    /**
-     * If provided, then Camel will write a checksum file when the original file has been written. The checksum file
-     * will contain the checksum created with the provided algorithm for the original file. The checksum file will
-     * always be written in the same folder as the original file.
-     */
     public void setChecksumFileAlgorithm(String checksumFileAlgorithm) {
         this.checksumFileAlgorithm = checksumFileAlgorithm;
+    }
+
+    public boolean isChecksumWriteFile() {
+        return checksumWriteFile;
+    }
+
+    public void setChecksumWriteFile(boolean checksumWriteFile) {
+        this.checksumWriteFile = checksumWriteFile;
     }
 
     /**
@@ -1642,7 +1661,7 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
             // need to normalize paths to ensure we can match using startsWith
             endpointPath = FileUtil.normalizePath(endpointPath);
             String copyOfName = FileUtil.normalizePath(name);
-            if (org.apache.camel.util.ObjectHelper.isNotEmpty(endpointPath) && copyOfName.startsWith(endpointPath)) {
+            if (ObjectHelper.isNotEmpty(endpointPath) && copyOfName.startsWith(endpointPath)) {
                 name = name.substring(endpointPath.length());
             }
 
@@ -1745,6 +1764,9 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
         if (readLockIdempotentReleaseExecutorService != null) {
             params.put("readLockIdempotentReleaseExecutorService", readLockIdempotentReleaseExecutorService);
         }
+        if (checksumFileAlgorithm != null) {
+            params.put("checksumFileAlgorithm", checksumFileAlgorithm);
+        }
         return params;
     }
 
@@ -1792,7 +1814,7 @@ public abstract class GenericFileEndpoint<T> extends ScheduledPollEndpoint imple
         }
 
         String answer = pattern;
-        if (org.apache.camel.util.ObjectHelper.isNotEmpty(path) && org.apache.camel.util.ObjectHelper.isNotEmpty(pattern)) {
+        if (ObjectHelper.isNotEmpty(path) && ObjectHelper.isNotEmpty(pattern)) {
             // done file must always be in same directory as the real file name
             answer = path + getFileSeparator() + pattern;
         }

@@ -16,6 +16,8 @@
  */
 package org.apache.camel.component.xslt;
 
+import javax.xml.transform.TransformerException;
+
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.ContextTestSupport;
 import org.apache.camel.builder.RouteBuilder;
@@ -24,7 +26,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class XsltTransformingExceptionTest extends ContextTestSupport {
     private static final String GOOD_XML_STRING = "<name>Camel</name>";
@@ -39,7 +40,7 @@ public class XsltTransformingExceptionTest extends ContextTestSupport {
                 () -> template.sendBody("direct:start", BAD_XML_STRING),
                 "Except a camel Execution exception here");
 
-        boolean b = ex.getCause() instanceof javax.xml.transform.TransformerException;
+        boolean b = ex.getCause() instanceof TransformerException;
         assertTrue(b);
 
         // we should not get any message from the result endpoint
@@ -52,13 +53,14 @@ public class XsltTransformingExceptionTest extends ContextTestSupport {
     public void testXsltWithoutException() throws Exception {
         MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedMessageCount(0);
-        try {
-            template.sendBody("direct:start", GOOD_XML_STRING);
-            fail("Except a camel Execution exception here");
-        } catch (CamelExecutionException ex) {
-            boolean b = ex.getCause() instanceof javax.xml.transform.TransformerException;
-            assertTrue(b);
-        }
+
+        CamelExecutionException ex = assertThrows(CamelExecutionException.class,
+                () -> template.sendBody("direct:start", GOOD_XML_STRING),
+                "Except a camel Execution exception here");
+
+        boolean b = ex.getCause() instanceof TransformerException;
+        assertTrue(b);
+
         assertMockEndpointsSatisfied();
     }
 

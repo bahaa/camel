@@ -19,6 +19,7 @@ package org.apache.camel.component.platform.http.vertx;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
@@ -29,6 +30,7 @@ import org.apache.camel.component.platform.http.PlatformHttpConstants;
 import org.apache.camel.component.platform.http.PlatformHttpEndpoint;
 import org.apache.camel.component.platform.http.spi.PlatformHttpConsumer;
 import org.apache.camel.component.platform.http.spi.PlatformHttpEngine;
+import org.apache.camel.component.platform.http.spi.PlatformHttpSecurityHandler;
 import org.apache.camel.spi.annotations.JdkService;
 import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.service.ServiceSupport;
@@ -95,6 +97,19 @@ public class VertxPlatformHttpEngine extends ServiceSupport implements PlatformH
     }
 
     @Override
+    public PlatformHttpConsumer createConsumer(
+            PlatformHttpEndpoint endpoint,
+            Processor processor,
+            PlatformHttpSecurityHandler securityHandler) {
+        return new VertxPlatformHttpConsumer(
+                endpoint,
+                processor,
+                handlers,
+                VertxPlatformHttpRouter.getRouterNameFromPort(getServerPort()),
+                securityHandler);
+    }
+
+    @Override
     public int getServerPort() {
         if (port == 0) {
             VertxPlatformHttpServer server = CamelContextHelper.findSingleByType(camelContext, VertxPlatformHttpServer.class);
@@ -113,6 +128,37 @@ public class VertxPlatformHttpEngine extends ServiceSupport implements PlatformH
                         = CamelContextHelper.findSingleByType(camelContext, VertxPlatformHttpRouter.class);
                 if (router != null && router.getServer() != null && router.getServer().getServer() != null) {
                     port = router.getServer().getServer().actualPort();
+                }
+            }
+            // When there are multiple servers (e.g., main server and management server),
+            // findSingleByType returns null. In this case, look for available routers
+            // registered in the registry and prefer the main server (SERVER_TYPE_SERVER)
+            // over the management server (SERVER_TYPE_MANAGEMENT).
+            if (port == 0) {
+                Map<String, VertxPlatformHttpRouter> routers
+                        = camelContext.getRegistry().findByTypeWithName(VertxPlatformHttpRouter.class);
+                int fallbackPort = 0;
+                for (VertxPlatformHttpRouter router : routers.values()) {
+                    if (router.getServer() != null && router.getServer().getServer() != null) {
+                        int actualPort = router.getServer().getServer().actualPort();
+                        if (actualPort > 0) {
+                            // Prefer routers marked as main server type
+                            if (router.isMainServer()) {
+                                port = actualPort;
+                                break;
+                            } else if (fallbackPort == 0 && !router.isManagementServer()) {
+                                // Keep first non-management router as fallback
+                                fallbackPort = actualPort;
+                            } else if (fallbackPort == 0) {
+                                // Last resort: use management router if nothing else available
+                                fallbackPort = actualPort;
+                            }
+                        }
+                    }
+                }
+                // If no main server router was found, use the fallback
+                if (port == 0 && fallbackPort > 0) {
+                    port = fallbackPort;
                 }
             }
 

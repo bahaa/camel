@@ -47,6 +47,7 @@ import org.apache.camel.tooling.model.MainModel;
 import org.apache.camel.tooling.model.OtherModel;
 import org.apache.camel.tooling.model.PojoBeanModel;
 import org.apache.camel.tooling.model.ReleaseModel;
+import org.apache.camel.tooling.model.SecurityAdvisoryModel;
 import org.apache.camel.tooling.model.TransformerModel;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
@@ -93,8 +94,6 @@ public class DefaultCamelCatalog extends AbstractCachingCamelCatalog implements 
     public static final String LIST_BEANS_AS_JSON = "listBeansAsJson";
 
     public static final String SUMMARY_AS_JSON = "summaryAsJson";
-
-    private final VersionHelper version = new VersionHelper();
 
     // 3rd party components/data-formats
     private final Map<String, String> extraComponents = new HashMap<>();
@@ -199,7 +198,7 @@ public class DefaultCamelCatalog extends AbstractCachingCamelCatalog implements 
 
     @Override
     public String getCatalogVersion() {
-        return version.getVersion();
+        return versionManager.getLoadedVersion();
     }
 
     @Override
@@ -318,21 +317,35 @@ public class DefaultCamelCatalog extends AbstractCachingCamelCatalog implements 
         for (String name : names) {
             BaseModel<?> model = modelLoader.apply(name);
             if (model != null) {
-                String label = model.getLabel();
-                String[] parts = label.split(",");
-                for (String part : parts) {
-                    try {
-                        if (part.equalsIgnoreCase(filter) || CatalogHelper.matchWildcard(part, filter)
-                                || part.matches(filter)) {
-                            answer.add(name);
-                        }
-                    } catch (PatternSyntaxException e) {
-                        // ignore as filter is maybe not a pattern
-                    }
+                if (matchesFilter(model, filter)) {
+                    answer.add(name);
                 }
             }
         }
         return answer;
+    }
+
+    private static boolean matchesFilter(BaseModel<?> model, String filter) {
+        String label = model.getLabel();
+        String[] parts = label.split(",");
+        for (String part : parts) {
+            try {
+                if (part.equalsIgnoreCase(filter) || CatalogHelper.matchWildcard(part, filter)
+                        || part.matches(filter)) {
+                    return true;
+                }
+            } catch (PatternSyntaxException e) {
+                // ignore as filter is maybe not a pattern
+            }
+        }
+        String normalized = filter.toLowerCase().replace("-", "").replace("_", "");
+        for (String alias : model.getAliases()) {
+            if (alias.equalsIgnoreCase(filter)
+                    || alias.toLowerCase().replace("-", "").replace("_", "").equals(normalized)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -673,6 +686,25 @@ public class DefaultCamelCatalog extends AbstractCachingCamelCatalog implements 
                 for (Object o : arr) {
                     JsonObject jo = (JsonObject) o;
                     answer.add(JsonMapper.generateReleaseModel(jo));
+                }
+                return answer;
+            } catch (Exception e) {
+                return Collections.emptyList();
+            }
+        });
+    }
+
+    @Override
+    public List<SecurityAdvisoryModel> camelSecurityAdvisories() {
+        return cache("camel-security-advisories.json", () -> {
+            try {
+                List<SecurityAdvisoryModel> answer = new ArrayList<>();
+                InputStream is = loadResource("advisories", "camel-security-advisories.json");
+                String json = CatalogHelper.loadText(is);
+                JsonArray arr = (JsonArray) Jsoner.deserialize(json);
+                for (Object o : arr) {
+                    JsonObject jo = (JsonObject) o;
+                    answer.add(JsonMapper.generateSecurityAdvisoryModel(jo));
                 }
                 return answer;
             } catch (Exception e) {

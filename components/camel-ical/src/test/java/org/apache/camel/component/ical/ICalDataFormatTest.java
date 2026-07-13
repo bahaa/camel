@@ -40,7 +40,7 @@ import net.fortuna.ical4j.model.property.immutable.ImmutableVersion;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.converter.IOConverter;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -136,7 +136,7 @@ public class ICalDataFormatTest extends CamelTestSupport {
         meeting.add(dev2);
 
         // Create a calendar
-        net.fortuna.ical4j.model.Calendar icsCalendar = new net.fortuna.ical4j.model.Calendar();
+        Calendar icsCalendar = new Calendar();
         icsCalendar.add(ImmutableVersion.VERSION_2_0);
         icsCalendar.add(new ProdId("-//Events Calendar//iCal4j 1.0//EN"));
         icsCalendar.add(ImmutableCalScale.GREGORIAN);

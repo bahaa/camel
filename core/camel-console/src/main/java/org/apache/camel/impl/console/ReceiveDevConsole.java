@@ -35,6 +35,7 @@ import org.apache.camel.Endpoint;
 import org.apache.camel.Exchange;
 import org.apache.camel.spi.Configurer;
 import org.apache.camel.spi.Metadata;
+import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.ExceptionHelper;
 import org.apache.camel.support.MessageHelper;
@@ -60,19 +61,17 @@ public class ReceiveDevConsole extends AbstractDevConsole {
               description = "Whether all received messages should be removed when dumping. By default, the messages are removed, which means that dumping will not contain previous dumped messages.")
     private boolean removeOnDump = true;
 
-    /**
-     * Whether to enable or disable receive mode
-     */
+    @Metadata(label = "query", description = "Whether to enable or disable receive mode",
+              javaType = "java.lang.String", enums = "true,false")
     public static final String ENABLED = "enabled";
 
-    /**
-     * Whether to dump received messages
-     */
+    @Metadata(label = "query", description = "Whether to dump received messages",
+              javaType = "java.lang.String", enums = "true,false")
     public static final String DUMP = "dump";
 
-    /**
-     * Endpoint for where to receive messages (can also refer to a route id, endpoint pattern).
-     */
+    @Metadata(label = "query",
+              description = "Endpoint for where to receive messages (can also refer to a route id, endpoint pattern)",
+              javaType = "java.lang.String")
     public static final String ENDPOINT = "endpoint";
 
     private final List<Consumer> consumers = new ArrayList<>();
@@ -133,7 +132,7 @@ public class ReceiveDevConsole extends AbstractDevConsole {
     protected String doCallText(Map<String, Object> options) {
         StringBuilder sb = new StringBuilder();
 
-        String dump = (String) options.get(DUMP);
+        String dump = optionString(options, DUMP);
         if ("true".equals(dump)) {
             JsonArray arr = new JsonArray();
             arr.addAll(queue);
@@ -149,7 +148,7 @@ public class ReceiveDevConsole extends AbstractDevConsole {
             return sb.toString();
         }
 
-        String enabled = (String) options.get(ENABLED);
+        String enabled = optionString(options, ENABLED);
         if ("false".equals(enabled)) {
             // turn off all consumers
             stopConsumers();
@@ -158,7 +157,7 @@ public class ReceiveDevConsole extends AbstractDevConsole {
             return sb.toString();
         }
 
-        String pattern = (String) options.get(ENDPOINT);
+        String pattern = optionString(options, ENDPOINT);
         if (pattern != null) {
             try {
                 Endpoint target = findMatchingEndpoint(getCamelContext(), pattern);
@@ -187,7 +186,7 @@ public class ReceiveDevConsole extends AbstractDevConsole {
     protected JsonObject doCallJson(Map<String, Object> options) {
         JsonObject root = new JsonObject();
 
-        String dump = (String) options.get(DUMP);
+        String dump = optionString(options, DUMP);
         if ("true".equals(dump)) {
             JsonArray arr = new JsonArray();
             arr.addAll(queue);
@@ -202,7 +201,7 @@ public class ReceiveDevConsole extends AbstractDevConsole {
             return root;
         }
 
-        String enabled = (String) options.get(ENABLED);
+        String enabled = optionString(options, ENABLED);
         if ("false".equals(enabled)) {
             // turn off all consumers
             stopConsumers();
@@ -211,7 +210,7 @@ public class ReceiveDevConsole extends AbstractDevConsole {
             return root;
         }
 
-        String pattern = (String) options.get(ENDPOINT);
+        String pattern = optionString(options, ENDPOINT);
         if (pattern != null) {
             try {
                 Endpoint target = findMatchingEndpoint(getCamelContext(), pattern);
@@ -305,8 +304,8 @@ public class ReceiveDevConsole extends AbstractDevConsole {
                                 // is the endpoint able to create a consumer
                                 target = camelContext.getEndpoint(uri);
                                 // is the target able to create a consumer
-                                org.apache.camel.spi.UriEndpoint ann
-                                        = ObjectHelper.getAnnotationDeep(target, org.apache.camel.spi.UriEndpoint.class);
+                                UriEndpoint ann
+                                        = ObjectHelper.getAnnotationDeep(target, UriEndpoint.class);
                                 if (ann != null) {
                                     if (ann.producerOnly()) {
                                         // skip if the endpoint cannot consume (we need to be able to consume to receive)
@@ -330,8 +329,8 @@ public class ReceiveDevConsole extends AbstractDevConsole {
         } else {
             target = camelContext.getEndpoint(endpoint);
             // is the target able to create a consumer
-            org.apache.camel.spi.UriEndpoint ann
-                    = ObjectHelper.getAnnotationDeep(target, org.apache.camel.spi.UriEndpoint.class);
+            UriEndpoint ann
+                    = ObjectHelper.getAnnotationDeep(target, UriEndpoint.class);
             if (ann != null) {
                 if (ann.producerOnly()) {
                     // skip if the endpoint cannot consume (we need to be able to consume to receive)

@@ -17,9 +17,12 @@
 package org.apache.camel.dsl.jbang.core.commands;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,27 +33,41 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
-import org.apache.camel.catalog.CamelCatalog;
-import org.apache.camel.dsl.jbang.core.common.CatalogLoader;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
+import org.w3c.dom.Document;
+
+import org.xml.sax.SAXException;
+
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.PathUtils;
+import org.apache.camel.dsl.jbang.core.common.QuarkusHelper;
+import org.apache.camel.dsl.jbang.core.common.QuarkusHelper.QuarkusPlatformBom;
 import org.apache.camel.dsl.jbang.core.common.RuntimeUtil;
+import org.apache.camel.dsl.jbang.core.common.TemplateHelper;
 import org.apache.camel.dsl.jbang.core.common.VersionHelper;
+import org.apache.camel.dsl.jbang.core.common.XmlHelper;
 import org.apache.camel.tooling.maven.MavenGav;
-import org.apache.camel.tooling.model.ArtifactModel;
 import org.apache.camel.util.CamelCaseOrderedProperties;
 import org.apache.camel.util.FileUtil;
-import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.StringHelper;
 
 import static org.apache.camel.dsl.jbang.core.commands.ExportHelper.exportPackageName;
-import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.*;
+import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.CLASSPATH_FILES;
 
 class ExportQuarkus extends Export {
 
+    private QuarkusPlatformBom quarkusCamelBom;
+
     public ExportQuarkus(CamelJBangMain main) {
         super(main);
-        pomTemplateName = "quarkus-pom.tmpl";
+        pomTemplateName = "quarkus-pom.ftl";
     }
 
     @Override
@@ -60,20 +77,13 @@ class ExportQuarkus extends Export {
             printer().printErr("--gav must be in syntax: groupId:artifactId:version");
             return 1;
         }
-        if (!buildTool.equals("maven") && !buildTool.equals("gradle")) {
-            printer().printErr("--build-tool must either be maven or gradle, was: " + buildTool);
-            return 1;
-        }
-        if (buildTool.equals("gradle")) {
-            printer().println("WARN: --build-tool=gradle is deprecated.");
-        }
 
         exportBaseDir = exportBaseDir != null ? exportBaseDir : Path.of(".");
         Path profile = exportBaseDir.resolve("application.properties");
 
         // the settings file has information what to export
         Path settings = CommandLineHelper.getWorkDir().resolve(Run.RUN_SETTINGS_FILE);
-        if (fresh || !files.isEmpty() || !Files.exists(settings)) {
+        if (mavenResolver.fresh() || !files.isEmpty() || !Files.exists(settings)) {
             // allow to automatic build
             printer().println("Generating fresh run data");
             int silent = runSilently(ignoreLoadingError, lazyBean, verbose);
@@ -135,34 +145,39 @@ class ExportQuarkus extends Export {
             return prop;
         });
         // copy docker files
-        copyDockerFiles(BUILD_DIR);
-        String appJar = "target" + File.separator + "quarkus-app" + File.separator + "quarkus-run.jar";
+        if (docker) {
+            copyDockerFiles(BUILD_DIR);
+        }
+        String appJar;
+        if ("fast-jar".equals(quarkusPackageType)) {
+            appJar = "target" + File.separator + "quarkus-app" + File.separator + "quarkus-run.jar";
+        } else {
+            appJar = "target" + File.separator + ids[1] + "-" + ids[2] + ".jar";
+        }
         copyReadme(BUILD_DIR, appJar);
         // gather dependencies
         Set<String> deps = resolveDependencies(settings, profile);
         // copy local lib JARs
         copyLocalLibDependencies(deps);
-        if ("maven".equals(buildTool)) {
-            createMavenPom(settings, buildDir.resolve("pom.xml"), deps);
-            if (mavenWrapper) {
-                copyMavenWrapper();
-            }
-        } else if ("gradle".equals(buildTool)) {
-            createGradleProperties(buildDir.resolve("gradle.properties"));
-            createSettingsGradle(buildDir.resolve("settings.gradle"));
-            createBuildGradle(settings, buildDir.resolve("build.gradle"), deps);
-            if (gradleWrapper) {
-                copyGradleWrapper();
-            }
+        createMavenPom(settings, buildDir.resolve("pom.xml"), deps);
+        if (mavenWrapper) {
+            copyMavenWrapper();
         }
 
         if (cleanExportDir || !exportDir.equals(".")) {
             // cleaning current dir can be a bit dangerous so only clean if explicit enabled
             // otherwise always clean export-dir to avoid stale data
+            if (cleanExportDir) {
+                String absPath = Path.of(exportDir).toAbsolutePath().toString();
+                if (!CommandHelper.confirmOperation("Are you sure you want to delete " + absPath + "?", yes)) {
+                    return 1;
+                }
+            }
             CommandHelper.cleanExportDir(exportDir);
         }
         // copy to export dir and remove work dir
         PathUtils.copyDirectory(buildDir, Path.of(exportDir));
+        createDeferredSymlinks(buildDir, Path.of(exportDir));
         PathUtils.deleteDirectory(buildDir);
 
         return 0;
@@ -218,7 +233,7 @@ class ExportQuarkus extends Export {
             if (extra != null) {
                 sj.add(extra);
             }
-            if (extra != null || VersionHelper.isLE(quarkusVersion, "3.21.0")) {
+            if (extra != null || VersionHelper.isLE(getQuarkusCamelBom().version(), "3.21.0")) {
                 // quarkus 3.21 or older need to have quarkus.native.resources.includes configured
                 if (sj.length() > 0) {
                     properties.setProperty("quarkus.native.resources.includes", sj.toString());
@@ -227,11 +242,23 @@ class ExportQuarkus extends Export {
         }
 
         // CAMEL-20911 workaround due to a bug in CEQ 3.11 and 3.12
-        if (VersionHelper.isBetween(quarkusVersion, "3.11.0", "3.13.0")) {
+        if (VersionHelper.isBetween(getQuarkusCamelBom().version(), "3.11.0", "3.13.0")) {
             if (!properties.containsKey("quarkus.camel.openapi.codegen.model-package")) {
                 properties.put("quarkus.camel.openapi.codegen.model-package", "org.apache.camel.quarkus");
             }
         }
+    }
+
+    private QuarkusPlatformBom getQuarkusCamelBom() {
+        if (quarkusCamelBom == null) {
+            // resolve Quarkus platform version from registry (when download is true)
+            quarkusCamelBom = quarkusPlatform.resolve(
+                    camelVersion,
+                    mavenResolver.downloader()::resolveArtifact,
+                    mavenResolver.download(),
+                    mavenResolver.fresh());
+        }
+        return quarkusCamelBom;
     }
 
     private static String stripPath(String fileName) {
@@ -241,123 +268,6 @@ class ExportQuarkus extends Export {
         fileName = FileUtil.stripPath(fileName);
         fileName = fileName.replace(CommandLineHelper.CAMEL_JBANG_WORK_DIR + "/", "");
         return fileName;
-    }
-
-    private void createGradleProperties(Path output) throws Exception {
-        InputStream is = ExportQuarkus.class.getClassLoader().getResourceAsStream("templates/quarkus-gradle-properties.tmpl");
-        String context = IOHelper.loadText(is);
-        IOHelper.close(is);
-
-        context = context.replaceFirst("\\{\\{ \\.QuarkusGroupId }}", quarkusGroupId);
-        context = context.replaceFirst("\\{\\{ \\.QuarkusArtifactId }}", quarkusArtifactId);
-        context = context.replaceAll("\\{\\{ \\.QuarkusVersion }}", quarkusVersion);
-
-        Files.writeString(output, context);
-    }
-
-    private void createSettingsGradle(Path output) throws Exception {
-        String[] ids = gav.split(":");
-
-        InputStream is = ExportQuarkus.class.getClassLoader().getResourceAsStream("templates/quarkus-settings-gradle.tmpl");
-        String context = IOHelper.loadText(is);
-        IOHelper.close(is);
-
-        context = context.replaceFirst("\\{\\{ \\.GroupId }}", ids[0]);
-        context = context.replaceFirst("\\{\\{ \\.ArtifactId }}", ids[1]);
-        context = context.replaceFirst("\\{\\{ \\.Version }}", ids[2]);
-
-        Files.writeString(output, context);
-    }
-
-    private void createBuildGradle(Path settings, Path gradleBuild, Set<String> deps) throws Exception {
-        String[] ids = gav.split(":");
-
-        InputStream is = ExportSpringBoot.class.getClassLoader().getResourceAsStream("templates/quarkus-build-gradle.tmpl");
-        String context = IOHelper.loadText(is);
-        IOHelper.close(is);
-
-        Properties prop = new CamelCaseOrderedProperties();
-        RuntimeUtil.loadProperties(prop, settings.toFile());
-        // quarkus controls the camel version
-        String repos = getMavenRepositories(settings, prop, quarkusVersion);
-
-        CamelCatalog catalog = CatalogLoader.loadQuarkusCatalog(repos, quarkusVersion, quarkusGroupId, download);
-        if (camelVersion == null) {
-            camelVersion = catalog.getCatalogVersion();
-        }
-
-        context = context.replaceFirst("\\{\\{ \\.GroupId }}", ids[0]);
-        context = context.replaceFirst("\\{\\{ \\.ArtifactId }}", ids[1]);
-        context = context.replaceFirst("\\{\\{ \\.Version }}", ids[2]);
-        context = context.replaceFirst("\\{\\{ \\.QuarkusGroupId }}", quarkusGroupId);
-        context = context.replaceFirst("\\{\\{ \\.QuarkusArtifactId }}", quarkusArtifactId);
-        context = context.replaceAll("\\{\\{ \\.QuarkusVersion }}", quarkusVersion);
-        context = context.replaceAll("\\{\\{ \\.JavaVersion }}", javaVersion);
-        context = context.replaceAll("\\{\\{ \\.CamelVersion }}", camelVersion);
-
-        if (repos == null || repos.isEmpty()) {
-            context = context.replaceFirst("\\{\\{ \\.MavenRepositories }}", "");
-        } else {
-            StringBuilder sb = new StringBuilder();
-            for (String repo : repos.split(",")) {
-                sb.append("    maven {\n");
-                sb.append("        url '").append(repo).append("'\n");
-                if (repo.contains("snapshots")) {
-                    sb.append("        mavenContent {\n");
-                    sb.append("            snapshotsOnly()\n");
-                    sb.append("        }\n");
-                }
-                sb.append("    }\n");
-            }
-            context = context.replaceFirst("\\{\\{ \\.MavenRepositories }}", sb.toString());
-        }
-
-        List<MavenGav> gavs = new ArrayList<>();
-        for (String dep : deps) {
-            MavenGav gav = parseMavenGav(dep);
-            String gid = gav.getGroupId();
-            String aid = gav.getArtifactId();
-            // transform to camel-quarkus extension GAV
-            if ("org.apache.camel".equals(gid)) {
-                String qaid = aid.replace("camel-", "camel-quarkus-");
-                ArtifactModel<?> am = catalog.modelFromMavenGAV("org.apache.camel.quarkus", qaid, null);
-                if (am != null) {
-                    // use quarkus extension
-                    gav.setGroupId(am.getGroupId());
-                    gav.setArtifactId(am.getArtifactId());
-                    gav.setVersion(null); // uses BOM so version should not be included
-                } else {
-                    // there is no quarkus extension so use plain camel
-                    gav.setVersion(camelVersion);
-                }
-            }
-            gavs.add(gav);
-        }
-
-        // replace dependencies with special quarkus dependencies if we can find any
-        replaceQuarkusDependencies(gavs);
-
-        // sort artifacts
-        gavs.sort(mavenGavComparator());
-
-        StringBuilder sb = new StringBuilder();
-        for (MavenGav gav : gavs) {
-            if ("lib".equals(gav.getPackaging())) {
-                // special for lib JARs
-                sb.append("    implementation files('lib/").append(gav.getArtifactId())
-                        .append("-").append(gav.getVersion()).append(".jar')\n");
-            } else if ("camel-kamelets-utils".equals(gav.getArtifactId())) {
-                // special for camel-kamelets-utils
-                sb.append("    implementation ('").append(gav).append("') {\n");
-                sb.append("        exclude group: 'org.apache.camel', module: '*'\n");
-                sb.append("    }\n");
-            } else {
-                sb.append("    implementation '").append(gav).append("'\n");
-            }
-        }
-        context = context.replaceFirst("\\{\\{ \\.CamelDependencies }}", sb.toString());
-
-        Files.writeString(gradleBuild, context);
     }
 
     private void replaceQuarkusDependencies(List<MavenGav> gavs) {
@@ -409,89 +319,126 @@ class ExportQuarkus extends Export {
 
     @Override
     protected void copyDockerFiles(String buildDir) throws Exception {
-        super.copyDockerFiles(buildDir);
-        Path docker = Path.of(buildDir).resolve("src/main/docker");
-        Files.createDirectories(docker);
-        // copy files
-        InputStream is = ExportQuarkus.class.getClassLoader().getResourceAsStream("quarkus-docker/Dockerfile.native");
-        PathUtils.copyFromStream(is, docker.resolve("Dockerfile.native"), true);
+        Path dockerSrc = Path.of(buildDir).resolve("src/main/docker");
+        if ("uber-jar".equals(quarkusPackageType)) {
+            super.copyDockerFiles(buildDir);
+        } else {
+            Files.createDirectories(dockerSrc);
+            try (InputStream is
+                    = ExportQuarkus.class.getClassLoader().getResourceAsStream("quarkus-docker/Dockerfile.jvm")) {
+                if (is != null) {
+                    PathUtils.copyFromStream(is, dockerSrc.resolve("Dockerfile"), false);
+                }
+            }
+        }
+
+        // Create Dockerfile.jvm to satisfy Quarkus container build tooling defaults if users choose to use it
+        if (Files.exists(dockerSrc.resolve("Dockerfile"))) {
+            Files.copy(dockerSrc.resolve("Dockerfile"), dockerSrc.resolve("Dockerfile.jvm"),
+                    StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        // Quarkus-specific Dockerfiles for native builds
+        for (String dockerfile : List.of("Dockerfile.native", "Dockerfile.native-micro")) {
+            try (InputStream is
+                    = ExportQuarkus.class.getClassLoader().getResourceAsStream("quarkus-docker/" + dockerfile)) {
+                if (is != null) {
+                    PathUtils.copyFromStream(is, dockerSrc.resolve(dockerfile), false);
+                }
+            }
+        }
     }
 
     @Override
     protected void copyReadme(String buildDir, String appJar) throws Exception {
         String[] ids = gav.split(":");
-        InputStream is = ExportCamelMain.class.getClassLoader().getResourceAsStream("templates/readme.native.md.tmpl");
-        String context = IOHelper.loadText(is);
-        IOHelper.close(is);
+        Map<String, Object> model = new HashMap<>();
+        model.put("ArtifactId", ids[1]);
+        model.put("Version", ids[2]);
+        model.put("AppRuntimeJar", appJar);
 
-        context = context.replaceAll("\\{\\{ \\.ArtifactId }}", ids[1]);
-        context = context.replaceAll("\\{\\{ \\.Version }}", ids[2]);
-        context = context.replaceAll("\\{\\{ \\.AppRuntimeJar }}", appJar);
+        String context = TemplateHelper.processTemplate("readme.native.md.ftl", model);
         Files.writeString(Path.of(buildDir).resolve("readme.md"), context);
+
+        copyAgents(buildDir);
     }
 
     private void createMavenPom(Path settings, Path pom, Set<String> deps) throws Exception {
         String[] ids = gav.split(":");
 
-        InputStream is = ExportQuarkus.class.getClassLoader().getResourceAsStream("templates/" + pomTemplateName);
-        String context = IOHelper.loadText(is);
-        IOHelper.close(is);
-
         Properties prop = new CamelCaseOrderedProperties();
         RuntimeUtil.loadProperties(prop, settings);
         // quarkus controls the camel version
-        String repos = getMavenRepositories(settings, prop, quarkusVersion);
 
-        CamelCatalog catalog = CatalogLoader.loadQuarkusCatalog(repos, quarkusVersion, quarkusGroupId, download);
+        final QuarkusPlatformBom plfBom = getQuarkusCamelBom();
+        MavenGav quarkusCamelBom = plfBom.quarkusCamelBom();
+        String repos = getMavenRepositories(settings, prop, quarkusCamelBom.getVersion());
+
         if (camelVersion == null) {
-            camelVersion = catalog.getCatalogVersion();
+            camelVersion = plfBom.camelVersion();
         }
 
-        String mp = prop.getProperty("quarkus.management.port");
-        if (mp == null) {
-            mp = "9876";
-        }
+        // Build template data model
+        List<Map<String, Object>> depList = buildQuarkusDependencyList(deps, quarkusCamelBom);
 
-        context = context.replaceAll("\\{\\{ \\.GroupId }}", ids[0]);
-        context = context.replaceAll("\\{\\{ \\.ArtifactId }}", ids[1]);
-        context = context.replaceAll("\\{\\{ \\.Version }}", ids[2]);
-        context = context.replaceAll("\\{\\{ \\.QuarkusGroupId }}", quarkusGroupId);
-        context = context.replaceAll("\\{\\{ \\.QuarkusArtifactId }}", quarkusArtifactId);
-        context = context.replaceAll("\\{\\{ \\.QuarkusVersion }}", quarkusVersion);
-        context = context.replaceAll("\\{\\{ \\.QuarkusManagementPort }}", mp);
-        context = context.replaceAll("\\{\\{ \\.JavaVersion }}", javaVersion);
-        context = context.replaceAll("\\{\\{ \\.CamelVersion }}", camelVersion);
-        context = context.replaceAll("\\{\\{ \\.ProjectBuildOutputTimestamp }}", this.getBuildMavenProjectDate());
+        Map<String, Object> model = new HashMap<>();
+        model.put("GroupId", ids[0]);
+        model.put("ArtifactId", ids[1]);
+        model.put("Version", ids[2]);
+        model.put("QuarkusGroupId", quarkusCamelBom.getGroupId());
+        model.put("QuarkusArtifactId", quarkusCamelBom.getArtifactId());
+        model.put("QuarkusVersion", quarkusCamelBom.getVersion());
+        model.put("UseQuarkusJunit", VersionHelper.isGE(quarkusCamelBom.getVersion(), "3.31.0"));
+        model.put("QuarkusPackageType", quarkusPackageType);
+        model.put("JavaVersion", javaVersion);
+        model.put("ProjectBuildOutputTimestamp", this.getBuildMavenProjectDate());
+        model.put("BuildProperties", formatBuildProperties());
+        model.put("Repositories", buildRepositoryList(repos));
+        model.put("Dependencies", depList);
+        model.put("JibMavenPluginVersion", jibMavenPluginVersion(settings, prop));
 
-        context = replaceBuildProperties(context);
+        String context = TemplateHelper.processTemplate(pomTemplateName, model);
+        Files.writeString(pom, context);
+    }
 
-        if (repos == null || repos.isEmpty()) {
-            context = context.replaceFirst("\\{\\{ \\.MavenRepositories }}", "");
-        } else {
-            String s = mavenRepositoriesAsPomXml(repos);
-            context = context.replaceFirst("\\{\\{ \\.MavenRepositories }}", s);
-        }
-
+    private List<Map<String, Object>> buildQuarkusDependencyList(Set<String> deps, MavenGav quarkusCamelBom) {
         List<MavenGav> gavs = new ArrayList<>();
-        for (String dep : deps) {
-            MavenGav gav = parseMavenGav(dep);
-            String gid = gav.getGroupId();
-            String aid = gav.getArtifactId();
-            // transform to camel-quarkus extension GAV
-            if ("org.apache.camel".equals(gid)) {
-                String qaid = aid.replace("camel-", "camel-quarkus-");
-                ArtifactModel<?> am = catalog.modelFromMavenGAV("org.apache.camel.quarkus", qaid, null);
-                if (am != null) {
-                    // use quarkus extension
-                    gav.setGroupId(am.getGroupId());
-                    gav.setArtifactId(am.getArtifactId());
-                    gav.setVersion(null); // uses BOM so version should not be included
-                } else {
-                    // there is no quarkus extension so use plain camel
-                    gav.setVersion(camelVersion);
+
+        Path file = mavenResolver.downloader().resolveArtifact(quarkusCamelBom).getFile().toPath();
+        DocumentBuilderFactory dbf = XmlHelper.createDocumentBuilderFactory();
+
+        try (InputStream in = Files.newInputStream(file)) {
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document dom = db.parse(in);
+            XPath xPath = XPathFactory.newDefaultInstance().newXPath();
+            for (String dep : deps) {
+                MavenGav gav = parseMavenGav(dep);
+                String gid = gav.getGroupId();
+                String aid = gav.getArtifactId();
+                // transform to camel-quarkus extension GAV
+                if ("org.apache.camel".equals(gid)) {
+                    String qaid = aid.replace("camel-", "camel-quarkus-");
+                    if (nodeExists(file, dom, xPath, "org.apache.camel.quarkus", qaid)) {
+                        // use quarkus extension
+                        gav.setGroupId("org.apache.camel.quarkus");
+                        gav.setArtifactId(qaid);
+                        gav.setVersion(null); // uses BOM so version should not be included
+                    } else if (nodeExists(file, dom, xPath, "org.apache.camel", aid)) {
+                        // The Camel artifact is managed in Quarkus Camel BOM
+                        gav.setVersion(null);
+                    } else {
+                        // Use plain camel with hard-coded version
+                        gav.setVersion(camelVersion);
+                    }
                 }
+                gavs.add(gav);
             }
-            gavs.add(gav);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not read " + file, e);
+        } catch (SAXException e) {
+            throw new RuntimeException("Could not parse " + file, e);
+        } catch (ParserConfigurationException e) {
+            throw new RuntimeException("Could not build a DocumentBuilder", e);
         }
 
         // replace dependencies with special quarkus dependencies if we can find any
@@ -500,41 +447,43 @@ class ExportQuarkus extends Export {
         // sort artifacts
         gavs.sort(mavenGavComparator());
 
-        StringBuilder sb = new StringBuilder();
+        List<Map<String, Object>> result = new ArrayList<>();
         for (MavenGav gav : gavs) {
-            //Special case, quarkus-pom.tmpl already have them included.
+            // Special case, quarkus-pom.ftl already has them included.
             if ("camel-quarkus-core".equals(gav.getArtifactId())
                     || "camel-quarkus-microprofile-health".equals(gav.getArtifactId())) {
                 continue;
             }
-            sb.append("        <dependency>\n");
-            sb.append("            <groupId>").append(gav.getGroupId()).append("</groupId>\n");
-            sb.append("            <artifactId>").append(gav.getArtifactId()).append("</artifactId>\n");
-            if (gav.getVersion() != null) {
-                sb.append("            <version>").append(gav.getVersion()).append("</version>\n");
+            Map<String, Object> dep = new HashMap<>();
+            dep.put("groupId", gav.getGroupId());
+            dep.put("artifactId", gav.getArtifactId());
+            if (!"org.apache.camel.kamelets".equals(gav.getGroupId())
+                    || !"camel-kamelets".equals(gav.getArtifactId())) {
+                // org.apache.camel.kamelets:camel-kamelets is managed in org.apache.camel.quarkus:camel-quarkus-bom
+                // as well as in io.quarkus.platform:quarkus-camel-bom
+                // so we do not need to add the version for it
+                dep.put("version", gav.getVersion());
             }
-            if (gav.getScope() != null) {
-                sb.append("            <scope>").append(gav.getScope()).append("</scope>\n");
-            }
-            if ("lib".equals(gav.getPackaging())) {
-                // special for lib JARs
-                sb.append("            <scope>system</scope>\n");
-                sb.append("            <systemPath>\\$\\{project.basedir}/lib/").append(gav.getArtifactId()).append("-")
-                        .append(gav.getVersion()).append(".jar</systemPath>\n");
-            } else if ("camel-kamelets-utils".equals(gav.getArtifactId())) {
-                // special for camel-kamelets-utils
-                sb.append("            <exclusions>\n");
-                sb.append("                <exclusion>\n");
-                sb.append("                    <groupId>org.apache.camel</groupId>\n");
-                sb.append("                    <artifactId>*</artifactId>\n");
-                sb.append("                </exclusion>\n");
-                sb.append("            </exclusions>\n");
-            }
-            sb.append("        </dependency>\n");
-        }
-        context = context.replaceFirst("\\{\\{ \\.CamelDependencies }}", sb.toString());
+            dep.put("scope", gav.getScope());
+            dep.put("isLib", "lib".equals(gav.getPackaging()));
+            dep.put("isKameletsUtils", "camel-kamelets-utils".equals(gav.getArtifactId()));
 
-        Files.writeString(pom, context);
+            result.add(dep);
+        }
+        return result;
+    }
+
+    private boolean nodeExists(Path file, Document dom, XPath xPath, String groupId, String artifactId) {
+        final String expr = QuarkusHelper.managedDependencyVersionXPath(groupId, artifactId);
+        try {
+            return xPath.evaluate(
+                    expr,
+                    dom,
+                    XPathConstants.NODE)
+                   != null;
+        } catch (XPathExpressionException e) {
+            throw new RuntimeException("Could not evaluate XPath expression '" + expr + "' on " + file, e);
+        }
     }
 
     @Override

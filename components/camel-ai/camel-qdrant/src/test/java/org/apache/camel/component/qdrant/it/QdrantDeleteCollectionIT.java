@@ -21,11 +21,13 @@ import io.grpc.StatusRuntimeException;
 import io.qdrant.client.grpc.Collections;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Exchange;
+import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.qdrant.QdrantAction;
 import org.apache.camel.component.qdrant.QdrantActionException;
 import org.apache.camel.component.qdrant.QdrantEndpoint;
 import org.apache.camel.component.qdrant.QdrantHeaders;
 import org.apache.camel.component.qdrant.QdrantTestSupport;
+import org.apache.camel.component.qdrant.rag.RAGCreateCollection;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -34,19 +36,29 @@ import org.junit.jupiter.api.TestMethodOrder;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class QdrantDeleteCollectionIT extends QdrantTestSupport {
+class QdrantDeleteCollectionIT extends QdrantTestSupport {
     @EndpointInject("qdrant:collectionForDeletion")
     QdrantEndpoint qdrantEndpoint;
 
+    @Override
+    protected RouteBuilder createRouteBuilder() {
+        return new RouteBuilder() {
+            @Override
+            public void configure() {
+                RAGCreateCollection createCollectionProcessor = new RAGCreateCollection();
+                createCollectionProcessor.setSize("2");
+
+                from("direct:createCollection")
+                        .process(createCollectionProcessor)
+                        .to("qdrant:collectionForDeletion");
+            }
+        };
+    }
+
     @Test
     @Order(1)
-    public void createCollection() {
-        Exchange result = fluentTemplate.to(qdrantEndpoint)
-                .withHeader(QdrantHeaders.ACTION, QdrantAction.CREATE_COLLECTION)
-                .withBody(
-                        Collections.VectorParams.newBuilder()
-                                .setSize(2)
-                                .setDistance(Collections.Distance.Cosine).build())
+    void createCollection() {
+        Exchange result = fluentTemplate.to("direct:createCollection")
                 .request(Exchange.class);
 
         assertThat(result).isNotNull();
@@ -55,7 +67,7 @@ public class QdrantDeleteCollectionIT extends QdrantTestSupport {
 
     @Test
     @Order(2)
-    public void collectionInfoExistent() {
+    void collectionInfoExistent() {
         Exchange result = fluentTemplate.to(qdrantEndpoint)
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.COLLECTION_INFO)
                 .request(Exchange.class);
@@ -67,7 +79,7 @@ public class QdrantDeleteCollectionIT extends QdrantTestSupport {
 
     @Test
     @Order(3)
-    public void deleteCollection() {
+    void deleteCollection() {
         Exchange result = fluentTemplate.to(qdrantEndpoint)
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.DELETE_COLLECTION)
                 .request(Exchange.class);
@@ -78,7 +90,7 @@ public class QdrantDeleteCollectionIT extends QdrantTestSupport {
 
     @Test
     @Order(4)
-    public void collectionInfoNonExistent() {
+    void collectionInfoNonExistent() {
         Exchange result = fluentTemplate.to(qdrantEndpoint)
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.COLLECTION_INFO)
                 .request(Exchange.class);
@@ -89,8 +101,9 @@ public class QdrantDeleteCollectionIT extends QdrantTestSupport {
         final QdrantActionException exception = result.getException(QdrantActionException.class);
         final Throwable cause = exception.getCause();
 
-        assertThat(cause).isNotNull();
-        assertThat(cause).isInstanceOf(StatusRuntimeException.class);
+        assertThat(cause)
+                .isNotNull()
+                .isInstanceOf(StatusRuntimeException.class);
 
         StatusRuntimeException statusRuntimeException = (StatusRuntimeException) cause;
         assertThat(statusRuntimeException.getStatus().getCode()).isEqualTo(Status.NOT_FOUND.getCode());

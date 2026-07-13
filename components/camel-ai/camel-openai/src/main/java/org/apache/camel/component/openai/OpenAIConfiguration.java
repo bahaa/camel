@@ -16,9 +16,13 @@
  */
 package org.apache.camel.component.openai;
 
+import java.util.Map;
+
+import com.openai.core.ClientOptions;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriParams;
+import org.apache.camel.support.jsse.SSLContextParameters;
 
 /**
  * Configuration for OpenAI component.
@@ -26,21 +30,30 @@ import org.apache.camel.spi.UriParams;
 @UriParams
 public class OpenAIConfiguration implements Cloneable {
 
-    @UriParam(secret = true)
-    @Metadata(description = "OpenAI API key. Can also be set via OPENAI_API_KEY environment variable.", secret = true)
+    @UriParam(security = "secret")
+    @Metadata(description = "OpenAI API key. Can also be set via OPENAI_API_KEY environment variable.", security = "secret")
     private String apiKey;
 
+    @UriParam(label = "security")
+    @Metadata(description = "OAuth profile name for obtaining an access token via the OAuth 2.0 Client Credentials grant. "
+                            + "When set, the token is acquired from the configured identity provider and used instead of apiKey. "
+                            + "Requires camel-oauth on the classpath. The profile properties are resolved from "
+                            + "camel.oauth.<profileName>.client-id, camel.oauth.<profileName>.client-secret, "
+                            + "and camel.oauth.<profileName>.token-endpoint.")
+    private String oauthProfile;
+
     @UriParam
-    @Metadata(description = "Base URL for OpenAI API. Defaults to OpenAI's official endpoint. Can be used for local or third-party providers.")
-    private String baseUrl;
+    @Metadata(description = "Base URL for OpenAI API. Defaults to OpenAI's official endpoint. Can be used for local or third-party providers.",
+              defaultValue = ClientOptions.PRODUCTION_URL)
+    private String baseUrl = ClientOptions.PRODUCTION_URL;
 
-    @UriParam(defaultValue = "gpt-5")
+    @UriParam
     @Metadata(description = "The model to use for chat completion")
-    private String model = "gpt-5";
+    private String model;
 
-    @UriParam(defaultValue = "1.0")
+    @UriParam
     @Metadata(description = "Temperature for response generation (0.0 to 2.0)")
-    private Double temperature = 1.0;
+    private Double temperature;
 
     @UriParam
     @Metadata(description = "Top P for response generation (0.0 to 1.0)")
@@ -88,12 +101,164 @@ public class OpenAIConfiguration implements Cloneable {
     @Metadata(description = "Store the full response in the exchange property 'CamelOpenAIResponse' in non-streaming mode")
     private boolean storeFullResponse = false;
 
+    @UriParam(defaultValue = "false")
+    @Metadata(description = "Strip <think>...</think> blocks from model responses (used by reasoning models like Qwen3, DeepSeek-R1). "
+                            + "The thinking content is stored in the CamelOpenAIThinkingContent header.")
+    private boolean stripThinking = false;
+
+    @UriParam(prefix = "additionalBodyProperty.", multiValue = true)
+    @Metadata(description = "Additional JSON properties to include in the request body (e.g. additionalBodyProperty.traceId=123)")
+    private Map<String, Object> additionalBodyProperty;
+
+    @UriParam(prefix = "additionalResponseHeader.", multiValue = true)
+    @Metadata(description = "Map additional fields from the response message to Camel headers. "
+                            + "The key is the field name in the API response, the value is the Camel header name "
+                            + "(e.g. additionalResponseHeader.reasoning_content=CamelMyReasoningHeader)")
+    private Map<String, Object> additionalResponseHeader;
+
+    @UriParam(prefix = "mcpServer.", multiValue = true)
+    @Metadata(description = "MCP (Model Context Protocol) server configurations. "
+                            + "Define servers using prefix notation: mcpServer.<name>.transportType=stdio|sse|streamableHttp, (Note that sse is deprecated) "
+                            + "mcpServer.<name>.command=<cmd> (stdio), mcpServer.<name>.args=<comma-separated> (stdio), "
+                            + "mcpServer.<name>.url=<url> (sse/streamableHttp), "
+                            + "mcpServer.<name>.oauthProfile=<profile> (OAuth profile for HTTP auth, requires camel-oauth)")
+    private Map<String, Object> mcpServer;
+
+    @UriParam(defaultValue = "50")
+    @Metadata(description = "Maximum number of tool call loop iterations to prevent infinite loops")
+    private int maxToolIterations = 50;
+
+    @UriParam(defaultValue = "true")
+    @Metadata(description = "When true and MCP servers are configured, automatically execute tool calls "
+                            + "and loop back to the model. When false, tool calls are returned as the message body for manual handling.")
+    private boolean autoToolExecution = true;
+
+    @UriParam
+    @Metadata(description = "Comma-separated list of MCP protocol versions to advertise when connecting to MCP servers "
+                            + "using Streamable HTTP transport. When not set, the SDK default is used. "
+                            + "Example: 2024-11-05,2025-03-26,2025-06-18")
+    private String mcpProtocolVersions;
+
+    @UriParam(defaultValue = "20")
+    @Metadata(description = "Timeout in seconds for MCP tool call requests. Applies to all MCP operations including "
+                            + "tool execution and initialization.")
+    private int mcpTimeout = 20;
+
+    @UriParam(defaultValue = "true")
+    @Metadata(description = "Automatically reconnect to MCP servers when a tool call fails due to a transport error, "
+                            + "and retry the call once.")
+    private boolean mcpReconnect = true;
+
+    // ========== EMBEDDINGS CONFIGURATION ==========
+
+    @UriParam
+    @Metadata(description = "The model to use for embeddings")
+    private String embeddingModel;
+
+    @UriParam
+    @Metadata(description = "Number of dimensions for the embedding output. Only supported by text-embedding-3 models. " +
+                            "Reducing dimensions can lower costs and improve performance without significant quality loss.")
+    private Integer dimensions;
+
+    @UriParam(enums = "float,base64", defaultValue = "base64")
+    @Metadata(description = "The format for embedding output: 'float' for list of floats, 'base64' for compressed format")
+    private String encodingFormat = "base64";
+
+    // ========== AUDIO TRANSCRIPTION CONFIGURATION ==========
+
+    @UriParam
+    @Metadata(description = "The model to use for audio transcription (e.g., whisper-1, gpt-4o-transcribe)")
+    private String audioModel;
+
+    @UriParam
+    @Metadata(description = "The language of the input audio in ISO-639-1 format (e.g., 'en'). Improves accuracy and latency.")
+    private String audioLanguage;
+
+    @UriParam
+    @Metadata(description = "Optional text to guide the model's style or continue a previous audio segment")
+    private String audioPrompt;
+
+    @UriParam(enums = "json,text,srt,verbose_json,vtt", defaultValue = "json")
+    @Metadata(description = "The format of the transcription output")
+    private String audioResponseFormat = "json";
+
+    @UriParam
+    @Metadata(description = "Sampling temperature for transcription (0.0 to 1.0)")
+    private Double audioTemperature;
+
+    @UriParam
+    @Metadata(description = "Comma-separated timestamp granularities: 'word', 'segment', or 'word,segment'. "
+                            + "Only applicable with verbose_json response format.")
+    private String audioTimestampGranularities;
+
+    // ========== SSL CONFIGURATION ==========
+
+    @UriParam(label = "security")
+    @Metadata(description = "SSLContextParameters to use for configuring SSL/TLS. "
+                            + "When set, takes precedence over the individual sslTruststore*, sslKeystore*, and sslProtocol options.")
+    private SSLContextParameters sslContextParameters;
+
+    @UriParam(label = "security")
+    @Metadata(description = "The location of the trust store file, used to validate the server's certificate")
+    private String sslTruststoreLocation;
+
+    @UriParam(label = "security", security = "secret")
+    @Metadata(description = "The password for the trust store file. If a password is not set, the configured trust store can still "
+                            + "be used, but integrity checking is disabled")
+    private String sslTruststorePassword;
+
+    @UriParam(label = "security", defaultValue = "JKS")
+    @Metadata(description = "The file format of the trust store file")
+    private String sslTruststoreType = "JKS";
+
+    @UriParam(label = "security")
+    @Metadata(description = "The location of the key store file. This is optional and can be used for two-way authentication "
+                            + "for the OpenAI API")
+    private String sslKeystoreLocation;
+
+    @UriParam(label = "security", security = "secret")
+    @Metadata(description = "The store password for the key store file")
+    private String sslKeystorePassword;
+
+    @UriParam(label = "security", defaultValue = "JKS")
+    @Metadata(description = "The file format of the key store file")
+    private String sslKeystoreType = "JKS";
+
+    @UriParam(label = "security", security = "secret")
+    @Metadata(description = "The password of the private key in the key store file")
+    private String sslKeyPassword;
+
+    @UriParam(label = "security", defaultValue = "TLSv1.3")
+    @Metadata(description = "The SSL protocol used to generate the SSLContext")
+    private String sslProtocol = "TLSv1.3";
+
+    @UriParam(label = "security", defaultValue = "SunX509")
+    @Metadata(description = "The algorithm used by the key manager factory for SSL connections")
+    private String sslKeymanagerAlgorithm = "SunX509";
+
+    @UriParam(label = "security", defaultValue = "PKIX")
+    @Metadata(description = "The algorithm used by the trust manager factory for SSL connections")
+    private String sslTrustmanagerAlgorithm = "PKIX";
+
+    @UriParam(label = "security", defaultValue = "https")
+    @Metadata(description = "The endpoint identification algorithm to validate the server hostname using the server certificate. "
+                            + "Set to an empty string or 'none' to disable hostname verification")
+    private String sslEndpointAlgorithm = "https";
+
     public String getApiKey() {
         return apiKey;
     }
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    public String getOauthProfile() {
+        return oauthProfile;
+    }
+
+    public void setOauthProfile(String oauthProfile) {
+        this.oauthProfile = oauthProfile;
     }
 
     public String getBaseUrl() {
@@ -206,6 +371,246 @@ public class OpenAIConfiguration implements Cloneable {
 
     public void setStoreFullResponse(boolean storeFullResponse) {
         this.storeFullResponse = storeFullResponse;
+    }
+
+    public boolean isStripThinking() {
+        return stripThinking;
+    }
+
+    public void setStripThinking(boolean stripThinking) {
+        this.stripThinking = stripThinking;
+    }
+
+    public Map<String, Object> getAdditionalBodyProperty() {
+        return additionalBodyProperty;
+    }
+
+    public void setAdditionalBodyProperty(Map<String, Object> additionalBodyProperty) {
+        this.additionalBodyProperty = additionalBodyProperty;
+    }
+
+    public Map<String, Object> getAdditionalResponseHeader() {
+        return additionalResponseHeader;
+    }
+
+    public void setAdditionalResponseHeader(Map<String, Object> additionalResponseHeader) {
+        this.additionalResponseHeader = additionalResponseHeader;
+    }
+
+    public String getEmbeddingModel() {
+        return embeddingModel;
+    }
+
+    public void setEmbeddingModel(String embeddingModel) {
+        this.embeddingModel = embeddingModel;
+    }
+
+    public Integer getDimensions() {
+        return dimensions;
+    }
+
+    public void setDimensions(Integer dimensions) {
+        this.dimensions = dimensions;
+    }
+
+    public String getEncodingFormat() {
+        return encodingFormat;
+    }
+
+    public void setEncodingFormat(String encodingFormat) {
+        this.encodingFormat = encodingFormat;
+    }
+
+    public String getAudioModel() {
+        return audioModel;
+    }
+
+    public void setAudioModel(String audioModel) {
+        this.audioModel = audioModel;
+    }
+
+    public String getAudioLanguage() {
+        return audioLanguage;
+    }
+
+    public void setAudioLanguage(String audioLanguage) {
+        this.audioLanguage = audioLanguage;
+    }
+
+    public String getAudioPrompt() {
+        return audioPrompt;
+    }
+
+    public void setAudioPrompt(String audioPrompt) {
+        this.audioPrompt = audioPrompt;
+    }
+
+    public String getAudioResponseFormat() {
+        return audioResponseFormat;
+    }
+
+    public void setAudioResponseFormat(String audioResponseFormat) {
+        this.audioResponseFormat = audioResponseFormat;
+    }
+
+    public Double getAudioTemperature() {
+        return audioTemperature;
+    }
+
+    public void setAudioTemperature(Double audioTemperature) {
+        this.audioTemperature = audioTemperature;
+    }
+
+    public String getAudioTimestampGranularities() {
+        return audioTimestampGranularities;
+    }
+
+    public void setAudioTimestampGranularities(String audioTimestampGranularities) {
+        this.audioTimestampGranularities = audioTimestampGranularities;
+    }
+
+    public Map<String, Object> getMcpServer() {
+        return mcpServer;
+    }
+
+    public void setMcpServer(Map<String, Object> mcpServer) {
+        this.mcpServer = mcpServer;
+    }
+
+    public int getMaxToolIterations() {
+        return maxToolIterations;
+    }
+
+    public void setMaxToolIterations(int maxToolIterations) {
+        this.maxToolIterations = maxToolIterations;
+    }
+
+    public boolean isAutoToolExecution() {
+        return autoToolExecution;
+    }
+
+    public void setAutoToolExecution(boolean autoToolExecution) {
+        this.autoToolExecution = autoToolExecution;
+    }
+
+    public String getMcpProtocolVersions() {
+        return mcpProtocolVersions;
+    }
+
+    public void setMcpProtocolVersions(String mcpProtocolVersions) {
+        this.mcpProtocolVersions = mcpProtocolVersions;
+    }
+
+    public int getMcpTimeout() {
+        return mcpTimeout;
+    }
+
+    public void setMcpTimeout(int mcpTimeout) {
+        this.mcpTimeout = mcpTimeout;
+    }
+
+    public boolean isMcpReconnect() {
+        return mcpReconnect;
+    }
+
+    public void setMcpReconnect(boolean mcpReconnect) {
+        this.mcpReconnect = mcpReconnect;
+    }
+
+    public SSLContextParameters getSslContextParameters() {
+        return sslContextParameters;
+    }
+
+    public void setSslContextParameters(SSLContextParameters sslContextParameters) {
+        this.sslContextParameters = sslContextParameters;
+    }
+
+    public String getSslTruststoreLocation() {
+        return sslTruststoreLocation;
+    }
+
+    public void setSslTruststoreLocation(String sslTruststoreLocation) {
+        this.sslTruststoreLocation = sslTruststoreLocation;
+    }
+
+    public String getSslTruststorePassword() {
+        return sslTruststorePassword;
+    }
+
+    public void setSslTruststorePassword(String sslTruststorePassword) {
+        this.sslTruststorePassword = sslTruststorePassword;
+    }
+
+    public String getSslTruststoreType() {
+        return sslTruststoreType;
+    }
+
+    public void setSslTruststoreType(String sslTruststoreType) {
+        this.sslTruststoreType = sslTruststoreType;
+    }
+
+    public String getSslKeystoreLocation() {
+        return sslKeystoreLocation;
+    }
+
+    public void setSslKeystoreLocation(String sslKeystoreLocation) {
+        this.sslKeystoreLocation = sslKeystoreLocation;
+    }
+
+    public String getSslKeystorePassword() {
+        return sslKeystorePassword;
+    }
+
+    public void setSslKeystorePassword(String sslKeystorePassword) {
+        this.sslKeystorePassword = sslKeystorePassword;
+    }
+
+    public String getSslKeystoreType() {
+        return sslKeystoreType;
+    }
+
+    public void setSslKeystoreType(String sslKeystoreType) {
+        this.sslKeystoreType = sslKeystoreType;
+    }
+
+    public String getSslKeyPassword() {
+        return sslKeyPassword;
+    }
+
+    public void setSslKeyPassword(String sslKeyPassword) {
+        this.sslKeyPassword = sslKeyPassword;
+    }
+
+    public String getSslProtocol() {
+        return sslProtocol;
+    }
+
+    public void setSslProtocol(String sslProtocol) {
+        this.sslProtocol = sslProtocol;
+    }
+
+    public String getSslKeymanagerAlgorithm() {
+        return sslKeymanagerAlgorithm;
+    }
+
+    public void setSslKeymanagerAlgorithm(String sslKeymanagerAlgorithm) {
+        this.sslKeymanagerAlgorithm = sslKeymanagerAlgorithm;
+    }
+
+    public String getSslTrustmanagerAlgorithm() {
+        return sslTrustmanagerAlgorithm;
+    }
+
+    public void setSslTrustmanagerAlgorithm(String sslTrustmanagerAlgorithm) {
+        this.sslTrustmanagerAlgorithm = sslTrustmanagerAlgorithm;
+    }
+
+    public String getSslEndpointAlgorithm() {
+        return sslEndpointAlgorithm;
+    }
+
+    public void setSslEndpointAlgorithm(String sslEndpointAlgorithm) {
+        this.sslEndpointAlgorithm = sslEndpointAlgorithm;
     }
 
     public OpenAIConfiguration copy() {

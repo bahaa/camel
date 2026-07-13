@@ -25,9 +25,8 @@ import org.apache.camel.Exchange;
 import org.apache.camel.RoutesBuilder;
 import org.apache.camel.ServiceStatus;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.junit.rule.mllp.MllpServerResource;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.test.mllp.Hl7TestMessageGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -56,7 +55,7 @@ public class LogPhiTest extends CamelTestSupport {
     @Override
     protected void doPreSetup() throws Exception {
         mllpServer.setListenHost("localhost");
-        mllpServer.setListenPort(AvailablePortFinder.getNextAvailable());
+        mllpServer.setListenPort(0);
         mllpServer.setDelayDuringAcknowledgement(SERVER_ACKNOWLEDGEMENT_DELAY);
         mllpServer.startup();
         assertTrue(mllpServer.isActive());

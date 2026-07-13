@@ -16,25 +16,12 @@
  */
 package org.apache.camel.component.vertx;
 
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
-import org.junit.jupiter.api.BeforeAll;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class VertxBaseTestSupport extends CamelTestSupport {
 
-    protected static int port;
-
     protected final Logger log = LoggerFactory.getLogger(getClass());
-
-    @BeforeAll
-    public static void initPort() {
-        port = AvailablePortFinder.getNextAvailable();
-    }
-
-    protected int getPort() {
-        return port;
-    }
 
 }

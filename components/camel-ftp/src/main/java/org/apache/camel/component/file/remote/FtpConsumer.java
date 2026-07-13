@@ -148,7 +148,7 @@ public class FtpConsumer extends RemoteFileConsumer<FTPFile> {
         LOG.trace("Found {} files in directory: {}", files.length, dir);
 
         if (getEndpoint().isPreSort()) {
-            Arrays.sort(files, Comparator.comparing(FTPFile::getName));
+            Arrays.sort(files, preSortComparator(getEndpoint().getPreSort()));
         }
 
         for (FTPFile file : files) {
@@ -189,8 +189,7 @@ public class FtpConsumer extends RemoteFileConsumer<FTPFile> {
             String absolutePath, List<GenericFile<FTPFile>> fileList, int depth, FTPFile[] files, FTPFile file) {
         if (endpoint.isRecursive() && depth < endpoint.getMaxDepth()) {
             // calculate the absolute file path using util class
-            String absoluteFilePath
-                    = FtpUtils.absoluteFilePath((FtpConfiguration) endpoint.getConfiguration(), absolutePath, file.getName());
+            String absoluteFilePath = absoluteFilePath(absolutePath, file.getName());
             Supplier<GenericFile<FTPFile>> remote
                     = Suppliers.memorize(() -> asRemoteFile(absolutePath, absoluteFilePath, file, getEndpoint().getCharset()));
             Supplier<String> relativePath = getRelativeFilePath(endpointPath, null, absolutePath, file);
@@ -212,8 +211,7 @@ public class FtpConsumer extends RemoteFileConsumer<FTPFile> {
             String absolutePath, List<GenericFile<FTPFile>> fileList, int depth, FTPFile[] files, FTPFile file) {
         if (depth >= endpoint.getMinDepth()) {
             // calculate the absolute file path using util class
-            String absoluteFilePath
-                    = FtpUtils.absoluteFilePath((FtpConfiguration) endpoint.getConfiguration(), absolutePath, file.getName());
+            String absoluteFilePath = absoluteFilePath(absolutePath, file.getName());
             Supplier<GenericFile<FTPFile>> remote
                     = Suppliers.memorize(() -> asRemoteFile(absolutePath, absoluteFilePath, file, getEndpoint().getCharset()));
             Supplier<String> relativePath = getRelativeFilePath(endpointPath, null, absolutePath, file);
@@ -418,11 +416,44 @@ public class FtpConsumer extends RemoteFileConsumer<FTPFile> {
         return null;
     }
 
+    private String absoluteFilePath(String absolutePath, String name) {
+        boolean absolute = FileUtil.hasLeadingSeparator(absolutePath);
+        String dir = FileUtil.stripTrailingSeparator(absolutePath);
+        String fileName = name;
+        FtpConfiguration cfg = (FtpConfiguration) endpoint.getConfiguration();
+        if (cfg.isHandleDirectoryParserAbsoluteResult()) {
+            fileName = FtpUtils.extractDirNameFromAbsolutePath(name);
+        }
+        String absoluteFileName = FileUtil.stripLeadingSeparator(dir + "/" + fileName);
+        if (absolute) {
+            absoluteFileName = "/" + absoluteFileName;
+        }
+        return absoluteFileName;
+    }
+
     @Override
     public String toString() {
         if (ftpConsumerToString == null) {
             ftpConsumerToString = "FtpConsumer[" + URISupport.sanitizeUri(getEndpoint().getEndpointUri()) + "]";
         }
         return ftpConsumerToString;
+    }
+
+    private static Comparator<FTPFile> preSortComparator(String preSort) {
+        boolean reverse = preSort.startsWith("-");
+        String field = reverse ? preSort.substring(1) : preSort;
+        Comparator<FTPFile> cmp;
+        switch (field) {
+            case "modified":
+                cmp = Comparator.comparingLong(f -> f.getTimestamp() != null ? f.getTimestamp().getTimeInMillis() : 0);
+                break;
+            case "size":
+                cmp = Comparator.comparingLong(FTPFile::getSize);
+                break;
+            default:
+                cmp = Comparator.comparing(FTPFile::getName);
+                break;
+        }
+        return reverse ? cmp.reversed() : cmp;
     }
 }

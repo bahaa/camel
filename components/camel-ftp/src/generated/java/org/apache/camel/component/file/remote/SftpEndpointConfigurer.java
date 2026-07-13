@@ -50,9 +50,19 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "browseLimit": target.setBrowseLimit(property(camelContext, int.class, value)); return true;
         case "bulkrequests":
         case "bulkRequests": target.getConfiguration().setBulkRequests(property(camelContext, java.lang.Integer.class, value)); return true;
+        case "casignaturealgorithms":
+        case "caSignatureAlgorithms": target.getConfiguration().setCaSignatureAlgorithms(property(camelContext, java.lang.String.class, value)); return true;
+        case "certbytes":
+        case "certBytes": target.getConfiguration().setCertBytes(property(camelContext, byte[].class, value)); return true;
+        case "certfile":
+        case "certFile": target.getConfiguration().setCertFile(property(camelContext, java.lang.String.class, value)); return true;
+        case "certuri":
+        case "certUri": target.getConfiguration().setCertUri(property(camelContext, java.lang.String.class, value)); return true;
         case "charset": target.setCharset(property(camelContext, java.lang.String.class, value)); return true;
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": target.setChecksumFileAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
+        case "checksumwritefile":
+        case "checksumWriteFile": target.setChecksumWriteFile(property(camelContext, boolean.class, value)); return true;
         case "chmod": target.getConfiguration().setChmod(property(camelContext, java.lang.String.class, value)); return true;
         case "chmoddirectory":
         case "chmodDirectory": target.getConfiguration().setChmodDirectory(property(camelContext, java.lang.String.class, value)); return true;
@@ -160,7 +170,7 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "premove":
         case "preMove": target.setPreMove(property(camelContext, java.lang.String.class, value)); return true;
         case "presort":
-        case "preSort": target.setPreSort(property(camelContext, boolean.class, value)); return true;
+        case "preSort": target.setPreSort(property(camelContext, java.lang.String.class, value)); return true;
         case "preferredauthentications":
         case "preferredAuthentications": target.getConfiguration().setPreferredAuthentications(property(camelContext, java.lang.String.class, value)); return true;
         case "privatekey":
@@ -292,9 +302,19 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "browseLimit": return int.class;
         case "bulkrequests":
         case "bulkRequests": return java.lang.Integer.class;
+        case "casignaturealgorithms":
+        case "caSignatureAlgorithms": return java.lang.String.class;
+        case "certbytes":
+        case "certBytes": return byte[].class;
+        case "certfile":
+        case "certFile": return java.lang.String.class;
+        case "certuri":
+        case "certUri": return java.lang.String.class;
         case "charset": return java.lang.String.class;
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": return java.lang.String.class;
+        case "checksumwritefile":
+        case "checksumWriteFile": return boolean.class;
         case "chmod": return java.lang.String.class;
         case "chmoddirectory":
         case "chmodDirectory": return java.lang.String.class;
@@ -402,7 +422,7 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "premove":
         case "preMove": return java.lang.String.class;
         case "presort":
-        case "preSort": return boolean.class;
+        case "preSort": return java.lang.String.class;
         case "preferredauthentications":
         case "preferredAuthentications": return java.lang.String.class;
         case "privatekey":
@@ -535,9 +555,19 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "browseLimit": return target.getBrowseLimit();
         case "bulkrequests":
         case "bulkRequests": return target.getConfiguration().getBulkRequests();
+        case "casignaturealgorithms":
+        case "caSignatureAlgorithms": return target.getConfiguration().getCaSignatureAlgorithms();
+        case "certbytes":
+        case "certBytes": return target.getConfiguration().getCertBytes();
+        case "certfile":
+        case "certFile": return target.getConfiguration().getCertFile();
+        case "certuri":
+        case "certUri": return target.getConfiguration().getCertUri();
         case "charset": return target.getCharset();
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": return target.getChecksumFileAlgorithm();
+        case "checksumwritefile":
+        case "checksumWriteFile": return target.isChecksumWriteFile();
         case "chmod": return target.getConfiguration().getChmod();
         case "chmoddirectory":
         case "chmodDirectory": return target.getConfiguration().getChmodDirectory();
@@ -645,7 +675,7 @@ public class SftpEndpointConfigurer extends PropertyConfigurerSupport implements
         case "premove":
         case "preMove": return target.getPreMove();
         case "presort":
-        case "preSort": return target.isPreSort();
+        case "preSort": return target.getPreSort();
         case "preferredauthentications":
         case "preferredAuthentications": return target.getConfiguration().getPreferredAuthentications();
         case "privatekey":

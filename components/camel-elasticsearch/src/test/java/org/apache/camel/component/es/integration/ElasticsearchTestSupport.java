@@ -26,8 +26,8 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.component.es.ElasticsearchComponent;
 import org.apache.camel.test.infra.elasticsearch.services.ElasticSearchService;
 import org.apache.camel.test.infra.elasticsearch.services.ElasticSearchServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
-import org.apache.camel.test.junit5.TestNameExtension;
+import org.apache.camel.test.junit6.CamelTestSupport;
+import org.apache.camel.test.junit6.TestNameExtension;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -40,6 +40,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.awaitility.Awaitility.await;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ElasticsearchTestSupport extends CamelTestSupport {
@@ -76,6 +78,13 @@ public class ElasticsearchTestSupport extends CamelTestSupport {
                 });
         restClient = builder.build();
         client = new ElasticsearchClient(new RestClientTransport(restClient, new JacksonJsonpMapper()));
+        await("Elasticsearch client is not ready").until(() -> {
+            try {
+                return client.ping().value();
+            } catch (Exception e) {
+                return false;
+            }
+        });
     }
 
     @Override

@@ -23,8 +23,9 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.itest.utils.extensions.JmsServiceExtension;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -33,13 +34,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @CamelSpringTest
 @ContextConfiguration
+@Timeout(60)
 public class JettyJmsShutdownTest {
     @RegisterExtension
     public static JmsServiceExtension jmsServiceExtension = JmsServiceExtension.createExtension();
 
+    @RegisterExtension
+    static AvailablePortFinder.Port portHolder = AvailablePortFinder.find();
     private static final String URL;
     static {
-        int port = AvailablePortFinder.getNextAvailable();
+        int port = portHolder.getPort();
         URL = "http://localhost:" + port + "/JettyJmsShutdownTest";
 
         //set them as system properties so Spring can use the property placeholder

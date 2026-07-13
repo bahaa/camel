@@ -29,7 +29,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.TreeSet;
@@ -42,7 +41,6 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.ext.web.impl.BlockingHandlerDecorator;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.ConsumerTemplate;
@@ -85,6 +83,7 @@ import org.apache.camel.support.service.ServiceHelper;
 import org.apache.camel.support.service.ServiceSupport;
 import org.apache.camel.util.AntPathMatcher;
 import org.apache.camel.util.FileUtil;
+import org.apache.camel.util.HomeHelper;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StopWatch;
@@ -390,6 +389,9 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
             consumer = camelContext.createConsumerTemplate();
         }
 
+        // Mark this as the management server so the engine can identify it
+        configuration.setServerType(VertxPlatformHttpRouter.SERVER_TYPE_MANAGEMENT);
+
         VertxPlatformHttpServer mainServer = camelContext.hasService(VertxPlatformHttpServer.class);
         if (mainServer != null && mainServer.getConfigurationPort() == configuration.getPort()) {
             // reuse main server as we should use same port
@@ -506,7 +508,7 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
                     jo.put("version", String.format("%s", System.getProperty("java.version")));
                     jo.put("user", System.getProperty("user.name"));
                     jo.put("dir", System.getProperty("user.dir"));
-                    jo.put("home", System.getProperty("user.home"));
+                    jo.put("home", HomeHelper.resolveHomeDir());
                 }
 
                 jo = new JsonObject();
@@ -573,13 +575,20 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
         };
 
         // use blocking handler as the task can take longer time to complete
-        info.handler(new BlockingHandlerDecorator(handler, true));
+        info.blockingHandler(handler);
 
         platformHttpComponent.addHttpManagementEndpoint(this.infoPath, "GET", null,
                 "application/json", null);
     }
 
     protected void setupHealthCheckConsole() {
+        // ensure camel has health check available
+        HealthCheckRegistry registry = HealthCheckRegistry.get(camelContext);
+        if (registry == null) {
+            throw new IllegalArgumentException(
+                    "Camel health-check is not available. Add camel-health or camel-observability-services JAR");
+        }
+
         final Route health = router.route(this.healthPath);
         health.method(HttpMethod.GET);
         health.produces("application/json");
@@ -643,9 +652,9 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
             }
         };
         // use blocking handler as the task can take longer time to complete
-        health.handler(new BlockingHandlerDecorator(handler, true));
-        live.handler(new BlockingHandlerDecorator(handler, true));
-        ready.handler(new BlockingHandlerDecorator(handler, true));
+        health.blockingHandler(handler);
+        live.blockingHandler(handler);
+        ready.blockingHandler(handler);
 
         platformHttpComponent.addHttpManagementEndpoint(this.healthPath, "GET", null,
                 "application/json", null);
@@ -653,9 +662,10 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
 
     protected void setupJolokia() {
         // load plugin
-        jolokiaPlugin = pluginRegistry.resolvePluginById(JolokiaPlatformHttpPlugin.NAME, JolokiaPlatformHttpPlugin.class)
-                .orElseThrow(() -> new RuntimeException(
-                        "JolokiaPlatformHttpPlugin not found. Add camel-platform-http-jolokia dependency."));
+        jolokiaPlugin = ResolverHelper.resolveMandatoryService(camelContext,
+                "platform-http/" + JolokiaPlatformHttpPlugin.NAME, JolokiaPlatformHttpPlugin.class,
+                "camel-platform-http-jolokia");
+        pluginRegistry.register(jolokiaPlugin);
 
         Route jolokia = router.route(jolokiaPath + "/*");
         jolokia.method(HttpMethod.GET).method(HttpMethod.POST)
@@ -663,7 +673,7 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
                 .handler(BodyHandler.create(false));
 
         Handler<RoutingContext> handler = (Handler<RoutingContext>) jolokiaPlugin.getHandler();
-        jolokia.handler(new BlockingHandlerDecorator(handler, true));
+        jolokia.blockingHandler(handler);
 
         platformHttpComponent.addHttpManagementEndpoint(jolokiaPath, "GET,POST", null,
                 "text/plain,application/json", null);
@@ -744,8 +754,8 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
             }
         };
         // use blocking handler as the task can take longer time to complete
-        upload.handler(new BlockingHandlerDecorator(handler, true));
-        uploadDelete.handler(new BlockingHandlerDecorator(handler, true));
+        upload.blockingHandler(handler);
+        uploadDelete.blockingHandler(handler);
 
         platformHttpComponent.addHttpManagementEndpoint("/q/upload", "PUT,DELETE",
                 "multipart/form-data", null, null);
@@ -856,7 +866,7 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
             }
         };
         // use blocking handler as the task can take longer time to complete
-        download.handler(new BlockingHandlerDecorator(handler, true));
+        download.blockingHandler(handler);
 
         platformHttpComponent.addHttpManagementEndpoint("/q/download", "GET",
                 null, "text/plain,application/octet-stream", null);
@@ -884,19 +894,18 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
             }
         };
         // use blocking handler as the task can take longer time to complete
-        send.handler(new BlockingHandlerDecorator(handler, true));
+        send.blockingHandler(handler);
 
         platformHttpComponent.addHttpManagementEndpoint("/q/send", "GET,POST",
                 null, "application/json", null);
     }
 
     protected PlatformHttpPluginRegistry resolvePlatformHttpPluginRegistry() {
-        Optional<PlatformHttpPluginRegistry> result = ResolverHelper.resolveService(
+        return ResolverHelper.resolveMandatoryService(
                 getCamelContext(),
                 PlatformHttpPluginRegistry.FACTORY,
-                PlatformHttpPluginRegistry.class);
-        return result.orElseThrow(() -> new IllegalArgumentException(
-                "Cannot create PlatformHttpPluginRegistry. Make sure camel-platform-http JAR is on classpath."));
+                PlatformHttpPluginRegistry.class,
+                "camel-platform-http");
     }
 
     private static void healthCheckStatus(JsonObject jo, boolean up) {
@@ -1010,7 +1019,7 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
                 final boolean json = pos2 < pos1;
                 final DevConsole.MediaType mediaType = json ? DevConsole.MediaType.JSON : DevConsole.MediaType.TEXT;
 
-                ctx.response().putHeader("content-type", "text/plain");
+                ctx.response().putHeader("content-type", "text/plain;charset=utf-8");
 
                 if (!camelContext.isDevConsole()) {
                     ctx.end("Developer Console is not enabled on CamelContext. Set camel.context.dev-console=true in application.properties");
@@ -1087,7 +1096,11 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
                         boolean include = "all".equals(id) || c.getId().equalsIgnoreCase(id);
                         if (include && c.supportMediaType(mediaType)) {
                             Object out = c.call(mediaType, params);
-                            if (out != null && mediaType == DevConsole.MediaType.TEXT) {
+                            // special if returning html
+                            if (out instanceof String text && text.startsWith("<html>")) {
+                                ctx.response().putHeader("content-type", "text/html");
+                                sb.append(out);
+                            } else if (out != null && mediaType == DevConsole.MediaType.TEXT) {
                                 sb.append(c.getDisplayName()).append(":");
                                 sb.append("\n\n");
                                 sb.append(out);
@@ -1111,8 +1124,8 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
             }
         };
         // use blocking handler as the task can take longer time to complete
-        dev.handler(new BlockingHandlerDecorator(handler, true));
-        devSub.handler(new BlockingHandlerDecorator(handler, true));
+        dev.blockingHandler(handler);
+        devSub.blockingHandler(handler);
 
         platformHttpComponent.addHttpManagementEndpoint("/q/dev", "GET", null,
                 "text/plain,application/json", null);
@@ -1282,6 +1295,7 @@ public class ManagementHttpServer extends ServiceSupport implements CamelContext
                 camelContext,
                 platformHttpComponent.getHttpManagementEndpoints(),
                 (server != null ? server.getPort() : getPort()),
+                configuration.isUseGlobalSslContextParameters(),
                 "HTTP Management endpoints summary");
     }
 

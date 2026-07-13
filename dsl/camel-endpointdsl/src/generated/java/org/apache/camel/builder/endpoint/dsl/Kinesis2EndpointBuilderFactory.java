@@ -2813,7 +2813,7 @@ public interface Kinesis2EndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final Kinesis2HeaderNameBuilder INSTANCE = new Kinesis2HeaderNameBuilder();
+        public static final Kinesis2HeaderNameBuilder INSTANCE = new Kinesis2HeaderNameBuilder();
 
         /**
          * The sequence number of the record, as defined in
@@ -2888,6 +2888,30 @@ public interface Kinesis2EndpointBuilderFactory {
          */
         public String awsKinesisShardId() {
             return "CamelAwsKinesisShardId";
+        }
+        /**
+         * The number of records that failed in a batch put operation.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsKinesisFailedRecordCount}.
+         */
+        public String awsKinesisFailedRecordCount() {
+            return "CamelAwsKinesisFailedRecordCount";
+        }
+        /**
+         * The total number of records in a batch put operation.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsKinesisRecordCount}.
+         */
+        public String awsKinesisRecordCount() {
+            return "CamelAwsKinesisRecordCount";
         }
     }
     static Kinesis2EndpointBuilder endpointBuilder(String componentName, String path) {

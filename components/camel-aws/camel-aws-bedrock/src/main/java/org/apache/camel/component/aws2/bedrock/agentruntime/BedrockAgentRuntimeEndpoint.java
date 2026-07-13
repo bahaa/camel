@@ -26,6 +26,7 @@ import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.support.ScheduledPollEndpoint;
 import org.apache.camel.util.ObjectHelper;
+import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeAsyncClient;
 import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeClient;
 
 /**
@@ -37,6 +38,7 @@ import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeCl
 public class BedrockAgentRuntimeEndpoint extends ScheduledPollEndpoint implements EndpointServiceLocation {
 
     private BedrockAgentRuntimeClient bedrockAgentRuntimeClient;
+    private BedrockAgentRuntimeAsyncClient bedrockAgentRuntimeAsyncClient;
 
     @UriParam
     private BedrockAgentRuntimeConfiguration configuration;
@@ -65,16 +67,31 @@ public class BedrockAgentRuntimeEndpoint extends ScheduledPollEndpoint implement
     public void doStart() throws Exception {
         super.doStart();
 
-        bedrockAgentRuntimeClient = configuration.getBedrockAgentRuntimeClient() != null
+        bedrockAgentRuntimeClient = ObjectHelper.isNotEmpty(configuration.getBedrockAgentRuntimeClient())
                 ? configuration.getBedrockAgentRuntimeClient()
                 : BedrockAgentRuntimeClientFactory.getBedrockAgentRuntimeClient(configuration);
+
+        // Only build the async client when the operation needs event-stream support (invokeFlow), or when the user
+        // explicitly supplied one. This avoids creating a Netty-based async HTTP client for users that only need
+        // synchronous operations like retrieveAndGenerate.
+        if (ObjectHelper.isNotEmpty(configuration.getBedrockAgentRuntimeAsyncClient())) {
+            bedrockAgentRuntimeAsyncClient = configuration.getBedrockAgentRuntimeAsyncClient();
+        } else if (configuration.getOperation() == BedrockAgentRuntimeOperations.invokeFlow) {
+            bedrockAgentRuntimeAsyncClient
+                    = BedrockAgentRuntimeClientFactory.getBedrockAgentRuntimeAsyncClient(configuration);
+        }
     }
 
     @Override
     public void doStop() throws Exception {
         if (ObjectHelper.isEmpty(configuration.getBedrockAgentRuntimeClient())) {
-            if (bedrockAgentRuntimeClient != null) {
+            if (ObjectHelper.isNotEmpty(bedrockAgentRuntimeClient)) {
                 bedrockAgentRuntimeClient.close();
+            }
+        }
+        if (ObjectHelper.isEmpty(configuration.getBedrockAgentRuntimeAsyncClient())) {
+            if (ObjectHelper.isNotEmpty(bedrockAgentRuntimeAsyncClient)) {
+                bedrockAgentRuntimeAsyncClient.close();
             }
         }
         super.doStop();
@@ -86,6 +103,10 @@ public class BedrockAgentRuntimeEndpoint extends ScheduledPollEndpoint implement
 
     public BedrockAgentRuntimeClient getBedrockAgentRuntimeClient() {
         return bedrockAgentRuntimeClient;
+    }
+
+    public BedrockAgentRuntimeAsyncClient getBedrockAgentRuntimeAsyncClient() {
+        return bedrockAgentRuntimeAsyncClient;
     }
 
     @Override
@@ -108,7 +129,7 @@ public class BedrockAgentRuntimeEndpoint extends ScheduledPollEndpoint implement
     @Override
     public Map<String, String> getServiceMetadata() {
         HashMap<String, String> metadata = new HashMap<>();
-        if (configuration.getModelId() != null) {
+        if (ObjectHelper.isNotEmpty(configuration.getModelId())) {
             metadata.put("modelId", configuration.getModelId());
         }
         return metadata;

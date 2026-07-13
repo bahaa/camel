@@ -131,6 +131,104 @@ public interface PqcComponentBuilderFactory {
         }
     
         /**
+         * The classical key agreement algorithm to use in hybrid KEM
+         * operations.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalKEMAlgorithm the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder classicalKEMAlgorithm(java.lang.String classicalKEMAlgorithm) {
+            doSetProperty("classicalKEMAlgorithm", classicalKEMAlgorithm);
+            return this;
+        }
+    
+        /**
+         * The classical KeyAgreement instance to be used in hybrid KEM
+         * operations.
+         * 
+         * The option is a: &lt;code&gt;javax.crypto.KeyAgreement&lt;/code&gt;
+         * type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalKeyAgreement the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder classicalKeyAgreement(javax.crypto.KeyAgreement classicalKeyAgreement) {
+            doSetProperty("classicalKeyAgreement", classicalKeyAgreement);
+            return this;
+        }
+    
+        /**
+         * The classical KeyPair to be used in hybrid operations.
+         * 
+         * The option is a: &lt;code&gt;java.security.KeyPair&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalKeyPair the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder classicalKeyPair(java.security.KeyPair classicalKeyPair) {
+            doSetProperty("classicalKeyPair", classicalKeyPair);
+            return this;
+        }
+    
+        /**
+         * The classical signature algorithm to use in hybrid operations.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalSignatureAlgorithm the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder classicalSignatureAlgorithm(java.lang.String classicalSignatureAlgorithm) {
+            doSetProperty("classicalSignatureAlgorithm", classicalSignatureAlgorithm);
+            return this;
+        }
+    
+        /**
+         * The classical Signature instance to be used in hybrid signature
+         * operations.
+         * 
+         * The option is a: &lt;code&gt;java.security.Signature&lt;/code&gt;
+         * type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalSigner the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder classicalSigner(java.security.Signature classicalSigner) {
+            doSetProperty("classicalSigner", classicalSigner);
+            return this;
+        }
+    
+        
+        /**
+         * The KDF algorithm to use for combining secrets in hybrid KEM
+         * operations.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: HKDF-SHA256
+         * Group: advanced
+         * 
+         * @param hybridKdfAlgorithm the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder hybridKdfAlgorithm(java.lang.String hybridKdfAlgorithm) {
+            doSetProperty("hybridKdfAlgorithm", hybridKdfAlgorithm);
+            return this;
+        }
+    
+        /**
          * In case there is no keyGenerator, we specify an algorithm to build
          * the KeyGenerator.
          * 
@@ -163,6 +261,23 @@ public interface PqcComponentBuilderFactory {
         }
     
         /**
+         * The KeyLifecycleManager to use for key lifecycle operations such as
+         * generation, rotation, import/export, expiration, and revocation.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param keyLifecycleManager the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder keyLifecycleManager(org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager keyLifecycleManager) {
+            doSetProperty("keyLifecycleManager", keyLifecycleManager);
+            return this;
+        }
+    
+        /**
          * The KeyPair to be used.
          * 
          * The option is a: &lt;code&gt;java.security.KeyPair&lt;/code&gt; type.
@@ -189,6 +304,75 @@ public interface PqcComponentBuilderFactory {
          */
         default PqcComponentBuilder keyPairAlias(java.lang.String keyPairAlias) {
             doSetProperty("keyPairAlias", keyPairAlias);
+            return this;
+        }
+    
+        
+        /**
+         * Interval between key rotation checks when the scheduler is enabled.
+         * 
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
+         * 
+         * Default: 3600000
+         * Group: advanced
+         * 
+         * @param keyRotationCheckInterval the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder keyRotationCheckInterval(long keyRotationCheckInterval) {
+            doSetProperty("keyRotationCheckInterval", keyRotationCheckInterval);
+            return this;
+        }
+    
+        /**
+         * When the scheduler is enabled, rotate keys older than this age. If
+         * not set, age is not used as a rotation signal.
+         * 
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param keyRotationMaxAge the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder keyRotationMaxAge(long keyRotationMaxAge) {
+            doSetProperty("keyRotationMaxAge", keyRotationMaxAge);
+            return this;
+        }
+    
+        /**
+         * When the scheduler is enabled, rotate keys whose recorded usage count
+         * reaches this value. 0 disables usage-based rotation.
+         * 
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
+         * 
+         * Group: advanced
+         * 
+         * @param keyRotationMaxUsage the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder keyRotationMaxUsage(long keyRotationMaxUsage) {
+            doSetProperty("keyRotationMaxUsage", keyRotationMaxUsage);
+            return this;
+        }
+    
+        
+        /**
+         * Whether to start an automated background key rotation scheduler for
+         * this component. Requires keyLifecycleManager to be set. The scheduler
+         * periodically rotates keys that exceed the configured age and/or usage
+         * policy.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param keyRotationSchedulerEnabled the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder keyRotationSchedulerEnabled(boolean keyRotationSchedulerEnabled) {
+            doSetProperty("keyRotationSchedulerEnabled", keyRotationSchedulerEnabled);
             return this;
         }
     
@@ -257,6 +441,28 @@ public interface PqcComponentBuilderFactory {
     
         
         /**
+         * The warning threshold for stateful key exhaustion as a fraction of
+         * total signatures (0.0 to 1.0). When the remaining signatures for a
+         * stateful key (XMSS, XMSSMT, LMS/HSS) drop below this fraction of the
+         * total capacity, a WARN log is emitted. When remaining signatures
+         * reach zero, an exception is thrown to prevent key reuse. Set to 0 to
+         * disable warnings.
+         * 
+         * The option is a: &lt;code&gt;double&lt;/code&gt; type.
+         * 
+         * Default: 0.1
+         * Group: advanced
+         * 
+         * @param statefulKeyWarningThreshold the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder statefulKeyWarningThreshold(double statefulKeyWarningThreshold) {
+            doSetProperty("statefulKeyWarningThreshold", statefulKeyWarningThreshold);
+            return this;
+        }
+    
+        
+        /**
          * In the context of extractSecretKeyFromEncapsulation operation, this
          * option define if we want to have the key set as header.
          * 
@@ -270,6 +476,28 @@ public interface PqcComponentBuilderFactory {
          */
         default PqcComponentBuilder storeExtractedSecretKeyAsHeader(boolean storeExtractedSecretKeyAsHeader) {
             doSetProperty("storeExtractedSecretKeyAsHeader", storeExtractedSecretKeyAsHeader);
+            return this;
+        }
+    
+        
+        /**
+         * Whether to enforce key status checks before cryptographic operations.
+         * When enabled, REVOKED keys are rejected for all operations, EXPIRED
+         * keys are rejected for signing/encapsulation but allowed for
+         * verification/extraction, and DEPRECATED keys produce a warning but
+         * still function. Requires a KeyLifecycleManager and a CamelPQCKeyId
+         * header to be set.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: advanced
+         * 
+         * @param strictKeyLifecycle the value to set
+         * @return the dsl builder
+         */
+        default PqcComponentBuilder strictKeyLifecycle(boolean strictKeyLifecycle) {
+            doSetProperty("strictKeyLifecycle", strictKeyLifecycle);
             return this;
         }
     
@@ -368,15 +596,28 @@ public interface PqcComponentBuilderFactory {
             case "lazyStartProducer": ((PQCComponent) component).setLazyStartProducer((boolean) value); return true;
             case "operation": getOrCreateConfiguration((PQCComponent) component).setOperation((org.apache.camel.component.pqc.PQCOperations) value); return true;
             case "autowiredEnabled": ((PQCComponent) component).setAutowiredEnabled((boolean) value); return true;
+            case "classicalKEMAlgorithm": getOrCreateConfiguration((PQCComponent) component).setClassicalKEMAlgorithm((java.lang.String) value); return true;
+            case "classicalKeyAgreement": getOrCreateConfiguration((PQCComponent) component).setClassicalKeyAgreement((javax.crypto.KeyAgreement) value); return true;
+            case "classicalKeyPair": getOrCreateConfiguration((PQCComponent) component).setClassicalKeyPair((java.security.KeyPair) value); return true;
+            case "classicalSignatureAlgorithm": getOrCreateConfiguration((PQCComponent) component).setClassicalSignatureAlgorithm((java.lang.String) value); return true;
+            case "classicalSigner": getOrCreateConfiguration((PQCComponent) component).setClassicalSigner((java.security.Signature) value); return true;
+            case "hybridKdfAlgorithm": getOrCreateConfiguration((PQCComponent) component).setHybridKdfAlgorithm((java.lang.String) value); return true;
             case "keyEncapsulationAlgorithm": getOrCreateConfiguration((PQCComponent) component).setKeyEncapsulationAlgorithm((java.lang.String) value); return true;
             case "keyGenerator": getOrCreateConfiguration((PQCComponent) component).setKeyGenerator((javax.crypto.KeyGenerator) value); return true;
+            case "keyLifecycleManager": getOrCreateConfiguration((PQCComponent) component).setKeyLifecycleManager((org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager) value); return true;
             case "keyPair": getOrCreateConfiguration((PQCComponent) component).setKeyPair((java.security.KeyPair) value); return true;
             case "keyPairAlias": getOrCreateConfiguration((PQCComponent) component).setKeyPairAlias((java.lang.String) value); return true;
+            case "keyRotationCheckInterval": ((PQCComponent) component).setKeyRotationCheckInterval((long) value); return true;
+            case "keyRotationMaxAge": ((PQCComponent) component).setKeyRotationMaxAge((long) value); return true;
+            case "keyRotationMaxUsage": ((PQCComponent) component).setKeyRotationMaxUsage((long) value); return true;
+            case "keyRotationSchedulerEnabled": ((PQCComponent) component).setKeyRotationSchedulerEnabled((boolean) value); return true;
             case "keyStore": getOrCreateConfiguration((PQCComponent) component).setKeyStore((java.security.KeyStore) value); return true;
             case "keyStorePassword": getOrCreateConfiguration((PQCComponent) component).setKeyStorePassword((java.lang.String) value); return true;
             case "signatureAlgorithm": getOrCreateConfiguration((PQCComponent) component).setSignatureAlgorithm((java.lang.String) value); return true;
             case "signer": getOrCreateConfiguration((PQCComponent) component).setSigner((java.security.Signature) value); return true;
+            case "statefulKeyWarningThreshold": getOrCreateConfiguration((PQCComponent) component).setStatefulKeyWarningThreshold((double) value); return true;
             case "storeExtractedSecretKeyAsHeader": getOrCreateConfiguration((PQCComponent) component).setStoreExtractedSecretKeyAsHeader((boolean) value); return true;
+            case "strictKeyLifecycle": getOrCreateConfiguration((PQCComponent) component).setStrictKeyLifecycle((boolean) value); return true;
             case "symmetricKeyAlgorithm": getOrCreateConfiguration((PQCComponent) component).setSymmetricKeyAlgorithm((java.lang.String) value); return true;
             case "symmetricKeyLength": getOrCreateConfiguration((PQCComponent) component).setSymmetricKeyLength((int) value); return true;
             case "healthCheckConsumerEnabled": ((PQCComponent) component).setHealthCheckConsumerEnabled((boolean) value); return true;

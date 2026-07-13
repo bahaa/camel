@@ -19,14 +19,14 @@ package org.apache.camel.component.qdrant;
 import org.apache.camel.CamelContext;
 import org.apache.camel.test.infra.qdrant.services.QdrantService;
 import org.apache.camel.test.infra.qdrant.services.QdrantServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class QdrantTestSupport extends CamelTestSupport {
     @RegisterExtension
-    static QdrantService QDRANT = QdrantServiceFactory.createSingletonService();
+    static final QdrantService QDRANT = QdrantServiceFactory.createSingletonService();
 
     @Override
     protected CamelContext createCamelContext() throws Exception {

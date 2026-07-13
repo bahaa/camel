@@ -25,6 +25,8 @@ public class VersionListDTO {
     private String camelVersion;
     private String runtime;
     private String runtimeVersion;
+    private String camelQuarkusVersion;
+    private String vendor;
     private String jdkVersion;
     private String kind;
     private String releaseDate;
@@ -33,12 +35,13 @@ public class VersionListDTO {
     public VersionListDTO() {
     }
 
-    public VersionListDTO(String camelVersion, String runtime, String runtimeVersion, String jdkVersion, String kind,
-                          String releaseDate,
-                          String eolDate) {
+    public VersionListDTO(String camelVersion, String runtime, String runtimeVersion,
+                          String vendor, String jdkVersion, String kind,
+                          String releaseDate, String eolDate) {
         this.camelVersion = camelVersion;
         this.runtime = runtime;
         this.runtimeVersion = runtimeVersion;
+        this.vendor = vendor;
         this.jdkVersion = jdkVersion;
         this.kind = kind;
         this.releaseDate = releaseDate;
@@ -67,6 +70,22 @@ public class VersionListDTO {
 
     public void setRuntimeVersion(String runtimeVersion) {
         this.runtimeVersion = runtimeVersion;
+    }
+
+    public String getCamelQuarkusVersion() {
+        return camelQuarkusVersion;
+    }
+
+    public void setCamelQuarkusVersion(String camelQuarkusVersion) {
+        this.camelQuarkusVersion = camelQuarkusVersion;
+    }
+
+    public String getVendor() {
+        return vendor;
+    }
+
+    public void setVendor(String vendor) {
+        this.vendor = vendor;
     }
 
     public String getJdkVersion() {
@@ -107,6 +126,12 @@ public class VersionListDTO {
         jo.put("runtime", runtime);
         if (runtimeVersion != null) {
             jo.put("runtimeVersion", runtimeVersion);
+        }
+        if (camelQuarkusVersion != null) {
+            jo.put("camelQuarkusVersion", camelQuarkusVersion);
+        }
+        if (vendor != null) {
+            jo.put("vendor", vendor);
         }
         if (jdkVersion != null) {
             jo.put("jdkVersion", jdkVersion);

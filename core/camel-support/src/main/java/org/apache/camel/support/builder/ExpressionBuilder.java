@@ -16,6 +16,8 @@
  */
 package org.apache.camel.support.builder;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -70,6 +72,33 @@ import static org.apache.camel.util.StringHelper.between;
  * A helper class for working with <a href="http://camel.apache.org/expression.html">expressions</a>.
  */
 public class ExpressionBuilder {
+
+    /**
+     * Trims the result of the given expression
+     */
+    public static Expression trimExpression(final Expression expression) {
+        return new ExpressionAdapter() {
+            @Override
+            public Object evaluate(Exchange exchange) {
+                Object answer = expression.evaluate(exchange, Object.class);
+                if (answer instanceof String str) {
+                    answer = str.trim();
+                }
+                return answer;
+            }
+
+            @Override
+            public void init(CamelContext context) {
+                super.init(context);
+                expression.init(context);
+            }
+
+            @Override
+            public String toString() {
+                return "trim(" + expression + ")";
+            }
+        };
+    }
 
     /**
      * Returns an expression for the header value with the given name
@@ -1347,9 +1376,9 @@ public class ExpressionBuilder {
     /**
      * Creates a source {@link Expression} for languages that can accept input from other sources than the message body.
      *
-     * @param  source Source to use, instead of message body. You can prefix with variable:, header:, or property: to
-     *                specify kind of source. Otherwise, the source is assumed to be a variable. Use empty or null to
-     *                use default source, which is the message body.
+     * @param  source Source to use, instead of message body. You can prefix with variable:, header:, property:, or
+     *                exchangeProperty: to specify kind of source. Otherwise, the source is assumed to be a variable.
+     *                Use empty or null to use default source, which is the message body.
      * @return        a variable expression if {@code variableName} is not empty, a header expression if
      *                {@code headerName} is not empty, otherwise a property expression if {@code propertyName} is not
      *                empty or finally a body expression.
@@ -1362,6 +1391,8 @@ public class ExpressionBuilder {
             exp = headerExpression(source.substring(7), true);
         } else if (source.startsWith("property:")) {
             exp = exchangePropertyExpression(source.substring(9), true);
+        } else if (source.startsWith("exchangeProperty:")) {
+            exp = exchangePropertyExpression(source.substring(17), true);
         } else {
             if (source.startsWith("variable:")) {
                 source = source.substring(9);
@@ -1378,8 +1409,6 @@ public class ExpressionBuilder {
         return new ExpressionAdapter() {
             @Override
             public Object evaluate(Exchange exchange) {
-                // TODO When baseline will be Java 21
-                //                return Thread.currentThread().threadId();
                 return Thread.currentThread().getId();
             }
 
@@ -2278,6 +2307,31 @@ public class ExpressionBuilder {
         };
     }
 
+    public static Expression eval(List<Expression> expressions) {
+        return new ExpressionAdapter() {
+            @Override
+            public void init(CamelContext context) {
+                super.init(context);
+                for (Expression exp : expressions) {
+                    exp.init(context);
+                }
+            }
+
+            @Override
+            public Object evaluate(Exchange exchange) {
+                for (Expression exp : expressions) {
+                    exp.evaluate(exchange, Object.class);
+                }
+                return null;
+            }
+
+            @Override
+            public String toString() {
+                return "eval";
+            }
+        };
+    }
+
     /**
      * Returns an Expression for the inbound message id
      */
@@ -2690,6 +2744,38 @@ public class ExpressionBuilder {
     }
 
     /**
+     * Returns the expression result serialized as a JSON string
+     */
+    public static Expression toJsonExpression(final Expression expression, boolean pretty) {
+        return new ExpressionAdapter() {
+            @Override
+            public Object evaluate(Exchange exchange) {
+                Object value = expression.evaluate(exchange, Object.class);
+                if (value == null) {
+                    return null;
+                }
+                if (value instanceof String) {
+                    return value;
+                }
+                String answer = serializeCarelessly(value);
+                if (answer != null && pretty) {
+                    answer = answer.trim();
+                    // only pretty print if json structure
+                    if (answer.startsWith("{") && answer.endsWith("}") || answer.startsWith("[") && answer.endsWith("]")) {
+                        answer = Jsoner.prettyPrint(answer);
+                    }
+                }
+                return answer;
+            }
+
+            @Override
+            public String toString() {
+                return "toJson(" + expression + ")";
+            }
+        };
+    }
+
+    /**
      * Returns the expression for the message body as pretty formatted string
      */
     public static Expression prettyBodyExpression() {
@@ -2723,6 +2809,16 @@ public class ExpressionBuilder {
         } catch (Exception e) {
             return rawXml;
         }
+    }
+
+    private static String serializeCarelessly(Object value) {
+        final StringWriter writer = new StringWriter();
+        try {
+            Jsoner.serializeCarelessly(value, writer);
+        } catch (final IOException caught) {
+            /* See StringWriter. */
+        }
+        return writer.toString();
     }
 
 }

@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InfraService(service = RedisInfraService.class,
-              description = "In Memory Database",
+              description = "Redis is an open source in-memory data store",
               serviceAlias = { "redis" })
 public class RedisLocalContainerInfraService implements RedisInfraService, ContainerService<RedisContainer> {
     private static final Logger LOG = LoggerFactory.getLogger(RedisLocalContainerInfraService.class);
@@ -32,11 +32,20 @@ public class RedisLocalContainerInfraService implements RedisInfraService, Conta
     private final RedisContainer container;
 
     public RedisLocalContainerInfraService() {
-        container = new RedisContainer();
+        container = initContainer();
         String name = ContainerEnvironmentUtil.containerName(this.getClass());
         if (name != null) {
             container.withCreateContainerCmdModifier(cmd -> cmd.withName(name));
         }
+    }
+
+    private RedisContainer initContainer() {
+        RedisContainer container = new RedisContainer();
+        if (ContainerEnvironmentUtil.isFixedPort(this.getClass())) {
+            int port = ContainerEnvironmentUtil.getConfiguredPort(RedisProperties.DEFAULT_PORT);
+            container.withFixedPort(port, RedisProperties.DEFAULT_PORT);
+        }
+        return container;
     }
 
     public RedisLocalContainerInfraService(String imageName) {

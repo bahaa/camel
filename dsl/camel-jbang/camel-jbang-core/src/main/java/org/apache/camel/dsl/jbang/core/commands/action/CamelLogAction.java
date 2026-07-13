@@ -41,16 +41,22 @@ import org.apache.camel.catalog.impl.TimePatternConverter;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.commands.CommandHelper;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
+import org.apache.camel.dsl.jbang.core.common.EnvironmentHelper;
 import org.apache.camel.dsl.jbang.core.common.ProcessHelper;
 import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.json.JsonObject;
-import org.fusesource.jansi.Ansi;
-import org.fusesource.jansi.AnsiConsole;
+import org.jline.jansi.Ansi;
+import org.jline.jansi.AnsiConsole;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "log",
-                     description = "Tail logs from running Camel integrations", sortOptions = false, showDefaultValues = true)
+                     description = "Tail logs from running Camel integrations", sortOptions = false, showDefaultValues = true,
+                     footer = {
+                             "%nExamples:",
+                             "  camel log hello",
+                             "  camel log *",
+                             "  camel log hello --tail=50" })
 public class CamelLogAction extends ActionBaseCommand {
 
     private static final int NAME_MAX_WIDTH = 25;
@@ -111,9 +117,13 @@ public class CamelLogAction extends ActionBaseCommand {
     String[] grep;
 
     String findAnsi;
+    Pattern[] grepPatterns;
+    Pattern[] findPatterns;
 
     private int nameMaxWidth;
     private boolean prefixShown;
+    private final SimpleDateFormat sdfMain = new SimpleDateFormat(TIMESTAMP_MAIN);
+    private final SimpleDateFormat sdfSB = new SimpleDateFormat(TIMESTAMP_SB);
 
     private final Map<String, Ansi.Color> colors = new HashMap<>();
 
@@ -123,6 +133,11 @@ public class CamelLogAction extends ActionBaseCommand {
 
     @Override
     public Integer doCall() throws Exception {
+        if (follow && EnvironmentHelper.isEmbedded()) {
+            follow = false;
+            printer().println("Tip: press F3 to switch to the Log tab for live log streaming");
+        }
+
         Map<Long, Row> rows = new LinkedHashMap<>();
 
         // find new pids
@@ -131,19 +146,11 @@ public class CamelLogAction extends ActionBaseCommand {
             // read existing log files (skip by tail/since)
             if (find != null) {
                 findAnsi = Ansi.ansi().fg(Ansi.Color.BLACK).bg(Ansi.Color.YELLOW).a("$0").reset().toString();
-                for (int i = 0; i < find.length; i++) {
-                    String f = find[i];
-                    f = Pattern.quote(f);
-                    find[i] = f;
-                }
+                findPatterns = quoteAndCompilePatterns(find);
             }
             if (grep != null) {
                 findAnsi = Ansi.ansi().fg(Ansi.Color.BLACK).bg(Ansi.Color.YELLOW).a("$0").reset().toString();
-                for (int i = 0; i < grep.length; i++) {
-                    String f = grep[i];
-                    f = Pattern.quote(f);
-                    grep[i] = f;
-                }
+                grepPatterns = quoteAndCompilePatterns(grep);
             }
             Date limit = null;
             if (since != null) {
@@ -255,7 +262,7 @@ public class CamelLogAction extends ActionBaseCommand {
 
         for (Row row : rows.values()) {
             if (row.reader == null) {
-                Path file = logFile(row.pid);
+                Path file = logFile(row.pid, row.name);
                 if (Files.exists(file)) {
                     row.reader = new LineNumberReader(Files.newBufferedReader(file));
                     if (tail == 0) {
@@ -390,7 +397,12 @@ public class CamelLogAction extends ActionBaseCommand {
                     colors.put(name, color);
                 }
                 String n = String.format("%-" + nameMaxWidth + "s", name);
-                AnsiConsole.out().print(Ansi.ansi().fg(color).a(n).a("| ").reset());
+                String prefix = Ansi.ansi().fg(color).a(n).a("| ").reset().toString();
+                if (EnvironmentHelper.isEmbedded()) {
+                    printer().print(prefix);
+                } else {
+                    AnsiConsole.out().print(prefix);
+                }
             }
         } else {
             line = unescapeAnsi(line);
@@ -408,34 +420,48 @@ public class CamelLogAction extends ActionBaseCommand {
                 before = StringHelper.before(line, "---");
                 after = StringHelper.after(line, "---", line);
             }
-            if (find != null) {
-                for (String f : find) {
-                    after = after.replaceAll("(?i)" + f, findAnsi);
+            if (findPatterns != null) {
+                for (Pattern p : findPatterns) {
+                    after = p.matcher(after).replaceAll(findAnsi);
                 }
             }
-            if (grep != null) {
-                for (String g : grep) {
-                    after = after.replaceAll("(?i)" + g, findAnsi);
+            if (grepPatterns != null) {
+                for (Pattern p : grepPatterns) {
+                    after = p.matcher(after).replaceAll(findAnsi);
                 }
             }
             line = before != null ? before + "---" + after : after;
         }
         if (loggingColor) {
-            AnsiConsole.out().println(line);
+            if (EnvironmentHelper.isEmbedded()) {
+                printer().println(line);
+            } else {
+                AnsiConsole.out().println(line);
+            }
         } else {
             printer().println(line);
         }
     }
 
     private static Path logFile(String pid) {
-        String name = pid + ".log";
+        return logFile(pid, null);
+    }
+
+    private static Path logFile(String pid, String appName) {
         Path parent = CommandLineHelper.getCamelDir();
-        return parent.resolve(name);
+        Path pidLog = parent.resolve(pid + ".log");
+        if (!Files.exists(pidLog) && appName != null) {
+            Path nameLog = parent.resolve(appName + ".log");
+            if (Files.exists(nameLog)) {
+                return nameLog;
+            }
+        }
+        return pidLog;
     }
 
     private void tailStartupLogFiles(Map<Long, Row> rows) throws Exception {
         for (Row row : rows.values()) {
-            Path log = logFile(row.pid);
+            Path log = logFile(row.pid, row.name);
             if (Files.exists(log)) {
                 row.fifo = new ArrayDeque<>();
                 row.reader = new LineNumberReader(Files.newBufferedReader(log));
@@ -457,7 +483,7 @@ public class CamelLogAction extends ActionBaseCommand {
 
     private void tailLogFiles(Map<Long, Row> rows, int tail, Date limit) throws Exception {
         for (Row row : rows.values()) {
-            Path log = logFile(row.pid);
+            Path log = logFile(row.pid, row.name);
             if (Files.exists(log)) {
                 row.reader = new LineNumberReader(Files.newBufferedReader(log));
                 String line;
@@ -489,7 +515,7 @@ public class CamelLogAction extends ActionBaseCommand {
         // if using spring boot then adjust the timestamp to uniform camel-main style
         String ts = StringHelper.before(line, "  ");
         if (ts != null && ts.contains("T")) {
-            SimpleDateFormat sdf = new SimpleDateFormat(TIMESTAMP_SB);
+            SimpleDateFormat sdf = sdfSB;
             try {
                 // the log can be in color or not so we need to unescape always
                 sdf.parse(unescapeAnsi(ts));
@@ -519,7 +545,7 @@ public class CamelLogAction extends ActionBaseCommand {
         line = unescapeAnsi(line);
         String ts = StringHelper.before(line, "  ");
         if (ts != null && !ts.isBlank()) {
-            SimpleDateFormat sdf = new SimpleDateFormat(TIMESTAMP_MAIN);
+            SimpleDateFormat sdf = sdfMain;
             try {
                 Date row = sdf.parse(ts);
                 return row.compareTo(limit) >= 0;
@@ -537,9 +563,8 @@ public class CamelLogAction extends ActionBaseCommand {
         // the log can be in color or not so we need to unescape always
         line = unescapeAnsi(line);
         String after = StringHelper.after(line, "---", line);
-        for (String g : grep) {
-            boolean m = Pattern.compile("(?i)" + g).matcher(after).find();
-            if (m) {
+        for (Pattern p : grepPatterns) {
+            if (p.matcher(after).find()) {
                 return true;
             }
         }

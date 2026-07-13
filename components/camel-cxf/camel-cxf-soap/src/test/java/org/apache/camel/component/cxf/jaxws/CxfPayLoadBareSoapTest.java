@@ -24,19 +24,21 @@ import jakarta.xml.ws.Endpoint;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.cxf.BusFactory;
 import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CxfPayLoadBareSoapTest extends CamelTestSupport {
 
-    private static final int PORT = AvailablePortFinder.getNextAvailable();
-    private static final String ORIGINAL_URL = String.format("http://localhost:%s/original/Service", PORT);
-    private static final String PROXY_URL = String.format("http://localhost:%s/proxy/Service", PORT);
+    @RegisterExtension
+    static AvailablePortFinder.Port PORT = AvailablePortFinder.find();
+    private static final String ORIGINAL_URL = String.format("http://localhost:%s/original/Service", PORT.getPort());
+    private static final String PROXY_URL = String.format("http://localhost:%s/proxy/Service", PORT.getPort());
     private static final BareSoapServiceImpl IMPLEMENTATION = new BareSoapServiceImpl();
 
     @BeforeAll

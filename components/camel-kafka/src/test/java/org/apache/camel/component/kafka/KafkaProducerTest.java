@@ -28,6 +28,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.IntNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.apache.camel.AggregationStrategy;
 import org.apache.camel.AsyncCallback;
 import org.apache.camel.CamelContext;
@@ -42,6 +45,7 @@ import org.apache.camel.processor.aggregate.GroupedMessageAggregationStrategy;
 import org.apache.camel.support.DefaultExchange;
 import org.apache.camel.support.DefaultMessage;
 import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -135,7 +139,7 @@ public class KafkaProducerTest {
     public void processSendsMessageWithException() {
         endpoint.getConfiguration().setTopic("sometopic");
         // set up the exception here
-        org.apache.kafka.clients.producer.Producer kp = producer.getKafkaProducer();
+        Producer kp = producer.getKafkaProducer();
         Mockito.when(kp.send(any(ProducerRecord.class))).thenThrow(new ApiException());
         Mockito.when(exchange.getIn()).thenReturn(in);
         Mockito.when(exchange.getMessage()).thenReturn(in);
@@ -169,7 +173,7 @@ public class KafkaProducerTest {
         Mockito.when(exchange.getMessage()).thenReturn(in);
 
         // set up the exception here
-        org.apache.kafka.clients.producer.Producer kp = producer.getKafkaProducer();
+        Producer kp = producer.getKafkaProducer();
         Mockito.when(kp.send(any(ProducerRecord.class), any(Callback.class))).thenThrow(new ApiException());
 
         in.setHeader(KafkaConstants.PARTITION_KEY, 4);
@@ -477,6 +481,34 @@ public class KafkaProducerTest {
                 Arrays.asList("value-1", "value-2", "value-3"));
         assertRecordMetadataExists(3);
         assertRecordMetadataExistsForEachAggregatedMessage();
+    }
+
+    @Test
+    public void processSendsMessageWithScalarJsonNode() throws Exception {
+        endpoint.getConfiguration().setTopic("sometopic");
+        Mockito.when(exchange.getIn()).thenReturn(in);
+        Mockito.when(exchange.getMessage()).thenReturn(in);
+
+        in.setBody(IntNode.valueOf(42));
+        producer.process(exchange);
+
+        verifySendMessage("sometopic");
+    }
+
+    @Test
+    public void processSendsMessagesWithJsonArrayNode() throws Exception {
+        endpoint.getConfiguration().setTopic("sometopic");
+        Mockito.when(exchange.getIn()).thenReturn(in);
+        Mockito.when(exchange.getMessage()).thenReturn(in);
+
+        ArrayNode node = JsonNodeFactory.instance.arrayNode();
+        node.add(1);
+        node.add(2);
+
+        in.setBody(node);
+        producer.process(exchange);
+
+        verifySendMessages(Arrays.asList("sometopic", "sometopic"), null);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })

@@ -40,7 +40,7 @@ import org.snakeyaml.engine.v2.api.LoadSettings;
 @Mojo(name = "xref-check", threadSafe = true)
 public class XRefCheckMojo extends AbstractMojo {
 
-    public static final java.lang.String PLAYBOOK = "antora-playbook-local-xref-check.yml";
+    public static final String PLAYBOOK = "antora-playbook-local-xref-check.yml";
     /**
      * The maven project.
      */
@@ -157,8 +157,9 @@ public class XRefCheckMojo extends AbstractMojo {
                     ml = module;
                     rem = groups[0];
                 }
-                if (cl.startsWith("latest@")) {
-                    cl = cl.substring("latest@".length());
+                int at = cl.indexOf('@');
+                if (at >= 0) {
+                    cl = cl.substring(at + 1);
                 }
                 link = cl + ":" + ml + ":" + rem;
                 if (!pages.containsKey(link)) {

@@ -233,9 +233,27 @@ public final class BlobConstants {
               javaType = "ListBlobContainersOptions")
     public static final String LIST_BLOB_CONTAINERS_OPTIONS = HEADER_PREFIX + "ListBlobContainersOptions";
     @Metadata(label = "producer",
-              description = "(downloadBlobToFile) `ParallelTransferOptions` to use to download to file. Number of parallel transfers parameter is ignored.",
+              description = "(downloadBlobToFile, uploadBlockBlobChunked) `ParallelTransferOptions` to use to download to file or upload from file. Number of parallel transfers parameter is ignored for downloads.",
               javaType = "ParallelTransferOptions")
     public static final String PARALLEL_TRANSFER_OPTIONS = HEADER_PREFIX + "ParallelTransferOptions";
+    @Metadata(label = "producer",
+              description = "(uploadBlockBlobChunked) The local file path to upload. Can be provided as a File, Path, or String in the message body, or via this header.",
+              javaType = "String")
+    public static final String FILE_PATH = HEADER_PREFIX + "FilePath";
+    @Metadata(label = "producer",
+              description = "(uploadBlockBlobChunked) The block size in bytes to use for chunked uploads. Default is 4MB (4194304). Maximum is 4000MB. Must be greater than 0.",
+              javaType = "Long")
+    public static final String BLOCK_SIZE = HEADER_PREFIX + "BlockSize";
+    @Metadata(label = "producer",
+              description = "(uploadBlockBlobChunked) The maximum number of parallel requests to use during upload. Default is determined by the Azure SDK based on available processors.",
+              javaType = "Integer")
+    public static final String MAX_CONCURRENCY = HEADER_PREFIX + "MaxConcurrency";
+    @Metadata(label = "producer",
+              description = "(uploadBlockBlobChunked) The maximum size in bytes for a single upload request. Files smaller than this will be uploaded in a single request. "
+                            +
+                            "Files larger will use chunked upload with blocks of size blockSize. Default is 256MB.",
+              javaType = "Long")
+    public static final String MAX_SINGLE_UPLOAD_SIZE = HEADER_PREFIX + "MaxSingleUploadSize";
     @Metadata(label = "producer", description = "(downloadLink) Override the default expiration (millis) of URL download link.",
               javaType = "Long")
     public static final String DOWNLOAD_LINK_EXPIRATION = HEADER_PREFIX + "DownloadLinkExpiration";
@@ -265,6 +283,55 @@ public final class BlobConstants {
               description = "(getChangeFeed) This gives additional context that is passed through the Http pipeline during the service call.",
               javaType = "Context")
     public static final String CHANGE_FEED_CONTEXT = HEADER_PREFIX + "Context";
+    @Metadata(description = "The snapshot identifier. On createBlobSnapshot it is set on the exchange as the"
+                            + " id of the newly created snapshot. On read operations (getBlob, downloadBlobToFile,"
+                            + " downloadLink) it can be provided as input to target a specific blob snapshot.",
+              javaType = "String")
+    public static final String BLOB_SNAPSHOT_ID = HEADER_PREFIX + "SnapshotId";
+    @Metadata(description = "The blob version identifier. On read operations (getBlob, downloadBlobToFile,"
+                            + " downloadLink) it can be provided as input to target a specific blob version when"
+                            + " versioning is enabled on the storage account. On the consumer side it is populated"
+                            + " from the blob properties when available.",
+              javaType = "String")
+    public static final String BLOB_VERSION_ID = HEADER_PREFIX + "VersionId";
+    @Metadata(label = "consumer", description = "Flag indicating whether this is the current version of the blob.",
+              javaType = "Boolean")
+    public static final String BLOB_IS_CURRENT_VERSION = HEADER_PREFIX + "IsCurrentVersion";
+    @Metadata(description = "(producer) (setBlobTags) The tags to set on the blob as key-value pairs.\n"
+                            + "(consumer) The tags retrieved from the blob.",
+              javaType = "Map<String,String>")
+    public static final String BLOB_TAGS = HEADER_PREFIX + "Tags";
+    @Metadata(label = "producer",
+              description = "(findBlobsByTags) A SQL-like expression that filters blobs across the storage account based on their"
+                            + " index tags, for example `\"Environment\" = 'Production' AND \"Status\" = 'Active'`.",
+              javaType = "String")
+    public static final String BLOB_TAG_FILTER = HEADER_PREFIX + "TagFilter";
+    @Metadata(description = "(producer) (setBlobLegalHold) The legal hold status to set on the blob. When set to true the blob is"
+                            + " protected from modification and deletion until the hold is cleared by setting the value to false.\n"
+                            + "(consumer) The legal hold status returned by the setBlobLegalHold operation.",
+              javaType = "Boolean")
+    public static final String BLOB_LEGAL_HOLD = HEADER_PREFIX + "LegalHold";
+    @Metadata(label = "producer",
+              description = "(setBlobImmutabilityPolicy) A pre-built `BlobImmutabilityPolicy` object that overrides the policy"
+                            + " expiry time and mode headers when present.",
+              javaType = "com.azure.storage.blob.models.BlobImmutabilityPolicy")
+    public static final String BLOB_IMMUTABILITY_POLICY = HEADER_PREFIX + "ImmutabilityPolicy";
+    @Metadata(label = "producer",
+              description = "(setBlobImmutabilityPolicy) The expiry time of the time-based retention policy. Required unless a"
+                            + " pre-built `BlobImmutabilityPolicy` is provided via the body or the"
+                            + " `CamelAzureStorageBlobImmutabilityPolicy` header.",
+              javaType = "java.time.OffsetDateTime")
+    public static final String BLOB_IMMUTABILITY_POLICY_EXPIRY_TIME = HEADER_PREFIX + "ImmutabilityPolicyExpiryTime";
+    @Metadata(label = "producer",
+              description = "(setBlobImmutabilityPolicy) The mode of the immutability policy: `UNLOCKED` (default, can be"
+                            + " modified or deleted), `LOCKED` (cannot be modified or shortened, only extended), or `MUTABLE`.",
+              javaType = "com.azure.storage.blob.models.BlobImmutabilityPolicyMode")
+    public static final String BLOB_IMMUTABILITY_POLICY_MODE = HEADER_PREFIX + "ImmutabilityPolicyMode";
+    @Metadata(label = "producer",
+              description = "(setBlobTier) The rehydrate priority used when rehydrating a blob from the archive tier:"
+                            + " `Standard` or `High`. Ignored when changing tier between non-archive tiers.",
+              javaType = "com.azure.storage.blob.models.RehydratePriority")
+    public static final String REHYDRATE_PRIORITY = HEADER_PREFIX + "RehydratePriority";
 
     private BlobConstants() {
     }

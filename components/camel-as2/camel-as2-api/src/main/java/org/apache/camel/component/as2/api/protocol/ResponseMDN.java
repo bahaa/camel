@@ -73,14 +73,18 @@ public class ResponseMDN implements HttpResponseInterceptor {
 
     public static final String DISPOSITION_MODIFIER = "Disposition-Modifier";
 
-    private static final String DEFAULT_MDN_MESSAGE_TEMPLATE = "MDN for -\n"
-                                                               + " Message ID: $requestHeaders[\"Message-Id\"]\n"
-                                                               + "  Subject: $requestHeaders[\"Subject\"]\n"
-                                                               + "  Date: $requestHeaders[\"Date\"]\n"
-                                                               + "  From: $requestHeaders[\"AS2-From\"]\n"
-                                                               + "  To: $requestHeaders[\"AS2-To\"]\n"
-                                                               + "  Received on: $responseHeaders[\"Date\"]\n"
-                                                               + " Status: $dispositionType \n";
+    // Use explicit CRLF line endings to ensure consistent digest computation for signed MDNs.
+    // Java text blocks use LF, which causes CRLF/LF mismatch when headers are written through
+    // CanonicalOutputStream (CRLF) but body content is written directly (LF).
+    private static final String DEFAULT_MDN_MESSAGE_TEMPLATE
+            = "MDN for -\r\n"
+              + " Message ID: $requestHeaders[\"Message-Id\"]\r\n"
+              + "  Subject: $requestHeaders[\"Subject\"]\r\n"
+              + "  Date: $requestHeaders[\"Date\"]\r\n"
+              + "  From: $requestHeaders[\"AS2-From\"]\r\n"
+              + "  To: $requestHeaders[\"AS2-To\"]\r\n"
+              + "  Received on: $responseHeaders[\"Date\"]\r\n"
+              + " Status: $dispositionType\r\n";
 
     private static final Logger LOG = LoggerFactory.getLogger(ResponseMDN.class);
 
@@ -152,9 +156,8 @@ public class ResponseMDN implements HttpResponseInterceptor {
                     = (Certificate[]) context.getAttribute(AS2ServerConnection.AS2_VALIDATE_SIGNING_CERTIFICATE_CHAIN);
         }
 
-        HttpCoreContext coreContext = HttpCoreContext.adapt(context);
-
-        HttpRequest request = coreContext.getAttribute(HttpCoreContext.HTTP_REQUEST, HttpRequest.class);
+        HttpCoreContext coreContext = HttpCoreContext.castOrCreate(context);
+        HttpRequest request = coreContext.getRequest();
         if (request == null || !(request instanceof ClassicHttpRequest httpEntityEnclosingRequest)) {
             // Not an enclosing request so nothing to do.
             return;

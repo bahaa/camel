@@ -16,6 +16,8 @@
  */
 package org.apache.camel.component.dns;
 
+import java.util.List;
+
 import org.apache.camel.Endpoint;
 import org.apache.camel.Exchange;
 import org.apache.camel.support.DefaultProducer;
@@ -32,7 +34,7 @@ import org.xbill.DNS.Type;
  * <p/>
  * See here for a reference: http://www.commandlinefu.com/commands/view/2829/query-wikipedia-via-console-over-dns
  * <p/>
- * This endpoint accepts the following header: term: a simple term to use to query wikipedia.
+ * This endpoint accepts the following header: CamelDnsTerm: a simple term to use to query wikipedia.
  */
 public class DnsWikipediaProducer extends DefaultProducer {
 
@@ -48,9 +50,9 @@ public class DnsWikipediaProducer extends DefaultProducer {
         Record rec = Record.newRecord(name, type, DClass.IN);
         Message query = Message.newQuery(rec);
         Message response = resolver.send(query);
-        Record[] records = response.getSectionArray(Section.ANSWER);
-        if (records.length > 0) {
-            exchange.getIn().setBody(records[0].rdataToString());
+        List<Record> records = response.getSection(Section.ANSWER);
+        if (!records.isEmpty()) {
+            exchange.getIn().setBody(records.get(0).rdataToString());
         } else {
             exchange.getIn().setBody(null);
         }

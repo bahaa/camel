@@ -22,9 +22,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.camel.ContextEvents;
 import org.apache.camel.api.management.ManagedCamelContext;
 import org.apache.camel.api.management.mbean.ManagedCamelContextMBean;
+import org.apache.camel.clock.Clock;
 import org.apache.camel.spi.ReloadStrategy;
+import org.apache.camel.spi.ResourceReloadStrategy;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.ExceptionHelper;
@@ -51,7 +54,11 @@ public class ContextDevConsole extends AbstractDevConsole {
                 getCamelContext().getStatus().name().toLowerCase(Locale.ROOT), getCamelContext().getName(),
                 profile, CamelContextHelper.getUptime(getCamelContext())));
         if (getCamelContext().getDescription() != null) {
-            sb.append(String.format("\n    %s", getCamelContext().getDescription()));
+            sb.append(String.format("%n    %s", getCamelContext().getDescription()));
+        }
+        Clock startClock = getCamelContext().getClock().get(ContextEvents.START);
+        if (startClock != null) {
+            sb.append(String.format("%n    Started: %s", startClock.asDate()));
         }
         sb.append("\n");
 
@@ -61,7 +68,7 @@ public class ContextDevConsole extends AbstractDevConsole {
             if (mb != null) {
                 int total = mb.getTotalRoutes();
                 int started = mb.getStartedRoutes();
-                sb.append(String.format("\n    Routes: %s (started: %s)", total, started));
+                sb.append(String.format("%n    Routes: %s (started: %s)", total, started));
 
                 int reloaded = 0;
                 int reloadedFailed = 0;
@@ -74,44 +81,51 @@ public class ContextDevConsole extends AbstractDevConsole {
                 String load5 = getLoad5(mb);
                 String load15 = getLoad15(mb);
                 if (!load1.isEmpty() || !load5.isEmpty() || !load15.isEmpty()) {
-                    sb.append(String.format("\n    Load Average: %s %s %s", load1, load5, load15));
+                    sb.append(String.format("%n    Load Average: %s %s %s", load1, load5, load15));
                 }
                 String thp = getThroughput(mb);
                 if (!thp.isEmpty()) {
-                    sb.append(String.format("\n    Messages/Sec: %s", thp));
+                    sb.append(String.format("%n    Messages/Sec: %s", thp));
                 }
-                sb.append(String.format("\n    Total: %s/%s", mb.getRemoteExchangesTotal(), mb.getExchangesTotal()));
-                sb.append(String.format("\n    Failed: %s/%s", mb.getRemoteExchangesFailed(), mb.getExchangesFailed()));
-                sb.append(String.format("\n    Inflight: %s/%s", mb.getRemoteExchangesInflight(), mb.getExchangesInflight()));
+                sb.append(String.format("%n    Total: %s/%s", mb.getRemoteExchangesTotal(), mb.getExchangesTotal()));
+                sb.append(String.format("%n    Failed: %s/%s", mb.getRemoteExchangesFailed(), mb.getExchangesFailed()));
+                sb.append(String.format("%n    Inflight: %s/%s", mb.getRemoteExchangesInflight(), mb.getExchangesInflight()));
                 long idle = mb.getIdleSince();
                 if (idle > 0) {
-                    sb.append(String.format("\n    Idle Since: %s", TimeUtils.printDuration(idle)));
+                    sb.append(String.format("%n    Idle Since: %s", TimeUtils.printDuration(idle)));
                 } else {
-                    sb.append(String.format("\n    Idle Since: %s", ""));
+                    sb.append(String.format("%n    Idle Since: %s", ""));
                 }
-                sb.append(String.format("\n    Reloaded: %s/%s", reloaded, reloadedFailed));
-                sb.append(String.format("\n    Mean Time: %s", TimeUtils.printDuration(mb.getMeanProcessingTime(), true)));
-                sb.append(String.format("\n    Max Time: %s", TimeUtils.printDuration(mb.getMaxProcessingTime(), true)));
-                sb.append(String.format("\n    Min Time: %s", TimeUtils.printDuration(mb.getMinProcessingTime(), true)));
+                sb.append(String.format("%n    Reloaded: %s/%s", reloaded, reloadedFailed));
+                boolean devMode = getCamelContext().hasService(ResourceReloadStrategy.class) != null;
+                sb.append(String.format("%n    Dev Mode: %s", devMode));
+                sb.append(String.format("%n    Mean Time: %s", TimeUtils.printDuration(mb.getMeanProcessingTime(), true)));
+                sb.append(String.format("%n    Max Time: %s", TimeUtils.printDuration(mb.getMaxProcessingTime(), true)));
+                sb.append(String.format("%n    Min Time: %s", TimeUtils.printDuration(mb.getMinProcessingTime(), true)));
                 if (mb.getExchangesTotal() > 0) {
-                    sb.append(String.format("\n    Last Time: %s", TimeUtils.printDuration(mb.getLastProcessingTime(), true)));
+                    sb.append(String.format("%n    Last Time: %s", TimeUtils.printDuration(mb.getLastProcessingTime(), true)));
                     sb.append(
-                            String.format("\n    Delta Time: %s", TimeUtils.printDuration(mb.getDeltaProcessingTime(), true)));
+                            String.format("%n    Delta Time: %s", TimeUtils.printDuration(mb.getDeltaProcessingTime(), true)));
                 }
                 Date last = mb.getLastExchangeCreatedTimestamp();
                 if (last != null) {
                     String ago = TimeUtils.printSince(last.getTime());
-                    sb.append(String.format("\n    Since Last Started: %s", ago));
+                    sb.append(String.format("%n    Since Last Started: %s", ago));
                 }
                 last = mb.getLastExchangeCompletedTimestamp();
                 if (last != null) {
                     String ago = TimeUtils.printSince(last.getTime());
-                    sb.append(String.format("\n    Since Last Completed: %s", ago));
+                    sb.append(String.format("%n    Since Last Completed: %s", ago));
+                }
+                last = mb.getLastExchangeFailureHandledTimestamp();
+                if (last != null) {
+                    String ago = TimeUtils.printSince(last.getTime());
+                    sb.append(String.format("%n    Since Last Failure Handled: %s", ago));
                 }
                 last = mb.getLastExchangeFailureTimestamp();
                 if (last != null) {
                     String ago = TimeUtils.printSince(last.getTime());
-                    sb.append(String.format("\n    Since Last Failed: %s", ago));
+                    sb.append(String.format("%n    Since Last Failed: %s", ago));
                 }
                 sb.append("\n");
             }
@@ -132,7 +146,13 @@ public class ContextDevConsole extends AbstractDevConsole {
         root.put("version", getCamelContext().getVersion());
         root.put("state", getCamelContext().getStatus().name());
         root.put("phase", getCamelContext().getCamelContextExtension().getStatusPhase());
-        root.put("uptime", getCamelContext().getUptime().toMillis());
+        long uptimeMillis = getCamelContext().getUptime().toMillis();
+        Clock startClock = getCamelContext().getClock().get(ContextEvents.START);
+        if (startClock != null) {
+            root.put("startTimestamp", startClock.getCreated());
+        }
+        root.put("uptime", uptimeMillis);
+        root.put("devMode", getCamelContext().hasService(ResourceReloadStrategy.class) != null);
 
         ManagedCamelContext mcc = getCamelContext().getCamelContextExtension().getContextPlugin(ManagedCamelContext.class);
         if (mcc != null) {
@@ -167,6 +187,11 @@ public class ContextDevConsole extends AbstractDevConsole {
                 stats.put("meanProcessingTime", mb.getMeanProcessingTime());
                 stats.put("maxProcessingTime", mb.getMaxProcessingTime());
                 stats.put("minProcessingTime", mb.getMinProcessingTime());
+                if (mb.getProcessingTimeP50() >= 0) {
+                    stats.put("p50ProcessingTime", mb.getProcessingTimeP50());
+                    stats.put("p95ProcessingTime", mb.getProcessingTimeP95());
+                    stats.put("p99ProcessingTime", mb.getProcessingTimeP99());
+                }
                 if (mb.getExchangesTotal() > 0) {
                     stats.put("lastProcessingTime", mb.getLastProcessingTime());
                     stats.put("deltaProcessingTime", mb.getDeltaProcessingTime());
@@ -178,6 +203,10 @@ public class ContextDevConsole extends AbstractDevConsole {
                 last = mb.getLastExchangeCompletedTimestamp();
                 if (last != null) {
                     stats.put("lastCompletedExchangeTimestamp", last.getTime());
+                }
+                last = mb.getLastExchangeFailureHandledTimestamp();
+                if (last != null) {
+                    stats.put("lastFailureHandledExchangeTimestamp", last.getTime());
                 }
                 last = mb.getLastExchangeFailureTimestamp();
                 if (last != null) {

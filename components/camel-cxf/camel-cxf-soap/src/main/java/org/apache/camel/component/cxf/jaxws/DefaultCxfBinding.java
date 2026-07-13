@@ -23,6 +23,7 @@ import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -234,7 +235,7 @@ public class DefaultCxfBinding implements CxfBinding, HeaderFilterStrategyAware 
     private void addAttachmentFileCloseUoW(Exchange camelExchange, org.apache.cxf.message.Exchange cxfExchange) {
         camelExchange.getExchangeExtension().addOnCompletion(new SynchronizationAdapter() {
             @Override
-            public void onDone(org.apache.camel.Exchange exchange) {
+            public void onDone(Exchange exchange) {
                 Collection<Attachment> atts = cxfExchange.getInMessage().getAttachments();
                 if (atts != null) {
                     for (Attachment att : atts) {
@@ -366,17 +367,60 @@ public class DefaultCxfBinding implements CxfBinding, HeaderFilterStrategyAware 
 
     private static void propagateSecuritySubject(Exchange camelExchange, Message cxfMessage) {
         SecurityContext securityContext = cxfMessage.get(SecurityContext.class);
-        if (securityContext instanceof LoginSecurityContext
-                && ((LoginSecurityContext) securityContext).getSubject() != null) {
+        if (securityContext instanceof LoginSecurityContext loginSecurityContext
+                && loginSecurityContext.getSubject() != null) {
+            Subject subject = loginSecurityContext.getSubject();
+            // attach certs to the subject instance
+            addInboundX509CertificatesToSubject(cxfMessage, subject);
             camelExchange.getIn().getHeaders().put(CxfConstants.AUTHENTICATION,
-                    ((LoginSecurityContext) securityContext).getSubject());
+                    subject);
         } else if (securityContext != null) {
             Principal user = securityContext.getUserPrincipal();
             if (user != null) {
                 Subject subject = new Subject();
                 subject.getPrincipals().add(user);
+                // attach certs to the subject instance
+                addInboundX509CertificatesToSubject(cxfMessage, subject);
                 camelExchange.getIn().getHeaders().put(CxfConstants.AUTHENTICATION, subject);
             }
+        }
+    }
+
+    private static final boolean WSS4J_AVAILABLE;
+    static {
+        boolean available;
+        try {
+            Class.forName("org.apache.wss4j.dom.handler.WSHandlerConstants");
+            available = true;
+        } catch (ClassNotFoundException e) {
+            available = false;
+        }
+        WSS4J_AVAILABLE = available;
+    }
+
+    private static void addInboundX509CertificatesToSubject(Message cxfMessage, Subject subject) {
+        if (!WSS4J_AVAILABLE || cxfMessage == null || subject == null) {
+            return;
+        }
+
+        if (subject.isReadOnly()) {
+            return;
+        }
+
+        Collection<X509Certificate> certs;
+        try {
+            certs = WsSecurityHelper.extractCertificates(cxfMessage);
+        } catch (NoClassDefFoundError e) {
+            return;
+        }
+
+        if (certs == null || certs.isEmpty()) {
+            return;
+        }
+
+        Set<Object> pub = (Set<Object>) subject.getPublicCredentials();
+        for (X509Certificate cert : certs) {
+            pub.add(cert);
         }
     }
 
@@ -461,8 +505,8 @@ public class DefaultCxfBinding implements CxfBinding, HeaderFilterStrategyAware 
         // create out message
         Endpoint ep = cxfExchange.get(Endpoint.class);
         Message outMessage = ep.getBinding().createMessage();
-        if (cxfExchange.getInMessage() instanceof SoapMessage) {
-            SoapVersion soapVersion = ((SoapMessage) cxfExchange.getInMessage()).getVersion();
+        if (cxfExchange.getInMessage() instanceof SoapMessage soapMessage) {
+            SoapVersion soapVersion = soapMessage.getVersion();
             ((SoapMessage) outMessage).setVersion(soapVersion);
         }
 
@@ -650,8 +694,8 @@ public class DefaultCxfBinding implements CxfBinding, HeaderFilterStrategyAware 
             cxfContext.putAll(context);
             if (LOG.isTraceEnabled()) {
                 LOG.trace("Propagate {} from header context = {}",
-                        contextKey, (context instanceof WrappedMessageContext)
-                                ? ((WrappedMessageContext) context).getWrappedMap()
+                        contextKey, (context instanceof WrappedMessageContext wrappedMessageContext)
+                                ? wrappedMessageContext.getWrappedMap()
                                 : context);
             }
         }
@@ -665,8 +709,8 @@ public class DefaultCxfBinding implements CxfBinding, HeaderFilterStrategyAware 
             cxfContext.putAll(context);
             if (LOG.isTraceEnabled()) {
                 LOG.trace("Propagate {} from exchange property context = {}",
-                        contextKey, (context instanceof WrappedMessageContext)
-                                ? ((WrappedMessageContext) context).getWrappedMap()
+                        contextKey, (context instanceof WrappedMessageContext wrappedMessageContext)
+                                ? wrappedMessageContext.getWrappedMap()
                                 : context);
             }
         }
@@ -1083,26 +1127,26 @@ public class DefaultCxfBinding implements CxfBinding, HeaderFilterStrategyAware 
                 part = ((Holder<?>) part).value;
             }
 
-            if (part instanceof Source) {
+            if (part instanceof Source source) {
                 Element element = null;
-                if (part instanceof DOMSource) {
-                    element = getFirstElement(((DOMSource) part).getNode());
+                if (part instanceof DOMSource domSource) {
+                    element = getFirstElement(domSource.getNode());
                 }
 
                 if (element != null) {
                     addNamespace(element, nsMap);
                     answer.add(new DOMSource(element));
                 } else {
-                    answer.add((Source) part);
+                    answer.add(source);
                 }
 
                 if (LOG.isTraceEnabled()) {
                     LOG.trace("Extract body element {}",
                             element == null ? "null" : getXMLString(element));
                 }
-            } else if (part instanceof Element) {
-                addNamespace((Element) part, nsMap);
-                answer.add(new DOMSource((Element) part));
+            } else if (part instanceof Element elem) {
+                addNamespace(elem, nsMap);
+                answer.add(new DOMSource(elem));
             } else {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Unhandled part type '{}'", part.getClass());
@@ -1173,7 +1217,7 @@ public class DefaultCxfBinding implements CxfBinding, HeaderFilterStrategyAware 
     @Override
     public void copyJaxWsContext(org.apache.cxf.message.Exchange cxfExchange, Map<String, Object> context) {
         if (cxfExchange.getOutMessage() != null) {
-            org.apache.cxf.message.Message outMessage = cxfExchange.getOutMessage();
+            Message outMessage = cxfExchange.getOutMessage();
             for (Map.Entry<String, Object> entry : context.entrySet()) {
                 if (outMessage.get(entry.getKey()) == null) {
                     outMessage.put(entry.getKey(), entry.getValue());
@@ -1184,7 +1228,7 @@ public class DefaultCxfBinding implements CxfBinding, HeaderFilterStrategyAware 
 
     @Override
     public void extractJaxWsContext(org.apache.cxf.message.Exchange cxfExchange, Map<String, Object> context) {
-        org.apache.cxf.message.Message inMessage = cxfExchange.getInMessage();
+        Message inMessage = cxfExchange.getInMessage();
         for (Map.Entry<String, Object> entry : inMessage.entrySet()) {
             if (entry.getKey().startsWith("jakarta.xml.ws")) {
                 context.put(entry.getKey(), entry.getValue());

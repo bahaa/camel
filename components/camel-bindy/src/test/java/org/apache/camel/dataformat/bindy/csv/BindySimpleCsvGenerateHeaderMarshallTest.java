@@ -30,7 +30,7 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.bindy.model.simple.oneclassgenerateheader.Order;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -40,8 +40,10 @@ public class BindySimpleCsvGenerateHeaderMarshallTest {
 
     private List<Map<String, Object>> models = new ArrayList<>();
     private String result
-            = "Order Nr,Client Nr,First Name,Last Name,Instrument Code,Instrument Nr,Order Type,Instrument Type,amount,currency,Order Date\r\n"
-              + "1,B2,Keira,Knightley,ISIN,XX23456789,BUY,Share,400.25,EUR,14-01-2009\r\n";
+            = """
+                    Order Nr,Client Nr,First Name,Last Name,Instrument Code,Instrument Nr,Order Type,Instrument Type,amount,currency,Order Date\r
+                    1,B2,Keira,Knightley,ISIN,XX23456789,BUY,Share,400.25,EUR,14-01-2009\r
+                    """;
 
     @Produce("direct:start")
     private ProducerTemplate template;
@@ -89,7 +91,7 @@ public class BindySimpleCsvGenerateHeaderMarshallTest {
         @Override
         public void configure() {
             BindyCsvDataFormat camelDataFormat
-                    = new BindyCsvDataFormat(org.apache.camel.dataformat.bindy.model.simple.oneclassgenerateheader.Order.class);
+                    = new BindyCsvDataFormat(Order.class);
             camelDataFormat.setLocale("en");
 
             from("direct:start").marshal(camelDataFormat).to("mock:result");

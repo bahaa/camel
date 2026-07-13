@@ -26,6 +26,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.spi.InterceptStrategy;
 import org.junit.jupiter.api.Test;
 
+@Deprecated(since = "4.19.0")
 class OpenTelemetryTracingStrategyTest extends CamelOpenTelemetryTestSupport {
 
     private static final SpanTestData[] testdata = {

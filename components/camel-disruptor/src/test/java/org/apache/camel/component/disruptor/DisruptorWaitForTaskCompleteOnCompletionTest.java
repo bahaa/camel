@@ -22,12 +22,12 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.support.SynchronizationAdapter;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DisruptorWaitForTaskCompleteOnCompletionTest extends CamelTestSupport {
 
@@ -37,13 +37,11 @@ public class DisruptorWaitForTaskCompleteOnCompletionTest extends CamelTestSuppo
     void testAlways() throws Exception {
         getMockEndpoint("mock:result").expectedMessageCount(0);
 
-        try {
+        CamelExecutionException e = assertThrows(CamelExecutionException.class, () -> {
             template.sendBody("direct:start", "Hello World");
-            fail("Should have thrown an exception");
-        } catch (CamelExecutionException e) {
-            assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
-            assertEquals("Forced", e.getCause().getMessage());
-        }
+        });
+        assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
+        assertEquals("Forced", e.getCause().getMessage());
 
         MockEndpoint.assertIsSatisfied(context);
 

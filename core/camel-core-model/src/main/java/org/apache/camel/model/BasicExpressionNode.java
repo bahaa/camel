@@ -27,6 +27,7 @@ import org.apache.camel.Predicate;
 import org.apache.camel.builder.ExpressionClause;
 import org.apache.camel.model.language.ExpressionDefinition;
 import org.apache.camel.spi.Metadata;
+import org.apache.camel.spi.annotations.DslArg;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlTransient
@@ -35,20 +36,21 @@ public abstract class BasicExpressionNode<T extends BasicExpressionNode<T>> exte
 
     @Metadata(description = "Expression used as the predicate to evaluate whether this when should trigger and route the message or not.")
     @XmlElementRef
+    @DslArg
     private ExpressionDefinition expression;
 
-    public BasicExpressionNode() {
+    protected BasicExpressionNode() {
     }
 
-    public BasicExpressionNode(ExpressionDefinition expression) {
+    protected BasicExpressionNode(ExpressionDefinition expression) {
         setExpression(expression);
     }
 
-    public BasicExpressionNode(Expression expression) {
+    protected BasicExpressionNode(Expression expression) {
         setExpression(expression);
     }
 
-    public BasicExpressionNode(Predicate predicate) {
+    protected BasicExpressionNode(Predicate predicate) {
         setPredicate(predicate);
     }
 

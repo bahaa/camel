@@ -75,14 +75,18 @@ public class SlackProducer extends DefaultAsyncProducer {
         Object payload = exchange.getIn().getBody();
 
         try {
-            if (payload instanceof SlackMessage) {
-                response = sendLegacySlackMessage((SlackMessage) payload);
-            } else if (payload instanceof Message) {
-                response = sendMessage((Message) payload);
+            if (payload instanceof SlackMessage slackmessage2) {
+                response = sendLegacySlackMessage(slackmessage2);
+            } else if (payload instanceof Message message2) {
+                response = sendMessage(message2);
             } else {
                 SlackMessage slackMessage = new SlackMessage();
                 slackMessage.setText(exchange.getIn().getBody(String.class));
                 response = sendLegacySlackMessage(slackMessage);
+            }
+            if (!response.isOk()) {
+                exchange.setException(
+                        new CamelExchangeException("Error POSTing to Slack API: " + response, exchange));
             }
         } catch (Exception e) {
             exchange.setException(e);
@@ -91,11 +95,7 @@ public class SlackProducer extends DefaultAsyncProducer {
             callback.done(true);
         }
 
-        if (!response.isOk()) {
-            exchange.setException(new CamelExchangeException("Error POSTing to Slack API: " + response.toString(), exchange));
-        }
-
-        return false;
+        return true;
     }
 
     private ChatPostMessageResponse sendLegacySlackMessage(SlackMessage slackMessage) throws IOException, SlackApiException {
@@ -121,10 +121,10 @@ public class SlackProducer extends DefaultAsyncProducer {
     private boolean sendMessageByWebhookURL(Exchange exchange, AsyncCallback callback) {
         String json;
         Object payload = exchange.getIn().getBody();
-        if (payload instanceof SlackMessage) {
-            json = GSON.toJson(addEndPointOptions((SlackMessage) payload));
-        } else if (payload instanceof Message) {
-            json = GSON.toJson(addEndPointOptions((Message) payload));
+        if (payload instanceof SlackMessage slackmessage) {
+            json = GSON.toJson(addEndPointOptions(slackmessage));
+        } else if (payload instanceof Message message) {
+            json = GSON.toJson(addEndPointOptions(message));
         } else {
             SlackMessage slackMessage = new SlackMessage();
             slackMessage.setText(exchange.getIn().getBody(String.class));
@@ -134,6 +134,10 @@ public class SlackProducer extends DefaultAsyncProducer {
         WebhookResponse response;
         try {
             response = slack.send(slackEndpoint.getWebhookUrl(), json);
+            if (response.getCode() < 200 || response.getCode() > 299) {
+                exchange.setException(
+                        new CamelExchangeException("Error POSTing to Slack API: " + response, exchange));
+            }
         } catch (IOException e) {
             exchange.setException(e);
             return true;
@@ -141,11 +145,7 @@ public class SlackProducer extends DefaultAsyncProducer {
             callback.done(true);
         }
 
-        if (response.getCode() < 200 || response.getCode() > 299) {
-            exchange.setException(new CamelExchangeException("Error POSTing to Slack API: " + response.toString(), exchange));
-        }
-
-        return false;
+        return true;
     }
 
     private Message addEndPointOptions(Message slackMessage) {

@@ -25,7 +25,6 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
 public class VertxInvalidJSonClientResponseValidationTest {
-
     @Test
     public void testInvalidJSon() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -47,7 +46,7 @@ public class VertxInvalidJSonClientResponseValidationTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()

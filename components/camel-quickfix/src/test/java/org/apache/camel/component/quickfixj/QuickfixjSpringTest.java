@@ -18,7 +18,7 @@ package org.apache.camel.component.quickfixj;
 
 import java.util.Properties;
 
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.AbstractApplicationContext;
@@ -73,7 +73,7 @@ public class QuickfixjSpringTest extends CamelSpringTestSupport {
     public static class CustomMessageFactory extends DefaultMessageFactory {
         @Override
         public Message create(String beginString, String msgType) {
-            if (beginString.equals(FixVersions.BEGINSTRING_FIX42) && msgType.equals(MsgType.ORDER_SINGLE)) {
+            if (beginString.equals(FixVersions.BEGINSTRING_FIX42) && msgType.equals(MsgType.NEW_ORDER_SINGLE)) {
                 return new CustomNewOrderSingle();
             }
             return super.create(beginString, msgType);

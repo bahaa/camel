@@ -20,7 +20,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * and a polling event yields no results.
  */
 public class MailConsumerIdleMessageTest extends CamelTestSupport {
-    private static final MailboxUser james = Mailbox.getOrCreateUser("james", "secret");
+    private static final MailboxUser james = Mailbox.getOrCreateUser("MailConsumerIdleMessageTest-james", "secret");
 
     @Test
     public void testConsumeIdleMessages() throws Exception {

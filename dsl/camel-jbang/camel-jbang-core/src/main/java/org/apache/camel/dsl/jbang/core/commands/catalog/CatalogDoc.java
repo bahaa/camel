@@ -18,6 +18,7 @@ package org.apache.camel.dsl.jbang.core.commands.catalog;
 
 import java.awt.*;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -32,10 +33,14 @@ import org.apache.camel.catalog.CamelCatalog;
 import org.apache.camel.catalog.DefaultCamelCatalog;
 import org.apache.camel.dsl.jbang.core.commands.CamelCommand;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
+import org.apache.camel.dsl.jbang.core.commands.MavenResolverMixin;
+import org.apache.camel.dsl.jbang.core.commands.QuarkusPlatformMixin;
 import org.apache.camel.dsl.jbang.core.common.CatalogLoader;
 import org.apache.camel.dsl.jbang.core.common.RuntimeCompletionCandidates;
 import org.apache.camel.dsl.jbang.core.common.RuntimeType;
 import org.apache.camel.dsl.jbang.core.common.RuntimeTypeConverter;
+import org.apache.camel.dsl.jbang.core.common.TerminalWidthHelper;
+import org.apache.camel.dsl.jbang.core.common.VersionHelper;
 import org.apache.camel.main.util.SuggestSimilarHelper;
 import org.apache.camel.tooling.maven.MavenGav;
 import org.apache.camel.tooling.model.BaseOptionModel;
@@ -51,7 +56,14 @@ import static org.apache.camel.dsl.jbang.core.commands.catalog.CatalogBaseComman
 
 @CommandLine.Command(name = "doc",
                      description = "Shows documentation for kamelet, component, and other Camel resources", sortOptions = false,
-                     showDefaultValues = true)
+                     showDefaultValues = true,
+                     footer = {
+                             "%nExamples:",
+                             "  camel doc kafka",
+                             "  camel doc timer",
+                             "  camel doc aws-s3-source",
+                             "  camel doc jsonpath",
+                             "  camel doc kafka --example" })
 public class CatalogDoc extends CamelCommand {
 
     @CommandLine.Parameters(description = "Name of kamelet, component, dataformat, or other Camel resource",
@@ -68,21 +80,11 @@ public class CatalogDoc extends CamelCommand {
                         description = "Runtime (${COMPLETION-CANDIDATES})")
     RuntimeType runtime;
 
-    @CommandLine.Option(names = { "--download" }, defaultValue = "true",
-                        description = "Whether to allow automatic downloading JAR dependencies (over the internet)")
-    boolean download = true;
+    @CommandLine.Mixin
+    MavenResolverMixin mavenResolver;
 
-    @CommandLine.Option(names = { "--quarkus-version" }, description = "Quarkus Platform version",
-                        defaultValue = RuntimeType.QUARKUS_VERSION)
-    String quarkusVersion;
-
-    @CommandLine.Option(names = { "--quarkus-group-id" }, description = "Quarkus Platform Maven groupId",
-                        defaultValue = "io.quarkus.platform")
-    String quarkusGroupId = "io.quarkus.platform";
-
-    @CommandLine.Option(names = { "--repo", "--repos" },
-                        description = "Additional maven repositories for download on-demand (Use commas to separate multiple repositories)")
-    String repos;
+    @CommandLine.Mixin
+    QuarkusPlatformMixin quarkusPlatform;
 
     @CommandLine.Option(names = { "--url" },
                         description = "Prints the link to the online documentation on the Camel website",
@@ -102,10 +104,13 @@ public class CatalogDoc extends CamelCommand {
                         description = "Whether to display component message headers", defaultValue = "false")
     boolean headers;
 
+    @CommandLine.Option(names = { "--example" },
+                        description = "Prints a minimal working YAML route snippet for the component", defaultValue = "false")
+    boolean example;
+
     @CommandLine.Option(names = {
-            "--kamelets-version" }, description = "Apache Camel Kamelets version",
-                        defaultValue = RuntimeType.KAMELETS_VERSION)
-    String kameletsVersion = RuntimeType.KAMELETS_VERSION;
+            "--kamelets-version" }, description = "Apache Camel Kamelets version (auto-detected from classpath if not set)")
+    String kameletsVersion;
 
     CamelCatalog catalog;
 
@@ -115,19 +120,30 @@ public class CatalogDoc extends CamelCommand {
 
     CamelCatalog loadCatalog() throws Exception {
         if (RuntimeType.springBoot == runtime) {
-            return CatalogLoader.loadSpringBootCatalog(repos, camelVersion, download);
+            return CatalogLoader.loadSpringBootCatalog(mavenResolver.repos(), camelVersion, mavenResolver.download());
         } else if (RuntimeType.quarkus == runtime) {
-            return CatalogLoader.loadQuarkusCatalog(repos, quarkusVersion, quarkusGroupId, download);
+            final MavenGav quarkusCamelBom
+                    = quarkusPlatform
+                            .resolve(
+                                    camelVersion,
+                                    mavenResolver.downloader()::resolveArtifact,
+                                    mavenResolver.download(),
+                                    mavenResolver.fresh())
+                            .quarkusCamelBom();
+            return CatalogLoader.loadQuarkusCatalog(quarkusCamelBom, mavenResolver.downloader()::resolveArtifact);
         }
         if (camelVersion == null) {
             return new DefaultCamelCatalog(true);
         } else {
-            return CatalogLoader.loadCatalog(repos, camelVersion, download);
+            return CatalogLoader.loadCatalog(mavenResolver.repos(), camelVersion, mavenResolver.download());
         }
     }
 
     @Override
     public Integer doCall() throws Exception {
+        if (kameletsVersion == null) {
+            kameletsVersion = VersionHelper.extractKameletsVersion();
+        }
         this.catalog = loadCatalog();
 
         String prefix = StringHelper.before(name, ":");
@@ -145,7 +161,7 @@ public class CatalogDoc extends CamelCommand {
         }
 
         if (prefix == null || "kamelet".equals(prefix)) {
-            KameletModel km = KameletCatalogHelper.loadKameletModel(name, kameletsVersion, repos);
+            KameletModel km = KameletCatalogHelper.loadKameletModel(name, kameletsVersion, mavenResolver.repos());
             if (km != null) {
                 docKamelet(km);
                 return 0;
@@ -154,7 +170,11 @@ public class CatalogDoc extends CamelCommand {
         if (prefix == null || "component".equals(prefix)) {
             ComponentModel cm = catalog.componentModel(name);
             if (cm != null) {
-                docComponent(cm);
+                if (example) {
+                    printExample(cm);
+                } else {
+                    docComponent(cm);
+                }
                 return 0;
             }
         }
@@ -187,21 +207,24 @@ public class CatalogDoc extends CamelCommand {
             if (kamelet) {
                 // kamelet names
                 suggestions
-                        = SuggestSimilarHelper.didYouMean(KameletCatalogHelper.findKameletNames(kameletsVersion, repos), name);
+                        = SuggestSimilarHelper.didYouMean(
+                                KameletCatalogHelper.findKameletNames(kameletsVersion, mavenResolver.repos()), name);
             } else {
                 // assume its a component
                 suggestions = SuggestSimilarHelper.didYouMean(findComponentNames(catalog), name);
             }
             if (!suggestions.isEmpty()) {
                 String type = kamelet ? "kamelet" : "component";
-                printer().printf("Camel %s: %s not found. Did you mean? %s%n", type, name, String.join(", ", suggestions));
+                printer().printErr(
+                        "Camel %s: %s not found. Did you mean? %s".formatted(type, name, String.join(", ", suggestions)));
             } else {
-                printer().println("Camel resource: " + name + " not found");
+                printer().printErr("Camel resource: " + name + " not found");
             }
         } else {
             List<String> suggestions = switch (prefix) {
                 case "kamelet" ->
-                    SuggestSimilarHelper.didYouMean(KameletCatalogHelper.findKameletNames(kameletsVersion, repos), name);
+                    SuggestSimilarHelper
+                            .didYouMean(KameletCatalogHelper.findKameletNames(kameletsVersion, mavenResolver.repos()), name);
                 case "component" -> SuggestSimilarHelper.didYouMean(findComponentNames(catalog), name);
                 case "dataformat" -> SuggestSimilarHelper.didYouMean(catalog.findDataFormatNames(), name);
                 case "language" -> SuggestSimilarHelper.didYouMean(catalog.findLanguageNames(), name);
@@ -209,12 +232,86 @@ public class CatalogDoc extends CamelCommand {
                 default -> List.of();
             };
             if (!suggestions.isEmpty()) {
-                printer().printf("Camel %s: %s not found. Did you mean? %s%n", prefix, name, String.join(", ", suggestions));
+                printer().printErr(
+                        "Camel %s: %s not found. Did you mean? %s".formatted(prefix, name, String.join(", ", suggestions)));
             } else {
-                printer().printf("Camel %s: %s not found.%n", prefix, name);
+                printer().printErr("Camel %s: %s not found.".formatted(prefix, name));
             }
         }
         return 1;
+    }
+
+    private void printExample(ComponentModel cm) {
+        String scheme = cm.getScheme();
+        String uri = buildExampleUri(cm);
+
+        printer().println("# Example: " + scheme + " component");
+
+        if (cm.isProducerOnly()) {
+            printer().println("- route:");
+            printer().println("    from:");
+            printer().println("      uri: \"timer:tick\"");
+            printer().println("      parameters:");
+            printer().println("        period: 1000");
+            printer().println("    steps:");
+            printer().println("      - to:");
+            printer().println("          uri: \"" + uri + "\"");
+        } else {
+            printer().println("- route:");
+            printer().println("    from:");
+            printer().println("      uri: \"" + uri + "\"");
+            printer().println("    steps:");
+            printer().println("      - to:");
+            printer().println("          uri: \"log:" + scheme + "\"");
+        }
+
+        printer().println();
+        printer().println("# Save to a file and run with:");
+        printer().println("#   camel run my-route.yaml");
+    }
+
+    private String buildExampleUri(ComponentModel cm) {
+        String scheme = cm.getScheme();
+        List<ComponentModel.EndpointOptionModel> pathOptions = cm.getEndpointPathOptions();
+        if (pathOptions.isEmpty()) {
+            return scheme;
+        }
+        List<String> pathValues = new ArrayList<>();
+        for (ComponentModel.EndpointOptionModel opt : pathOptions) {
+            Object dv = opt.getDefaultValue();
+            if (dv != null && !dv.toString().isEmpty()) {
+                pathValues.add(dv.toString());
+            } else if (opt.getEnums() != null && !opt.getEnums().isEmpty()) {
+                pathValues.add(opt.getEnums().get(0));
+            } else {
+                pathValues.add("my" + capitalize(opt.getName()));
+            }
+        }
+        String syntax = cm.getSyntax();
+        if (syntax != null) {
+            String result = syntax;
+            for (ComponentModel.EndpointOptionModel opt : pathOptions) {
+                Object dv = opt.getDefaultValue();
+                String value;
+                if (dv != null && !dv.toString().isEmpty()) {
+                    value = dv.toString();
+                } else if (opt.getEnums() != null && !opt.getEnums().isEmpty()) {
+                    value = opt.getEnums().get(0);
+                } else {
+                    value = "my" + capitalize(opt.getName());
+                }
+                result = result.replace(opt.getName(), value);
+            }
+            return result;
+        }
+        return scheme + ":" + String.join("/", pathValues);
+    }
+
+    private static String capitalize(String s) {
+        if (s == null || s.isEmpty()) {
+            return s;
+        }
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     private void docKamelet(KameletModel km) throws Exception {
@@ -273,17 +370,22 @@ public class CatalogDoc extends CamelCommand {
                 printer().printf("The %s kamelet supports (total: %s match-filter: %s) options, which are listed below.%n%n",
                         km.name, total1, total2);
             }
+            int[] kw = docColumnWidths5(35, 80, 25, 25, 40);
             printer().println(AsciiTable.getTable(AsciiTable.FANCY_ASCII, filtered, Arrays.asList(
-                    new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).minWidth(20)
-                            .maxWidth(35, OverflowBehaviour.NEWLINE)
+                    new Column().header("NAME").dataAlign(HorizontalAlign.LEFT)
+                            .maxWidth(kw[0], OverflowBehaviour.NEWLINE)
                             .with(r -> r.name),
-                    new Column().header("DESCRIPTION").dataAlign(HorizontalAlign.LEFT).maxWidth(80, OverflowBehaviour.NEWLINE)
+                    new Column().header("DESCRIPTION").dataAlign(HorizontalAlign.LEFT)
+                            .maxWidth(kw[1], OverflowBehaviour.NEWLINE)
                             .with(this::getDescription),
-                    new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
+                    new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT)
+                            .maxWidth(kw[2], OverflowBehaviour.NEWLINE)
                             .with(r -> r.defaultValue),
-                    new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
+                    new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT)
+                            .maxWidth(kw[3], OverflowBehaviour.NEWLINE)
                             .with(r -> r.type),
-                    new Column().header("EXAMPLE").dataAlign(HorizontalAlign.LEFT).maxWidth(40, OverflowBehaviour.NEWLINE)
+                    new Column().header("EXAMPLE").dataAlign(HorizontalAlign.LEFT)
+                            .maxWidth(kw[4], OverflowBehaviour.NEWLINE)
                             .with(r -> r.example))));
             printer().println("");
         }
@@ -317,7 +419,7 @@ public class CatalogDoc extends CamelCommand {
         printer().println("");
         printer().println("    <dependency>");
         printer().println("        <groupId>" + "org.apache.camel" + "</groupId>");
-        printer().println("        <artifactId>" + "camel.main" + "</artifactId>");
+        printer().println("        <artifactId>" + "camel-main" + "</artifactId>");
         printer().println("        <version>" + catalog.getCatalogVersion() + "</version>");
         printer().println("    </dependency>");
         printer().println("");
@@ -336,16 +438,19 @@ public class CatalogDoc extends CamelCommand {
                 } else {
                     printer().printf("%s options (total: %s match-filter: %s):%n", g.getDescription(), total1, total2);
                 }
+                int[] mw = docColumnWidths(40, 80, 25, 25);
                 printer().println(AsciiTable.getTable(AsciiTable.FANCY_ASCII, filtered, Arrays.asList(
-                        new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).minWidth(20)
-                                .maxWidth(40, OverflowBehaviour.NEWLINE)
+                        new Column().header("NAME").dataAlign(HorizontalAlign.LEFT)
+                                .maxWidth(mw[0], OverflowBehaviour.NEWLINE)
                                 .with(this::getName),
                         new Column().header("DESCRIPTION").dataAlign(HorizontalAlign.LEFT)
-                                .maxWidth(80, OverflowBehaviour.NEWLINE)
+                                .maxWidth(mw[1], OverflowBehaviour.NEWLINE)
                                 .with(this::getDescription),
-                        new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                                .with(r -> r.getShortDefaultValue(25)),
-                        new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
+                        new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT)
+                                .maxWidth(mw[2], OverflowBehaviour.NEWLINE)
+                                .with(r -> r.getShortDefaultValue(mw[2])),
+                        new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT)
+                                .maxWidth(mw[3], OverflowBehaviour.NEWLINE)
                                 .with(BaseOptionModel::getShortJavaType))));
                 printer().println("");
                 printer().println("");
@@ -404,15 +509,7 @@ public class CatalogDoc extends CamelCommand {
         printer().println("with the following path and query parameters:");
         printer().println("");
         printer().printf("Path parameters (%s):%n", cm.getEndpointPathOptions().size());
-        printer().println(AsciiTable.getTable(AsciiTable.FANCY_ASCII, cm.getEndpointPathOptions(), Arrays.asList(
-                new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).minWidth(20).maxWidth(35, OverflowBehaviour.NEWLINE)
-                        .with(this::getName),
-                new Column().header("DESCRIPTION").dataAlign(HorizontalAlign.LEFT).maxWidth(80, OverflowBehaviour.NEWLINE)
-                        .with(this::getDescription),
-                new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                        .with(r -> r.getShortDefaultValue(25)),
-                new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                        .with(BaseOptionModel::getShortJavaType))));
+        printer().println(optionTable(cm.getEndpointPathOptions()));
         printer().println("");
         var filtered = filter(filter, cm.getEndpointParameterOptions());
         var total1 = cm.getEndpointParameterOptions().size();
@@ -422,15 +519,7 @@ public class CatalogDoc extends CamelCommand {
         } else {
             printer().printf("Query parameters (total: %s match-filter: %s):%n", total1, total2);
         }
-        printer().println(AsciiTable.getTable(AsciiTable.FANCY_ASCII, filtered, Arrays.asList(
-                new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).minWidth(20).maxWidth(35, OverflowBehaviour.NEWLINE)
-                        .with(this::getName),
-                new Column().header("DESCRIPTION").dataAlign(HorizontalAlign.LEFT).maxWidth(80, OverflowBehaviour.NEWLINE)
-                        .with(this::getDescription),
-                new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                        .with(r -> r.getShortDefaultValue(25)),
-                new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                        .with(BaseOptionModel::getShortJavaType))));
+        printer().println(optionTable(filtered));
         printer().println("");
 
         if (headers && !cm.getEndpointHeaders().isEmpty()) {
@@ -442,16 +531,7 @@ public class CatalogDoc extends CamelCommand {
             } else {
                 printer().printf("Message headers (total: %s match-filter: %s):%n", total1, total2);
             }
-            printer().println(AsciiTable.getTable(AsciiTable.FANCY_ASCII, filtered, Arrays.asList(
-                    new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).minWidth(20)
-                            .maxWidth(35, OverflowBehaviour.NEWLINE)
-                            .with(this::getName),
-                    new Column().header("DESCRIPTION").dataAlign(HorizontalAlign.LEFT).maxWidth(80, OverflowBehaviour.NEWLINE)
-                            .with(this::getDescription),
-                    new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                            .with(r -> r.getShortDefaultValue(25)),
-                    new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                            .with(BaseOptionModel::getShortJavaType))));
+            printer().println(optionTable(filtered));
             printer().println("");
         }
 
@@ -501,15 +581,7 @@ public class CatalogDoc extends CamelCommand {
             printer().printf("The %s dataformat supports (total: %s match-filter: %s) options, which are listed below.%n%n",
                     dm.getName(), total1, total2);
         }
-        printer().println(AsciiTable.getTable(AsciiTable.FANCY_ASCII, filtered, Arrays.asList(
-                new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).minWidth(20).maxWidth(35, OverflowBehaviour.NEWLINE)
-                        .with(this::getName),
-                new Column().header("DESCRIPTION").dataAlign(HorizontalAlign.LEFT).maxWidth(80, OverflowBehaviour.NEWLINE)
-                        .with(this::getDescription),
-                new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                        .with(r -> r.getShortDefaultValue(25)),
-                new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                        .with(BaseOptionModel::getShortJavaType))));
+        printer().println(optionTable(filtered));
         printer().println("");
 
         if (link != null) {
@@ -558,15 +630,7 @@ public class CatalogDoc extends CamelCommand {
             printer().printf("The %s language supports (total: %s match-filter: %s) options, which are listed below.%n%n",
                     lm.getName(), total1, total2);
         }
-        printer().println(AsciiTable.getTable(AsciiTable.FANCY_ASCII, filtered, Arrays.asList(
-                new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).minWidth(20).maxWidth(35, OverflowBehaviour.NEWLINE)
-                        .with(this::getName),
-                new Column().header("DESCRIPTION").dataAlign(HorizontalAlign.LEFT).maxWidth(80, OverflowBehaviour.NEWLINE)
-                        .with(this::getDescription),
-                new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                        .with(r -> r.getShortDefaultValue(25)),
-                new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(25, OverflowBehaviour.NEWLINE)
-                        .with(BaseOptionModel::getShortJavaType))));
+        printer().println(optionTable(filtered));
         printer().println("");
 
         if (link != null) {
@@ -612,6 +676,48 @@ public class CatalogDoc extends CamelCommand {
         }
     }
 
+    private int[] docColumnWidths(int nameMax, int descMax, int defaultMax, int typeMax) {
+        int tw = terminalWidth();
+        int borders = TerminalWidthHelper.fancyBorderOverhead(4);
+        int totalPreferred = nameMax + descMax + defaultMax + typeMax;
+        return new int[] {
+                TerminalWidthHelper.scaleWidth(tw, borders, nameMax, 12, totalPreferred),
+                TerminalWidthHelper.scaleWidth(tw, borders, descMax, 15, totalPreferred),
+                TerminalWidthHelper.scaleWidth(tw, borders, defaultMax, 8, totalPreferred),
+                TerminalWidthHelper.scaleWidth(tw, borders, typeMax, 8, totalPreferred)
+        };
+    }
+
+    private String optionTable(List<? extends BaseOptionModel> options) {
+        int[] w = docColumnWidths(35, 80, 25, 25);
+        return AsciiTable.getTable(AsciiTable.FANCY_ASCII, options, Arrays.asList(
+                new Column().header("NAME").dataAlign(HorizontalAlign.LEFT)
+                        .maxWidth(w[0], OverflowBehaviour.NEWLINE)
+                        .with(this::getName),
+                new Column().header("DESCRIPTION").dataAlign(HorizontalAlign.LEFT)
+                        .maxWidth(w[1], OverflowBehaviour.NEWLINE)
+                        .with(this::getDescription),
+                new Column().header("DEFAULT").dataAlign(HorizontalAlign.LEFT)
+                        .maxWidth(w[2], OverflowBehaviour.NEWLINE)
+                        .with(r -> r.getShortDefaultValue(w[2])),
+                new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT)
+                        .maxWidth(w[3], OverflowBehaviour.NEWLINE)
+                        .with(BaseOptionModel::getShortJavaType)));
+    }
+
+    private int[] docColumnWidths5(int nameMax, int descMax, int defaultMax, int typeMax, int exampleMax) {
+        int tw = terminalWidth();
+        int borders = TerminalWidthHelper.fancyBorderOverhead(5);
+        int totalPreferred = nameMax + descMax + defaultMax + typeMax + exampleMax;
+        return new int[] {
+                TerminalWidthHelper.scaleWidth(tw, borders, nameMax, 12, totalPreferred),
+                TerminalWidthHelper.scaleWidth(tw, borders, descMax, 15, totalPreferred),
+                TerminalWidthHelper.scaleWidth(tw, borders, defaultMax, 8, totalPreferred),
+                TerminalWidthHelper.scaleWidth(tw, borders, typeMax, 8, totalPreferred),
+                TerminalWidthHelper.scaleWidth(tw, borders, exampleMax, 8, totalPreferred)
+        };
+    }
+
     String getName(BaseOptionModel o) {
         String l = o.getShortGroup();
         if (l != null && !"common".equals(l)) {
@@ -653,7 +759,7 @@ public class CatalogDoc extends CamelCommand {
         }
         String target = name.toLowerCase(Locale.ROOT);
         return options.stream().filter(
-                r -> r.getName().contains(target) || r.getName().equalsIgnoreCase(target)
+                r -> r.getName().toLowerCase(Locale.ROOT).contains(target) || r.getName().equalsIgnoreCase(target)
                         || r.getDescription().toLowerCase(Locale.ROOT).contains(target)
                         || r.getShortGroup() != null && r.getShortGroup().toLowerCase(Locale.ROOT).contains(target))
                 .collect(Collectors.toList());
@@ -699,7 +805,7 @@ public class CatalogDoc extends CamelCommand {
         }
         String target = name.toLowerCase(Locale.ROOT);
         return options.stream().filter(
-                r -> r.getName().contains(target) || r.getName().equalsIgnoreCase(target)
+                r -> r.getName().toLowerCase(Locale.ROOT).contains(target) || r.getName().equalsIgnoreCase(target)
                         || r.getDescription().toLowerCase(Locale.ROOT).contains(target)
                         || r.getShortGroup() != null && r.getShortGroup().toLowerCase(Locale.ROOT).contains(target))
                 .collect(Collectors.toList());

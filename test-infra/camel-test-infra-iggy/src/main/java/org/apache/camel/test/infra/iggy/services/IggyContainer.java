@@ -19,7 +19,9 @@ package org.apache.camel.test.infra.iggy.services;
 
 import java.util.List;
 
+import com.github.dockerjava.api.model.Capability;
 import com.github.dockerjava.api.model.Ulimit;
+import org.apache.camel.test.infra.common.services.ContainerEnvironmentUtil;
 import org.apache.camel.test.infra.iggy.common.IggyProperties;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -46,17 +48,15 @@ public class IggyContainer extends GenericContainer<IggyContainer> {
                 // Required capabilities for Iggy container as per docker-compose
                 withCreateContainerCmdModifier(cmd -> {
                     cmd.getHostConfig()
-                            .withCapAdd(com.github.dockerjava.api.model.Capability.SYS_NICE)
-                            .withSecurityOpts(java.util.List.of("seccomp:unconfined"))
-                            .withUlimits(List.of(new Ulimit("memlock", -1, -1)));
+                            .withCapAdd(Capability.SYS_NICE)
+                            .withSecurityOpts(List.of("seccomp:unconfined"))
+                            .withUlimits(List.of(new Ulimit("memlock", -1L, -1L)));
                 });
 
-                if (fixedPort) {
-                    addFixedExposedPort(IggyProperties.DEFAULT_TCP_PORT, IggyProperties.DEFAULT_TCP_PORT);
-                } else {
-                    withNetworkAliases(networkAlias)
-                            .withExposedPorts(IggyProperties.DEFAULT_TCP_PORT);
+                if (!fixedPort) {
+                    withNetworkAliases(networkAlias);
                 }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, IggyProperties.DEFAULT_TCP_PORT);
             }
         }
 

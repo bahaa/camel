@@ -21,14 +21,14 @@ import java.util.Map;
 
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.context.support.AbstractXmlApplicationContext;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SpringJettyNoConnectionTest extends CamelSpringTestSupport {
 
@@ -57,11 +57,10 @@ public class SpringJettyNoConnectionTest extends CamelSpringTestSupport {
         // stop Jetty route so there should not be a connection
         context.getRouteController().stopRoute("jetty");
 
-        try {
-            template.requestBody("direct:start", "Moon", String.class);
-            fail("Should have thrown an exception");
-        } catch (CamelExecutionException e) {
-            assertIsInstanceOf(ConnectException.class, e.getCause());
-        }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.requestBody("direct:start", "Moon", String.class),
+                "Should have thrown an exception");
+
+        assertIsInstanceOf(ConnectException.class, e.getCause());
     }
 }

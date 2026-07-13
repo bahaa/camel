@@ -108,11 +108,19 @@ public final class CamelOpenMBeanTypes {
     public static CompositeType listRuntimeEndpointsCompositeType() throws OpenDataException {
         return new CompositeType(
                 "endpoints", "Endpoints",
-                new String[] { "index", "url", "routeId", "direction", "static", "dynamic", "hits" },
-                new String[] { "Index", "Url", "Route Id", "Direction", "Static", "Dynamic", "Hits" },
+                new String[] {
+                        "index", "url", "routeId", "direction", "static", "dynamic", "hits",
+                        "minBodySize", "maxBodySize", "meanBodySize",
+                        "minHeadersSize", "maxHeadersSize", "meanHeadersSize" },
+                new String[] {
+                        "Index", "Url", "Route Id", "Direction", "Static", "Dynamic", "Hits",
+                        "Min Body Size", "Max Body Size", "Mean Body Size",
+                        "Min Headers Size", "Max Headers Size", "Mean Headers Size" },
                 new OpenType[] {
                         SimpleType.INTEGER, SimpleType.STRING, SimpleType.STRING, SimpleType.STRING, SimpleType.BOOLEAN,
-                        SimpleType.BOOLEAN, SimpleType.LONG });
+                        SimpleType.BOOLEAN, SimpleType.LONG,
+                        SimpleType.LONG, SimpleType.LONG, SimpleType.LONG,
+                        SimpleType.LONG, SimpleType.LONG, SimpleType.LONG });
     }
 
     public static TabularType listComponentsTabularType() throws OpenDataException {
@@ -367,6 +375,31 @@ public final class CamelOpenMBeanTypes {
                 new OpenType[] {
                         SimpleType.STRING, SimpleType.STRING, SimpleType.STRING, SimpleType.LONG, SimpleType.LONG,
                         SimpleType.LONG, SimpleType.LONG, SimpleType.LONG, SimpleType.LONG, SimpleType.STRING });
+    }
+
+    public static TabularType listErrorRegistryTabularType() throws OpenDataException {
+        CompositeType ct = listErrorRegistryCompositeType();
+        return new TabularType("listErrors", "Lists captured routing errors", ct, new String[] { "exchangeId" });
+    }
+
+    public static CompositeType listErrorRegistryCompositeType() throws OpenDataException {
+        return new CompositeType(
+                "errors", "Errors",
+                new String[] {
+                        "exchangeId", "routeId", "routeGroup", "nodeId", "stepId",
+                        "endpointUri", "fromEndpointUri", "timestamp",
+                        "routeUptime", "elapsed",
+                        "handled", "exceptionType", "exceptionMessage" },
+                new String[] {
+                        "Exchange Id", "Route Id", "Route Group", "Node Id", "Step Id",
+                        "Endpoint Uri", "From Endpoint Uri", "Timestamp",
+                        "Route Uptime", "Elapsed",
+                        "Handled", "Exception Type", "Exception Message" },
+                new OpenType[] {
+                        SimpleType.STRING, SimpleType.STRING, SimpleType.STRING, SimpleType.STRING, SimpleType.STRING,
+                        SimpleType.STRING, SimpleType.STRING, SimpleType.STRING,
+                        SimpleType.LONG, SimpleType.LONG,
+                        SimpleType.BOOLEAN, SimpleType.STRING, SimpleType.STRING });
     }
 
 }

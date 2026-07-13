@@ -269,6 +269,18 @@ public enum ZendeskApiMethod implements ApiMethod {
         arg("tweetId", long.class),
         arg("monitorId", long.class)),
 
+    CREATE_TICKET_IDEMPOTENT(
+        org.zendesk.client.v2.model.IdempotentResult.class,
+        "createTicketIdempotent",
+        arg("ticket", org.zendesk.client.v2.model.Ticket.class),
+        arg("idempotencyKey", String.class)),
+
+    CREATE_TICKET_IDEMPOTENT_ASYNC(
+        org.asynchttpclient.ListenableFuture.class,
+        "createTicketIdempotentAsync",
+        arg("ticket", org.zendesk.client.v2.model.Ticket.class),
+        arg("idempotencyKey", String.class)),
+
     CREATE_TICKETS(
         org.zendesk.client.v2.model.JobStatus.class,
         "createTickets",
@@ -1255,6 +1267,17 @@ public enum ZendeskApiMethod implements ApiMethod {
     GET_TICKET_FORMS(
         java.util.List.class,
         "getTicketForms"),
+
+    GET_TICKET_FROM_SEARCH_WITH_EXPORT(
+        Iterable.class,
+        "getTicketFromSearchWithExport",
+        arg("searchTerm", String.class)),
+
+    GET_TICKET_FROM_SEARCH_WITH_EXPORT_1(
+        Iterable.class,
+        "getTicketFromSearchWithExport",
+        arg("searchTerm", String.class),
+        arg("pageSize", int.class)),
 
     GET_TICKET_INCIDENTS(
         Iterable.class,

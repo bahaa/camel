@@ -19,8 +19,7 @@ package org.apache.camel.component.ssh;
 import java.io.IOException;
 import java.nio.file.Paths;
 
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.apache.sshd.server.SshServer;
 
@@ -30,15 +29,14 @@ public class SshComponentTestSupport extends CamelTestSupport {
 
     @Override
     public void doPreSetup() throws Exception {
-        port = AvailablePortFinder.getNextAvailable();
-
         sshd = SshServer.setUpDefaultServer();
-        sshd.setPort(port);
+        sshd.setPort(0);
         sshd.setKeyPairProvider(new FileKeyPairProvider(Paths.get(getHostKey())));
         sshd.setCommandFactory(new TestEchoCommandFactory());
         sshd.setPasswordAuthenticator((username, password, session) -> true);
         sshd.setPublickeyAuthenticator((username, key, session) -> true);
         sshd.start();
+        port = sshd.getPort();
     }
 
     protected String getHostKey() {

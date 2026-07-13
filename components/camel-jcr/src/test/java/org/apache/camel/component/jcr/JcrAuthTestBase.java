@@ -16,8 +16,6 @@
  */
 package org.apache.camel.component.jcr;
 
-import java.io.File;
-
 import javax.jcr.Repository;
 import javax.jcr.SimpleCredentials;
 import javax.jcr.security.AccessControlList;
@@ -25,14 +23,14 @@ import javax.jcr.security.AccessControlManager;
 import javax.jcr.security.AccessControlPolicyIterator;
 
 import org.apache.camel.spi.Registry;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.jackrabbit.api.security.user.User;
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.jackrabbit.core.SessionImpl;
 import org.apache.jackrabbit.core.TransientRepository;
 import org.junit.jupiter.api.BeforeAll;
 
-import static org.apache.camel.test.junit5.TestSupport.deleteDirectory;
+import static org.apache.camel.test.junit6.TestSupport.deleteDirectory;
 
 /**
  * Base class for tests that use authentication/authorization in the repository. Ensures that the transient repo is set
@@ -42,9 +40,11 @@ public abstract class JcrAuthTestBase extends CamelTestSupport {
 
     protected static final String BASE_REPO_PATH = "/home/test";
 
+    protected static final String CONFIG_FILE = "target/test-classes/repository.xml";
+
     protected static final String REPO_PATH = "target/repository";
 
-    private static Repository repository = new TransientRepository(new File(REPO_PATH));
+    private static Repository repository = new TransientRepository(CONFIG_FILE, REPO_PATH);
 
     @BeforeAll
     public static void cleanupDirectory() {

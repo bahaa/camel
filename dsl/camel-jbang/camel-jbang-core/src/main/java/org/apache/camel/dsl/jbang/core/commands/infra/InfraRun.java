@@ -16,7 +16,6 @@
  */
 package org.apache.camel.dsl.jbang.core.commands.infra;
 
-import java.io.Console;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -32,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
+import org.apache.camel.dsl.jbang.core.common.EnvironmentHelper;
 import org.apache.camel.dsl.jbang.core.common.Printer;
 import org.apache.camel.dsl.jbang.core.common.RuntimeUtil;
 import org.apache.camel.main.download.DependencyDownloaderClassLoader;
@@ -39,9 +39,13 @@ import org.apache.camel.main.download.MavenDependencyDownloader;
 import org.apache.camel.tooling.maven.MavenArtifact;
 import picocli.CommandLine;
 
-import static org.apache.camel.dsl.jbang.core.commands.RunHelper.addCamelJBangCommand;
+import static org.apache.camel.dsl.jbang.core.commands.RunHelper.addCamelCLICommand;
 
-@CommandLine.Command(name = "run", description = "Run an external service", sortOptions = false, showDefaultValues = true)
+@CommandLine.Command(name = "run", description = "Run an external service", sortOptions = false, showDefaultValues = true,
+                     footer = {
+                             "%nExamples:",
+                             "  camel infra run kafka",
+                             "  camel infra run kafka --background" })
 public class InfraRun extends InfraBaseCommand {
 
     @CommandLine.Spec
@@ -56,6 +60,10 @@ public class InfraRun extends InfraBaseCommand {
 
     @CommandLine.Option(names = { "--background" }, defaultValue = "false", description = "Run in the background")
     boolean background;
+
+    @CommandLine.Option(names = { "--port" },
+                        description = "Override the default port for the service")
+    Integer port;
 
     public InfraRun(CamelJBangMain main) {
         super(main);
@@ -96,10 +104,11 @@ public class InfraRun extends InfraBaseCommand {
         if (testInfraService == null) {
             String message = ", use the list command for the available services";
             if (testServiceImplementation != null) {
-                printer().println("service " + testService + " with implementation " + testServiceImplementation + " not found"
-                                  + message);
+                printer().printErr("service " + testService + " with implementation " + testServiceImplementation + " not found"
+                                   + message);
+            } else {
+                printer().printErr("service " + testService + " not found" + message);
             }
-            printer().println("service " + testService + " not found" + message);
             return 1;
         }
 
@@ -116,13 +125,24 @@ public class InfraRun extends InfraBaseCommand {
             cmds = new ArrayList<>(spec.commandLine().getParseResult().originalArgs());
         } else {
             cmds = new ArrayList<>();
+            cmds.add("infra");
             cmds.add("run");
+            if (serviceName != null) {
+                cmds.addAll(serviceName);
+            }
+            if (port != null) {
+                cmds.add("--port");
+                cmds.add(String.valueOf(port));
+            }
+            if (logToStdout) {
+                cmds.add("--log");
+            }
         }
 
         cmds.remove("--background=true");
         cmds.remove("--background");
 
-        addCamelJBangCommand(cmds);
+        addCamelCLICommand(cmds);
 
         ProcessBuilder pb = new ProcessBuilder();
         pb.command(cmds);
@@ -142,6 +162,13 @@ public class InfraRun extends InfraBaseCommand {
 
         String serviceInterface = testInfraService.service();
         String serviceImpl = testInfraService.implementation();
+
+        // Set the fixed port property BEFORE instantiating the service so it uses fixed ports
+        System.setProperty("camel.infra.fixedPort", "true");
+        // Set the port property if a specific port was requested
+        if (port != null) {
+            System.setProperty("camel.infra.port", String.valueOf(port));
+        }
 
         Object actualService = cl.loadClass(serviceImpl).newInstance();
 
@@ -167,12 +194,16 @@ public class InfraRun extends InfraBaseCommand {
             }
             printer().println("Starting service " + testService + prefix + " (PID: " + RuntimeUtil.getPid() + ")");
         }
+
         actualService.getClass().getMethod("initialize").invoke(actualService);
 
         Method[] serviceMethods = cl.loadClass(serviceInterface).getDeclaredMethods();
         Map<String, Object> properties = new TreeMap<>();
         for (Method method : serviceMethods) {
-            if (method.getParameterCount() == 0 && !method.getName().contains("registerProperties")) {
+            // Skip methods that return complex objects or have side effects
+            if (method.getParameterCount() == 0
+                    && !method.getName().equals("registerProperties")
+                    && !method.getName().equals("getContainer")) {
                 Object value = null;
                 try {
                     value = method.invoke(actualService);
@@ -183,6 +214,13 @@ public class InfraRun extends InfraBaseCommand {
                     properties.put(method.getName(), value);
                 }
             }
+        }
+
+        if (testInfraService.serviceVersion() != null && !testInfraService.serviceVersion().isEmpty()) {
+            properties.put("serviceVersion", testInfraService.serviceVersion());
+        }
+        if (testInfraService.description() != null && !testInfraService.description().isEmpty()) {
+            properties.put("description", testInfraService.description());
         }
 
         String jsonProperties = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(properties);
@@ -210,15 +248,14 @@ public class InfraRun extends InfraBaseCommand {
         final CountDownLatch latch = new CountDownLatch(1);
 
         // running in foreground then wait for user to exit
-        final Console c = System.console();
-        if (c != null) {
+        if (EnvironmentHelper.isInteractiveTerminal()) {
             if (!jsonOutput) {
                 printer().println("Press ENTER to stop the execution");
             }
             Thread t = new Thread(() -> {
                 boolean quit = false;
                 do {
-                    String line = c.readLine();
+                    String line = EnvironmentHelper.readLine();
                     if (line != null) {
                         quit = true;
                         latch.countDown();
@@ -277,6 +314,8 @@ public class InfraRun extends InfraBaseCommand {
             } catch (Exception e) {
                 // ignore
             }
+            System.clearProperty("camel.infra.port");
+            System.clearProperty("camel.infra.fixedPort");
         }
     }
 

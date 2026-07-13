@@ -26,8 +26,9 @@ import org.apache.camel.InvalidPayloadException;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.solr.SolrConstants;
 import org.apache.camel.component.solr.SolrUtils;
+import org.apache.solr.client.solrj.RemoteSolrException;
 import org.apache.solr.client.solrj.SolrResponse;
-import org.apache.solr.client.solrj.impl.BaseHttpSolrClient;
+//import org.apache.solr.client.solrj.impl.BaseHttpSolrClient;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.SolrPingResponse;
@@ -91,9 +92,10 @@ class SolrPingAndSearchTest extends SolrTestSupport {
         // clusterstatus should fail as we're not running in solrCloud mode
         assertTrue(responseExchange.isFailed());
         assertInstanceOf(CamelExchangeException.class, responseExchange.getException());
-        assertInstanceOf(BaseHttpSolrClient.RemoteSolrException.class, responseExchange.getException().getCause().getCause());
+        System.out.println("### " + responseExchange.getException().getCause().getCause().getClass());
+        assertInstanceOf(RemoteSolrException.class, responseExchange.getException().getCause().getCause());
         assertEquals(400,
-                ((BaseHttpSolrClient.RemoteSolrException) responseExchange.getException().getCause().getCause()).code());
+                ((RemoteSolrException) responseExchange.getException().getCause().getCause()).code());
         assertTrue(responseExchange.getException().getCause().getCause().getMessage()
                 .endsWith("Solr instance is not running in SolrCloud mode."));
 
@@ -131,7 +133,7 @@ class SolrPingAndSearchTest extends SolrTestSupport {
         assertFalse(returnedValues.contains("content1"));
         assertFalse(returnedValues.contains("content4"));
 
-        // we can also send the 2 filters by using the 'SolrParam.fq' header and passing an Iterable.
+        // we can also send the 2 filters by using the 'CamelSolrParam.fq' header and passing an Iterable.
         Map<String, Object> solrFilters = Map.of(HEADER_PARAM_PREFIX + "fq", List.of("-content:content2", "-content:content3"));
         sdl = executeSolrQuery("direct:search", "*:*", solrFilters).getResults();
 

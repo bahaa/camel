@@ -16,10 +16,14 @@
  */
 package org.apache.camel.dsl.jbang.core.commands;
 
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Stack;
 
@@ -32,8 +36,23 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "route", description = "Transform Camel routes to XML or YAML format", sortOptions = false,
-         showDefaultValues = true)
+         showDefaultValues = true,
+         footer = {
+                 "%nExamples:",
+                 "  camel transform route hello.java --format=yaml",
+                 "  camel transform route hello.xml --format=yaml" })
 public class TransformRoute extends CamelCommand {
+
+    public static class FormatCompletionCandidates implements Iterable<String> {
+
+        public FormatCompletionCandidates() {
+        }
+
+        @Override
+        public Iterator<String> iterator() {
+            return List.of("xml", "yaml").iterator();
+        }
+    }
 
     @CommandLine.Parameters(description = "The Camel file(s) to run. If no files specified then application.properties is used as source for which files to run.",
                             arity = "0..9", paramLabel = "<files>", parameterConsumer = FilesConsumer.class)
@@ -43,11 +62,12 @@ public class TransformRoute extends CamelCommand {
 
     @CommandLine.Option(names = {
             "--output" },
-                        description = "File or directory to store transformed files. If none provide then output is printed to console.")
+                        description = "File or directory to store transformed files. If none provide then output is printed to console. Use clipboard as name to copy content into clipboard.")
     private String output;
 
     @CommandLine.Option(names = { "--format" },
-                        description = "Output format (xml or yaml), if only yaml files are provided, the format defaults to xml and vice versa")
+                        completionCandidates = FormatCompletionCandidates.class,
+                        description = "Output format (${COMPLETION-CANDIDATES}), if only yaml files are provided, the format defaults to xml and vice versa")
     String format;
 
     @CommandLine.Option(names = { "--resolve-placeholders" }, defaultValue = "false",
@@ -61,6 +81,9 @@ public class TransformRoute extends CamelCommand {
     @CommandLine.Option(names = { "--ignore-loading-error" },
                         description = "Whether to ignore route loading and compilation errors (use this with care!)")
     boolean ignoreLoadingError;
+
+    @CommandLine.Mixin
+    MavenResolverMixin mavenResolver;
 
     public TransformRoute(CamelJBangMain main) {
         super(main);
@@ -79,9 +102,10 @@ public class TransformRoute extends CamelCommand {
 
         String dump = output;
         // if no output then we want to print to console, so we need to write to a hidden file, and dump that file afterwards
-        if (output == null) {
+        if (output == null || "clipboard".equals(output)) {
             dump = CommandLineHelper.CAMEL_JBANG_WORK_DIR + "/transform-output." + format;
         }
+        Files.deleteIfExists(Path.of(dump));
         final String target = dump;
 
         Run run = new Run(getMain()) {
@@ -93,6 +117,8 @@ public class TransformRoute extends CamelCommand {
                 main.addInitialProperty("camel.main.dumpRoutesResolvePlaceholders", Boolean.toString(resolvePlaceholders));
                 main.addInitialProperty("camel.main.dumpRoutesUriAsParameters", Boolean.toString(uriAsParameters));
                 main.addInitialProperty("camel.main.dumpRoutesOutput", target);
+                // turn debug off as this can otherwise include source location in dump
+                main.addInitialProperty("camel.debug.enabled", "false");
                 main.addInitialProperty(CamelJBangConstants.TRANSFORM, "true");
                 main.addInitialProperty("camel.component.properties.ignoreMissingProperty", "true");
                 if (ignoreLoadingError) {
@@ -102,16 +128,22 @@ public class TransformRoute extends CamelCommand {
             }
         };
         run.files = files;
-        run.maxSeconds = 1;
+        run.executionLimitOptions.maxSeconds = 1;
+        run.mavenResolver = mavenResolver;
         Integer exit = run.runTransform(ignoreLoadingError);
         if (exit != null && exit != 0) {
             return exit;
         }
 
-        if (output == null) {
+        if (output == null || "clipboard".equals(output)) {
             // load target file and print to console
             dump = waitForDumpFile(Path.of(target));
             if (dump != null) {
+                if ("clipboard".equals(output)) {
+                    Clipboard c = Toolkit.getDefaultToolkit().getSystemClipboard();
+                    StringSelection data = new StringSelection(dump);
+                    c.setContents(data, data);
+                }
                 printer().println(dump);
             }
         }

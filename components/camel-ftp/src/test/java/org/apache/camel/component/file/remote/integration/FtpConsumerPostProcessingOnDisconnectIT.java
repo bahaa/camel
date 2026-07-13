@@ -27,7 +27,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertFileNotExists;
+import static org.apache.camel.test.junit6.TestSupport.assertFileNotExists;
 import static org.awaitility.Awaitility.await;
 
 public class FtpConsumerPostProcessingOnDisconnectIT extends FtpServerTestSupport {
@@ -84,7 +84,7 @@ public class FtpConsumerPostProcessingOnDisconnectIT extends FtpServerTestSuppor
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from("ftp://admin@localhost:{{ftp.server.port}}?password=admin&delete=true").routeId("foo").noAutoStartup()
+                from("ftp://admin@localhost:{{ftp.server.port}}?password=admin&delete=true").routeId("foo").autoStartup(false)
                         .process(new Processor() {
                             @Override
                             public void process(Exchange exchange) {
@@ -92,7 +92,7 @@ public class FtpConsumerPostProcessingOnDisconnectIT extends FtpServerTestSuppor
                             }
                         }).to("mock:result");
                 from("ftp://admin@localhost:{{ftp.server.port}}?password=admin&noop=false&move=.camel").routeId("bar")
-                        .noAutoStartup()
+                        .autoStartup(false)
                         .process(new Processor() {
                             @Override
                             public void process(Exchange exchange) {

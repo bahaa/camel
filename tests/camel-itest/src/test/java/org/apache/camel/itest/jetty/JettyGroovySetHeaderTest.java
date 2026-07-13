@@ -19,15 +19,18 @@ package org.apache.camel.itest.jetty;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.apache.camel.language.groovy.GroovyLanguage.groovy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JettyGroovySetHeaderTest extends CamelTestSupport {
 
-    private int port;
+    @RegisterExtension
+    static AvailablePortFinder.Port portFinder = AvailablePortFinder.find();
+    private int port = portFinder.getPort();
 
     @Test
     void testJettyGroovySetHeader() throws Exception {
@@ -45,7 +48,6 @@ public class JettyGroovySetHeaderTest extends CamelTestSupport {
 
     @Override
     protected RouteBuilder createRouteBuilder() {
-        port = AvailablePortFinder.getNextAvailable();
 
         return new RouteBuilder() {
             @Override

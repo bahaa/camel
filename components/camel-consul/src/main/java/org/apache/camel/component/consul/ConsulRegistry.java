@@ -19,6 +19,7 @@ package org.apache.camel.component.consul;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -48,10 +49,19 @@ import org.kiwiproject.consul.model.session.SessionCreatedResponse;
  */
 public class ConsulRegistry implements Registry {
 
+    /**
+     * Default deserialization filter. Denies {@code java.net.**} and otherwise allows {@code java.**} and
+     * {@code org.apache.camel.**}; applies JEP-290 graph-shape limits ({@code maxdepth}, {@code maxrefs},
+     * {@code maxbytes}) as defense-in-depth against resource-exhaustion payloads.
+     */
+    static final String DEFAULT_DESERIALIZATION_FILTER
+            = "!java.net.**;java.**;org.apache.camel.**;maxdepth=20;maxrefs=10000;maxbytes=10485760;!*";
+
     private String hostname = "localhost";
     private int port = 8500;
     private Consul consul;
     private KeyValueClient kvClient;
+    private String deserializationFilter = DEFAULT_DESERIALIZATION_FILTER;
 
     /* constructor with default port */
     public ConsulRegistry(String hostname) {
@@ -70,6 +80,9 @@ public class ConsulRegistry implements Registry {
         this.hostname = builder.hostname;
         this.port = builder.port;
         this.consul = Consul.builder().withUrl("http://" + this.hostname + ":" + this.port).build();
+        if (builder.deserializationFilter != null) {
+            this.deserializationFilter = builder.deserializationFilter;
+        }
     }
 
     @Override
@@ -80,7 +93,7 @@ public class ConsulRegistry implements Registry {
 
         return kvClient.getValueAsString(key).map(result -> {
             byte[] postDecodedValue = ConsulRegistryUtils.decodeBase64(result);
-            return ConsulRegistryUtils.deserialize(postDecodedValue);
+            return ConsulRegistryUtils.deserialize(postDecodedValue, deserializationFilter);
         }).orElse(null);
     }
 
@@ -219,7 +232,7 @@ public class ConsulRegistry implements Registry {
         if (lookupByName(key) != null) {
             remove(key);
         }
-        Object clone = ConsulRegistryUtils.clone((Serializable) object);
+        Object clone = ConsulRegistryUtils.clone((Serializable) object, deserializationFilter);
         byte[] serializedObject = ConsulRegistryUtils.serialize((Serializable) clone);
         // pre-encode due native encoding issues
         String value = ConsulRegistryUtils.encodeBase64(serializedObject);
@@ -239,6 +252,7 @@ public class ConsulRegistry implements Registry {
         String hostname;
         // optional parameter
         Integer port = 8500;
+        String deserializationFilter;
 
         public Builder(String hostname) {
             this.hostname = hostname;
@@ -246,6 +260,11 @@ public class ConsulRegistry implements Registry {
 
         public Builder port(Integer port) {
             this.port = port;
+            return this;
+        }
+
+        public Builder deserializationFilter(String deserializationFilter) {
+            this.deserializationFilter = deserializationFilter;
             return this;
         }
 
@@ -268,6 +287,24 @@ public class ConsulRegistry implements Registry {
 
     public void setPort(int port) {
         this.port = port;
+    }
+
+    /**
+     * Gets the deserialization filter applied when reading objects from Consul KV store.
+     */
+    public String getDeserializationFilter() {
+        return deserializationFilter;
+    }
+
+    /**
+     * Sets a deserialization filter while reading objects from Consul KV store. By default the filter denies
+     * {@code java.net.**} (to avoid classes whose hash/equals methods perform network I/O) and otherwise allows all
+     * java packages and subpackages and all org.apache.camel packages and subpackages, while the remaining will be
+     * blacklisted and not deserialized. This parameter should be customized if you're using classes you trust to be
+     * deserialized.
+     */
+    public void setDeserializationFilter(String deserializationFilter) {
+        this.deserializationFilter = deserializationFilter;
     }
 
     static final class ConsulRegistryUtils {
@@ -300,11 +337,16 @@ public class ConsulRegistry implements Registry {
         /**
          * Deserializes an object out of the given byte array.
          *
-         * @param  bytes the byte array to deserialize from
-         * @return       an {@link Object} deserialized from the given byte array
+         * @param  bytes                 the byte array to deserialize from
+         * @param  deserializationFilter the deserialization filter to apply (e.g.
+         *                               "!java.net.**;java.**;org.apache.camel.**;maxdepth=20;maxrefs=10000;maxbytes=10485760;!*")
+         * @return                       an {@link Object} deserialized from the given byte array
          */
-        static Object deserialize(byte[] bytes) {
+        static Object deserialize(byte[] bytes, String deserializationFilter) {
             try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bytes))) {
+                if (deserializationFilter != null && !deserializationFilter.isEmpty()) {
+                    in.setObjectInputFilter(ObjectInputFilter.Config.createFilter(deserializationFilter));
+                }
                 return in.readObject();
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeCamelException(e);
@@ -314,11 +356,12 @@ public class ConsulRegistry implements Registry {
         /**
          * A deep serialization based clone
          *
-         * @param  object the object to clone
-         * @return        a deep clone
+         * @param  object                the object to clone
+         * @param  deserializationFilter the deserialization filter to apply
+         * @return                       a deep clone
          */
-        static Object clone(Serializable object) {
-            return deserialize(serialize(object));
+        static Object clone(Serializable object, String deserializationFilter) {
+            return deserialize(serialize(object), deserializationFilter);
         }
 
         /**

@@ -32,6 +32,7 @@ public class CoAPEndpointConfigurer extends PropertyConfigurerSupport implements
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
         case "ciphersuites":
         case "cipherSuites": target.setCipherSuites(property(camelContext, java.lang.String.class, value)); return true;
+        case "client": target.setClient(property(camelContext, org.eclipse.californium.core.CoapClient.class, value)); return true;
         case "clientauthentication":
         case "clientAuthentication": target.setClientAuthentication(property(camelContext, org.eclipse.californium.elements.config.CertificateAuthenticationMode.class, value)); return true;
         case "coapmethodrestrict":
@@ -40,6 +41,8 @@ public class CoAPEndpointConfigurer extends PropertyConfigurerSupport implements
         case "exceptionHandler": target.setExceptionHandler(property(camelContext, org.apache.camel.spi.ExceptionHandler.class, value)); return true;
         case "exchangepattern":
         case "exchangePattern": target.setExchangePattern(property(camelContext, org.apache.camel.ExchangePattern.class, value)); return true;
+        case "headerfilterstrategy":
+        case "headerFilterStrategy": target.setHeaderFilterStrategy(property(camelContext, org.apache.camel.spi.HeaderFilterStrategy.class, value)); return true;
         case "lazystartproducer":
         case "lazyStartProducer": target.setLazyStartProducer(property(camelContext, boolean.class, value)); return true;
         case "notify": target.setNotify(property(camelContext, boolean.class, value)); return true;
@@ -69,6 +72,7 @@ public class CoAPEndpointConfigurer extends PropertyConfigurerSupport implements
         case "bridgeErrorHandler": return boolean.class;
         case "ciphersuites":
         case "cipherSuites": return java.lang.String.class;
+        case "client": return org.eclipse.californium.core.CoapClient.class;
         case "clientauthentication":
         case "clientAuthentication": return org.eclipse.californium.elements.config.CertificateAuthenticationMode.class;
         case "coapmethodrestrict":
@@ -77,6 +81,8 @@ public class CoAPEndpointConfigurer extends PropertyConfigurerSupport implements
         case "exceptionHandler": return org.apache.camel.spi.ExceptionHandler.class;
         case "exchangepattern":
         case "exchangePattern": return org.apache.camel.ExchangePattern.class;
+        case "headerfilterstrategy":
+        case "headerFilterStrategy": return org.apache.camel.spi.HeaderFilterStrategy.class;
         case "lazystartproducer":
         case "lazyStartProducer": return boolean.class;
         case "notify": return boolean.class;
@@ -107,6 +113,7 @@ public class CoAPEndpointConfigurer extends PropertyConfigurerSupport implements
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
         case "ciphersuites":
         case "cipherSuites": return target.getCipherSuites();
+        case "client": return target.getClient();
         case "clientauthentication":
         case "clientAuthentication": return target.getClientAuthentication();
         case "coapmethodrestrict":
@@ -115,6 +122,8 @@ public class CoAPEndpointConfigurer extends PropertyConfigurerSupport implements
         case "exceptionHandler": return target.getExceptionHandler();
         case "exchangepattern":
         case "exchangePattern": return target.getExchangePattern();
+        case "headerfilterstrategy":
+        case "headerFilterStrategy": return target.getHeaderFilterStrategy();
         case "lazystartproducer":
         case "lazyStartProducer": return target.isLazyStartProducer();
         case "notify": return target.isNotify();

@@ -109,7 +109,7 @@ public class MiloServerComponent extends DefaultComponent {
     private String securityPoliciesById;
     @Metadata(label = "security")
     private Set<SecurityPolicy> securityPolicies;
-    @Metadata(label = "security", secret = true)
+    @Metadata(label = "security", security = "secret")
     private String userAuthenticationCredentials;
     @Metadata(label = "security")
     private String usernameSecurityPolicyUri = OpcUaServerConfig.USER_TOKEN_POLICY_USERNAME.getSecurityPolicyUri();
@@ -203,11 +203,11 @@ public class MiloServerComponent extends DefaultComponent {
 
         if (certificateValidator != null) {
             LOG.debug("Using validator: {}", certificateValidator);
-            if (certificateValidator instanceof Closeable) {
+            if (certificateValidator instanceof Closeable closeable) {
                 runOnStop(() -> {
                     try {
                         LOG.debug("Closing: {}", certificateValidator);
-                        ((Closeable) certificateValidator).close();
+                        closeable.close();
                     } catch (IOException e) {
                         LOG.debug("Failed to close. This exception is ignored.", e);
                     }
@@ -440,13 +440,21 @@ public class MiloServerComponent extends DefaultComponent {
          * desired, do it explicitly.
          */
         Objects.requireNonNull(result, "Setting a null is not supported. call setCertificateManager(null) instead.)");
-        loadServerCertificate(result.getKeyPair(), result.getCertificate());
+        loadServerCertificate(result.getKeyPair(), result.getCertificate(), result.getCertificateChain());
     }
 
     /**
      * Server certificate
      */
     public void loadServerCertificate(final KeyPair keyPair, final X509Certificate certificate) {
+        loadServerCertificate(keyPair, certificate, new X509Certificate[] { certificate });
+    }
+
+    /**
+     * Server certificate with full certificate chain
+     */
+    public void loadServerCertificate(
+            final KeyPair keyPair, final X509Certificate certificate, final X509Certificate[] certificateChain) {
         this.certificate = certificate;
         // TODO evaluate migration to CertificateGroup
         //        setCertificateManager(new DefaultCertificateManager(keyPair, certificate));
@@ -455,7 +463,7 @@ public class MiloServerComponent extends DefaultComponent {
                 this.certificateGroup.updateCertificate(
                         NodeIds.ServerConfiguration_CertificateGroups_DefaultApplicationGroup,
                         keyPair,
-                        new X509Certificate[] { certificate });
+                        certificateChain);
             } catch (Exception e) {
                 throw new RuntimeCamelException(e);
             }

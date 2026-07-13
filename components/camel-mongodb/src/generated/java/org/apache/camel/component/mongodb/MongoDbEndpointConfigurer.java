@@ -29,6 +29,10 @@ public class MongoDbEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "authSource": target.setAuthSource(property(camelContext, java.lang.String.class, value)); return true;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
+        case "changestreamtoken":
+        case "changeStreamToken": target.setChangeStreamToken(property(camelContext, java.lang.String.class, value)); return true;
+        case "changestreamtokenrepository":
+        case "changeStreamTokenRepository": target.setChangeStreamTokenRepository(property(camelContext, org.apache.camel.spi.StateRepository.class, value)); return true;
         case "collection": target.setCollection(property(camelContext, java.lang.String.class, value)); return true;
         case "collectionindex":
         case "collectionIndex": target.setCollectionIndex(property(camelContext, java.lang.String.class, value)); return true;
@@ -102,6 +106,8 @@ public class MongoDbEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "srvMaxHosts": target.setSrvMaxHosts(property(camelContext, java.lang.Integer.class, value)); return true;
         case "srvservicename":
         case "srvServiceName": target.setSrvServiceName(property(camelContext, java.lang.String.class, value)); return true;
+        case "sslcontextparameters":
+        case "sslContextParameters": target.setSslContextParameters(property(camelContext, org.apache.camel.support.jsse.SSLContextParameters.class, value)); return true;
         case "streamfilter":
         case "streamFilter": target.setStreamFilter(property(camelContext, java.lang.String.class, value)); return true;
         case "tailtrackcollection":
@@ -137,6 +143,10 @@ public class MongoDbEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "authSource": return java.lang.String.class;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
+        case "changestreamtoken":
+        case "changeStreamToken": return java.lang.String.class;
+        case "changestreamtokenrepository":
+        case "changeStreamTokenRepository": return org.apache.camel.spi.StateRepository.class;
         case "collection": return java.lang.String.class;
         case "collectionindex":
         case "collectionIndex": return java.lang.String.class;
@@ -210,6 +220,8 @@ public class MongoDbEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "srvMaxHosts": return java.lang.Integer.class;
         case "srvservicename":
         case "srvServiceName": return java.lang.String.class;
+        case "sslcontextparameters":
+        case "sslContextParameters": return org.apache.camel.support.jsse.SSLContextParameters.class;
         case "streamfilter":
         case "streamFilter": return java.lang.String.class;
         case "tailtrackcollection":
@@ -246,6 +258,10 @@ public class MongoDbEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "authSource": return target.getAuthSource();
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
+        case "changestreamtoken":
+        case "changeStreamToken": return target.getChangeStreamToken();
+        case "changestreamtokenrepository":
+        case "changeStreamTokenRepository": return target.getChangeStreamTokenRepository();
         case "collection": return target.getCollection();
         case "collectionindex":
         case "collectionIndex": return target.getCollectionIndex();
@@ -319,6 +335,8 @@ public class MongoDbEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "srvMaxHosts": return target.getSrvMaxHosts();
         case "srvservicename":
         case "srvServiceName": return target.getSrvServiceName();
+        case "sslcontextparameters":
+        case "sslContextParameters": return target.getSslContextParameters();
         case "streamfilter":
         case "streamFilter": return target.getStreamFilter();
         case "tailtrackcollection":
@@ -341,6 +359,15 @@ public class MongoDbEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "writeResultAsHeader": return target.isWriteResultAsHeader();
         case "zlibcompressionlevel":
         case "zlibCompressionLevel": return target.getZlibCompressionLevel();
+        default: return null;
+        }
+    }
+
+    @Override
+    public Object getCollectionValueType(Object target, String name, boolean ignoreCase) {
+        switch (ignoreCase ? name.toLowerCase() : name) {
+        case "changestreamtokenrepository":
+        case "changeStreamTokenRepository": return java.lang.String.class;
         default: return null;
         }
     }

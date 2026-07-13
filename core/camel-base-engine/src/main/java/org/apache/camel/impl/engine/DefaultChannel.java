@@ -210,7 +210,7 @@ public class DefaultChannel extends CamelInternalProcessor implements Channel {
         if (camelContext.isBacklogTracingStandby() || route.isBacklogTracing()) {
             // add jmx backlog tracer
             BacklogTracer backlogTracer = getOrCreateBacklogTracer(camelContext);
-            addAdvice(new BacklogTracerAdvice(camelContext, backlogTracer, targetOutputDef, routeDefinition, first));
+            addAdvice(new BacklogTracerAdvice(camelContext, backlogTracer, targetOutputDef, routeDefinition));
         }
         if (route.isTracing() || camelContext.isTracingStandby()) {
             // add logger tracer
@@ -234,7 +234,7 @@ public class DefaultChannel extends CamelInternalProcessor implements Channel {
         Collections.reverse(interceptors);
         // wrap the output with the configured interceptors
         Processor target = nextProcessor;
-        boolean skip = target instanceof InterceptableProcessor && !((InterceptableProcessor) target).canIntercept();
+        boolean skip = target instanceof InterceptableProcessor ip && !ip.canIntercept();
         if (!skip) {
             for (InterceptStrategy strategy : interceptors) {
                 Processor next = target == nextProcessor ? null : nextProcessor;
@@ -293,7 +293,7 @@ public class DefaultChannel extends CamelInternalProcessor implements Channel {
         }
     }
 
-    private static BacklogTracer getOrCreateBacklogTracer(CamelContext camelContext) {
+    static BacklogTracer getOrCreateBacklogTracer(CamelContext camelContext) {
         BacklogTracer tracer = null;
         if (camelContext.getRegistry() != null) {
             // lookup in registry
@@ -312,6 +312,11 @@ public class DefaultChannel extends CamelInternalProcessor implements Channel {
             tracer.setTraceTemplates(camelContext.isBacklogTracingTemplates());
             tracer.setTraceRests(camelContext.isBacklogTracingRests());
             camelContext.getCamelContextExtension().addContextPlugin(BacklogTracer.class, tracer);
+            try {
+                camelContext.addService(tracer);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
         return tracer;
     }
@@ -347,10 +352,14 @@ public class DefaultChannel extends CamelInternalProcessor implements Channel {
         // setup initial breakpoints
         if (debugger.getInitialBreakpoints() != null) {
             boolean match = false;
+            boolean allRoutes = false;
             String id = definition.getId();
             for (String pattern : debugger.getInitialBreakpoints().split(",")) {
                 pattern = pattern.trim();
-                match |= BacklogDebugger.BREAKPOINT_ALL_ROUTES.equals(pattern) && first;
+                if (BacklogDebugger.BREAKPOINT_ALL_ROUTES.equals(pattern) && first) {
+                    match = true;
+                    allRoutes = true;
+                }
                 if (!match) {
                     match = PatternHelper.matchPattern(id, pattern);
                 }
@@ -387,13 +396,12 @@ public class DefaultChannel extends CamelInternalProcessor implements Channel {
                 }
             }
             if (match) {
-                if (first && debugger.isSingleStepIncludeStartEnd()) {
-                    // we want route to be breakpoint (use input)
+                if (allRoutes && first && debugger.isSingleStepIncludeStartEnd()) {
+                    // all routes breakpoint: we want route to be breakpoint (use input)
                     id = routeDefinition.getInput().getId();
                     debugger.addBreakpoint(id);
                     LOG.debug("BacklogDebugger added breakpoint: {}", id);
                 } else {
-                    // first output should also be breakpoint
                     id = targetOutputDef.getId();
                     debugger.addBreakpoint(id);
                     LOG.debug("BacklogDebugger added breakpoint: {}", id);

@@ -72,6 +72,28 @@ public class JsonArray extends ArrayList<Object> implements Jsonable {
     }
 
     /**
+     * A convenience method that assumes there is another JsonObject at the given index.
+     *
+     * @param  index              representing where the value is expected to be at.
+     * @return                    the value stored at the key.
+     * @throws ClassCastException if the value didn't match the assumed return type.
+     */
+    public JsonObject getJsonObject(final int index) {
+        return getMap(index);
+    }
+
+    /**
+     * A convenience method that assumes there is a JsonArray at the given index.
+     *
+     * @param  index              representing where the value is expected to be at.
+     * @return                    the value stored at the key.
+     * @throws ClassCastException if the value didn't match the assumed return type.
+     */
+    public JsonArray getJsonArray(final int index) {
+        return getCollection(index);
+    }
+
+    /**
      * A convenience method that assumes there is a BigDecimal, Number, or String at the given index. If a Number or
      * String is there it is used to construct a new BigDecimal.
      *
@@ -90,9 +112,9 @@ public class JsonArray extends ArrayList<Object> implements Jsonable {
         } else if (returnable instanceof Number) {
             /* A number can be used to construct a BigDecimal. */
             returnable = new BigDecimal(returnable.toString());
-        } else if (returnable instanceof String) {
+        } else if (returnable instanceof String str) {
             /* A number can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return (BigDecimal) returnable;
     }
@@ -107,8 +129,8 @@ public class JsonArray extends ArrayList<Object> implements Jsonable {
      */
     public Boolean getBoolean(final int index) {
         Object returnable = this.get(index);
-        if (returnable instanceof String) {
-            returnable = Boolean.valueOf((String) returnable);
+        if (returnable instanceof String str) {
+            returnable = Boolean.valueOf(str);
         }
         return (Boolean) returnable;
     }
@@ -129,9 +151,9 @@ public class JsonArray extends ArrayList<Object> implements Jsonable {
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).byteValue();
     }
@@ -172,9 +194,9 @@ public class JsonArray extends ArrayList<Object> implements Jsonable {
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).doubleValue();
     }
@@ -266,9 +288,9 @@ public class JsonArray extends ArrayList<Object> implements Jsonable {
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).floatValue();
     }
@@ -289,9 +311,9 @@ public class JsonArray extends ArrayList<Object> implements Jsonable {
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).intValue();
     }
@@ -312,9 +334,9 @@ public class JsonArray extends ArrayList<Object> implements Jsonable {
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).longValue();
     }
@@ -355,9 +377,9 @@ public class JsonArray extends ArrayList<Object> implements Jsonable {
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).shortValue();
     }

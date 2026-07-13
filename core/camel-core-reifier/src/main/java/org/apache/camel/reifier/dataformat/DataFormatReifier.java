@@ -31,7 +31,6 @@ import org.apache.camel.spi.DataFormatContentTypeHeader;
 import org.apache.camel.spi.ExtendedPropertyConfigurerGetter;
 import org.apache.camel.spi.PropertyConfigurer;
 import org.apache.camel.spi.PropertyConfigurerAware;
-import org.apache.camel.spi.ReifierStrategy;
 import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.PluginHelper;
 import org.apache.camel.support.PropertyBindingSupport;
@@ -51,7 +50,7 @@ public abstract class DataFormatReifier<T extends DataFormatDefinition> extends 
 
     protected final T definition;
 
-    public DataFormatReifier(CamelContext camelContext, T definition) {
+    protected DataFormatReifier(CamelContext camelContext, T definition) {
         super(camelContext);
         this.definition = definition;
     }
@@ -59,9 +58,6 @@ public abstract class DataFormatReifier<T extends DataFormatDefinition> extends 
     public static void registerReifier(
             Class<? extends DataFormatDefinition> dataFormatClass,
             BiFunction<CamelContext, DataFormatDefinition, DataFormatReifier<? extends DataFormatDefinition>> creator) {
-        if (DATAFORMATS.isEmpty()) {
-            ReifierStrategy.addReifierClearer(DataFormatReifier::clearReifiers);
-        }
         DATAFORMATS.put(dataFormatClass, creator);
     }
 
@@ -170,6 +166,8 @@ public abstract class DataFormatReifier<T extends DataFormatDefinition> extends 
             return new ForyDataFormatReifier(camelContext, definition);
         } else if (definition instanceof GrokDataFormat) {
             return new GrokDataFormatReifier(camelContext, definition);
+        } else if (definition instanceof GroovyJSonDataFormat) {
+            return new GroovyJSonDataFormatReifier(camelContext, definition);
         } else if (definition instanceof GroovyXmlDataFormat) {
             return new GroovyXmlDataFormatReifier(camelContext, definition);
         } else if (definition instanceof GzipDeflaterDataFormat) {
@@ -192,6 +190,8 @@ public abstract class DataFormatReifier<T extends DataFormatDefinition> extends 
             return new LZFDataFormatReifier(camelContext, definition);
         } else if (definition instanceof MimeMultipartDataFormat) {
             return new MimeMultipartDataFormatReifier(camelContext, definition);
+        } else if (definition instanceof OcsfDataFormat) {
+            return new OcsfDataFormatReifier(camelContext, definition);
         } else if (definition instanceof ParquetAvroDataFormat) {
             return new ParquetAvroDataFormatReifier(camelContext, definition);
         } else if (definition instanceof PGPDataFormat) {

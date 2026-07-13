@@ -33,7 +33,7 @@ import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.support.ObjectHelper;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.util.CastUtils;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -43,8 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class MultipleDestinationConsumeTest extends CamelTestSupport {
-    private static final MailboxUser james = Mailbox.getOrCreateUser("james", "secret");
-    private static final MailboxUser bar = Mailbox.getOrCreateUser("bar", "secret");
+    private static final MailboxUser james = Mailbox.getOrCreateUser("MultipleDestinationConsumeTest-james", "secret");
+    private static final MailboxUser bar = Mailbox.getOrCreateUser("MultipleDestinationConsumeTest-bar", "secret");
     private Logger log = LoggerFactory.getLogger(getClass());
     private String body = "hello world!\r\n";
     private Session mailSession;
@@ -104,7 +104,7 @@ public class MultipleDestinationConsumeTest extends CamelTestSupport {
     }
 
     @Override
-    public void doPreSetup() throws Exception {
+    public void setupResources() throws Exception {
         mailSession = Mailbox.getSmtpSession();
     }
 

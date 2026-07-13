@@ -2,6 +2,7 @@
 // make edits in docs/*nav.adoc.template files instead
 
 * xref:eips:enterprise-integration-patterns.adoc[Enterprise Integration Patterns]
+* xref:eips:ai-patterns.adoc[AI Patterns]
 ** xref:aggregate-eip.adoc[Aggregate]
 ** xref:batchConfig-eip.adoc[BatchConfig]
 ** xref:bean-eip.adoc[Bean]
@@ -85,7 +86,6 @@
 ** xref:script-eip.adoc[Script]
 ** xref:selective-consumer.adoc[Selective Consumer]
 ** xref:service-activator.adoc[Service Activator]
-** xref:serviceCall-eip.adoc[Service Call]
 ** xref:setBody-eip.adoc[Set Body]
 ** xref:setHeader-eip.adoc[Set Header]
 ** xref:setHeaders-eip.adoc[Set Headers]
@@ -97,6 +97,7 @@
 ** xref:step-eip.adoc[Step]
 ** xref:stickyLoadBalancer-eip.adoc[Sticky Load Balancer]
 ** xref:stop-eip.adoc[Stop]
+** xref:throwException-eip.adoc[Stop]
 ** xref:streamConfig-eip.adoc[StreamConfig]
 ** xref:threads-eip.adoc[Threads]
 ** xref:throttle-eip.adoc[Throttle]

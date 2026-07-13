@@ -27,7 +27,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.test.infra.openai.mock.OpenAIMock;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -103,7 +103,7 @@ public class LangChain4jToolMultipleMatchingGroupsTest extends CamelTestSupport 
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(new SystemMessage(
                 """
-                        You provide the requested information using the functions you hava available. You can invoke the functions to obtain the information you need to complete the answer.
+                        You provide the requested information using the functions you have available. You can invoke the functions to obtain the information you need to complete the answer.
                         """));
         messages.add(new UserMessage("""
                 What is the name of the user 1 and what department he is part of?
@@ -113,7 +113,9 @@ public class LangChain4jToolMultipleMatchingGroupsTest extends CamelTestSupport 
 
         Assertions.assertThat(message).isNotNull();
         final String responseContent = message.getMessage().getBody().toString();
-        Assertions.assertThat(responseContent).containsIgnoringCase(nameFromDB);
+        // Normalize U+202F (narrow no-break space) to ASCII space - Granite4 may substitute spaces
+        final String normalizedContent = responseContent.replace('\u202F', ' ');
+        Assertions.assertThat(normalizedContent).containsIgnoringCase(nameFromDB);
         Assertions.assertThat(responseContent).containsIgnoringCase("engineering");
     }
 }

@@ -19,7 +19,7 @@ package org.apache.camel.component.gson;
 import java.text.SimpleDateFormat;
 
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.AbstractXmlApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -59,9 +59,10 @@ public class SpringGsonJsonDataFormatTest extends CamelSpringTestSupport {
 
         Object marshalled = template.requestBody("direct:inPretty", in);
         String marshalledAsString = context.getTypeConverter().convertTo(String.class, marshalled);
-        String expected = "{\n"
-                          + "  \"name\": \"Camel\""
-                          + "\n}";
+        String expected = """
+                {
+                  "name": "Camel"
+                }""";
         assertEquals(expected, marshalledAsString);
 
         template.sendBody("direct:backPretty", marshalled);

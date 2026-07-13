@@ -20,7 +20,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.util.StopWatch;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Unit test for testing mail polling is happening according to the default poll interval.
  */
 public class MailDefaultDelayForMailConsumeTest extends CamelTestSupport {
-    private static final MailboxUser bond = Mailbox.getOrCreateUser("bond", "secret");
+    private static final MailboxUser bond = Mailbox.getOrCreateUser("MailDefaultDelayForMailConsumeTest-bond", "secret");
 
     @Test
     public void testConsuming() throws Exception {

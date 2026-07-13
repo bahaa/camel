@@ -29,40 +29,34 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.netty.codec.ObjectDecoder;
 import org.apache.camel.component.netty.codec.ObjectEncoder;
 import org.apache.camel.test.AvailablePortFinder;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Object Serialization is not allowed by default. However it can be enabled by adding specific encoders/decoders.
  */
 public class ObjectSerializationTest extends BaseNettyTest {
 
-    private static volatile int port2;
-
-    @BeforeAll
-    public static void initPort2() {
-        port2 = AvailablePortFinder.getNextAvailable();
-    }
+    @RegisterExtension
+    AvailablePortFinder.Port port2 = AvailablePortFinder.find();
 
     @Test
     public void testObjectSerializationFailureByDefault() {
         Date date = new Date();
-        try {
-            Object o = template.requestBody("netty:tcp://localhost:{{port}}?sync=true&encoders=#encoder", date, Date.class);
-            fail("Should have thrown exception");
-        } catch (CamelExecutionException e) {
-            // expected
-        }
+        assertThrows(CamelExecutionException.class,
+                () -> template.requestBody("netty:tcp://localhost:{{port}}?sync=true&encoders=#encoder", date, Date.class),
+                "Should have thrown exception");
     }
 
     @Test
     public void testObjectSerializationAllowedViaDecoder() {
         Date date = new Date();
         Date receivedDate = template
-                .requestBody("netty:tcp://localhost:{{port2}}?sync=true&encoders=#encoder&decoders=#decoder", date, Date.class);
+                .requestBody("netty:tcp://localhost:{{port2}}?sync=true&encoders=#encoder&decoders=#decoder", date,
+                        Date.class);
         assertEquals(date, receivedDate);
     }
 
@@ -72,7 +66,7 @@ public class ObjectSerializationTest extends BaseNettyTest {
 
         Properties prop = new Properties();
         prop.setProperty("port", Integer.toString(getPort()));
-        prop.setProperty("port2", Integer.toString(port2));
+        prop.setProperty("port2", Integer.toString(port2.getPort()));
 
         return prop;
     }

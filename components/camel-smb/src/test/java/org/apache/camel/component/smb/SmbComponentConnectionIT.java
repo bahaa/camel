@@ -29,7 +29,7 @@ import org.apache.camel.component.file.GenericFileExist;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.infra.smb.services.SmbService;
 import org.apache.camel.test.infra.smb.services.SmbServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -126,15 +126,15 @@ public class SmbComponentConnectionIT extends CamelTestSupport {
                         .toF("smb:%s/%s?username=%s&password=%s", service.address(), service.shareName(),
                                 service.userName(), service.password());
 
-                fromF("smb:%s/%s?username=%s&password=%s&searchPattern=*_override.doc", service.address(),
+                fromF("smb:%s/%s?username=%s&password=%s&searchPattern=*_override.doc&initialDelay=3000", service.address(),
                         service.shareName(),
                         service.userName(), service.password())
                         .to("mock:received_override");
-                fromF("smb:%s/%s?username=%s&password=%s&searchPattern=*_ignore.doc", service.address(),
+                fromF("smb:%s/%s?username=%s&password=%s&searchPattern=*_ignore.doc&initialDelay=3000", service.address(),
                         service.shareName(),
                         service.userName(), service.password())
                         .to("mock:received_ignore");
-                fromF("smb:%s/%s?username=%s&password=%s&searchPattern=*_send.doc", service.address(),
+                fromF("smb:%s/%s?username=%s&password=%s&searchPattern=*_send.doc&initialDelay=3000", service.address(),
                         service.shareName(),
                         service.userName(), service.password())
                         .to("mock:received_send");

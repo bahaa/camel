@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 import com.github.freva.asciitable.AsciiTable;
 import com.github.freva.asciitable.Column;
@@ -31,11 +32,16 @@ import org.apache.camel.dsl.jbang.core.common.ProcessHelper;
 import org.apache.camel.util.TimeUtils;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
+import org.apache.camel.util.json.Jsoner;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "platform-http",
-         description = "Get embedded HTTP services of Camel integrations", sortOptions = false, showDefaultValues = true)
+         description = "Get embedded HTTP services of Camel integrations", sortOptions = false, showDefaultValues = true,
+         footer = {
+                 "%nExamples:",
+                 "  camel get platform-http",
+                 "  camel get platform-http --all" })
 public class ListPlatformHttp extends ProcessWatchCommand {
 
     @CommandLine.Parameters(description = "Name or pid of running Camel integration", arity = "0..1")
@@ -118,13 +124,27 @@ public class ListPlatformHttp extends ProcessWatchCommand {
         rows.sort(this::sortRow);
 
         if (!rows.isEmpty()) {
-            printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
-                    new Column().header("PID").headerAlign(HorizontalAlign.CENTER).with(r -> r.pid),
-                    new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).maxWidth(30, OverflowBehaviour.ELLIPSIS_RIGHT)
-                            .with(r -> r.name),
-                    new Column().header("URL").dataAlign(HorizontalAlign.LEFT).with(r -> r.url),
-                    new Column().header("METHOD").dataAlign(HorizontalAlign.LEFT).with(r -> r.verbs),
-                    new Column().header("CONTENT-TYPE").dataAlign(HorizontalAlign.LEFT).with(this::getContent))));
+            if (jsonOutput) {
+                printer().println(Jsoner.serialize(rows.stream().map(r -> {
+                    JsonObject jo = new JsonObject();
+                    jo.put("pid", r.pid);
+                    jo.put("name", r.name);
+                    jo.put("url", r.url);
+                    jo.put("method", r.verbs);
+                    jo.put("consumes", r.consumes);
+                    jo.put("produces", r.produces);
+                    return jo;
+                }).collect(Collectors.toList())));
+            } else {
+                printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
+                        new Column().header("PID").headerAlign(HorizontalAlign.CENTER).with(r -> r.pid),
+                        new Column().header("NAME").dataAlign(HorizontalAlign.LEFT)
+                                .maxWidth(30, OverflowBehaviour.ELLIPSIS_RIGHT)
+                                .with(r -> r.name),
+                        new Column().header("URL").dataAlign(HorizontalAlign.LEFT).with(r -> r.url),
+                        new Column().header("METHOD").dataAlign(HorizontalAlign.LEFT).with(r -> r.verbs),
+                        new Column().header("CONTENT-TYPE").dataAlign(HorizontalAlign.LEFT).with(this::getContent))));
+            }
         }
 
         return 0;

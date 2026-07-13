@@ -21,6 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.Lock;
@@ -45,6 +46,7 @@ import org.apache.camel.spi.ClassResolver;
 import org.apache.camel.spi.EndpointServiceRegistry;
 import org.apache.camel.spi.EndpointStrategy;
 import org.apache.camel.spi.EndpointUriFactory;
+import org.apache.camel.spi.ErrorRegistry;
 import org.apache.camel.spi.EventNotifier;
 import org.apache.camel.spi.ExchangeFactory;
 import org.apache.camel.spi.ExchangeFactoryManager;
@@ -61,6 +63,7 @@ import org.apache.camel.spi.ManagementNameStrategy;
 import org.apache.camel.spi.ManagementStrategy;
 import org.apache.camel.spi.ManagementStrategyFactory;
 import org.apache.camel.spi.MessageHistoryFactory;
+import org.apache.camel.spi.MessageSizeStrategy;
 import org.apache.camel.spi.NormalizedEndpointUri;
 import org.apache.camel.spi.PluginManager;
 import org.apache.camel.spi.ProcessorExchangeFactory;
@@ -68,7 +71,6 @@ import org.apache.camel.spi.PropertiesComponent;
 import org.apache.camel.spi.ReactiveExecutor;
 import org.apache.camel.spi.Registry;
 import org.apache.camel.spi.RestConfiguration;
-import org.apache.camel.spi.RestRegistry;
 import org.apache.camel.spi.RestRegistryFactory;
 import org.apache.camel.spi.RouteController;
 import org.apache.camel.spi.RouteStartupOrder;
@@ -87,15 +89,16 @@ import org.apache.camel.support.service.ServiceHelper;
 import org.apache.camel.support.startup.DefaultStartupStepRecorder;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.URISupport;
+import org.apache.camel.util.concurrent.ContextValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     private final AbstractCamelContext camelContext;
-    private final ThreadLocal<String> isCreateRoute = new ThreadLocal<>();
-    private final ThreadLocal<String> isCreateProcessor = new ThreadLocal<>();
-    private final ThreadLocal<Boolean> isSetupRoutes = new ThreadLocal<>();
+    private final ContextValue<String> isCreateRoute = ContextValue.newInstance("isCreateRoute");
+    private final ContextValue<String> isCreateProcessor = ContextValue.newInstance("isCreateProcessor");
+    private final ContextValue<Boolean> isSetupRoutes = ContextValue.newInstance("isSetupRoutes");
     private final List<InterceptStrategy> interceptStrategies = new ArrayList<>();
     private final Map<String, FactoryFinder> factories = new ConcurrentHashMap<>();
     private final Map<String, FactoryFinder> bootstrapFactories = new ConcurrentHashMap<>();
@@ -122,11 +125,12 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     private volatile PropertiesComponent propertiesComponent;
     private volatile RestRegistryFactory restRegistryFactory;
     private volatile RestConfiguration restConfiguration;
-    private volatile RestRegistry restRegistry;
     private volatile ClassResolver classResolver;
     private volatile MessageHistoryFactory messageHistoryFactory;
     private volatile StreamCachingStrategy streamCachingStrategy;
+    private volatile MessageSizeStrategy messageSizeStrategy;
     private volatile InflightRepository inflightRepository;
+    private volatile ErrorRegistry errorRegistry;
     private volatile UuidGenerator uuidGenerator;
     private volatile Tracer tracer;
     private volatile TransformerRegistry transformerRegistry;
@@ -318,18 +322,17 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     @Override
     public boolean isSetupRoutes() {
-        Boolean answer = isSetupRoutes.get();
-        return answer != null && answer;
+        return Boolean.TRUE.equals(isSetupRoutes.orElse(false));
     }
 
     @Override
     public String getCreateRoute() {
-        return isCreateRoute.get();
+        return isCreateRoute.orElse(null);
     }
 
     @Override
     public String getCreateProcessor() {
-        return isCreateProcessor.get();
+        return isCreateProcessor.orElse(null);
     }
 
     @Override
@@ -419,15 +422,35 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     }
 
     @Override
+    @Deprecated
     public void createRoute(String routeId) {
         if (routeId != null) {
             isCreateRoute.set(routeId);
         } else {
-            isSetupRoutes.remove();
+            isCreateRoute.remove();
         }
     }
 
     @Override
+    public void createRoute(String routeId, Runnable operation) {
+        ContextValue.where(isCreateRoute, routeId, operation);
+    }
+
+    @Override
+    public <T> T createRoute(String routeId, Callable<T> callable) throws Exception {
+        return ContextValue.where(isCreateRoute, routeId, () -> {
+            try {
+                return callable.call();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Override
+    @Deprecated
     public void createProcessor(String processorId) {
         if (processorId != null) {
             isCreateProcessor.set(processorId);
@@ -437,12 +460,49 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
     }
 
     @Override
+    public void createProcessor(String processorId, Runnable operation) {
+        ContextValue.where(isCreateProcessor, processorId, operation);
+    }
+
+    @Override
+    public <T> T createProcessor(String processorId, Callable<T> callable) throws Exception {
+        return ContextValue.where(isCreateProcessor, processorId, () -> {
+            try {
+                return callable.call();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @Override
+    @Deprecated
     public void setupRoutes(boolean done) {
         if (done) {
             isSetupRoutes.remove();
         } else {
             isSetupRoutes.set(true);
         }
+    }
+
+    @Override
+    public void setupRoutes(Runnable operation) {
+        ContextValue.where(isSetupRoutes, true, operation);
+    }
+
+    @Override
+    public <T> T setupRoutes(Callable<T> callable) throws Exception {
+        return ContextValue.where(isSetupRoutes, true, () -> {
+            try {
+                return callable.call();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Override
@@ -718,7 +778,10 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
             lock.lock();
             try {
                 if (restRegistryFactory == null) {
-                    setRestRegistryFactory(camelContext.createRestRegistryFactory());
+                    RestRegistryFactory factory = camelContext.createRestRegistryFactory();
+                    if (factory != null) {
+                        setRestRegistryFactory(factory);
+                    }
                 }
             } finally {
                 lock.unlock();
@@ -729,24 +792,6 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     void setRestRegistryFactory(RestRegistryFactory restRegistryFactory) {
         this.restRegistryFactory = camelContext.getInternalServiceManager().addService(camelContext, restRegistryFactory);
-    }
-
-    RestRegistry getRestRegistry() {
-        if (restRegistry == null) {
-            lock.lock();
-            try {
-                if (restRegistry == null) {
-                    setRestRegistry(camelContext.createRestRegistry());
-                }
-            } finally {
-                lock.unlock();
-            }
-        }
-        return restRegistry;
-    }
-
-    void setRestRegistry(RestRegistry restRegistry) {
-        this.restRegistry = camelContext.getInternalServiceManager().addService(camelContext, restRegistry);
     }
 
     RestConfiguration getRestConfiguration() {
@@ -822,6 +867,25 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
                 = camelContext.getInternalServiceManager().addService(camelContext, streamCachingStrategy, true, false, true);
     }
 
+    MessageSizeStrategy getMessageSizeStrategy() {
+        if (messageSizeStrategy == null) {
+            lock.lock();
+            try {
+                if (messageSizeStrategy == null) {
+                    setMessageSizeStrategy(camelContext.createMessageSizeStrategy());
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+        return messageSizeStrategy;
+    }
+
+    void setMessageSizeStrategy(MessageSizeStrategy messageSizeStrategy) {
+        this.messageSizeStrategy
+                = camelContext.getInternalServiceManager().addService(camelContext, messageSizeStrategy, true, false, true);
+    }
+
     InflightRepository getInflightRepository() {
         if (inflightRepository == null) {
             lock.lock();
@@ -838,6 +902,24 @@ class DefaultCamelContextExtension implements ExtendedCamelContext {
 
     void setInflightRepository(InflightRepository repository) {
         this.inflightRepository = camelContext.getInternalServiceManager().addService(camelContext, repository);
+    }
+
+    ErrorRegistry getErrorRegistry() {
+        if (errorRegistry == null) {
+            lock.lock();
+            try {
+                if (errorRegistry == null) {
+                    setErrorRegistry(camelContext.createErrorRegistry());
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+        return errorRegistry;
+    }
+
+    void setErrorRegistry(ErrorRegistry errorRegistry) {
+        this.errorRegistry = camelContext.getInternalServiceManager().addService(camelContext, errorRegistry);
     }
 
     UuidGenerator getUuidGenerator() {

@@ -25,8 +25,9 @@ public interface Ddb2Constants {
     @Metadata(label = "DeleteItem GetItem PutItem UpdateItem",
               description = "The list of attributes returned by the operation.", javaType = "Map<String, AttributeValue>")
     String ATTRIBUTES = "CamelAwsDdbAttributes";
-    @Metadata(description = "If attribute names are not specified then all attributes will be\n" +
-                            "returned.",
+    @Metadata(description = """
+            If attribute names are not specified then all attributes will be
+            returned.""",
               javaType = "Collection<String>")
     String ATTRIBUTE_NAMES = "CamelAwsDdbAttributeNames";
     @Metadata(description = "A map of the table name and corresponding items to get by primary key.",
@@ -35,8 +36,9 @@ public interface Ddb2Constants {
     @Metadata(label = "BatchGetItems", description = "Table names and the respective item attributes from the tables.",
               javaType = "Map<String, BatchResponse>")
     String BATCH_RESPONSE = "CamelAwsDdbBatchResponse";
-    @Metadata(description = "If set to true, then a consistent read is issued, otherwise eventually\n" +
-                            "consistent is used.",
+    @Metadata(description = """
+            If set to true, then a consistent read is issued, otherwise eventually
+            consistent is used.""",
               javaType = "Boolean")
     String CONSISTENT_READ = "CamelAwsDdbConsistentRead";
     @Metadata(label = "Query Scan", description = "The number of Capacity Units of the provisioned throughput of the table\n" +
@@ -88,6 +90,10 @@ public interface Ddb2Constants {
                                                   "the previous result set.",
               javaType = "Key")
     String LAST_EVALUATED_KEY = "CamelAwsDdbLastEvaluatedKey";
+    @Metadata(label = "Query Scan",
+              description = "Whether the response has more results (is truncated). If true, use LAST_EVALUATED_KEY as START_KEY for the next page.",
+              javaType = "Boolean")
+    String IS_TRUNCATED = "CamelAwsDdbIsTruncated";
     @Metadata(description = "The maximum number of items to return.", javaType = "Integer")
     String LIMIT = "CamelAwsDdbLimit";
     @Metadata(description = "The operation to perform.", javaType = "org.apache.camel.component.aws2.ddb.Ddb2Operations")
@@ -138,6 +144,58 @@ public interface Ddb2Constants {
     @Metadata(label = "UpdateTable DescribeTable", description = "WriteCapacityUnits property of this table.",
               javaType = "Long")
     String WRITE_CAPACITY = "CamelAwsDdbWriteCapacity";
+    @Metadata(label = "ExecuteStatement",
+              description = "A PartiQL statement that uses parameters.",
+              javaType = "String")
+    String STATEMENT = "CamelAwsDdbStatement";
+    @Metadata(label = "ExecuteStatement",
+              description = "The parameters for the PartiQL statement, if any.",
+              javaType = "java.util.List<software.amazon.awssdk.services.dynamodb.model.AttributeValue>")
+    String STATEMENT_PARAMETERS = "CamelAwsDdbStatementParameters";
+    @Metadata(label = "BatchExecuteStatement",
+              description = "The list of PartiQL statements representing the batch to run.",
+              javaType = "java.util.List<software.amazon.awssdk.services.dynamodb.model.BatchStatementRequest>")
+    String BATCH_STATEMENTS = "CamelAwsDdbBatchStatements";
+    @Metadata(label = "ExecuteStatement",
+              description = "The response items from an ExecuteStatement operation.",
+              javaType = "java.util.List<java.util.Map<String, software.amazon.awssdk.services.dynamodb.model.AttributeValue>>")
+    String EXECUTE_STATEMENT_ITEMS = "CamelAwsDdbExecuteStatementItems";
+    @Metadata(label = "BatchExecuteStatement",
+              description = "The response to each PartiQL statement in the batch.",
+              javaType = "java.util.List<software.amazon.awssdk.services.dynamodb.model.BatchStatementResponse>")
+    String BATCH_STATEMENT_RESPONSE = "CamelAwsDdbBatchStatementResponse";
+    @Metadata(label = "TransactWriteItems",
+              description = "The list of TransactWriteItem objects for a transactional write.",
+              javaType = "java.util.List<software.amazon.awssdk.services.dynamodb.model.TransactWriteItem>")
+    String TRANSACT_WRITE_ITEMS = "CamelAwsDdbTransactWriteItems";
+    @Metadata(label = "TransactWriteItems",
+              description = "A unique client request token for idempotent TransactWriteItems calls.",
+              javaType = "String")
+    String TRANSACT_CLIENT_REQUEST_TOKEN = "CamelAwsDdbTransactClientRequestToken";
+    @Metadata(label = "TransactWriteItems",
+              description = "The consumed capacity from a TransactWriteItems operation.",
+              javaType = "java.util.List<software.amazon.awssdk.services.dynamodb.model.ConsumedCapacity>")
+    String TRANSACT_WRITE_CONSUMED_CAPACITY = "CamelAwsDdbTransactWriteConsumedCapacity";
+    @Metadata(label = "TransactWriteItems",
+              description = "The item collection metrics from a TransactWriteItems operation.",
+              javaType = "java.util.Map<String, java.util.List<software.amazon.awssdk.services.dynamodb.model.ItemCollectionMetrics>>")
+    String TRANSACT_WRITE_ITEM_COLLECTION_METRICS = "CamelAwsDdbTransactWriteItemCollectionMetrics";
+    @Metadata(label = "TransactGetItems",
+              description = "The list of TransactGetItem objects for a transactional read.",
+              javaType = "java.util.List<software.amazon.awssdk.services.dynamodb.model.TransactGetItem>")
+    String TRANSACT_GET_ITEMS = "CamelAwsDdbTransactGetItems";
+    @Metadata(label = "TransactGetItems",
+              description = "The response from a TransactGetItems operation.",
+              javaType = "java.util.List<software.amazon.awssdk.services.dynamodb.model.ItemResponse>")
+    String TRANSACT_GET_RESPONSE = "CamelAwsDdbTransactGetResponse";
+    @Metadata(label = "BatchWriteItems",
+              description = "A map of table names to lists of WriteRequest objects for batch writes.",
+              javaType = "java.util.Map<String, java.util.List<software.amazon.awssdk.services.dynamodb.model.WriteRequest>>")
+    String BATCH_WRITE_ITEMS = "CamelAwsDdbBatchWriteItems";
+    @Metadata(label = "BatchWriteItems",
+              description = "A map of tables and their respective unprocessed items after a BatchWriteItems operation.",
+              javaType = "java.util.Map<String, java.util.List<software.amazon.awssdk.services.dynamodb.model.WriteRequest>>")
+    String BATCH_WRITE_UNPROCESSED_ITEMS = "CamelAwsDdbBatchWriteUnprocessedItems";
     @Metadata(label = "Query Scan", description = "The Filter Expression.",
               javaType = "String")
     String FILTER_EXPRESSION = "CamelAwsDdbFilterExpression";

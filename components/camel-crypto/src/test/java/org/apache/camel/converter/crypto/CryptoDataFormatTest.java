@@ -35,13 +35,13 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class CryptoDataFormatTest extends CamelTestSupport {
 
@@ -131,12 +131,10 @@ public class CryptoDataFormatTest extends CamelTestSupport {
 
     @Test
     void testNoAlgorithm() throws Exception {
-        try {
-            doRoundTripEncryptionTests("direct:no-algorithm");
-            fail("Failure expected on no algorithm specified");
-        } catch (CamelExecutionException ex) {
-            assertTrue(ex.getCause() instanceof NoSuchAlgorithmException);
-        }
+        CamelExecutionException ex = assertThrows(CamelExecutionException.class,
+                () -> doRoundTripEncryptionTests("direct:no-algorithm"),
+                "Failure expected on no algorithm specified");
+        assertTrue(ex.getCause() instanceof NoSuchAlgorithmException);
     }
 
     private void validateHeaderIsCleared(Exchange ex) {

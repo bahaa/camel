@@ -26,7 +26,7 @@ public abstract class LoadBalancerDefinition extends IdentifiedType implements C
     @XmlTransient
     private String loadBalancerTypeName;
 
-    public LoadBalancerDefinition() {
+    protected LoadBalancerDefinition() {
     }
 
     protected LoadBalancerDefinition(LoadBalancerDefinition source) {
@@ -37,9 +37,6 @@ public abstract class LoadBalancerDefinition extends IdentifiedType implements C
         this.loadBalancerTypeName = loadBalancerTypeName;
     }
 
-    /**
-     * Maximum number of outputs, as some load balancers only support 1 processor
-     */
     public int getMaximumNumberOfOutputs() {
         return Integer.MAX_VALUE;
     }

@@ -1240,7 +1240,7 @@ public interface CxfRsEndpointBuilderFactory {
         /**
          * This option allows you to configure the maximum size of the cache.
          * The implementation caches CXF clients or ClientFactoryBean in
-         * CxfProvider and CxfRsProvider.
+         * CxfProvider and CxfRsProvider. The value must be greater than 0.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -1257,7 +1257,7 @@ public interface CxfRsEndpointBuilderFactory {
         /**
          * This option allows you to configure the maximum size of the cache.
          * The implementation caches CXF clients or ClientFactoryBean in
-         * CxfProvider and CxfRsProvider.
+         * CxfProvider and CxfRsProvider. The value must be greater than 0.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -2162,7 +2162,7 @@ public interface CxfRsEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final CxfRsHeaderNameBuilder INSTANCE = new CxfRsHeaderNameBuilder();
+        public static final CxfRsHeaderNameBuilder INSTANCE = new CxfRsHeaderNameBuilder();
 
         /**
          * The name of the operation.
@@ -2171,10 +2171,10 @@ public interface CxfRsEndpointBuilderFactory {
          * 
          * Group: common
          * 
-         * @return the name of the header {@code operationName}.
+         * @return the name of the header {@code CxfOperationName}.
          */
-        public String operationName() {
-            return "operationName";
+        public String cxfOperationName() {
+            return "CamelCxfOperationName";
         }
         /**
          * The authentication.

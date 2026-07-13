@@ -135,6 +135,142 @@ public interface PQCEndpointBuilderFactory {
             return this;
         }
         /**
+         * The classical key agreement algorithm to use in hybrid KEM
+         * operations.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalKEMAlgorithm the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder classicalKEMAlgorithm(String classicalKEMAlgorithm) {
+            doSetProperty("classicalKEMAlgorithm", classicalKEMAlgorithm);
+            return this;
+        }
+        /**
+         * The classical KeyAgreement instance to be used in hybrid KEM
+         * operations.
+         * 
+         * The option is a: <code>javax.crypto.KeyAgreement</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalKeyAgreement the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder classicalKeyAgreement(javax.crypto.KeyAgreement classicalKeyAgreement) {
+            doSetProperty("classicalKeyAgreement", classicalKeyAgreement);
+            return this;
+        }
+        /**
+         * The classical KeyAgreement instance to be used in hybrid KEM
+         * operations.
+         * 
+         * The option will be converted to a
+         * <code>javax.crypto.KeyAgreement</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalKeyAgreement the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder classicalKeyAgreement(String classicalKeyAgreement) {
+            doSetProperty("classicalKeyAgreement", classicalKeyAgreement);
+            return this;
+        }
+        /**
+         * The classical KeyPair to be used in hybrid operations.
+         * 
+         * The option is a: <code>java.security.KeyPair</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalKeyPair the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder classicalKeyPair(java.security.KeyPair classicalKeyPair) {
+            doSetProperty("classicalKeyPair", classicalKeyPair);
+            return this;
+        }
+        /**
+         * The classical KeyPair to be used in hybrid operations.
+         * 
+         * The option will be converted to a <code>java.security.KeyPair</code>
+         * type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalKeyPair the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder classicalKeyPair(String classicalKeyPair) {
+            doSetProperty("classicalKeyPair", classicalKeyPair);
+            return this;
+        }
+        /**
+         * The classical signature algorithm to use in hybrid operations.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalSignatureAlgorithm the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder classicalSignatureAlgorithm(String classicalSignatureAlgorithm) {
+            doSetProperty("classicalSignatureAlgorithm", classicalSignatureAlgorithm);
+            return this;
+        }
+        /**
+         * The classical Signature instance to be used in hybrid signature
+         * operations.
+         * 
+         * The option is a: <code>java.security.Signature</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalSigner the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder classicalSigner(java.security.Signature classicalSigner) {
+            doSetProperty("classicalSigner", classicalSigner);
+            return this;
+        }
+        /**
+         * The classical Signature instance to be used in hybrid signature
+         * operations.
+         * 
+         * The option will be converted to a
+         * <code>java.security.Signature</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param classicalSigner the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder classicalSigner(String classicalSigner) {
+            doSetProperty("classicalSigner", classicalSigner);
+            return this;
+        }
+        /**
+         * The KDF algorithm to use for combining secrets in hybrid KEM
+         * operations.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: HKDF-SHA256
+         * Group: advanced
+         * 
+         * @param hybridKdfAlgorithm the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder hybridKdfAlgorithm(String hybridKdfAlgorithm) {
+            doSetProperty("hybridKdfAlgorithm", hybridKdfAlgorithm);
+            return this;
+        }
+        /**
          * In case there is no keyGenerator, we specify an algorithm to build
          * the KeyGenerator.
          * 
@@ -176,6 +312,38 @@ public interface PQCEndpointBuilderFactory {
          */
         default AdvancedPQCEndpointBuilder keyGenerator(String keyGenerator) {
             doSetProperty("keyGenerator", keyGenerator);
+            return this;
+        }
+        /**
+         * The KeyLifecycleManager to use for key lifecycle operations such as
+         * generation, rotation, import/export, expiration, and revocation.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param keyLifecycleManager the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder keyLifecycleManager(org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager keyLifecycleManager) {
+            doSetProperty("keyLifecycleManager", keyLifecycleManager);
+            return this;
+        }
+        /**
+         * The KeyLifecycleManager to use for key lifecycle operations such as
+         * generation, rotation, import/export, expiration, and revocation.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param keyLifecycleManager the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder keyLifecycleManager(String keyLifecycleManager) {
+            doSetProperty("keyLifecycleManager", keyLifecycleManager);
             return this;
         }
         /**
@@ -309,6 +477,46 @@ public interface PQCEndpointBuilderFactory {
             return this;
         }
         /**
+         * The warning threshold for stateful key exhaustion as a fraction of
+         * total signatures (0.0 to 1.0). When the remaining signatures for a
+         * stateful key (XMSS, XMSSMT, LMS/HSS) drop below this fraction of the
+         * total capacity, a WARN log is emitted. When remaining signatures
+         * reach zero, an exception is thrown to prevent key reuse. Set to 0 to
+         * disable warnings.
+         * 
+         * The option is a: <code>double</code> type.
+         * 
+         * Default: 0.1
+         * Group: advanced
+         * 
+         * @param statefulKeyWarningThreshold the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder statefulKeyWarningThreshold(double statefulKeyWarningThreshold) {
+            doSetProperty("statefulKeyWarningThreshold", statefulKeyWarningThreshold);
+            return this;
+        }
+        /**
+         * The warning threshold for stateful key exhaustion as a fraction of
+         * total signatures (0.0 to 1.0). When the remaining signatures for a
+         * stateful key (XMSS, XMSSMT, LMS/HSS) drop below this fraction of the
+         * total capacity, a WARN log is emitted. When remaining signatures
+         * reach zero, an exception is thrown to prevent key reuse. Set to 0 to
+         * disable warnings.
+         * 
+         * The option will be converted to a <code>double</code> type.
+         * 
+         * Default: 0.1
+         * Group: advanced
+         * 
+         * @param statefulKeyWarningThreshold the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder statefulKeyWarningThreshold(String statefulKeyWarningThreshold) {
+            doSetProperty("statefulKeyWarningThreshold", statefulKeyWarningThreshold);
+            return this;
+        }
+        /**
          * In the context of extractSecretKeyFromEncapsulation operation, this
          * option define if we want to have the key set as header.
          * 
@@ -338,6 +546,46 @@ public interface PQCEndpointBuilderFactory {
          */
         default AdvancedPQCEndpointBuilder storeExtractedSecretKeyAsHeader(String storeExtractedSecretKeyAsHeader) {
             doSetProperty("storeExtractedSecretKeyAsHeader", storeExtractedSecretKeyAsHeader);
+            return this;
+        }
+        /**
+         * Whether to enforce key status checks before cryptographic operations.
+         * When enabled, REVOKED keys are rejected for all operations, EXPIRED
+         * keys are rejected for signing/encapsulation but allowed for
+         * verification/extraction, and DEPRECATED keys produce a warning but
+         * still function. Requires a KeyLifecycleManager and a CamelPQCKeyId
+         * header to be set.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: advanced
+         * 
+         * @param strictKeyLifecycle the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder strictKeyLifecycle(boolean strictKeyLifecycle) {
+            doSetProperty("strictKeyLifecycle", strictKeyLifecycle);
+            return this;
+        }
+        /**
+         * Whether to enforce key status checks before cryptographic operations.
+         * When enabled, REVOKED keys are rejected for all operations, EXPIRED
+         * keys are rejected for signing/encapsulation but allowed for
+         * verification/extraction, and DEPRECATED keys produce a warning but
+         * still function. Requires a KeyLifecycleManager and a CamelPQCKeyId
+         * header to be set.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: advanced
+         * 
+         * @param strictKeyLifecycle the value to set
+         * @return the dsl builder
+         */
+        default AdvancedPQCEndpointBuilder strictKeyLifecycle(String strictKeyLifecycle) {
+            doSetProperty("strictKeyLifecycle", strictKeyLifecycle);
             return this;
         }
         /**
@@ -451,7 +699,7 @@ public interface PQCEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final PQCHeaderNameBuilder INSTANCE = new PQCHeaderNameBuilder();
+        public static final PQCHeaderNameBuilder INSTANCE = new PQCHeaderNameBuilder();
 
         /**
          * The operation we want to perform.
@@ -635,6 +883,103 @@ public interface PQCEndpointBuilderFactory {
          */
         public String pQCRevocationReason() {
             return "CamelPQCRevocationReason";
+        }
+        /**
+         * The hybrid signature combining both classical and PQC signatures.
+         * 
+         * The option is a: {@code byte[]} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code PQCHybridSignature}.
+         */
+        public String pQCHybridSignature() {
+            return "CamelPQCHybridSignature";
+        }
+        /**
+         * The classical signature component of a hybrid signature.
+         * 
+         * The option is a: {@code byte[]} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code PQCClassicalSignature}.
+         */
+        public String pQCClassicalSignature() {
+            return "CamelPQCClassicalSignature";
+        }
+        /**
+         * The PQC signature component of a hybrid signature.
+         * 
+         * The option is a: {@code byte[]} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code PQCPqcSignature}.
+         */
+        public String pQCPqcSignature() {
+            return "CamelPQCPqcSignature";
+        }
+        /**
+         * The classical encapsulation component of a hybrid KEM.
+         * 
+         * The option is a: {@code byte[]} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code PQCClassicalEncapsulation}.
+         */
+        public String pQCClassicalEncapsulation() {
+            return "CamelPQCClassicalEncapsulation";
+        }
+        /**
+         * The PQC encapsulation component of a hybrid KEM.
+         * 
+         * The option is a: {@code byte[]} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code PQCPqcEncapsulation}.
+         */
+        public String pQCPqcEncapsulation() {
+            return "CamelPQCPqcEncapsulation";
+        }
+        /**
+         * The combined secret key from hybrid KEM operation.
+         * 
+         * The option is a: {@code javax.crypto.SecretKey} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code PQCHybridSecretKey}.
+         */
+        public String pQCHybridSecretKey() {
+            return "CamelPQCHybridSecretKey";
+        }
+        /**
+         * The hybrid encapsulation combining both classical and PQC
+         * encapsulations.
+         * 
+         * The option is a: {@code byte[]} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code PQCHybridEncapsulation}.
+         */
+        public String pQCHybridEncapsulation() {
+            return "CamelPQCHybridEncapsulation";
+        }
+        /**
+         * The verification result of hybrid signature (both must pass).
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code PQCHybridVerification}.
+         */
+        public String pQCHybridVerification() {
+            return "CamelPQCHybridVerification";
         }
     }
     static PQCEndpointBuilder endpointBuilder(String componentName, String path) {

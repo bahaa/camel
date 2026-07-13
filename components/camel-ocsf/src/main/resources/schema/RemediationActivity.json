@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/classes/remediation_activity",
+  "title": "RemediationActivity",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.RemediationActivity",
+  "description": "RemediationActivity event class.",
+  "extends": {
+    "$ref": "OcsfEvent.json"
+  },
+  "properties": {
+    "scan": {
+      "$ref": "Scan.json"
+    },
+    "remediation": {
+      "$ref": "Remediation.json"
+    },
+    "command_uid": {
+      "type": "string",
+      "title": "Command UID"
+    },
+    "countermeasures": {
+      "type": "array",
+      "title": "Countermeasures",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "enrichments": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Enrichment.json"
+      }
+    },
+    "raw_data_hash": {
+      "$ref": "Fingerprint.json"
+    },
+    "raw_data_size": {
+      "type": "integer",
+      "title": "Raw Data Size"
+    }
+  }
+}

@@ -30,7 +30,7 @@ import org.apache.camel.component.telegram.util.TelegramTestUtil;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertCollectionSize;
+import static org.apache.camel.test.junit6.TestSupport.assertCollectionSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -73,7 +73,7 @@ public class TelegramConsumerFallbackConversionTest extends TelegramTestSupport 
 
     @Override
     protected TelegramMockRoutes createMockRoutes() {
-        return new TelegramMockRoutes(port)
+        return new TelegramMockRoutes(port.getPort())
                 .addEndpoint(
                         "sendMessage",
                         "POST",

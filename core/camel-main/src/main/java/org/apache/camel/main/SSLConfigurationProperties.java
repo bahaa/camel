@@ -44,20 +44,36 @@ public class SSLConfigurationProperties implements BootstrapCloseable {
     private String cipherSuitesInclude;
     @Metadata(label = "advanced")
     private String cipherSuitesExclude;
+    @Metadata(label = "advanced")
+    private String namedGroups;
+    @Metadata(label = "advanced")
+    private String namedGroupsInclude;
+    @Metadata(label = "advanced")
+    private String namedGroupsExclude;
+    @Metadata(label = "advanced")
+    private String signatureSchemes;
+    @Metadata(label = "advanced")
+    private String signatureSchemesInclude;
+    @Metadata(label = "advanced")
+    private String signatureSchemesExclude;
     @Metadata
     private String keyStore;
     @Metadata(label = "advanced")
     private String keyStoreType;
     @Metadata(label = "advanced")
     private String keyStoreProvider;
-    @Metadata
+    @Metadata(security = "secret")
     private String keystorePassword;
     @Metadata
     private String trustStore;
-    @Metadata
+    @Metadata(security = "secret")
     private String trustStorePassword;
-    @Metadata
+    @Metadata(security = "insecure:ssl")
     private boolean trustAllCertificates;
+    @Metadata
+    private boolean selfSigned;
+    @Metadata(label = "advanced", defaultValue = "EC", enums = "EC,RSA")
+    private String selfSignedKeyType = "EC";
     @Metadata(label = "advanced")
     private String keyManagerAlgorithm;
     @Metadata(label = "advanced")
@@ -185,6 +201,98 @@ public class SSLConfigurationProperties implements BootstrapCloseable {
         this.cipherSuitesExclude = cipherSuitesExclude;
     }
 
+    public String getNamedGroups() {
+        return namedGroups;
+    }
+
+    /**
+     * List of TLS/SSL named groups (key exchange groups). Multiple names can be separated by comma.
+     * <p>
+     * Named groups control which key exchange algorithms are available during the TLS handshake, including post-quantum
+     * hybrid groups such as X25519MLKEM768.
+     */
+    public void setNamedGroups(String namedGroups) {
+        this.namedGroups = namedGroups;
+    }
+
+    public String getNamedGroupsInclude() {
+        return namedGroupsInclude;
+    }
+
+    /**
+     * Filters TLS/SSL named groups.
+     * <p>
+     * This filter is used for including named groups that match the naming pattern. Multiple names can be separated by
+     * comma.
+     * <p>
+     * Notice that if the namedGroups option has been configured then the include/exclude filters are not in use.
+     */
+    public void setNamedGroupsInclude(String namedGroupsInclude) {
+        this.namedGroupsInclude = namedGroupsInclude;
+    }
+
+    public String getNamedGroupsExclude() {
+        return namedGroupsExclude;
+    }
+
+    /**
+     * Filters TLS/SSL named groups.
+     * <p>
+     * This filter is used for excluding named groups that match the naming pattern. Multiple names can be separated by
+     * comma.
+     * <p>
+     * Notice that if the namedGroups option has been configured then the include/exclude filters are not in use.
+     */
+    public void setNamedGroupsExclude(String namedGroupsExclude) {
+        this.namedGroupsExclude = namedGroupsExclude;
+    }
+
+    public String getSignatureSchemes() {
+        return signatureSchemes;
+    }
+
+    /**
+     * List of TLS/SSL signature schemes. Multiple names can be separated by comma.
+     * <p>
+     * Signature schemes control which signature algorithms are available during the TLS handshake, including
+     * post-quantum signature algorithms such as ML-DSA.
+     */
+    public void setSignatureSchemes(String signatureSchemes) {
+        this.signatureSchemes = signatureSchemes;
+    }
+
+    public String getSignatureSchemesInclude() {
+        return signatureSchemesInclude;
+    }
+
+    /**
+     * Filters TLS/SSL signature schemes.
+     * <p>
+     * This filter is used for including signature schemes that match the naming pattern. Multiple names can be
+     * separated by comma.
+     * <p>
+     * Notice that if the signatureSchemes option has been configured then the include/exclude filters are not in use.
+     */
+    public void setSignatureSchemesInclude(String signatureSchemesInclude) {
+        this.signatureSchemesInclude = signatureSchemesInclude;
+    }
+
+    public String getSignatureSchemesExclude() {
+        return signatureSchemesExclude;
+    }
+
+    /**
+     * Filters TLS/SSL signature schemes.
+     * <p>
+     * This filter is used for excluding signature schemes that match the naming pattern. Multiple names can be
+     * separated by comma.
+     * <p>
+     * Notice that if the signatureSchemes option has been configured then the include/exclude filters are not in use.
+     */
+    public void setSignatureSchemesExclude(String signatureSchemesExclude) {
+        this.signatureSchemesExclude = signatureSchemesExclude;
+    }
+
     public String getKeyStore() {
         return keyStore;
     }
@@ -275,10 +383,36 @@ public class SSLConfigurationProperties implements BootstrapCloseable {
     /**
      * Allows to trust all SSL certificates without performing certificate validation. This can be used in development
      * environment but may expose the system to security risks. Notice that if the trustAllCertificates option is set to
-     * true then the trustStore/trustStorePassword options are not in use..
+     * true then the trustStore/trustStorePassword options are not in use.
      */
     public void setTrustAllCertificates(boolean trustAllCertificates) {
         this.trustAllCertificates = trustAllCertificates;
+    }
+
+    public boolean isSelfSigned() {
+        return selfSigned;
+    }
+
+    /**
+     * Whether to generate a self-signed certificate for development use when no keystore is configured. This can be
+     * used in development environment to easily enable HTTPS without providing a keystore.
+     *
+     * Do NOT use this in production as the certificate is not trusted and is regenerated on each restart.
+     */
+    public void setSelfSigned(boolean selfSigned) {
+        this.selfSigned = selfSigned;
+    }
+
+    public String getSelfSignedKeyType() {
+        return selfSignedKeyType;
+    }
+
+    /**
+     * The key algorithm to use when generating the self-signed certificate for development use (requires selfSigned to
+     * be enabled). Supported values are EC (default, NIST P-256) and RSA (2048-bit).
+     */
+    public void setSelfSignedKeyType(String selfSignedKeyType) {
+        this.selfSignedKeyType = selfSignedKeyType;
     }
 
     public String getKeyManagerAlgorithm() {
@@ -426,6 +560,80 @@ public class SSLConfigurationProperties implements BootstrapCloseable {
     }
 
     /**
+     * List of TLS/SSL named groups (key exchange groups). Multiple names can be separated by comma.
+     * <p>
+     * Named groups control which key exchange algorithms are available during the TLS handshake, including post-quantum
+     * hybrid groups such as X25519MLKEM768.
+     */
+    public SSLConfigurationProperties withNamedGroups(String namedGroups) {
+        this.namedGroups = namedGroups;
+        return this;
+    }
+
+    /**
+     * Filters TLS/SSL named groups.
+     * <p>
+     * This filter is used for including named groups that match the naming pattern. Multiple names can be separated by
+     * comma.
+     * <p>
+     * Notice that if the namedGroups option has been configured then the include/exclude filters are not in use.
+     */
+    public SSLConfigurationProperties withNamedGroupsInclude(String namedGroupsInclude) {
+        this.namedGroupsInclude = namedGroupsInclude;
+        return this;
+    }
+
+    /**
+     * Filters TLS/SSL named groups.
+     * <p>
+     * This filter is used for excluding named groups that match the naming pattern. Multiple names can be separated by
+     * comma.
+     * <p>
+     * Notice that if the namedGroups option has been configured then the include/exclude filters are not in use.
+     */
+    public SSLConfigurationProperties withNamedGroupsExclude(String namedGroupsExclude) {
+        this.namedGroupsExclude = namedGroupsExclude;
+        return this;
+    }
+
+    /**
+     * List of TLS/SSL signature schemes. Multiple names can be separated by comma.
+     * <p>
+     * Signature schemes control which signature algorithms are available during the TLS handshake, including
+     * post-quantum signature algorithms such as ML-DSA.
+     */
+    public SSLConfigurationProperties withSignatureSchemes(String signatureSchemes) {
+        this.signatureSchemes = signatureSchemes;
+        return this;
+    }
+
+    /**
+     * Filters TLS/SSL signature schemes.
+     * <p>
+     * This filter is used for including signature schemes that match the naming pattern. Multiple names can be
+     * separated by comma.
+     * <p>
+     * Notice that if the signatureSchemes option has been configured then the include/exclude filters are not in use.
+     */
+    public SSLConfigurationProperties withSignatureSchemesInclude(String signatureSchemesInclude) {
+        this.signatureSchemesInclude = signatureSchemesInclude;
+        return this;
+    }
+
+    /**
+     * Filters TLS/SSL signature schemes.
+     * <p>
+     * This filter is used for excluding signature schemes that match the naming pattern. Multiple names can be
+     * separated by comma.
+     * <p>
+     * Notice that if the signatureSchemes option has been configured then the include/exclude filters are not in use.
+     */
+    public SSLConfigurationProperties withSignatureSchemesExclude(String signatureSchemesExclude) {
+        this.signatureSchemesExclude = signatureSchemesExclude;
+        return this;
+    }
+
+    /**
      * The keystore to load.
      *
      * The keystore is by default loaded from classpath. If you must load from file system, then use file: as prefix.
@@ -497,6 +705,26 @@ public class SSLConfigurationProperties implements BootstrapCloseable {
      */
     public SSLConfigurationProperties withTrustAllCertificates(boolean trustAllCertificates) {
         this.trustAllCertificates = trustAllCertificates;
+        return this;
+    }
+
+    /**
+     * Whether to generate a self-signed certificate for development use when no keystore is configured. This can be
+     * used in development environment to easily enable HTTPS without providing a keystore.
+     *
+     * Do NOT use this in production as the certificate is not trusted and is regenerated on each restart.
+     */
+    public SSLConfigurationProperties withSelfSigned(boolean selfSigned) {
+        this.selfSigned = selfSigned;
+        return this;
+    }
+
+    /**
+     * The key algorithm to use when generating the self-signed certificate for development use (requires selfSigned to
+     * be enabled). Supported values are EC (default, NIST P-256) and RSA (2048-bit).
+     */
+    public SSLConfigurationProperties withSelfSignedKeyType(String selfSignedKeyType) {
+        this.selfSignedKeyType = selfSignedKeyType;
         return this;
     }
 

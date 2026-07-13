@@ -18,9 +18,12 @@ package org.apache.camel.component.as2.api;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -29,19 +32,22 @@ import javax.net.ssl.SSLServerSocketFactory;
 
 import org.apache.camel.component.as2.api.io.AS2BHttpServerConnection;
 import org.apache.camel.util.ObjectHelper;
+import org.apache.hc.core5.http.ClassicHttpRequest;
 import org.apache.hc.core5.http.HttpException;
 import org.apache.hc.core5.http.config.Http1Config;
 import org.apache.hc.core5.http.impl.io.HttpService;
+import org.apache.hc.core5.http.impl.routing.RequestRouter;
 import org.apache.hc.core5.http.io.HttpRequestHandler;
 import org.apache.hc.core5.http.io.HttpServerConnection;
 import org.apache.hc.core5.http.io.HttpServerRequestHandler;
 import org.apache.hc.core5.http.io.support.BasicHttpServerRequestHandler;
-import org.apache.hc.core5.http.protocol.BasicHttpContext;
-import org.apache.hc.core5.http.protocol.DefaultHttpProcessor;
 import org.apache.hc.core5.http.protocol.HttpContext;
+import org.apache.hc.core5.http.protocol.HttpCoreContext;
 import org.apache.hc.core5.http.protocol.HttpProcessor;
-import org.apache.hc.core5.http.protocol.RequestHandlerRegistry;
-import org.apache.hc.core5.http.protocol.RequestValidateHost;
+import org.apache.hc.core5.http.protocol.HttpProcessorBuilder;
+import org.apache.hc.core5.http.protocol.ResponseConnControl;
+import org.apache.hc.core5.http.protocol.ResponseContent;
+import org.apache.hc.core5.http.protocol.ResponseDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +70,10 @@ public class AS2AsyncMDNServerConnection {
         listenerThread = new RequestListenerThread(parserPortNumber, sslContext);
         listenerThread.setDaemon(true);
         listenerThread.start();
+    }
+
+    public int getLocalPort() {
+        return listenerThread != null ? listenerThread.serverSocket.getLocalPort() : -1;
     }
 
     public void close() {
@@ -98,21 +108,52 @@ public class AS2AsyncMDNServerConnection {
 
         private final ServerSocket serverSocket;
         private final HttpService httpService;
-        private final RequestHandlerRegistry registry;
-        private final HttpServerRequestHandler handler;
+        private final Map<String, HttpRequestHandler> routeMap = new LinkedHashMap<>();
+        private volatile HttpServerRequestHandler currentHandler;
+
+        /**
+         * Delegating handler that always forwards to the current handler. This allows us to update the routing
+         * configuration dynamically.
+         */
+        private class DelegatingRequestHandler implements HttpServerRequestHandler {
+            @Override
+            public void handle(
+                    ClassicHttpRequest request, HttpServerRequestHandler.ResponseTrigger responseTrigger,
+                    HttpContext context)
+                    throws HttpException, IOException {
+                currentHandler.handle(request, responseTrigger, context);
+            }
+        }
 
         public RequestListenerThread(int port, SSLContext sslContext) throws IOException {
             setName(REQUEST_LISTENER_THREAD_NAME_PREFIX + port);
             if (sslContext == null) {
-                serverSocket = new ServerSocket(port);
+                serverSocket = new ServerSocket();
             } else {
                 SSLServerSocketFactory factory = sslContext.getServerSocketFactory();
-                serverSocket = factory.createServerSocket(port);
+                serverSocket = factory.createServerSocket();
             }
-            HttpProcessor httpProcessor = new DefaultHttpProcessor(new RequestValidateHost());
-            registry = new RequestHandlerRegistry<>();
-            handler = new BasicHttpServerRequestHandler(registry);
-            httpService = new HttpService(httpProcessor, handler);
+            serverSocket.setReuseAddress(true);
+            serverSocket.bind(new InetSocketAddress(port));
+            HttpProcessor httpProcessor = HttpProcessorBuilder.create()
+                    .add(new ResponseContent(true))
+                    .add(new ResponseDate())
+                    .add(new ResponseConnControl())
+                    .build();
+            // Create initial empty router
+            currentHandler = createHandler();
+            // Set up the HTTP service with delegating handler
+            httpService = new HttpService(httpProcessor, new DelegatingRequestHandler());
+        }
+
+        private HttpServerRequestHandler createHandler() {
+            RequestRouter.Builder<HttpRequestHandler> builder = RequestRouter.builder();
+            // Use LOCAL_AUTHORITY_RESOLVER to match any host (like the old RequestHandlerRegistry behavior)
+            builder.resolveAuthority(RequestRouter.LOCAL_AUTHORITY_RESOLVER);
+            for (Map.Entry<String, HttpRequestHandler> entry : routeMap.entrySet()) {
+                builder.addRoute(RequestRouter.LOCAL_AUTHORITY, entry.getKey(), entry.getValue());
+            }
+            return new BasicHttpServerRequestHandler(builder.build());
         }
 
         @Override
@@ -136,7 +177,8 @@ public class AS2AsyncMDNServerConnection {
         }
 
         void registerHandler(String requestUriPattern, HttpRequestHandler httpRequestHandler) {
-            registry.register(null, requestUriPattern, httpRequestHandler);
+            routeMap.put(requestUriPattern, httpRequestHandler);
+            currentHandler = createHandler();
         }
     }
 
@@ -162,9 +204,13 @@ public class AS2AsyncMDNServerConnection {
 
         @Override
         public void run() {
-            final HttpContext context = new BasicHttpContext(null);
+            final HttpContext context = HttpCoreContext.create();
             try {
                 while (!Thread.interrupted()) {
+                    // Make raw body bytes available in the context for signature verification
+                    if (this.serverConnection instanceof AS2BHttpServerConnection as2Conn) {
+                        context.setAttribute(AS2BHttpServerConnection.class.getName(), as2Conn);
+                    }
                     this.httpService.handleRequest(this.serverConnection, context);
                 }
             } catch (final IOException ex) {

@@ -43,6 +43,11 @@ public class LiteralExpression extends BaseSimpleNode implements LiteralNode {
         this.text.append(text);
     }
 
+    public void replaceText(String text) {
+        this.text.setLength(0);
+        addText(text);
+    }
+
     @Override
     public String getText() {
         return text.toString();

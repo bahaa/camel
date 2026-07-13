@@ -333,6 +333,180 @@ class KameletLoaderTest extends YamlTestSupport {
             MockEndpoint.assertIsSatisfied(context)
     }
 
+    def "kamelet with dataTypes input"() {
+        when:
+            loadKamelets('''
+                apiVersion: camel.apache.org/v1
+                kind: Kamelet
+                metadata:
+                  name: my-sink
+                spec:
+                  definition:
+                    title: "My Sink"
+                    required:
+                      - table
+                    properties:
+                      table:
+                        title: Table
+                        type: string
+                  dataTypes:
+                    in:
+                      default: json
+                      types:
+                        json:
+                          scheme: my-component
+                          format: application-json
+                  template:
+                    from:
+                      uri: "kamelet:source"
+                      steps:
+                        - to: "log:test"
+            ''')
+        then:
+            context.routeTemplateDefinitions.size() == 1
+
+            with (context.routeTemplateDefinitions[0]) {
+                id == 'my-sink'
+
+                with(route) {
+                    inputType.urn == 'my-component:application-json'
+                    outputType == null
+                }
+            }
+    }
+
+    def "kamelet with dataTypes input and output"() {
+        when:
+            loadKamelets('''
+                apiVersion: camel.apache.org/v1
+                kind: Kamelet
+                metadata:
+                  name: my-action
+                spec:
+                  definition:
+                    title: "My Action"
+                  dataTypes:
+                    in:
+                      default: json
+                      types:
+                        json:
+                          scheme: my-component
+                          format: application-json
+                    out:
+                      default: binary
+                      types:
+                        binary:
+                          format: application-octet-stream
+                  template:
+                    from:
+                      uri: "kamelet:source"
+                      steps:
+                        - to: "log:test"
+            ''')
+        then:
+            context.routeTemplateDefinitions.size() == 1
+
+            with (context.routeTemplateDefinitions[0]) {
+                id == 'my-action'
+
+                with(route) {
+                    inputType.urn == 'my-component:application-json'
+                    outputType.urn == 'application-octet-stream'
+                }
+            }
+    }
+
+    def "kamelet with dataTypes format only"() {
+        when:
+            loadKamelets('''
+                apiVersion: camel.apache.org/v1
+                kind: Kamelet
+                metadata:
+                  name: my-source
+                spec:
+                  definition:
+                    title: "My Source"
+                  dataTypes:
+                    out:
+                      default: binary
+                      types:
+                        binary:
+                          format: application-octet-stream
+                  template:
+                    from:
+                      uri: "kamelet:source"
+                      steps:
+                        - to: "log:test"
+            ''')
+        then:
+            context.routeTemplateDefinitions.size() == 1
+
+            with (context.routeTemplateDefinitions[0]) {
+                id == 'my-source'
+
+                with(route) {
+                    inputType == null
+                    outputType.urn == 'application-octet-stream'
+                }
+            }
+    }
+
+    def "kamelet with local bean via bean ref"() {
+        setup:
+            loadKamelets '''
+                apiVersion: camel.apache.org/v1
+                kind: Kamelet
+                metadata:
+                  name: counter-action
+                  labels:
+                    camel.apache.org/kamelet.type: action
+                spec:
+                  definition:
+                    title: "Counter Action"
+                    properties:
+                      start:
+                        title: Start
+                        description: The starting value for the counter
+                        type: integer
+                        default: 0
+                  template:
+                    beans:
+                      - name: counter
+                        type: java.util.concurrent.atomic.AtomicInteger
+                        constructors:
+                          "0": "{{start}}"
+                    from:
+                      uri: kamelet:source
+                      steps:
+                        - bean:
+                            ref: "{{counter}}"
+                            method: getAndIncrement
+                        - to: "kamelet:sink"
+            '''
+
+            loadRoutes """
+                - from:
+                    uri: "direct:start"
+                    steps:
+                      - kamelet:
+                          name: "counter-action"
+                      - to: "mock:result"
+            """
+
+            withMock('mock:result') {
+                expectedBodiesReceived '0'
+            }
+
+        when:
+            context.start()
+
+            withTemplate {
+                to('direct:start').withBody('hello').send()
+            }
+        then:
+            MockEndpoint.assertIsSatisfied(context)
+    }
+
     def "kamelet with bean constructors"() {
         when:
         loadKamelets('''

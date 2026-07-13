@@ -19,6 +19,7 @@ package org.apache.camel;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 import org.apache.camel.catalog.RuntimeCamelCatalog;
@@ -42,10 +43,18 @@ import org.apache.camel.spi.Registry;
 import org.apache.camel.spi.RouteController;
 import org.apache.camel.spi.RouteStartupOrder;
 import org.apache.camel.spi.StartupStepRecorder;
+import org.jspecify.annotations.Nullable;
 
 /**
- * Extended {@link CamelContext} which contains the methods and APIs that are not primary intended for Camel end users
- * but for SPI, custom components, or more advanced used-cases with Camel.
+ * Internal extension surface of {@link CamelContext}: methods and SPI hooks that custom components, data formats,
+ * languages, route policies and tooling may need, but that are <b>not</b> part of the end-user facing API.
+ * <p/>
+ * Obtained via {@link CamelContext#getCamelContextExtension()}. End-user route code should depend only on
+ * {@link CamelContext}; everything in this interface should be considered an internal contract that may change between
+ * minor releases.
+ *
+ * @see   CamelContext#getCamelContextExtension()
+ * @since 3.0
  */
 public interface ExtendedCamelContext {
 
@@ -59,28 +68,28 @@ public interface ExtendedCamelContext {
      */
     void setName(String name);
 
-    default String getName() {
+    default @Nullable String getName() {
         return null;
     }
 
     /**
      * Sets the description of this Camel application.
      */
-    void setDescription(String description);
+    void setDescription(@Nullable String description);
 
-    default String getDescription() {
+    default @Nullable String getDescription() {
         return null;
     }
 
     /**
      * Sets the profile Camel should run as (dev,test,prod).
      */
-    void setProfile(String profile);
+    void setProfile(@Nullable String profile);
 
     /**
      * The profile Camel should run as (dev,test,prod). Returns null if no profile has been set.
      */
-    default String getProfile() {
+    default @Nullable String getProfile() {
         return null;
     }
 
@@ -101,16 +110,19 @@ public interface ExtendedCamelContext {
      */
     void setManagementMBeanAssembler(ManagementMBeanAssembler managementMBeanAssembler);
 
-    default Registry getRegistry() {
+    default @Nullable Registry getRegistry() {
         return null;
     }
 
     /**
      * Method to signal to {@link CamelContext} that the process to initialize setup routes is in progress.
      *
-     * @param done <tt>false</tt> to start the process, call again with <tt>true</tt> to signal its done.
-     * @see        #isSetupRoutes()
+     * @param      done <tt>false</tt> to start the process, call again with <tt>true</tt> to signal its done.
+     * @see             #isSetupRoutes()
+     * @deprecated      use {@link #setupRoutes(Runnable)} or {@link #setupRoutes(Callable)} for ScopedValue
+     *                  compatibility
      */
+    @Deprecated(since = "4.19.0")
     void setupRoutes(boolean done);
 
     /**
@@ -128,12 +140,50 @@ public interface ExtendedCamelContext {
     boolean isSetupRoutes();
 
     /**
+     * Executes the given operation within a "setup routes" context.
+     * <p/>
+     * This is the preferred method for ScopedValue compatibility on virtual threads.
+     *
+     * @param operation the operation to execute
+     */
+    default void setupRoutes(Runnable operation) {
+        setupRoutes(false);
+        try {
+            operation.run();
+        } finally {
+            setupRoutes(true);
+        }
+    }
+
+    /**
+     * Executes the given callable within a "setup routes" context and returns its result.
+     * <p/>
+     * This is the preferred method for ScopedValue compatibility on virtual threads.
+     *
+     * @param  <T>       the return type
+     * @param  callable  the callable to execute
+     * @return           the result of the callable
+     * @throws Exception if the callable throws
+     */
+    default <T> T setupRoutes(Callable<T> callable) throws Exception {
+        setupRoutes(false);
+        try {
+            return callable.call();
+        } finally {
+            setupRoutes(true);
+        }
+    }
+
+    /**
      * Method to signal to {@link CamelContext} that the process to create routes is in progress.
      *
-     * @param routeId the current id of the route being created
-     * @see           #getCreateRoute()
+     * @param      routeId the current id of the route being created
+     * @see                #getCreateRoute()
+     * @deprecated         use {@link #createRoute(String, Runnable)} or {@link #createRoute(String, Callable)} for
+     *                     ScopedValue compatibility
      */
-    void createRoute(String routeId);
+    @Deprecated(since = "4.19.0")
+    void createRoute(@Nullable String routeId);
 
     /**
      * Indicates whether current thread is creating a route as part of starting Camel.
@@ -143,15 +193,56 @@ public interface ExtendedCamelContext {
      * @return the route id currently being created/started, or <tt>null</tt> if not.
      * @see    #createRoute(String)
      */
+    @Nullable
     String getCreateRoute();
+
+    /**
+     * Executes the given operation within a "create route" context.
+     * <p/>
+     * This is the preferred method for ScopedValue compatibility on virtual threads.
+     *
+     * @param routeId   the id of the route being created
+     * @param operation the operation to execute
+     */
+    default void createRoute(String routeId, Runnable operation) {
+        createRoute(routeId);
+        try {
+            operation.run();
+        } finally {
+            createRoute(null);
+        }
+    }
+
+    /**
+     * Executes the given callable within a "create route" context and returns its result.
+     * <p/>
+     * This is the preferred method for ScopedValue compatibility on virtual threads.
+     *
+     * @param  <T>       the return type
+     * @param  routeId   the id of the route being created
+     * @param  callable  the callable to execute
+     * @return           the result of the callable
+     * @throws Exception if the callable throws
+     */
+    default <T> T createRoute(String routeId, Callable<T> callable) throws Exception {
+        createRoute(routeId);
+        try {
+            return callable.call();
+        } finally {
+            createRoute(null);
+        }
+    }
 
     /**
      * Method to signal to {@link CamelContext} that creation of a given processor is in progress.
      *
-     * @param processorId the current id of the processor being created
-     * @see               #getCreateProcessor()
+     * @param      processorId the current id of the processor being created
+     * @see                    #getCreateProcessor()
+     * @deprecated             use {@link #createProcessor(String, Runnable)} or
+     *                         {@link #createProcessor(String, Callable)} for ScopedValue compatibility
      */
-    void createProcessor(String processorId);
+    @Deprecated(since = "4.19.0")
+    void createProcessor(@Nullable String processorId);
 
     /**
      * Indicates whether current thread is creating a processor as part of starting Camel.
@@ -161,7 +252,45 @@ public interface ExtendedCamelContext {
      * @return the current id of the processor being created
      * @see    #createProcessor(String)
      */
+    @Nullable
     String getCreateProcessor();
+
+    /**
+     * Executes the given operation within a "create processor" context.
+     * <p/>
+     * This is the preferred method for ScopedValue compatibility on virtual threads.
+     *
+     * @param processorId the id of the processor being created
+     * @param operation   the operation to execute
+     */
+    default void createProcessor(String processorId, Runnable operation) {
+        createProcessor(processorId);
+        try {
+            operation.run();
+        } finally {
+            createProcessor(null);
+        }
+    }
+
+    /**
+     * Executes the given callable within a "create processor" context and returns its result.
+     * <p/>
+     * This is the preferred method for ScopedValue compatibility on virtual threads.
+     *
+     * @param  <T>         the return type
+     * @param  processorId the id of the processor being created
+     * @param  callable    the callable to execute
+     * @return             the result of the callable
+     * @throws Exception   if the callable throws
+     */
+    default <T> T createProcessor(String processorId, Callable<T> callable) throws Exception {
+        createProcessor(processorId);
+        try {
+            return callable.call();
+        } finally {
+            createProcessor(null);
+        }
+    }
 
     /**
      * Registers a {@link org.apache.camel.spi.EndpointStrategy callback} to allow you to do custom logic when an
@@ -217,6 +346,7 @@ public interface ExtendedCamelContext {
      * @param  uri the URI of the endpoint
      * @return     the registered endpoint or <tt>null</tt> if not registered
      */
+    @Nullable
     Endpoint hasEndpoint(NormalizedEndpointUri uri);
 
     /**
@@ -314,6 +444,7 @@ public interface ExtendedCamelContext {
      *
      * @return the builder
      */
+    @Nullable
     ErrorHandlerFactory getErrorHandlerFactory();
 
     /**
@@ -390,11 +521,12 @@ public interface ExtendedCamelContext {
      *
      * @param options optional parameters to configure {@link org.apache.camel.spi.ManagementAgent}.
      */
-    void setupManagement(Map<String, Object> options);
+    void setupManagement(@Nullable Map<String, Object> options);
 
     /**
      * Gets a list of {@link LogListener} (can be null if empty).
      */
+    @Nullable
     Set<LogListener> getLogListeners();
 
     /**
@@ -458,13 +590,14 @@ public interface ExtendedCamelContext {
     /**
      * Gets the {@link EndpointUriFactory} for the given component name.
      */
+    @Nullable
     EndpointUriFactory getEndpointUriFactory(String scheme);
 
     /**
      * Gets the {@link RuntimeCamelCatalog} if available on the classpath.
      */
     @Deprecated(since = "4.0.0")
-    default RuntimeCamelCatalog getRuntimeCamelCatalog() {
+    default @Nullable RuntimeCamelCatalog getRuntimeCamelCatalog() {
         return getContextPlugin(RuntimeCamelCatalog.class);
     }
 
@@ -496,6 +629,7 @@ public interface ExtendedCamelContext {
     /**
      * Used during unit-testing where it is possible to specify a set of routes to exclude from discovery
      */
+    @Nullable
     String getTestExcludeRoutes();
 
     /**
@@ -519,6 +653,7 @@ public interface ExtendedCamelContext {
      *
      * @return the base package name (can be null if not configured)
      */
+    @Nullable
     String getBasePackageScan();
 
     /**
@@ -528,7 +663,7 @@ public interface ExtendedCamelContext {
      *
      * @param basePackageScan the base package name
      */
-    void setBasePackageScan(String basePackageScan);
+    void setBasePackageScan(@Nullable String basePackageScan);
 
     /**
      * Camel comes with a default set of sensitive keywords which are automatically masked. This option allows to add
@@ -536,6 +671,7 @@ public interface ExtendedCamelContext {
      *
      * @see org.apache.camel.util.SensitiveUtils
      */
+    @Nullable
     String getAdditionalSensitiveKeywords();
 
     /**
@@ -544,7 +680,7 @@ public interface ExtendedCamelContext {
      *
      * @see org.apache.camel.util.SensitiveUtils
      */
-    void setAdditionalSensitiveKeywords(String additionalSensitiveKeywords);
+    void setAdditionalSensitiveKeywords(@Nullable String additionalSensitiveKeywords);
 
     /**
      * Gets the {@link AutoMockInterceptStrategy} strategies.
@@ -563,7 +699,7 @@ public interface ExtendedCamelContext {
      * @param  type the type of the extension
      * @return      the extension, or <tt>null</tt> if no extension has been installed.
      */
-    <T> T getContextPlugin(Class<T> type);
+    <T> @Nullable T getContextPlugin(Class<T> type);
 
     /**
      * Whether a plugin of the given type is already in use

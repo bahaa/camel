@@ -9,7 +9,6 @@
 :component-header: Only producer is supported
 //Manually maintained attributes
 :group: AI
-:camel-spring-boot-name: qdrant
 
 *Since Camel {since}*
 
@@ -36,7 +35,7 @@ include::partial$component-endpoint-headers.adoc[]
 
 === Collection Examples
 
-In the route below, we use the qdrant component to create a collection named _myCollection_ with the given parameters:
+In the route below, we use the Qdrant component to create a collection named _myCollection_ with the given parameters:
 
 ==== Create Collection
 
@@ -47,7 +46,7 @@ Java::
 [source,java]
 ----
 from("direct:in")
-    .setHeader(Qdrant.Headers.ACTION)
+    .setHeader(QdrantHeaders.ACTION)
         .constant(QdrantAction.CREATE_COLLECTION)
     .setBody()
         .constant(
@@ -60,7 +59,7 @@ from("direct:in")
 
 ==== Delete Collection
 
-In the route below, we use the qdrant component to delete a collection named _myCollection_:
+In the route below, we use the Qdrant component to delete a collection named _myCollection_:
 
 [tabs]
 ====
@@ -69,7 +68,7 @@ Java::
 [source,java]
 ----
 from("direct:in")
-    .setHeader(Qdrant.Headers.ACTION)
+    .setHeader(QdrantHeaders.ACTION)
         .constant(QdrantAction.DELETE_COLLECTION)
     .to("qdrant:myCollection");
 ----
@@ -87,7 +86,7 @@ Java::
 [source,java]
 ----
 from("direct:in")
-    .setHeader(Qdrant.Headers.ACTION)
+    .setHeader(QdrantHeaders.ACTION)
         .constant(QdrantAction.COLLECTION_INFO)
     .to("qdrant:myCollection")
     .process(this::process);
@@ -112,7 +111,7 @@ Java::
 [source,java]
 ----
 from("direct:in")
-    .setHeader(Qdrant.Headers.ACTION)
+    .setHeader(QdrantHeaders.ACTION)
         .constant(QdrantAction.UPSERT)
     .setBody()
         .constant(
@@ -130,7 +129,7 @@ from("direct:in")
 
 ==== Retrieve
 
-In the route below, we use the qdrant component to retrieve information of a single point by id from the collection named _myCollection_:
+In the route below, we use the Qdrant component to retrieve information of a single point by id from the collection named _myCollection_:
 
 [tabs]
 ====
@@ -139,14 +138,13 @@ Java::
 [source,java]
 ----
 from("direct:in")
-    .setHeader(Qdrant.Headers.ACTION)
+    .setHeader(QdrantHeaders.ACTION)
         .constant(QdrantAction.RETRIEVE)
     .setBody()
         .constant(PointIdFactory.id(8))
     .to("qdrant:myCollection");
 ----
 ====
-
 
 
 ==== Delete
@@ -160,7 +158,7 @@ Java::
 [source,java]
 ----
 from("direct:in")
-    .setHeader(Qdrant.Headers.ACTION)
+    .setHeader(QdrantHeaders.ACTION)
         .constant(QdrantAction.DELETE)
     .setBody()
         .constant(ConditionFactory.matchKeyword("foo", "hello"))
@@ -169,8 +167,3 @@ from("direct:in")
 ====
 
 
-
-
-
-
-include::spring-boot:partial$starter.adoc[]

@@ -91,8 +91,8 @@ public final class AWS2S3Utils {
     }
 
     public static long determineLengthInputStream(InputStream is) throws IOException {
-        if (is instanceof StreamCache) {
-            long len = ((StreamCache) is).length();
+        if (is instanceof StreamCache streamCache) {
+            long len = streamCache.length();
             if (len > 0) {
                 return len;
             }
@@ -148,6 +148,30 @@ public final class AWS2S3Utils {
             key = simple.createExpression(key).evaluate(exchange, String.class);
         }
         return key;
+    }
+
+    public static String evaluateDestinationBucketPrefix(final Exchange exchange, AWS2S3Configuration configuration) {
+        String prefix = configuration.getDestinationBucketPrefix();
+        if (ObjectHelper.isEmpty(prefix)) {
+            return "";
+        }
+        if (hasSimpleFunction(prefix)) {
+            Language simple = exchange.getContext().resolveLanguage("simple");
+            prefix = simple.createExpression(prefix).evaluate(exchange, String.class);
+        }
+        return prefix;
+    }
+
+    public static String evaluateDestinationBucketSuffix(final Exchange exchange, AWS2S3Configuration configuration) {
+        String suffix = configuration.getDestinationBucketSuffix();
+        if (ObjectHelper.isEmpty(suffix)) {
+            return "";
+        }
+        if (hasSimpleFunction(suffix)) {
+            Language simple = exchange.getContext().resolveLanguage("simple");
+            suffix = simple.createExpression(suffix).evaluate(exchange, String.class);
+        }
+        return suffix;
     }
 
     public static void setEncryption(

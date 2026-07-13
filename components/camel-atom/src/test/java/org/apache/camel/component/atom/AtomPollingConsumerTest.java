@@ -23,7 +23,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -75,10 +75,12 @@ public class AtomPollingConsumerTest extends CamelTestSupport {
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
-                from("atom:file:src/test/data/feed.atom?splitEntries=false").to("mock:result");
+                // not split: a single poll delivers the whole feed; repeatCount=1 keeps it to exactly one message
+                from("atom:file:src/test/data/feed.atom?splitEntries=false&initialDelay=0&repeatCount=1").to("mock:result");
 
                 // this is a bit weird syntax that normally is not using the feedUri parameter
-                from("atom:?feedUri=file:src/test/data/feed.atom&splitEntries=false").to("mock:result2");
+                from("atom:?feedUri=file:src/test/data/feed.atom&splitEntries=false&initialDelay=0&repeatCount=1")
+                        .to("mock:result2");
             }
         };
     }

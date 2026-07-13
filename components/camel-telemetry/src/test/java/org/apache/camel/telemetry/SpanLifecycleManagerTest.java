@@ -27,7 +27,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.telemetry.mock.MockSpanAdapter;
 import org.apache.camel.telemetry.mock.MockTrace;
 import org.apache.camel.telemetry.mock.MockTracer;
-import org.apache.camel.test.junit5.ExchangeTestSupport;
+import org.apache.camel.test.junit6.ExchangeTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,6 +42,7 @@ public class SpanLifecycleManagerTest extends ExchangeTestSupport {
     protected CamelContext createCamelContext() throws Exception {
         CamelContext context = super.createCamelContext();
         this.mockTracer = new MockTracer();
+        this.mockTracer.setDisableCoreProcessors(true);
         CamelContextAware.trySetCamelContext(mockTracer, context);
         mockTracer.init(context);
         return context;

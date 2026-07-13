@@ -443,7 +443,7 @@ public interface DebeziumMongodbComponentBuilderFactory {
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
          * Default:
-         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret
+         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret|.*credentials\.json$
          * Group: mongodb
          * 
          * @param customSanitizePattern the value to set
@@ -1364,6 +1364,28 @@ public interface DebeziumMongodbComponentBuilderFactory {
     
         
         /**
+         * The factor used to scale the number of snapshot chunks per table. The
+         * default behavior is to take 'row_count/snapshot.max.threads' to
+         * compute the number of rows per chunks. This may not be ideal for
+         * larger tables, and using the multiplier, the formula is adjusted to
+         * increase the number of chunks by using
+         * 'row_count/(snapshot.max.threads snapshot.max.threads.multiplier).
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Default: 1
+         * Group: mongodb
+         * 
+         * @param snapshotMaxThreadsMultiplier the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMongodbComponentBuilder snapshotMaxThreadsMultiplier(int snapshotMaxThreadsMultiplier) {
+            doSetProperty("snapshotMaxThreadsMultiplier", snapshotMaxThreadsMultiplier);
+            return this;
+        }
+    
+        
+        /**
          * The criteria for running a snapshot upon startup of the connector.
          * Select one of the following snapshot options: 'initial' (default): If
          * the connector does not detect any offsets for the logical server
@@ -1515,6 +1537,25 @@ public interface DebeziumMongodbComponentBuilderFactory {
          */
         default DebeziumMongodbComponentBuilder sourceinfoStructMaker(java.lang.String sourceinfoStructMaker) {
             doSetProperty("sourceinfoStructMaker", sourceinfoStructMaker);
+            return this;
+        }
+    
+        
+        /**
+         * Enable to collect various kind of statistics, like latencies in
+         * record processing, and derived data like quantiles. By default
+         * collecting statistics is enabled.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: mongodb
+         * 
+         * @param statisticsMetricsEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMongodbComponentBuilder statisticsMetricsEnabled(boolean statisticsMetricsEnabled) {
+            doSetProperty("statisticsMetricsEnabled", statisticsMetricsEnabled);
             return this;
         }
     
@@ -1708,6 +1749,7 @@ public interface DebeziumMongodbComponentBuilderFactory {
             case "snapshotFetchSize": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSnapshotFetchSize((int) value); return true;
             case "snapshotIncludeCollectionList": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSnapshotIncludeCollectionList((java.lang.String) value); return true;
             case "snapshotMaxThreads": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSnapshotMaxThreads((int) value); return true;
+            case "snapshotMaxThreadsMultiplier": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSnapshotMaxThreadsMultiplier((int) value); return true;
             case "snapshotMode": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSnapshotMode((java.lang.String) value); return true;
             case "snapshotModeConfigurationBasedSnapshotData": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSnapshotModeConfigurationBasedSnapshotData((boolean) value); return true;
             case "snapshotModeConfigurationBasedSnapshotOnDataError": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSnapshotModeConfigurationBasedSnapshotOnDataError((boolean) value); return true;
@@ -1716,6 +1758,7 @@ public interface DebeziumMongodbComponentBuilderFactory {
             case "snapshotModeConfigurationBasedStartStream": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSnapshotModeConfigurationBasedStartStream((boolean) value); return true;
             case "snapshotModeCustomName": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSnapshotModeCustomName((java.lang.String) value); return true;
             case "sourceinfoStructMaker": getOrCreateConfiguration((DebeziumMongodbComponent) component).setSourceinfoStructMaker((java.lang.String) value); return true;
+            case "statisticsMetricsEnabled": getOrCreateConfiguration((DebeziumMongodbComponent) component).setStatisticsMetricsEnabled((boolean) value); return true;
             case "streamingDelayMs": getOrCreateConfiguration((DebeziumMongodbComponent) component).setStreamingDelayMs((long) value); return true;
             case "tombstonesOnDelete": getOrCreateConfiguration((DebeziumMongodbComponent) component).setTombstonesOnDelete((boolean) value); return true;
             case "topicNamingStrategy": getOrCreateConfiguration((DebeziumMongodbComponent) component).setTopicNamingStrategy((java.lang.String) value); return true;

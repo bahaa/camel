@@ -23,7 +23,7 @@ import java.net.URLClassLoader;
 import org.apache.camel.Exchange;
 import org.apache.camel.component.quickfixj.converter.QuickfixjConverters;
 import org.apache.camel.support.DefaultExchange;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import quickfix.Acceptor;
 import quickfix.DataDictionary;
@@ -85,7 +85,7 @@ public class QuickfixjConvertersTest extends CamelTestSupport {
         QuickfixjEndpoint endpoint = new QuickfixjEndpoint(null, "", new QuickfixjComponent(context));
 
         Message message = new Message();
-        message.getHeader().setString(MsgType.FIELD, MsgType.ORDER_SINGLE);
+        message.getHeader().setString(MsgType.FIELD, MsgType.NEW_ORDER_SINGLE);
 
         Exchange exchange = QuickfixjConverters.toExchange(endpoint, sessionID, message, QuickfixjEventCategory.AppMessageSent);
 
@@ -94,7 +94,7 @@ public class QuickfixjConvertersTest extends CamelTestSupport {
         assertThat((QuickfixjEventCategory) exchange.getIn().getHeader(QuickfixjEndpoint.EVENT_CATEGORY_KEY),
                 is(QuickfixjEventCategory.AppMessageSent));
 
-        assertThat((String) exchange.getIn().getHeader(QuickfixjEndpoint.MESSAGE_TYPE_KEY), is(MsgType.ORDER_SINGLE));
+        assertThat((String) exchange.getIn().getHeader(QuickfixjEndpoint.MESSAGE_TYPE_KEY), is(MsgType.NEW_ORDER_SINGLE));
     }
 
     @Test

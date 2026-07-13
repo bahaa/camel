@@ -26,7 +26,7 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.junit.rule.mllp.MllpClientResource;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -50,15 +50,19 @@ public class MllpTcpServerCharsetTest extends CamelTestSupport {
     static final String TARGET_URI = "mock://target";
 
     @RegisterExtension
+    AvailablePortFinder.Port mllpClientPort = AvailablePortFinder.find();
+
+    @RegisterExtension
     public MllpClientResource mllpClient = new MllpClientResource();
 
     @EndpointInject(TARGET_URI)
     MockEndpoint target;
 
+    @SuppressWarnings("deprecation")
     @Override
     protected CamelContext createCamelContext() throws Exception {
         mllpClient.setMllpHost("localhost");
-        mllpClient.setMllpPort(AvailablePortFinder.getNextAvailable());
+        mllpClient.setMllpPort(mllpClientPort.getPort());
 
         DefaultCamelContext context = (DefaultCamelContext) super.createCamelContext();
 

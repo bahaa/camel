@@ -28,20 +28,20 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.camel.component.mail.SearchTermBuilder.Op;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MailSearchTermTest extends CamelTestSupport {
-    protected static final MailboxUser bill = Mailbox.getOrCreateUser("bill", "secret");
+    protected static final MailboxUser bill = Mailbox.getOrCreateUser("MailSearchTermTest-bill", "secret");
 
     @BindToRegistry("myTerm")
     private SearchTerm term = createSearchTerm();
 
     @Override
-    public void doPreSetup() throws Exception {
+    public void setupResources() throws Exception {
         prepareMailbox();
     }
 

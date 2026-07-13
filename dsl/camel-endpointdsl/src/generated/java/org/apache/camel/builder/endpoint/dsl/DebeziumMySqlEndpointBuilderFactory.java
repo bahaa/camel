@@ -371,6 +371,78 @@ public interface DebeziumMySqlEndpointBuilderFactory {
             return this;
         }
         /**
+         * The number of seconds to wait for a read from the binlog connection
+         * to complete before the server times out. A value of 0 means use the
+         * MySQL server default. May need to be increased in high-latency
+         * network environments to prevent EOFException during streaming.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Default: 0
+         * Group: mysql
+         * 
+         * @param binlogNetReadTimeout the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder binlogNetReadTimeout(long binlogNetReadTimeout) {
+            doSetProperty("binlogNetReadTimeout", binlogNetReadTimeout);
+            return this;
+        }
+        /**
+         * The number of seconds to wait for a read from the binlog connection
+         * to complete before the server times out. A value of 0 means use the
+         * MySQL server default. May need to be increased in high-latency
+         * network environments to prevent EOFException during streaming.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Default: 0
+         * Group: mysql
+         * 
+         * @param binlogNetReadTimeout the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder binlogNetReadTimeout(String binlogNetReadTimeout) {
+            doSetProperty("binlogNetReadTimeout", binlogNetReadTimeout);
+            return this;
+        }
+        /**
+         * The number of seconds to wait for a write to the binlog connection to
+         * complete before the server times out. A value of 0 means use the
+         * MySQL server default. May need to be increased when large data
+         * volumes cause EOFException during streaming.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Default: 0
+         * Group: mysql
+         * 
+         * @param binlogNetWriteTimeout the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder binlogNetWriteTimeout(long binlogNetWriteTimeout) {
+            doSetProperty("binlogNetWriteTimeout", binlogNetWriteTimeout);
+            return this;
+        }
+        /**
+         * The number of seconds to wait for a write to the binlog connection to
+         * complete before the server times out. A value of 0 means use the
+         * MySQL server default. May need to be increased when large data
+         * volumes cause EOFException during streaming.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Default: 0
+         * Group: mysql
+         * 
+         * @param binlogNetWriteTimeout the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder binlogNetWriteTimeout(String binlogNetWriteTimeout) {
+            doSetProperty("binlogNetWriteTimeout", binlogNetWriteTimeout);
+            return this;
+        }
+        /**
          * Regular expressions matching columns to exclude from change events.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -587,7 +659,7 @@ public interface DebeziumMySqlEndpointBuilderFactory {
          * The option is a: <code>java.lang.String</code> type.
          * 
          * Default:
-         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret
+         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret|.*credentials\.json$
          * Group: mysql
          * 
          * @param customSanitizePattern the value to set
@@ -955,6 +1027,25 @@ public interface DebeziumMySqlEndpointBuilderFactory {
             return this;
         }
         /**
+         * Specifies which ANTLR grammar to use for parsing MySQL DDL
+         * statements. 'default' uses the Oracle MySQL grammar, which is
+         * actively maintained and supports MySQL 8.0 features. 'legacy' uses
+         * the Positive Technologies grammar for backward compatibility with
+         * existing deployments.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: default
+         * Group: mysql
+         * 
+         * @param ddlParserType the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder ddlParserType(String ddlParserType) {
+            doSetProperty("ddlParserType", ddlParserType);
+            return this;
+        }
+        /**
          * Specify how DECIMAL and NUMERIC columns should be represented in
          * change events, including: 'precise' (the default) uses
          * java.math.BigDecimal to represent values, which are encoded in the
@@ -1149,6 +1240,40 @@ public interface DebeziumMySqlEndpointBuilderFactory {
          */
         default DebeziumMySqlEndpointBuilder extendedHeadersEnabled(String extendedHeadersEnabled) {
             doSetProperty("extendedHeadersEnabled", extendedHeadersEnabled);
+            return this;
+        }
+        /**
+         * Whether the connector should ignore GTID during recovery and restart
+         * from the binlog file and position instead. GTID mode on the server
+         * remains enabled, and GTID tracking resumes normally after recovery.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: mysql
+         * 
+         * @param gtidIgnoreOnRecovery the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder gtidIgnoreOnRecovery(boolean gtidIgnoreOnRecovery) {
+            doSetProperty("gtidIgnoreOnRecovery", gtidIgnoreOnRecovery);
+            return this;
+        }
+        /**
+         * Whether the connector should ignore GTID during recovery and restart
+         * from the binlog file and position instead. GTID mode on the server
+         * remains enabled, and GTID tracking resumes normally after recovery.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: mysql
+         * 
+         * @param gtidIgnoreOnRecovery the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder gtidIgnoreOnRecovery(String gtidIgnoreOnRecovery) {
+            doSetProperty("gtidIgnoreOnRecovery", gtidIgnoreOnRecovery);
             return this;
         }
         /**
@@ -1670,6 +1795,44 @@ public interface DebeziumMySqlEndpointBuilderFactory {
          */
         default DebeziumMySqlEndpointBuilder maxQueueSizeInBytes(String maxQueueSizeInBytes) {
             doSetProperty("maxQueueSizeInBytes", maxQueueSizeInBytes);
+            return this;
+        }
+        /**
+         * The fully-qualified class name of the storage implementation for
+         * schema metadata. The class must implement
+         * io.debezium.relational.TableMappingStorage. Defaults to
+         * io.debezium.relational.ConcurrentMapTableMappingStorage for in-memory
+         * storage.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: io.debezium.relational.ConcurrentMapTableMappingStorage
+         * Group: mysql
+         * 
+         * @param memoryManagementSchemasClass the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder memoryManagementSchemasClass(String memoryManagementSchemasClass) {
+            doSetProperty("memoryManagementSchemasClass", memoryManagementSchemasClass);
+            return this;
+        }
+        /**
+         * The fully-qualified class name of the storage implementation for
+         * table metadata. The class must implement
+         * io.debezium.relational.TableMappingStorage. Defaults to
+         * io.debezium.relational.ConcurrentMapTableMappingStorage for in-memory
+         * storage.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: io.debezium.relational.ConcurrentMapTableMappingStorage
+         * Group: mysql
+         * 
+         * @param memoryManagementTablesClass the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder memoryManagementTablesClass(String memoryManagementTablesClass) {
+            doSetProperty("memoryManagementTablesClass", memoryManagementTablesClass);
             return this;
         }
         /**
@@ -2446,6 +2609,46 @@ public interface DebeziumMySqlEndpointBuilderFactory {
             return this;
         }
         /**
+         * The factor used to scale the number of snapshot chunks per table. The
+         * default behavior is to take 'row_count/snapshot.max.threads' to
+         * compute the number of rows per chunks. This may not be ideal for
+         * larger tables, and using the multiplier, the formula is adjusted to
+         * increase the number of chunks by using
+         * 'row_count/(snapshot.max.threads snapshot.max.threads.multiplier).
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 1
+         * Group: mysql
+         * 
+         * @param snapshotMaxThreadsMultiplier the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder snapshotMaxThreadsMultiplier(int snapshotMaxThreadsMultiplier) {
+            doSetProperty("snapshotMaxThreadsMultiplier", snapshotMaxThreadsMultiplier);
+            return this;
+        }
+        /**
+         * The factor used to scale the number of snapshot chunks per table. The
+         * default behavior is to take 'row_count/snapshot.max.threads' to
+         * compute the number of rows per chunks. This may not be ideal for
+         * larger tables, and using the multiplier, the formula is adjusted to
+         * increase the number of chunks by using
+         * 'row_count/(snapshot.max.threads snapshot.max.threads.multiplier).
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 1
+         * Group: mysql
+         * 
+         * @param snapshotMaxThreadsMultiplier the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder snapshotMaxThreadsMultiplier(String snapshotMaxThreadsMultiplier) {
+            doSetProperty("snapshotMaxThreadsMultiplier", snapshotMaxThreadsMultiplier);
+            return this;
+        }
+        /**
          * The criteria for running a snapshot upon startup of the connector.
          * Select one of the following snapshot options: 'when_needed': On
          * startup, the connector runs a snapshot if one is needed.;
@@ -2464,11 +2667,7 @@ public interface DebeziumMySqlEndpointBuilderFactory {
          * the connector begins to stream changes from the binlog.;
          * 'initial_only': The connector performs a snapshot as it does for the
          * 'initial' option, but after the connector completes the snapshot, it
-         * stops, and does not stream changes from the binlog.; 'never': The
-         * connector does not run a snapshot. Upon first startup, the connector
-         * immediately begins reading from the beginning of the binlog. The
-         * 'never' mode should be used with care, and only when the binlog is
-         * known to contain all history.
+         * stops, and does not stream changes from the binlog.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -2761,6 +2960,40 @@ public interface DebeziumMySqlEndpointBuilderFactory {
          */
         default DebeziumMySqlEndpointBuilder sourceinfoStructMaker(String sourceinfoStructMaker) {
             doSetProperty("sourceinfoStructMaker", sourceinfoStructMaker);
+            return this;
+        }
+        /**
+         * Enable to collect various kind of statistics, like latencies in
+         * record processing, and derived data like quantiles. By default
+         * collecting statistics is enabled.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: mysql
+         * 
+         * @param statisticsMetricsEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder statisticsMetricsEnabled(boolean statisticsMetricsEnabled) {
+            doSetProperty("statisticsMetricsEnabled", statisticsMetricsEnabled);
+            return this;
+        }
+        /**
+         * Enable to collect various kind of statistics, like latencies in
+         * record processing, and derived data like quantiles. By default
+         * collecting statistics is enabled.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: mysql
+         * 
+         * @param statisticsMetricsEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMySqlEndpointBuilder statisticsMetricsEnabled(String statisticsMetricsEnabled) {
+            doSetProperty("statisticsMetricsEnabled", statisticsMetricsEnabled);
             return this;
         }
         /**
@@ -3195,7 +3428,7 @@ public interface DebeziumMySqlEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final DebeziumMySqlHeaderNameBuilder INSTANCE = new DebeziumMySqlHeaderNameBuilder();
+        public static final DebeziumMySqlHeaderNameBuilder INSTANCE = new DebeziumMySqlHeaderNameBuilder();
 
         /**
          * The metadata about the source event, for example table name, database

@@ -35,9 +35,14 @@ import org.apache.camel.tracing.SpanAdapter;
 import org.apache.camel.tracing.SpanDecorator;
 import org.apache.camel.tracing.SpanKind;
 import org.apache.camel.tracing.decorators.AbstractInternalSpanDecorator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ManagedResource(description = "MicrometerObservationTracer")
+@Deprecated(since = "4.19.0")
 public class MicrometerObservationTracer extends org.apache.camel.tracing.Tracer {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MicrometerObservationTracer.class);
 
     private static final String SPAN_DECORATOR_INTERNAL = "camel.micrometer.abstract-internal";
     private static final String CAMEL_CONTEXT_NAME = "camel.component";
@@ -62,7 +67,7 @@ public class MicrometerObservationTracer extends org.apache.camel.tracing.Tracer
     }
 
     private Observation.Context spanKindToContextOnExtract(
-            org.apache.camel.tracing.SpanKind kind, SpanDecorator sd, Exchange exchange) {
+            SpanKind kind, SpanDecorator sd, Exchange exchange) {
         ExtractAdapter adapter = sd.getExtractAdapter(exchange.getIn().getHeaders(), encoding);
         switch (kind) {
             case PRODUCER:
@@ -91,7 +96,7 @@ public class MicrometerObservationTracer extends org.apache.camel.tracing.Tracer
     }
 
     private Observation.Context spanKindToContextOnInject(
-            org.apache.camel.tracing.SpanKind kind, InjectAdapter adapter, Exchange exchange) {
+            SpanKind kind, InjectAdapter adapter, Exchange exchange) {
         switch (kind) {
             case SPAN_KIND_CLIENT:
                 RequestReplySenderContext<Object, Message> senderContext
@@ -113,6 +118,8 @@ public class MicrometerObservationTracer extends org.apache.camel.tracing.Tracer
 
     @Override
     protected void initTracer() {
+        LOG.warn("Camel micrometer observability is deprecated and may be removed in future versions. " +
+                 "Please, use camel-micrometer-observability components instead!");
         if (tracer == null) {
             tracer = CamelContextHelper.findSingleByType(getCamelContext(), Tracer.class);
         }
@@ -173,7 +180,7 @@ public class MicrometerObservationTracer extends org.apache.camel.tracing.Tracer
 
     @Override
     protected SpanAdapter startExchangeBeginSpan(
-            Exchange exchange, SpanDecorator sd, String operationName, org.apache.camel.tracing.SpanKind kind,
+            Exchange exchange, SpanDecorator sd, String operationName, SpanKind kind,
             SpanAdapter parent) {
         boolean parentPresent = parent != null;
         Observation.Context context = spanKindToContextOnExtract(kind, sd, exchange);

@@ -1,7 +1,7 @@
 = Pipeline EIP
 :doctitle: Pipeline
 :shortname: pipeline
-:description: Routes the message to a sequence of processors.
+:description: Processes the message through a sequence of steps where the output of each step becomes the input of the next
 :since: 
 :supportlevel: Stable
 :tabs-sync-option:
@@ -59,6 +59,24 @@ XML::
     </pipeline>
 </route>
 ----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: activemq:cheese
+      steps:
+        - pipeline:
+            steps:
+              - to:
+                  uri: bean:foo
+              - to:
+                  uri: bean:bar
+              - to:
+                  uri: activemq:wine
+----
 ====
 
 Though a pipeline is the default mode of operation when you specify
@@ -86,6 +104,22 @@ XML::
     <to uri="bean:bar"/>
     <to uri="activemq:wine"/>
 </route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: activemq:SomeQueue
+      steps:
+        - to:
+            uri: bean:foo
+        - to:
+            uri: bean:bar
+        - to:
+            uri: activemq:OutputQueue
 ----
 ====
 
@@ -148,5 +182,33 @@ XML::
   </multicast>
   <to uri="log:result"/>
 </route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: activemq:SomeQueue
+      steps:
+        - multicast:
+            steps:
+              - pipeline:
+                  steps:
+                    - to:
+                        uri: bean:something
+                    - to:
+                        uri: log:something
+              - pipeline:
+                  steps:
+                    - to:
+                        uri: bean:foo
+                    - to:
+                        uri: bean:bar
+                    - to:
+                        uri: activemq:OutputQueue
+        - to:
+            uri: log:result
 ----
 ====

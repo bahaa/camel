@@ -21,9 +21,10 @@ import org.apache.camel.ConsumerTemplate;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.itest.utils.extensions.JmsServiceExtension;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.TestSupport;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.junit6.TestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -32,16 +33,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @CamelSpringTest
 @ContextConfiguration
+@Timeout(60)
 public class JettyMulticastJmsFileTest {
     @RegisterExtension
     public static JmsServiceExtension jmsServiceExtension = JmsServiceExtension.createExtension();
 
-    private static int port = AvailablePortFinder.getNextAvailable();
-    private static final String URL = "http://localhost:" + port + "/JettyMulticastJmsFileTest";
+    @RegisterExtension
+    static AvailablePortFinder.Port port = AvailablePortFinder.find();
+    private static final String URL = "http://localhost:" + port.getPort() + "/JettyMulticastJmsFileTest";
     static {
         //set them as system properties so Spring can use the property placeholder
         //things to set them into the URL's in the spring contexts
-        System.setProperty("JettyMulticastJmsFileTest.port", Integer.toString(port));
+        System.setProperty("JettyMulticastJmsFileTest.port", Integer.toString(port.getPort()));
     }
 
     @Autowired

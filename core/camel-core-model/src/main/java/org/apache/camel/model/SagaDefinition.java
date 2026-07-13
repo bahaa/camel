@@ -30,7 +30,9 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 
 import org.apache.camel.Expression;
+import org.apache.camel.builder.EndpointProducerBuilder;
 import org.apache.camel.saga.CamelSagaService;
+import org.apache.camel.spi.AsEndpointUri;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.TimeUtils;
@@ -38,33 +40,48 @@ import org.apache.camel.util.TimeUtils;
 /**
  * Enables Sagas on the route
  */
-@Metadata(label = "eip,routing")
+@Metadata(label = "eip,routing",
+          aliases = { "compensate" },
+          description = "Defines a Saga (long-running action) that coordinates distributed services toward a consistent outcome."
+                        + " Unlike XA transactions, Sagas use compensating actions for rollback and work across heterogeneous services.")
 @XmlRootElement(name = "saga")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SagaDefinition extends OutputDefinition<SagaDefinition> {
 
     @XmlTransient
+    private EndpointProducerBuilder compensationEndpointProducerBuilder;
+    @XmlTransient
+    private EndpointProducerBuilder completionEndpointProducerBuilder;
+
+    @XmlTransient
     private CamelSagaService sagaServiceBean;
     @XmlAttribute
-    @Metadata(label = "advanced", javaType = "org.apache.camel.saga.CamelSagaService")
+    @Metadata(label = "advanced", javaType = "org.apache.camel.saga.CamelSagaService",
+              description = "Refers to the id to lookup in the registry for the specific CamelSagaService to use")
     private String sagaService;
     @XmlAttribute
     @Metadata(label = "advanced", javaType = "org.apache.camel.model.SagaPropagation", defaultValue = "REQUIRED",
-              enums = "REQUIRED,REQUIRES_NEW,MANDATORY,SUPPORTS,NOT_SUPPORTED,NEVER")
+              enums = "REQUIRED,REQUIRES_NEW,MANDATORY,SUPPORTS,NOT_SUPPORTED,NEVER",
+              description = "Set the Saga propagation mode. REQUIRED joins an existing saga or starts a new one. REQUIRES_NEW always starts a new saga, suspending any existing one. MANDATORY requires an existing saga and fails if none is active. SUPPORTS joins an existing saga if present but does not start a new one. NOT_SUPPORTED executes outside any saga, suspending an existing one. NEVER fails if a saga is already active.")
     private String propagation;
     @XmlAttribute
     @Metadata(label = "advanced", javaType = "org.apache.camel.model.SagaCompletionMode", defaultValue = "AUTO",
-              enums = "AUTO,MANUAL")
+              enums = "AUTO,MANUAL",
+              description = "Determine how the saga should be considered complete. When set to AUTO, the saga is completed when the exchange is processed successfully, or compensated when it completes exceptionally. When set to MANUAL, the user must complete or compensate the saga using the saga:complete or saga:compensate endpoints.")
     private String completionMode;
     @XmlAttribute
-    @Metadata(javaType = "java.time.Duration")
+    @Metadata(javaType = "java.time.Duration",
+              description = "Set the maximum amount of time for the Saga. After the timeout is expired, the saga will be compensated automatically (unless a different decision has been taken in the meantime).")
     private String timeout;
-    @XmlElement
-    private SagaActionUriDefinition compensation;
-    @XmlElement
-    private SagaActionUriDefinition completion;
+    @XmlAttribute
+    @Metadata(description = "The compensation endpoint URI that must be called to compensate all changes done in the route. The route corresponding to the compensation URI must perform compensation and complete without error.")
+    private String compensation;
+    @XmlAttribute
+    @Metadata(description = "The completion endpoint URI that will be called when the Saga is completed successfully. The route corresponding to the completion URI must perform completion tasks and terminate without error.")
+    private String completion;
     @XmlElement(name = "option")
-    @Metadata(label = "advanced")
+    @Metadata(label = "advanced",
+              description = "Allows to save properties of the current exchange in order to re-use them in a compensation/completion callback route. Option values will be transformed into input headers of the compensation/completion exchange.")
     private List<PropertyExpressionDefinition> options;
 
     public SagaDefinition() {
@@ -77,8 +94,10 @@ public class SagaDefinition extends OutputDefinition<SagaDefinition> {
         this.propagation = source.propagation;
         this.completionMode = source.completionMode;
         this.timeout = source.timeout;
-        this.compensation = source.compensation != null ? source.compensation.copyDefinition() : null;
-        this.completion = source.completion != null ? source.completion.copyDefinition() : null;
+        this.compensation = source.compensation;
+        this.completion = source.completion;
+        this.compensationEndpointProducerBuilder = source.compensationEndpointProducerBuilder;
+        this.completionEndpointProducerBuilder = source.completionEndpointProducerBuilder;
         this.options = ProcessorDefinitionHelper.deepCopyDefinitions(source.options);
     }
 
@@ -135,6 +154,14 @@ public class SagaDefinition extends OutputDefinition<SagaDefinition> {
 
     // Properties
 
+    public EndpointProducerBuilder getCompensationEndpointProducerBuilder() {
+        return compensationEndpointProducerBuilder;
+    }
+
+    public EndpointProducerBuilder getCompletionEndpointProducerBuilder() {
+        return completionEndpointProducerBuilder;
+    }
+
     public CamelSagaService getSagaServiceBean() {
         return sagaServiceBean;
     }
@@ -143,46 +170,38 @@ public class SagaDefinition extends OutputDefinition<SagaDefinition> {
         return sagaService;
     }
 
-    /**
-     * Refers to the id to lookup in the registry for the specific CamelSagaService to use.
-     */
     public void setSagaService(String sagaService) {
         this.sagaService = sagaService;
     }
 
-    public SagaActionUriDefinition getCompensation() {
+    public String getCompensation() {
         return compensation;
     }
 
-    /**
-     * The compensation endpoint URI that must be called to compensate all changes done in the route. The route
-     * corresponding to the compensation URI must perform compensation and complete without error. If errors occur
-     * during compensation, the saga service may call again the compensation URI to retry.
-     */
-    public void setCompensation(SagaActionUriDefinition compensation) {
+    public void setCompensation(@AsEndpointUri String compensation) {
         this.compensation = compensation;
     }
 
-    public SagaActionUriDefinition getCompletion() {
+    public void setCompensation(@AsEndpointUri EndpointProducerBuilder compensation) {
+        this.compensationEndpointProducerBuilder = compensation;
+    }
+
+    public String getCompletion() {
         return completion;
     }
 
-    /**
-     * The completion endpoint URI that will be called when the Saga is completed successfully. The route corresponding
-     * to the completion URI must perform completion tasks and terminate without error. If errors occur during
-     * completion, the saga service may call again the completion URI to retry.
-     */
-    public void setCompletion(SagaActionUriDefinition completion) {
+    public void setCompletion(@AsEndpointUri String completion) {
         this.completion = completion;
+    }
+
+    public void setCompletion(@AsEndpointUri EndpointProducerBuilder completion) {
+        this.completionEndpointProducerBuilder = completion;
     }
 
     public String getPropagation() {
         return propagation;
     }
 
-    /**
-     * Set the Saga propagation mode (REQUIRED, REQUIRES_NEW, MANDATORY, SUPPORTS, NOT_SUPPORTED, NEVER).
-     */
     public void setPropagation(String propagation) {
         this.propagation = propagation;
     }
@@ -191,11 +210,6 @@ public class SagaDefinition extends OutputDefinition<SagaDefinition> {
         return completionMode;
     }
 
-    /**
-     * Determine how the saga should be considered complete. When set to AUTO, the saga is completed when the exchange
-     * that initiates the saga is processed successfully, or compensated when it completes exceptionally. When set to
-     * MANUAL, the user must complete or compensate the saga using the "saga:complete" or "saga:compensate" endpoints.
-     */
     public void setCompletionMode(String completionMode) {
         this.completionMode = completionMode;
     }
@@ -204,12 +218,6 @@ public class SagaDefinition extends OutputDefinition<SagaDefinition> {
         return options;
     }
 
-    /**
-     * Allows to save properties of the current exchange in order to re-use them in a compensation/completion callback
-     * route. Options are usually helpful e.g. to store and retrieve identifiers of objects that should be deleted in
-     * compensating actions. Option values will be transformed into input headers of the compensation/completion
-     * exchange.
-     */
     public void setOptions(List<PropertyExpressionDefinition> options) {
         this.options = options;
     }
@@ -218,10 +226,6 @@ public class SagaDefinition extends OutputDefinition<SagaDefinition> {
         return timeout;
     }
 
-    /**
-     * Set the maximum amount of time for the Saga. After the timeout is expired, the saga will be compensated
-     * automatically (unless a different decision has been taken in the meantime).
-     */
     public void setTimeout(String timeout) {
         this.timeout = timeout;
     }
@@ -236,18 +240,12 @@ public class SagaDefinition extends OutputDefinition<SagaDefinition> {
     // Builders
 
     public SagaDefinition compensation(String compensation) {
-        if (this.compensation != null) {
-            throw new IllegalStateException("Compensation has already been set");
-        }
-        this.compensation = new SagaActionUriDefinition(compensation);
+        this.compensation = compensation;
         return this;
     }
 
     public SagaDefinition completion(String completion) {
-        if (this.completion != null) {
-            throw new IllegalStateException("Completion has already been set");
-        }
-        this.completion = new SagaActionUriDefinition(completion);
+        this.completion = completion;
         return this;
     }
 

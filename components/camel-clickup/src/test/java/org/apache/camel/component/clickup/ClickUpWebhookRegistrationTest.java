@@ -33,7 +33,7 @@ import org.apache.camel.component.clickup.model.WebhookCreationCommand;
 import org.apache.camel.component.clickup.util.ClickUpMockRoutes;
 import org.apache.camel.component.clickup.util.ClickUpTestSupport;
 import org.apache.camel.impl.DefaultCamelContext;
-import org.apache.camel.test.junit5.TestExecutionConfiguration;
+import org.apache.camel.test.junit6.TestExecutionConfiguration;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
@@ -81,7 +81,7 @@ public class ClickUpWebhookRegistrationTest extends ClickUpTestSupport {
 
                 assertInstanceOf(WebhookCreationCommand.class, command);
             } catch (IOException e) {
-                fail(e);
+                throw new AssertionError("Failed to parse recorded message", e);
             }
 
             mockProcessor.clearRecordedMessages();
@@ -150,7 +150,7 @@ public class ClickUpWebhookRegistrationTest extends ClickUpTestSupport {
 
     @Override
     protected ClickUpMockRoutes createMockRoutes() {
-        ClickUpMockRoutes clickUpMockRoutes = new ClickUpMockRoutes(port);
+        ClickUpMockRoutes clickUpMockRoutes = new ClickUpMockRoutes(port.getPort());
 
         clickUpMockRoutes.addEndpoint(
                 "health",

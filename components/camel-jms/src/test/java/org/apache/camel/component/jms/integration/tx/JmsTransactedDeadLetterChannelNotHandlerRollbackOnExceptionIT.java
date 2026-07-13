@@ -16,31 +16,115 @@
  */
 package org.apache.camel.component.jms.integration.tx;
 
+import java.util.concurrent.TimeUnit;
+
+import jakarta.jms.ConnectionFactory;
+
+import org.apache.activemq.artemis.api.core.QueueConfiguration;
+import org.apache.activemq.artemis.api.core.RoutingType;
+import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.camel.CamelContext;
+import org.apache.camel.Exchange;
+import org.apache.camel.Handler;
+import org.apache.camel.RuntimeCamelException;
+import org.apache.camel.builder.NotifyBuilder;
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.jms.JmsComponent;
+import org.apache.camel.test.infra.artemis.common.ConnectionFactoryHelper;
+import org.apache.camel.test.infra.artemis.services.ArtemisService;
+import org.apache.camel.test.infra.artemis.services.ArtemisVMService;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import static org.apache.camel.component.jms.JmsComponent.jmsComponentTransacted;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// This test cannot run in parallel: it reads from the default DLQ and there could be more messages there
 @Tags({ @Tag("not-parallel"), @Tag("transaction") })
-public class JmsTransactedDeadLetterChannelNotHandlerRollbackOnExceptionIT
-        extends JmsTransactedDeadLetterChannelHandlerRollbackOnExceptionIT {
+public class JmsTransactedDeadLetterChannelNotHandlerRollbackOnExceptionIT extends CamelTestSupport {
+
+    private static final String DLQ_NAME
+            = "DLQ." + JmsTransactedDeadLetterChannelNotHandlerRollbackOnExceptionIT.class.getSimpleName();
+
+    @RegisterExtension
+    public static ArtemisService service = createArtemisService();
+
+    static ArtemisService createArtemisService() {
+        ArtemisVMService svc = new ArtemisVMService();
+        svc.customConfiguration(cfg -> {
+            cfg.getAddressSettings().values()
+                    .forEach(s -> {
+                        s.setMaxDeliveryAttempts(1);
+                        s.setDeadLetterAddress(SimpleString.of(DLQ_NAME));
+                    });
+            cfg.addQueueConfiguration(
+                    QueueConfiguration.of(DLQ_NAME).setRoutingType(RoutingType.ANYCAST));
+        });
+        return svc;
+    }
+
+    public static class BadErrorHandler {
+        @Handler
+        public void onException(Exchange exchange, Exception exception) {
+            throw new RuntimeCamelException("error in errorhandler");
+        }
+    }
+
+    private final String testingEndpoint = "activemq:test." + getClass().getName();
 
     @Override
-    protected boolean isHandleNew() {
-        return false;
+    protected RouteBuilder createRouteBuilder() {
+        return new RouteBuilder() {
+            @Override
+            public void configure() {
+                // we use DLC to handle the exception but if it throw a new exception
+                // then the DLC does NOT handle that (the transaction will rollback)
+                errorHandler(deadLetterChannel("bean:" + BadErrorHandler.class.getName())
+                        .deadLetterHandleNewException(false)
+                        .logNewException(true));
+
+                from(testingEndpoint)
+                        .log("Incoming JMS message ${body}")
+                        .throwException(new RuntimeCamelException("bad error"));
+            }
+        };
+    }
+
+    @Test
+    public void shouldNotLoseMessagesOnExceptionInErrorHandler() {
+        // wait for the exchange to be fully done (processed + transaction rolled back)
+        // before checking the DLQ, to avoid a race between route processing and the assertion
+        NotifyBuilder notify = new NotifyBuilder(context).whenDone(1).create();
+
+        template.sendBody(testingEndpoint, "Hello World");
+
+        assertTrue(notify.matches(30, TimeUnit.SECONDS), "Exchange should be done");
+
+        // as we do not handle new exception, then the exception propagates back
+        // and causes the transaction to rollback, and we can find the message in the DLQ.
+        // Use Awaitility to retry: the transacted session may be briefly closed after
+        // the rollback, causing "Session is closed" on the first receiveBody attempt.
+        await().atMost(30, TimeUnit.SECONDS)
+                .ignoreExceptions()
+                .untilAsserted(() -> {
+                    Object dlqBody = consumer.receiveBody("activemq:" + DLQ_NAME, 2000);
+                    assertEquals("Hello World", dlqBody);
+                });
     }
 
     @Override
-    @Test
-    public void shouldNotLoseMessagesOnExceptionInErrorHandler() {
-        template.sendBody(testingEndpoint, "Hello World");
+    protected CamelContext createCamelContext() throws Exception {
+        CamelContext camelContext = super.createCamelContext();
 
-        // as we do not handle new exception, then the exception propagates back
-        // and causes the transaction to rollback, and we can find the message in the ActiveMQ DLQ
-        Object dlqBody = consumer.receiveBody("activemq:DLQ", 2000);
-        assertEquals("Hello World", dlqBody);
+        ConnectionFactory connectionFactory = ConnectionFactoryHelper.createConnectionFactory(service, 0);
+
+        JmsComponent component = jmsComponentTransacted(connectionFactory);
+        camelContext.addComponent("activemq", component);
+        return camelContext;
     }
 
 }

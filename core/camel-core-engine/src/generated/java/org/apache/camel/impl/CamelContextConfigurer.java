@@ -54,6 +54,8 @@ public class CamelContextConfigurer extends org.apache.camel.support.component.P
         case "devConsole": target.setDevConsole(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "dumproutes":
         case "dumpRoutes": target.setDumpRoutes(property(camelContext, java.lang.String.class, value)); return true;
+        case "errorregistry":
+        case "errorRegistry": target.setErrorRegistry(property(camelContext, org.apache.camel.spi.ErrorRegistry.class, value)); return true;
         case "executorservicemanager":
         case "executorServiceManager": target.setExecutorServiceManager(property(camelContext, org.apache.camel.spi.ExecutorServiceManager.class, value)); return true;
         case "globaloptions":
@@ -81,6 +83,10 @@ public class CamelContextConfigurer extends org.apache.camel.support.component.P
         case "messageHistory": target.setMessageHistory(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "messagehistoryfactory":
         case "messageHistoryFactory": target.setMessageHistoryFactory(property(camelContext, org.apache.camel.spi.MessageHistoryFactory.class, value)); return true;
+        case "messagesize":
+        case "messageSize": target.setMessageSize(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "messagesizestrategy":
+        case "messageSizeStrategy": target.setMessageSizeStrategy(property(camelContext, org.apache.camel.spi.MessageSizeStrategy.class, value)); return true;
         case "modeline": target.setModeline(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "namestrategy":
         case "nameStrategy": target.setNameStrategy(property(camelContext, org.apache.camel.spi.CamelContextNameStrategy.class, value)); return true;
@@ -174,6 +180,8 @@ public class CamelContextConfigurer extends org.apache.camel.support.component.P
         case "devConsole": return java.lang.Boolean.class;
         case "dumproutes":
         case "dumpRoutes": return java.lang.String.class;
+        case "errorregistry":
+        case "errorRegistry": return org.apache.camel.spi.ErrorRegistry.class;
         case "executorservicemanager":
         case "executorServiceManager": return org.apache.camel.spi.ExecutorServiceManager.class;
         case "globaloptions":
@@ -201,6 +209,10 @@ public class CamelContextConfigurer extends org.apache.camel.support.component.P
         case "messageHistory": return java.lang.Boolean.class;
         case "messagehistoryfactory":
         case "messageHistoryFactory": return org.apache.camel.spi.MessageHistoryFactory.class;
+        case "messagesize":
+        case "messageSize": return java.lang.Boolean.class;
+        case "messagesizestrategy":
+        case "messageSizeStrategy": return org.apache.camel.spi.MessageSizeStrategy.class;
         case "modeline": return java.lang.Boolean.class;
         case "namestrategy":
         case "nameStrategy": return org.apache.camel.spi.CamelContextNameStrategy.class;
@@ -295,6 +307,8 @@ public class CamelContextConfigurer extends org.apache.camel.support.component.P
         case "devConsole": return target.isDevConsole();
         case "dumproutes":
         case "dumpRoutes": return target.getDumpRoutes();
+        case "errorregistry":
+        case "errorRegistry": return target.getErrorRegistry();
         case "executorservicemanager":
         case "executorServiceManager": return target.getExecutorServiceManager();
         case "globaloptions":
@@ -322,6 +336,10 @@ public class CamelContextConfigurer extends org.apache.camel.support.component.P
         case "messageHistory": return target.isMessageHistory();
         case "messagehistoryfactory":
         case "messageHistoryFactory": return target.getMessageHistoryFactory();
+        case "messagesize":
+        case "messageSize": return target.isMessageSize();
+        case "messagesizestrategy":
+        case "messageSizeStrategy": return target.getMessageSizeStrategy();
         case "modeline": return target.isModeline();
         case "namestrategy":
         case "nameStrategy": return target.getNameStrategy();

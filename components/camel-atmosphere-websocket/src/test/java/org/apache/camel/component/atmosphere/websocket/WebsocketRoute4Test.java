@@ -40,7 +40,7 @@ public class WebsocketRoute4Test extends WebsocketCamelRouterTestSupport {
     void testWebsocketEventsResendingDisabled() throws Exception {
         WebsocketTestClient wsclient = new WebsocketTestClient("ws://localhost:" + PORT + "/hola4");
         wsclient.connect();
-        assertFalse(wsclient.await(10));
+        assertFalse(wsclient.await(2));
         wsclient.close();
     }
 

@@ -29,7 +29,6 @@ import java.util.function.Predicate;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.PropertiesLookupListener;
-import org.apache.camel.StaticService;
 import org.apache.camel.api.management.ManagedAttribute;
 import org.apache.camel.api.management.ManagedOperation;
 import org.apache.camel.api.management.ManagedResource;
@@ -60,7 +59,7 @@ import org.slf4j.LoggerFactory;
 @JdkService(org.apache.camel.spi.PropertiesComponent.FACTORY)
 @Configurer(extended = true)
 public class PropertiesComponent extends ServiceSupport
-        implements org.apache.camel.spi.PropertiesComponent, StaticService, CamelContextAware {
+        implements org.apache.camel.spi.PropertiesComponent, CamelContextAware {
 
     /**
      * Never check system properties.
@@ -131,12 +130,6 @@ public class PropertiesComponent extends ServiceSupport
 
     public PropertiesComponent() {
         addPropertiesLookupListener(defaultPropertiesLookupListener);
-        // include out of the box functions
-        addPropertiesFunction(new EnvPropertiesFunction());
-        addPropertiesFunction(new SysPropertiesFunction());
-        addPropertiesFunction(new ServicePropertiesFunction());
-        addPropertiesFunction(new ServiceHostPropertiesFunction());
-        addPropertiesFunction(new ServicePortPropertiesFunction());
     }
 
     /**

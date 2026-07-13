@@ -37,7 +37,10 @@ import com.github.freva.asciitable.Column;
 import com.github.freva.asciitable.HorizontalAlign;
 import org.apache.camel.dsl.jbang.core.commands.CamelCommand;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
+import org.apache.camel.dsl.jbang.core.common.CamelTableColumns;
 import org.apache.camel.dsl.jbang.core.common.RuntimeType;
+import org.apache.camel.dsl.jbang.core.common.TerminalWidthHelper;
+import org.apache.camel.dsl.jbang.core.common.VersionHelper;
 import org.apache.camel.dsl.jbang.core.model.UpdateListDTO;
 import org.apache.camel.main.download.MavenDependencyDownloader;
 import org.apache.camel.tooling.maven.MavenArtifact;
@@ -82,7 +85,10 @@ import picocli.CommandLine;
  * @see org.apache.camel.dsl.jbang.core.commands.CamelJBangMain
  */
 @CommandLine.Command(name = "list",
-                     description = "List available update versions for Camel and its runtime variants")
+                     description = "List available update versions for Camel and its runtime variants",
+                     footer = {
+                             "%nExamples:",
+                             "  camel update list" })
 public class UpdateList extends CamelCommand {
 
     @CommandLine.Option(names = { "--repo", "--repos" },
@@ -133,12 +139,12 @@ public class UpdateList extends CamelCommand {
                 // upgrade recipes 4.12.1 was released, but only Camel 4.12.0 is released, in this case,
                 // consider the major.minor only
                 if (runtimeVersion == null) {
-                    String majorMinorVersion = getMajorMinorVersion(l[0]);
+                    String majorMinorVersion = VersionHelper.getMajorMinorVersion(l[0]);
                     runtimeVersion
                             = recipesVersions.sbVersions().stream()
                                     .filter(v -> {
                                         // Handle micro Camel Upgrade Recipes versions like 4.14.0.1
-                                        String actualMajorMinorVersion = getMajorMinorVersion(v[0]);
+                                        String actualMajorMinorVersion = VersionHelper.getMajorMinorVersion(v[0]);
                                         return actualMajorMinorVersion.equals(majorMinorVersion);
                                     })
                                     .findFirst()
@@ -152,10 +158,11 @@ public class UpdateList extends CamelCommand {
             // Translate quarkus versions to Camel
             recipesVersions.camelQuarkusRecipesVersions();
             recipesVersions.quarkusUpdateRecipes().forEach(l -> {
-                List<String[]> runtimeVersions = recipesVersions.qVersions().stream().filter(v -> v[1].startsWith(l.version()))
+                List<String[]> runtimeVersions = recipesVersions.qVersions().stream()
+                        .filter(v -> v[1].equals(l.version()) || v[1].startsWith(l.version() + "."))
                         .collect(Collectors.toList());
                 if (!runtimeVersions.isEmpty()) {
-                    runtimeVersions.sort(Comparator.comparing(o -> o[1]));
+                    runtimeVersions.sort(Comparator.comparing(o -> new ComparableVersion(o[1])));
                     String[] runtimeVersion = runtimeVersions.get(runtimeVersions.size() - 1);
                     // Quarkus may release patches independently, therefore, we do not know the real micro version
                     String quarkusVersion = runtimeVersion[1];
@@ -178,24 +185,26 @@ public class UpdateList extends CamelCommand {
                                     .map(UpdateListDTO::toMap)
                                     .collect(Collectors.toList())));
         } else {
+            // Size the DESCRIPTION column to fill the terminal: measure the actual rendered width of the
+            // other columns so the remainder handed to the last column is exact (see CamelTableColumns).
+            int versionW = CamelTableColumns.measure("VERSION", Integer.MAX_VALUE, rows, r -> r.version().toString());
+            int runtimeW = CamelTableColumns.measure("RUNTIME", Integer.MAX_VALUE, rows, r -> r.runtime());
+            int runtimeVersionW
+                    = CamelTableColumns.measure("RUNTIME VERSION", Integer.MAX_VALUE, rows, r -> r.runtimeVersion());
+            int overhead = TerminalWidthHelper.noBorderOverhead(4);
+            int descWidth
+                    = CamelTableColumns.lastColumnWidth(terminalWidth(), overhead, versionW, runtimeW, runtimeVersionW);
             printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
-                    new Column().header("VERSION").minWidth(10).dataAlign(HorizontalAlign.LEFT)
+                    new Column().header("VERSION").dataAlign(HorizontalAlign.LEFT)
                             .with(r -> r.version().toString()),
                     new Column().header("RUNTIME")
                             .dataAlign(HorizontalAlign.LEFT).with(r -> r.runtime()),
                     new Column().header("RUNTIME VERSION")
                             .dataAlign(HorizontalAlign.LEFT).with(r -> r.runtimeVersion()),
-                    new Column().header("DESCRIPTION")
-                            .dataAlign(HorizontalAlign.LEFT).with(r -> r.description()))));
+                    CamelTableColumns.lastText("DESCRIPTION", descWidth).with(r -> r.description()))));
         }
 
         return 0;
-    }
-
-    private static String getMajorMinorVersion(String l) {
-        String[] versions = l.split("\\.");
-        String majorMinorVersion = versions[0] + "." + versions[1];
-        return majorMinorVersion;
     }
 
     /**
@@ -312,8 +321,9 @@ public class UpdateList extends CamelCommand {
                         /* Quarkus specific, maybe in the future can be removed */
                         && !name.contains("alpha")) {
 
-                    String content = new String(jarFile.getInputStream(jarEntry).readAllBytes());
-                    String description = Arrays.stream(content.split(System.lineSeparator()))
+                    String content = new String(
+                            jarFile.getInputStream(jarEntry).readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                    String description = Arrays.stream(content.split("\\R"))
                             .filter(l -> l.startsWith("description"))
                             .map(l -> l.substring(l.indexOf(":") + 1).trim())
                             .findFirst().orElse("");

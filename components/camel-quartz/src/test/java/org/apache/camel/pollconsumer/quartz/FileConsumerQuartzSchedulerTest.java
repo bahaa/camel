@@ -21,8 +21,8 @@ import java.nio.file.Path;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
-import org.apache.camel.test.junit5.TestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
+import org.apache.camel.test.junit6.TestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -47,7 +47,7 @@ public class FileConsumerQuartzSchedulerTest extends CamelTestSupport {
             @Override
             public void configure() {
                 from(TestSupport.fileUri(testDirectory, "?scheduler=quartz&scheduler.cron=0/2+*+*+*+*+?")).routeId("foo")
-                        .noAutoStartup()
+                        .autoStartup(false)
                         .to("mock:result");
             }
         };

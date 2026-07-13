@@ -27,12 +27,10 @@ import org.apache.camel.support.PluginHelper;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@DisabledIfSystemProperty(named = "ci.env.name", matches = ".*", disabledReason = "Flaky on Github CI")
 public class AsyncProcessorAwaitManagerInterruptWithRedeliveryTest extends ContextTestSupport {
 
     private MyBean bean;
@@ -56,15 +54,13 @@ public class AsyncProcessorAwaitManagerInterruptWithRedeliveryTest extends Conte
         getMockEndpoint("mock:error").expectedMessageCount(0);
 
         createThreadToInterrupt();
-        try {
-            template.sendBody("direct:start", "Hello Camel");
-            fail("Should throw exception");
-        } catch (CamelExecutionException e) {
-            Throwable cause = e.getCause();
-            boolean interrupted = cause.getMessage().startsWith("Interrupted while waiting for asynchronous callback");
-            if (!interrupted) {
-                log.warn("Did not find exception caused exception", cause);
-            }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.sendBody("direct:start", "Hello Camel"),
+                "Should throw exception");
+        Throwable cause = e.getCause();
+        boolean interrupted = cause.getMessage().startsWith("Interrupted while waiting for asynchronous callback");
+        if (!interrupted) {
+            log.warn("Did not find exception caused exception", cause);
         }
 
         assertMockEndpointsSatisfied();
@@ -112,9 +108,8 @@ public class AsyncProcessorAwaitManagerInterruptWithRedeliveryTest extends Conte
         return new RouteBuilder() {
             @Override
             public void configure() {
-                // redelivery delay should not be too fast as tested on slower CI servers can cause test to fail
                 errorHandler(
-                        deadLetterChannel("mock:error").maximumRedeliveries(5).redeliveryDelay(750).asyncDelayedRedelivery());
+                        deadLetterChannel("mock:error").maximumRedeliveries(5).redeliveryDelay(1500).asyncDelayedRedelivery());
 
                 from("direct:start").routeId("myRoute").to("mock:before").bean("myBean", "callMe").to("mock:result");
             }

@@ -59,6 +59,7 @@ import org.apache.camel.spi.ReactiveExecutor;
 import org.apache.camel.spi.RecoverableAggregationRepository;
 import org.apache.camel.spi.RouteIdAware;
 import org.apache.camel.spi.ShutdownAware;
+import org.apache.camel.spi.StepIdAware;
 import org.apache.camel.spi.Synchronization;
 import org.apache.camel.support.DefaultTimeoutMap;
 import org.apache.camel.support.ExchangeHelper;
@@ -69,6 +70,7 @@ import org.apache.camel.support.service.ServiceHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.TimeUtils;
+import org.apache.camel.util.concurrent.SynchronousExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +86,7 @@ import org.slf4j.LoggerFactory;
  * message.
  */
 public class AggregateProcessor extends BaseProcessorSupport
-        implements Navigate<Processor>, Traceable, ShutdownAware, IdAware, RouteIdAware {
+        implements Navigate<Processor>, Traceable, ShutdownAware, IdAware, RouteIdAware, StepIdAware {
 
     public static final String AGGREGATE_TIMEOUT_CHECKER = "AggregateTimeoutChecker";
     public static final String AGGREGATE_OPTIMISTIC_LOCKING_EXECUTOR = "AggregateOptimisticLockingExecutor";
@@ -105,6 +107,7 @@ public class AggregateProcessor extends BaseProcessorSupport
     private final AsyncProcessor processor;
     private String id;
     private String routeId;
+    private String stepId;
     private AggregationStrategy aggregationStrategy;
     private boolean preCompletion;
     private Expression correlationExpression;
@@ -230,6 +233,7 @@ public class AggregateProcessor extends BaseProcessorSupport
     private Integer closeCorrelationKeyOnCompletion;
     private boolean parallelProcessing;
     private boolean optimisticLocking;
+    private boolean optimisticLockingSyncRetry;
 
     // different ways to have completion triggered
     private boolean eagerCheckCompletion;
@@ -313,6 +317,16 @@ public class AggregateProcessor extends BaseProcessorSupport
     }
 
     @Override
+    public String getStepId() {
+        return stepId;
+    }
+
+    @Override
+    public void setStepId(String stepId) {
+        this.stepId = stepId;
+    }
+
+    @Override
     public boolean process(Exchange exchange, AsyncCallback callback) {
         try {
             return doProcess(exchange, callback);
@@ -373,6 +387,20 @@ public class AggregateProcessor extends BaseProcessorSupport
                         "On attempt {} OptimisticLockingAggregationRepository: {} threw OptimisticLockingException while trying to aggregate exchange: {}",
                         attempt, aggregationRepository, exchange, e);
                 if (optimisticLockRetryPolicy.shouldRetry(attempt)) {
+                    if (optimisticLockingSyncRetry) {
+                        // Synchronous retry: delay in the same thread instead of
+                        // scheduling on a background thread. This ensures aggregation
+                        // stays within a single thread (e.g. for transactional processing).
+                        try {
+                            optimisticLockRetryPolicy.doDelay(attempt);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            exchange.setException(ie);
+                            callback.done(sync);
+                            return sync;
+                        }
+                        continue;
+                    }
                     long delay = optimisticLockRetryPolicy.getDelay(attempt);
                     if (delay > 0) {
                         int nextAttempt = attempt;
@@ -396,6 +424,16 @@ public class AggregateProcessor extends BaseProcessorSupport
         // copy exchange, and do not share the unit of work
         // the aggregated output runs in another unit of work
         Exchange copy = ExchangeHelper.createCorrelatedCopy(exchange, false);
+        // when using a synchronous executor the completion task runs on the caller thread,
+        // so it can preserve the transacted flag; this ensures downstream Pipeline.process()
+        // uses scheduleQueue instead of scheduleMain, avoiding queue-swap deadlocks in the
+        // reactive executor's executeFromQueue loop
+        if (executorService instanceof SynchronousExecutorService && exchange.isTransacted()) {
+            copy.getExchangeExtension().setTransacted(true);
+            if (copy.getProperty(Exchange.TRANSACTION_CONTEXT_DATA) == null) {
+                copy.setProperty(Exchange.TRANSACTION_CONTEXT_DATA, exchange.getProperty(Exchange.TRANSACTION_CONTEXT_DATA));
+            }
+        }
 
         // remove the complete all groups flags as it should not be on the copy
         removeFlagCompleteCurrentGroup(copy);
@@ -857,7 +895,7 @@ public class AggregateProcessor extends BaseProcessorSupport
         executorService.execute(() -> {
             ExchangeHelper.prepareOutToIn(exchange);
 
-            Runnable task = () -> processor.process(exchange, done -> {
+            AsyncCallback completionCallback = done -> {
                 // log exception if there was a problem
                 if (exchange.getException() != null) {
                     // if there was an exception then let the exception handler handle it
@@ -866,12 +904,19 @@ public class AggregateProcessor extends BaseProcessorSupport
                 } else {
                     LOG.trace("Processing aggregated exchange: {} complete.", exchange);
                 }
-            });
-            // execute the task using this thread sync (similar to multicast eip in parallel mode)
-            if (exchange.isTransacted()) {
-                reactiveExecutor.scheduleQueue(task);
+            };
+
+            if (executorService instanceof SynchronousExecutorService) {
+                // CAMEL-23281: process inline to avoid deadlock with transacted exchanges
+                processor.process(exchange, completionCallback);
             } else {
-                reactiveExecutor.scheduleSync(task);
+                Runnable task = () -> processor.process(exchange, completionCallback);
+                // execute the task using this thread sync (similar to multicast eip in parallel mode)
+                if (exchange.isTransacted()) {
+                    reactiveExecutor.scheduleQueue(task);
+                } else {
+                    reactiveExecutor.scheduleSync(task);
+                }
             }
         });
     }
@@ -1106,6 +1151,14 @@ public class AggregateProcessor extends BaseProcessorSupport
 
     public void setOptimisticLocking(boolean optimisticLocking) {
         this.optimisticLocking = optimisticLocking;
+    }
+
+    public boolean isOptimisticLockingSyncRetry() {
+        return optimisticLockingSyncRetry;
+    }
+
+    public void setOptimisticLockingSyncRetry(boolean optimisticLockingSyncRetry) {
+        this.optimisticLockingSyncRetry = optimisticLockingSyncRetry;
     }
 
     public AggregationRepository getAggregationRepository() {
@@ -1684,7 +1737,7 @@ public class AggregateProcessor extends BaseProcessorSupport
         // but only do this when forced=false, as that is when we have chance to
         // send out new messages to be routed by Camel. When forced=true, then
         // we have to shutdown in a hurry
-        if (!forced && forceCompletionOnStop) {
+        if (!forced && (forceCompletionOnStop || completeAllOnStop)) {
             doForceCompletionOnStop();
         }
     }

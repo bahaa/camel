@@ -22,6 +22,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
@@ -45,12 +47,28 @@ import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.*;
 
 @CommandLine.Command(name = "list",
                      description = "Displays all Camel dependencies required to run", sortOptions = false,
-                     showDefaultValues = true)
+                     showDefaultValues = true,
+                     footer = {
+                             "%nExamples:",
+                             "  camel dependency list hello.java",
+                             "  camel dependency list hello.java --output=gav" })
 public class DependencyList extends Export {
 
     protected static final String EXPORT_DIR = CommandLineHelper.CAMEL_JBANG_WORK_DIR + "/export";
 
-    @CommandLine.Option(names = { "--output" }, description = "Output format (gav, maven, jbang)", defaultValue = "gav")
+    public static class OutputFormatCompletionCandidates implements Iterable<String> {
+
+        public OutputFormatCompletionCandidates() {
+        }
+
+        @Override
+        public Iterator<String> iterator() {
+            return List.of("gav", "maven", "jbang").iterator();
+        }
+    }
+
+    @CommandLine.Option(names = { "--output" }, completionCandidates = OutputFormatCompletionCandidates.class,
+                        description = "Output format (${COMPLETION-CANDIDATES})", defaultValue = "gav")
     protected String output;
 
     public DependencyList(CamelJBangMain main) {
@@ -195,7 +213,7 @@ public class DependencyList extends Export {
             Path buildDir = Paths.get(EXPORT_DIR);
             try {
                 Files.walk(buildDir)
-                        .sorted(java.util.Comparator.reverseOrder())
+                        .sorted(Comparator.reverseOrder())
                         .forEach(p -> {
                             try {
                                 Files.deleteIfExists(p);
@@ -255,9 +273,7 @@ public class DependencyList extends Export {
             this.camelVersion = prop.getProperty(CAMEL_VERSION, this.camelVersion);
             this.kameletsVersion = prop.getProperty(KAMELETS_VERSION, this.kameletsVersion);
             this.localKameletDir = prop.getProperty(LOCAL_KAMELET_DIR, this.localKameletDir);
-            this.quarkusGroupId = prop.getProperty(QUARKUS_GROUP_ID, this.quarkusGroupId);
-            this.quarkusArtifactId = prop.getProperty(QUARKUS_ARTIFACT_ID, this.quarkusArtifactId);
-            this.quarkusVersion = prop.getProperty(QUARKUS_VERSION, this.quarkusVersion);
+            this.quarkusPlatform = QuarkusPlatformMixin.of(prop, quarkusPlatform);
             this.springBootVersion = prop.getProperty(SPRING_BOOT_VERSION, this.springBootVersion);
         }
 

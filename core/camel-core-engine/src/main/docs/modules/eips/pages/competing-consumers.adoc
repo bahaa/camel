@@ -47,13 +47,14 @@ YAML::
 +
 [source,yaml]
 ----
-- from:
-    uri: jms:MyQueue
-    parameters:
-      concurrentConsumers: 5
-    steps:
-      - to:
-          uri: bean:someBean
+- route:
+    from:
+      uri: jms:MyQueue
+      parameters:
+        concurrentConsumers: 5
+      steps:
+        - to:
+            uri: bean:someBean
 ----
 ====
 
@@ -91,11 +92,14 @@ YAML::
 +
 [source,yaml]
 ----
-- from:
-    uri: "file://inbox?move=../backup-${date:now:yyyyMMdd}"
-    steps:
-      - to:
-          uri: bean:calculateBean
+- route:
+    from:
+      uri: file://inbox
+      parameters:
+        move: "../backup-${date:now:yyyyMMdd}"
+      steps:
+        - to:
+            uri: bean:calculateBean
 ----
 ====
 
@@ -147,13 +151,16 @@ YAML::
 +
 [source,yaml]
 ----
-- from:
-    uri: "file://inbox?move=../backup-${date:now:yyyyMMdd}"
-    steps:
-      - threads:
-          poolSize: 10
-      - to:
-          uri: bean:calculateBean
+- route:
+    from:
+      uri: file://inbox
+      parameters:
+        move: "../backup-${date:now:yyyyMMdd}"
+      steps:
+        - threads:
+            poolSize: 10
+        - to:
+            uri: bean:calculateBean
 ----
 ====
 
@@ -177,4 +184,4 @@ into the backup folder. This is an important note that the on completion is done
 This ensures the file is not moved before the file is processed successfully. Suppose the `calculateBean` bean
 could not process one of the files. If it was the synchronous thread that should do the on completion strategy,
 then the file would have been moved to early into the backup folder. By handing over this to the asynchronous
- thread, we do it after we have processed the message completely
+thread, we do it after we have processed the message completely

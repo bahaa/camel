@@ -17,10 +17,8 @@
 package org.apache.camel.http.common;
 
 import java.net.URI;
-import java.util.Map;
 
-import org.apache.camel.cloud.DiscoverableService;
-import org.apache.camel.cloud.ServiceDefinition;
+import org.apache.camel.http.base.HttpHeaderFilterStrategy;
 import org.apache.camel.http.base.cookie.CookieHandler;
 import org.apache.camel.spi.EndpointServiceLocation;
 import org.apache.camel.spi.HeaderFilterStrategy;
@@ -29,10 +27,9 @@ import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
-import org.apache.camel.util.CollectionHelper;
 
 public abstract class HttpCommonEndpoint extends DefaultEndpoint
-        implements HeaderFilterStrategyAware, DiscoverableService, EndpointServiceLocation {
+        implements HeaderFilterStrategyAware, EndpointServiceLocation {
 
     // Note: all options must be documented with description in annotations so
     // extended components can access the documentation
@@ -44,7 +41,7 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
     URI httpUri;
     @UriParam(label = "common,advanced",
               description = "To use a custom HeaderFilterStrategy to filter header to and from Camel message.")
-    HeaderFilterStrategy headerFilterStrategy = new org.apache.camel.http.base.HttpHeaderFilterStrategy();
+    HeaderFilterStrategy headerFilterStrategy = new HttpHeaderFilterStrategy();
     @UriParam(label = "common,advanced",
               description = "To use a custom HttpBinding to control the mapping between Camel message and HttpClient.")
     HttpBinding httpBinding;
@@ -84,7 +81,8 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
                             + " On the producer side the exception will be deserialized and thrown as is, instead of the HttpOperationFailedException."
                             + " The caused exception is required to be serialized."
                             + " This is by default turned off. If you enable this then be aware that Java will deserialize the incoming"
-                            + " data from the request to Java and that can be a potential security risk.")
+                            + " data from the request to Java and that can be a potential security risk.",
+              security = "insecure:serialization")
     boolean transferException;
     @UriParam(label = "consumer",
               description = "If enabled and an Exchange failed processing on the consumer side the response's body won't contain the exception's stack trace.")
@@ -145,15 +143,15 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
     @UriParam(label = "producer,security", enums = "Basic,Bearer,NTLM",
               description = "Authentication methods allowed to use as a comma separated list of values Basic, Bearer, or NTLM. (NTLM is deprecated)")
     private String authMethod;
-    @UriParam(label = "producer,security", secret = true, description = "Authentication username")
+    @UriParam(label = "producer,security", security = "secret", description = "Authentication username")
     private String authUsername;
-    @UriParam(label = "producer,security", secret = true, description = "Authentication bearer token")
+    @UriParam(label = "producer,security", security = "secret", description = "Authentication bearer token")
     private String authBearerToken;
-    @UriParam(label = "producer,security", secret = true, description = "Authentication password")
+    @UriParam(label = "producer,security", security = "secret", description = "Authentication password")
     private String authPassword;
-    @UriParam(label = "producer,security", secret = true, description = "OAuth2 client id")
+    @UriParam(label = "producer,security", security = "secret", description = "OAuth2 client id")
     private String oauth2ClientId;
-    @UriParam(label = "producer,security", secret = true, description = "OAuth2 client secret")
+    @UriParam(label = "producer,security", security = "secret", description = "OAuth2 client secret")
     private String oauth2ClientSecret;
     @UriParam(label = "producer,security", description = "OAuth2 Token endpoint")
     private String oauth2ResourceIndicator;
@@ -173,8 +171,7 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
                             +
                             "If you set this parameter to too small value, you can get 4xx http errors because camel will think that the received token is still valid, while in reality the token is expired for the Authentication server.")
     private long oauth2CachedTokensExpirationMarginSeconds = 5;
-    @UriParam(label = "producer,security",
-              description = "Whether to use OAuth2 body authentication.")
+    @UriParam(label = "producer,security", description = "Whether to use OAuth2 body authentication.")
     private boolean oauth2BodyAuthentication;
     @Deprecated
     @UriParam(label = "producer,security", description = "Authentication domain to use with NTLM")
@@ -192,9 +189,9 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
     @UriParam(label = "producer,proxy", enums = "Basic,Bearer,NTLM",
               description = "Proxy authentication method to use (NTLM is deprecated)")
     private String proxyAuthMethod;
-    @UriParam(label = "producer,proxy", secret = true, description = "Proxy server username")
+    @UriParam(label = "producer,proxy", security = "secret", description = "Proxy server username")
     private String proxyAuthUsername;
-    @UriParam(label = "producer,proxy", secret = true, description = "Proxy server password")
+    @UriParam(label = "producer,proxy", security = "secret", description = "Proxy server password")
     private String proxyAuthPassword;
     @Deprecated
     @UriParam(label = "producer,proxy", description = "Proxy server host")
@@ -261,17 +258,6 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
         return true;
     }
 
-    // Service Registration
-    // -------------------------------------------------------------------------
-
-    @Override
-    public Map<String, String> getServiceProperties() {
-        return CollectionHelper.immutableMapOf(
-                ServiceDefinition.SERVICE_META_PORT, Integer.toString(getPort()),
-                ServiceDefinition.SERVICE_META_PATH, getPath(),
-                ServiceDefinition.SERVICE_META_PROTOCOL, getProtocol());
-    }
-
     // Properties
     // -------------------------------------------------------------------------
 
@@ -292,6 +278,7 @@ public abstract class HttpCommonEndpoint extends DefaultEndpoint
             httpBinding.setMuteException(isMuteException());
             if (getComponent() != null) {
                 httpBinding.setAllowJavaSerializedObject(getComponent().isAllowJavaSerializedObject());
+                httpBinding.setDeserializationFilter(getComponent().getDeserializationFilter());
             }
             httpBinding.setEagerCheckContentAvailable(isEagerCheckContentAvailable());
             httpBinding.setMapHttpMessageBody(isMapHttpMessageBody());

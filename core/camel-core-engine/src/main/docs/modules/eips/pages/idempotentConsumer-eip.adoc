@@ -1,7 +1,7 @@
 = Idempotent Consumer EIP
 :doctitle: Idempotent Consumer
 :shortname: idempotentConsumer
-:description: Filters out duplicate messages
+:description: Filters out duplicate messages based on a unique message identifier and an idempotent repository that tracks previously seen IDs
 :since: 
 :supportlevel: Stable
 :tabs-sync-option:
@@ -37,6 +37,7 @@ your own `org.apache.camel.spi.IdempotentRepository`.
 
 Camel provides the following Idempotent Consumer implementations:
 
+* FileIdempotentRepository from `camel-support` JAR
 * MemoryIdempotentRepository from `camel-support` JAR
 * xref:ROOT:caffeine-cache-component.adoc[CaffeineIdempotentRepository]
 * xref:ROOT:cql-component.adoc[CassandraIdempotentRepository]

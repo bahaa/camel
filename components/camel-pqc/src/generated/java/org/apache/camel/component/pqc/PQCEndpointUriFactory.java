@@ -21,11 +21,19 @@ public class PQCEndpointUriFactory extends org.apache.camel.support.component.En
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(14);
+        Set<String> props = new HashSet<>(23);
+        props.add("classicalKEMAlgorithm");
+        props.add("classicalKeyAgreement");
+        props.add("classicalKeyPair");
+        props.add("classicalSignatureAlgorithm");
+        props.add("classicalSigner");
+        props.add("hybridKdfAlgorithm");
         props.add("keyEncapsulationAlgorithm");
         props.add("keyGenerator");
+        props.add("keyLifecycleManager");
         props.add("keyPair");
         props.add("keyPairAlias");
         props.add("keyStore");
@@ -35,13 +43,16 @@ public class PQCEndpointUriFactory extends org.apache.camel.support.component.En
         props.add("operation");
         props.add("signatureAlgorithm");
         props.add("signer");
+        props.add("statefulKeyWarningThreshold");
         props.add("storeExtractedSecretKeyAsHeader");
+        props.add("strictKeyLifecycle");
         props.add("symmetricKeyAlgorithm");
         props.add("symmetricKeyLength");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         Set<String> secretProps = new HashSet<>(1);
         secretProps.add("keyStorePassword");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
@@ -70,6 +81,11 @@ public class PQCEndpointUriFactory extends org.apache.camel.support.component.En
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

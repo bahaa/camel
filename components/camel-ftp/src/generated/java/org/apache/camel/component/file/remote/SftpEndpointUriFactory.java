@@ -21,9 +21,10 @@ public class SftpEndpointUriFactory extends org.apache.camel.support.component.E
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(134);
+        Set<String> props = new HashSet<>(139);
         props.add("allowNullBody");
         props.add("antExclude");
         props.add("antFilterCaseSensitive");
@@ -38,8 +39,13 @@ public class SftpEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("bridgeErrorHandler");
         props.add("browseLimit");
         props.add("bulkRequests");
+        props.add("caSignatureAlgorithms");
+        props.add("certBytes");
+        props.add("certFile");
+        props.add("certUri");
         props.add("charset");
         props.add("checksumFileAlgorithm");
+        props.add("checksumWriteFile");
         props.add("chmod");
         props.add("chmodDirectory");
         props.add("ciphers");
@@ -159,7 +165,10 @@ public class SftpEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("useUserKnownHostsFile");
         props.add("username");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
-        Set<String> secretProps = new HashSet<>(10);
+        Set<String> secretProps = new HashSet<>(13);
+        secretProps.add("certBytes");
+        secretProps.add("certFile");
+        secretProps.add("certUri");
         secretProps.add("keyPair");
         secretProps.add("knownHosts");
         secretProps.add("knownHostsFile");
@@ -171,6 +180,7 @@ public class SftpEndpointUriFactory extends org.apache.camel.support.component.E
         secretProps.add("privateKeyUri");
         secretProps.add("username");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         Map<String, String> prefixes = new HashMap<>(1);
         prefixes.put("schedulerProperties", "scheduler.");
         MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
@@ -203,6 +213,11 @@ public class SftpEndpointUriFactory extends org.apache.camel.support.component.E
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

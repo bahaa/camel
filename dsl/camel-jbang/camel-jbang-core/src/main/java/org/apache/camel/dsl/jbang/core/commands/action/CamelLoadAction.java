@@ -27,12 +27,15 @@ import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 import org.apache.camel.util.json.Jsoner;
-import org.fusesource.jansi.Ansi;
+import org.jline.jansi.Ansi;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "load",
                      description = "Loads new source files into an existing Camel", sortOptions = false,
-                     showDefaultValues = true)
+                     showDefaultValues = true,
+                     footer = {
+                             "%nExamples:",
+                             "  camel cmd load --source=myRoute.yaml" })
 public class CamelLoadAction extends ActionBaseCommand {
 
     @CommandLine.Parameters(description = "Name or pid of running Camel integration", arity = "0..1")
@@ -59,11 +62,11 @@ public class CamelLoadAction extends ActionBaseCommand {
 
         List<Long> pids = findPids(name);
         if (pids.isEmpty()) {
-            return 0;
+            return 1;
         } else if (pids.size() > 1) {
             printer().println("Name or pid " + name + " matches " + pids.size()
                               + " running Camel integrations. Specify a name or PID that matches exactly one.");
-            return 0;
+            return 1;
         }
         long pid = pids.get(0);
 

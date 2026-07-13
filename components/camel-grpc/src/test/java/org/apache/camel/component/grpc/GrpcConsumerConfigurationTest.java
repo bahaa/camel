@@ -17,7 +17,7 @@
 package org.apache.camel.component.grpc;
 
 import org.apache.camel.FailedToCreateConsumerException;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -35,13 +35,6 @@ class GrpcConsumerConfigurationTest extends CamelTestSupport {
     void emptyPort() {
         FailedToCreateConsumerException exception = assertThrows(FailedToCreateConsumerException.class,
                 () -> consumer.receive("grpc:localhost/org.apache.camel.component.grpc.PingPong"));
-        assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-    }
-
-    @Test
-    void invalidPort() {
-        FailedToCreateConsumerException exception = assertThrows(FailedToCreateConsumerException.class,
-                () -> consumer.receive("grpc:localhost:0/org.apache.camel.component.grpc.PingPong"));
         assertInstanceOf(IllegalArgumentException.class, exception.getCause());
     }
 

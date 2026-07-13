@@ -164,6 +164,13 @@ public final class EndpointHelper {
                 if (s.startsWith(prefix)) {
                     continue;
                 }
+                // the value may be wrapped in RAW() for secret parameters
+                if (s.startsWith("RAW(") && s.endsWith(")")) {
+                    String inner = s.substring(4, s.length() - 1);
+                    if (inner.startsWith(prefix)) {
+                        continue;
+                    }
+                }
                 // okay the value may use a resource loader with a scheme prefix
                 int dot = s.indexOf(':');
                 if (dot > 0 && dot < s.length() - 1) {
@@ -405,12 +412,15 @@ public final class EndpointHelper {
             parameters = StringHelper.after(className, "(");
             parameters = parameters.substring(0, parameters.length() - 1); // clip last )
             className = StringHelper.before(className, "(");
+            if (parameters.isBlank()) {
+                parameters = null;
+            }
         }
         if (className != null && className.indexOf('#') != -1) {
             factoryMethod = StringHelper.after(className, "#");
             className = StringHelper.before(className, "#");
         }
-        Class<?> clazz = camelContext.getClassResolver().resolveMandatoryClass(className);
+        Class<?> clazz = camelContext.getClassResolver().resolveClass(className);
         Class<?> factoryClass = null;
         if (factoryMethod != null) {
             String typeOrRef = StringHelper.before(factoryMethod, ":");
@@ -422,9 +432,14 @@ public final class EndpointHelper {
                 if (existing != null) {
                     factoryClass = existing.getClass();
                 } else {
-                    factoryClass = camelContext.getClassResolver().resolveMandatoryClass(typeOrRef);
+                    factoryClass = camelContext.getClassResolver().resolveClass(typeOrRef);
                 }
             }
+        }
+
+        if (clazz == null && factoryClass == null) {
+            // cannot create bean from class
+            return null;
         }
 
         if (factoryMethod != null && parameters != null) {

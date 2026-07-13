@@ -17,7 +17,7 @@
 package org.apache.camel.component.as2.api.util;
 
 import java.util.ArrayList;
-import java.util.BitSet;
+import java.util.Base64;
 import java.util.List;
 
 import org.apache.camel.component.as2.api.AS2Header;
@@ -30,8 +30,8 @@ import org.apache.hc.core5.http.NameValuePair;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.apache.hc.core5.http.message.MessageSupport;
 import org.apache.hc.core5.http.message.ParserCursor;
-import org.apache.hc.core5.http.message.TokenParser;
 import org.apache.hc.core5.util.CharArrayBuffer;
+import org.apache.hc.core5.util.Tokenizer;
 
 public final class AS2HeaderUtils {
 
@@ -78,11 +78,11 @@ public final class AS2HeaderUtils {
     private static final char ELEM_DELIMITER = ';';
     private static final char NAME_VALUE_DELIMITER = '=';
 
-    private static final TokenParser TOKEN_PARSER = TokenParser.INSTANCE;
+    private static final Tokenizer TOKEN_PARSER = Tokenizer.INSTANCE;
 
-    private static final BitSet TOKEN_DELIMS = TokenParser.INIT_BITSET(NAME_VALUE_DELIMITER, PARAM_DELIMITER,
-            ELEM_DELIMITER);
-    private static final BitSet VALUE_DELIMS = TokenParser.INIT_BITSET(PARAM_DELIMITER, ELEM_DELIMITER);
+    private static final Tokenizer.Delimiter TOKEN_DELIMS
+            = Tokenizer.delimiters(NAME_VALUE_DELIMITER, PARAM_DELIMITER, ELEM_DELIMITER);
+    private static final Tokenizer.Delimiter VALUE_DELIMS = Tokenizer.delimiters(PARAM_DELIMITER, ELEM_DELIMITER);
 
     private AS2HeaderUtils() {
     }
@@ -152,7 +152,7 @@ public final class AS2HeaderUtils {
         ObjectHelper.notNull(headerName, "headerName");
         for (Header header : headers) {
             if (header.getName().equalsIgnoreCase(headerName)) {
-                for (HeaderElement headerElement : MessageSupport.parse(header)) {
+                for (HeaderElement headerElement : MessageSupport.parseElements(header)) {
                     for (NameValuePair nameValuePair : headerElement.getParameters()) {
                         if (nameValuePair.getName().equalsIgnoreCase(parameterName)) {
                             return nameValuePair.getValue();
@@ -167,7 +167,7 @@ public final class AS2HeaderUtils {
     public static void addAuthorizationHeader(HttpMessage message, String userName, String password, String accessToken) {
         if (userName != null && password != null) {
             message.addHeader(AS2Header.AUTHORIZATION,
-                    ("Basic " + java.util.Base64.getEncoder().encodeToString((userName + ":" + password).getBytes())));
+                    ("Basic " + Base64.getEncoder().encodeToString((userName + ":" + password).getBytes())));
         } else if (accessToken != null) {
             message.addHeader(AS2Header.AUTHORIZATION, "Bearer " + accessToken);
         }

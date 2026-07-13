@@ -25,6 +25,8 @@ import java.util.function.Supplier;
 import com.azure.core.util.Context;
 import com.azure.storage.blob.models.AccessTier;
 import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.models.BlobImmutabilityPolicy;
+import com.azure.storage.blob.models.BlobImmutabilityPolicyMode;
 import com.azure.storage.blob.models.BlobListDetails;
 import com.azure.storage.blob.models.BlobRange;
 import com.azure.storage.blob.models.BlobRequestConditions;
@@ -35,6 +37,7 @@ import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.models.PageRange;
 import com.azure.storage.blob.models.ParallelTransferOptions;
 import com.azure.storage.blob.models.PublicAccessType;
+import com.azure.storage.blob.models.RehydratePriority;
 import org.apache.camel.Exchange;
 import org.apache.camel.util.ObjectHelper;
 
@@ -187,6 +190,14 @@ public class BlobConfigurationOptionsProxy {
         return getOption(BlobExchangeHeaders::getBlobNameFromHeaders, configuration::getBlobName, exchange);
     }
 
+    public String getSnapshotId(final Exchange exchange) {
+        return getOption(BlobExchangeHeaders::getSnapshotIdFromHeaders, configuration::getSnapshotId, exchange);
+    }
+
+    public String getVersionId(final Exchange exchange) {
+        return getOption(BlobExchangeHeaders::getVersionIdFromHeaders, configuration::getVersionId, exchange);
+    }
+
     public String getContainerName(final Exchange exchange) {
         return getOption(BlobExchangeHeaders::getBlobContainerNameFromHeaders, configuration::getContainerName, exchange);
     }
@@ -219,6 +230,84 @@ public class BlobConfigurationOptionsProxy {
     public Integer getLeaseDurationInSeconds(final Exchange exchange) {
         return getOption(BlobExchangeHeaders::getLeaseDurationInSecondsFromHeaders, configuration::getLeaseDurationInSeconds,
                 exchange);
+    }
+
+    public String getFilePath(final Exchange exchange) {
+        return getOption(BlobExchangeHeaders::getFilePathFromHeaders, () -> null, exchange);
+    }
+
+    public Long getBlockSize(final Exchange exchange) {
+        return getOption(BlobExchangeHeaders::getBlockSizeFromHeaders, configuration::getBlockSize, exchange);
+    }
+
+    public Integer getMaxConcurrency(final Exchange exchange) {
+        return getOption(BlobExchangeHeaders::getMaxConcurrencyFromHeaders, configuration::getMaxConcurrency, exchange);
+    }
+
+    public Long getMaxSingleUploadSize(final Exchange exchange) {
+        return getOption(BlobExchangeHeaders::getMaxSingleUploadSizeFromHeaders, configuration::getMaxSingleUploadSize,
+                exchange);
+    }
+
+    /**
+     * Creates ParallelTransferOptions from configuration and exchange headers. Used for upload operations that support
+     * chunked parallel uploads.
+     */
+    public ParallelTransferOptions getUploadParallelTransferOptions(final Exchange exchange) {
+        // First check if explicit ParallelTransferOptions was provided via header
+        ParallelTransferOptions pto = getParallelTransferOptions(exchange);
+        if (pto != null) {
+            return pto;
+        }
+
+        // Build from individual settings
+        Long blockSize = getBlockSize(exchange);
+        Integer maxConcurrency = getMaxConcurrency(exchange);
+        Long maxSingleUploadSize = getMaxSingleUploadSize(exchange);
+
+        if (blockSize != null || maxConcurrency != null || maxSingleUploadSize != null) {
+            pto = new ParallelTransferOptions();
+            if (blockSize != null) {
+                pto.setBlockSizeLong(blockSize);
+            }
+            if (maxConcurrency != null) {
+                pto.setMaxConcurrency(maxConcurrency);
+            }
+            if (maxSingleUploadSize != null) {
+                pto.setMaxSingleUploadSizeLong(maxSingleUploadSize);
+            }
+            return pto;
+        }
+
+        return null;
+    }
+
+    public Map<String, String> getBlobTags(final Exchange exchange) {
+        return BlobExchangeHeaders.getBlobTagsFromHeaders(exchange);
+    }
+
+    public String getBlobTagFilter(final Exchange exchange) {
+        return BlobExchangeHeaders.getBlobTagFilterFromHeaders(exchange);
+    }
+
+    public Boolean getBlobLegalHold(final Exchange exchange) {
+        return BlobExchangeHeaders.getBlobLegalHoldFromHeaders(exchange);
+    }
+
+    public BlobImmutabilityPolicy getBlobImmutabilityPolicy(final Exchange exchange) {
+        return BlobExchangeHeaders.getBlobImmutabilityPolicyFromHeaders(exchange);
+    }
+
+    public OffsetDateTime getBlobImmutabilityPolicyExpiryTime(final Exchange exchange) {
+        return BlobExchangeHeaders.getBlobImmutabilityPolicyExpiryTimeFromHeaders(exchange);
+    }
+
+    public BlobImmutabilityPolicyMode getBlobImmutabilityPolicyMode(final Exchange exchange) {
+        return BlobExchangeHeaders.getBlobImmutabilityPolicyModeFromHeaders(exchange);
+    }
+
+    public RehydratePriority getRehydratePriority(final Exchange exchange) {
+        return BlobExchangeHeaders.getRehydratePriorityFromHeaders(exchange);
     }
 
     public BlobConfiguration getConfiguration() {

@@ -23,6 +23,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
+import org.apache.camel.dsl.jbang.core.commands.MavenResolverMixin;
 import org.apache.camel.dsl.jbang.core.commands.Run;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.PathUtils;
@@ -33,13 +34,16 @@ import org.apache.camel.util.TimeUtils;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 import org.apache.camel.util.json.Jsoner;
-import org.fusesource.jansi.Ansi;
-import org.fusesource.jansi.AnsiConsole;
+import org.jline.jansi.Ansi;
+import org.jline.jansi.AnsiConsole;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "message",
                      description = "Transform message from one format to another via an existing running Camel integration",
-                     sortOptions = false, showDefaultValues = true)
+                     sortOptions = false, showDefaultValues = true,
+                     footer = {
+                             "%nExamples:",
+                             "  camel cmd message --body='Hello World'" })
 public class TransformMessageAction extends ActionWatchCommand {
 
     @CommandLine.Option(names = { "--camel-version" },
@@ -76,7 +80,7 @@ public class TransformMessageAction extends ActionWatchCommand {
 
     @CommandLine.Option(names = {
             "--template" },
-                        description = "The template to use for message transformation (prefix with file: to refer to loading message body from file)")
+                        description = "The template to use for message transformation (prefix with file: to refer to loading template from file)")
     private String template;
 
     @CommandLine.Option(names = { "--option" },
@@ -115,9 +119,8 @@ public class TransformMessageAction extends ActionWatchCommand {
                         description = "Pretty print message body when using JSon or XML format")
     boolean pretty;
 
-    @CommandLine.Option(names = { "--repo", "--repos" },
-                        description = "Additional maven repositories (Use commas to separate multiple repositories)")
-    String repositories;
+    @CommandLine.Mixin
+    MavenResolverMixin mavenResolver;
 
     private volatile long pid;
 
@@ -168,7 +171,7 @@ public class TransformMessageAction extends ActionWatchCommand {
                 printer().printErr("This requires Camel version 4.3 or newer");
                 return -1;
             }
-            exit = run.runTransformMessage(camelVersion, repositories);
+            exit = run.runTransformMessage(camelVersion, mavenResolver);
             this.pid = run.spawnPid;
             if (exit == 0) {
                 exit = super.doCall();
@@ -219,8 +222,8 @@ public class TransformMessageAction extends ActionWatchCommand {
             for (String h : headers) {
                 JsonObject jo = new JsonObject();
                 if (!h.contains("=")) {
-                    printer().println("Header must be in key=value format, was: " + h);
-                    return 0;
+                    printer().printErr("Header must be in key=value format, was: " + h);
+                    return 1;
                 }
                 jo.put("key", StringHelper.before(h, "="));
                 jo.put("value", StringHelper.after(h, "="));
@@ -233,8 +236,8 @@ public class TransformMessageAction extends ActionWatchCommand {
             for (String h : options) {
                 JsonObject jo = new JsonObject();
                 if (!h.contains("=")) {
-                    printer().println("Option must be in key=value format, was: " + h);
-                    return 0;
+                    printer().printErr("Option must be in key=value format, was: " + h);
+                    return 1;
                 }
                 jo.put("key", StringHelper.before(h, "="));
                 jo.put("value", StringHelper.after(h, "="));

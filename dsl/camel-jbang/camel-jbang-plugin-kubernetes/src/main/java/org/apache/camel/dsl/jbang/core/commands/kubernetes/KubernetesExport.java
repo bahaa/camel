@@ -36,6 +36,10 @@ import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.commands.Export;
 import org.apache.camel.dsl.jbang.core.commands.ExportBaseCommand;
 import org.apache.camel.dsl.jbang.core.commands.ExportHelper;
+import org.apache.camel.dsl.jbang.core.commands.MavenResolverMixin;
+import org.apache.camel.dsl.jbang.core.commands.MavenResolverMixinSpec;
+import org.apache.camel.dsl.jbang.core.commands.QuarkusPlatformMixin;
+import org.apache.camel.dsl.jbang.core.commands.QuarkusPlatformMixinSpec;
 import org.apache.camel.dsl.jbang.core.commands.Run;
 import org.apache.camel.dsl.jbang.core.commands.RunHelper;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.TraitCatalog;
@@ -43,18 +47,19 @@ import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.TraitContext;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.TraitHelper;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.model.Container;
 import org.apache.camel.dsl.jbang.core.commands.kubernetes.traits.model.Traits;
+import org.apache.camel.dsl.jbang.core.common.CatalogLoader;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.RuntimeType;
 import org.apache.camel.dsl.jbang.core.common.RuntimeUtil;
 import org.apache.camel.dsl.jbang.core.common.Source;
 import org.apache.camel.dsl.jbang.core.common.SourceHelper;
+import org.apache.camel.tooling.maven.MavenGav;
 import org.apache.camel.util.CamelCaseOrderedProperties;
 import org.apache.camel.util.FileUtil;
-import org.apache.camel.util.StringHelper;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Command(name = "export", description = "Export as Maven/Gradle project that contains a Kubernetes deployment manifest",
+@Command(name = "export", description = "Export as Maven project that contains a Kubernetes deployment manifest",
          sortOptions = false)
 public class KubernetesExport extends Export {
 
@@ -70,11 +75,11 @@ public class KubernetesExport extends Export {
     protected String[] resources;
 
     @CommandLine.Option(names = { "--env" },
-                        description = "Set an environment variable in the integration container, for instance \"-e MY_VAR=my-value\".")
+                        description = "Set an environment variable in the integration container, for instance \"--env MY_VAR=my-value\".")
     protected String[] envVars;
 
     @CommandLine.Option(names = { "--volume" },
-                        description = "Mount a volume into the integration container, for instance \"-v pvcname:/container/path\".")
+                        description = "Mount a volume into the integration container, for instance \"--volume pvcname:/container/path\".")
     protected String[] volumes;
 
     @CommandLine.Option(names = { "--connect" },
@@ -146,13 +151,13 @@ public class KubernetesExport extends Export {
         super(main);
 
         runtime = configurer.runtime;
-        quarkusVersion = configurer.quarkusVersion;
-
+        final Properties emptyProps = new Properties();
+        quarkusPlatform = QuarkusPlatformMixin.of(emptyProps, configurer);
         exportBaseDir = configurer.exportBaseDir;
         files = configurer.files;
         name = configurer.name;
         gav = configurer.gav;
-        repositories = configurer.repositories;
+        mavenResolver = MavenResolverMixin.of(emptyProps, configurer);
         dependencies = configurer.dependencies;
         excludes = configurer.excludes;
         mavenSettings = configurer.mavenSettings;
@@ -166,9 +171,6 @@ public class KubernetesExport extends Export {
         localKameletDir = configurer.localKameletDir;
         springBootVersion = configurer.springBootVersion;
         camelSpringBootVersion = configurer.camelSpringBootVersion;
-        quarkusGroupId = configurer.quarkusGroupId;
-        quarkusArtifactId = configurer.quarkusArtifactId;
-        buildTool = configurer.buildTool;
         openapi = configurer.openapi;
         exportDir = configurer.exportDir;
         packageName = configurer.packageName;
@@ -177,9 +179,6 @@ public class KubernetesExport extends Export {
         javaLiveReload = configurer.javaLiveReload;
         ignoreLoadingError = configurer.ignoreLoadingError;
         mavenWrapper = configurer.mavenWrapper;
-        gradleWrapper = configurer.gradleWrapper;
-        fresh = configurer.fresh;
-        download = configurer.download;
         skipPlugins = configurer.skipPlugins;
         packageScanJars = configurer.packageScanJars;
         quiet = configurer.quiet;
@@ -211,10 +210,6 @@ public class KubernetesExport extends Export {
 
         printer().println("Exporting application ...");
 
-        if (!buildTool.equals("maven")) {
-            printer().printf("--build-tool=%s is not yet supported%n", buildTool);
-        }
-
         // Resolve image group and registry
         String resolvedImageGroup = resolveImageGroup();
         String resolvedImageRegistry = resolveImageRegistry();
@@ -232,16 +227,24 @@ public class KubernetesExport extends Export {
             }
         }
 
-        String projectName = getProjectName();
-        String runtimeVersion;
+        final CamelCatalog catalog;
         if (runtime == RuntimeType.quarkus) {
-            runtimeVersion = quarkusVersion;
+            MavenGav camelQuarkusBom = quarkusPlatform
+                    .resolve(
+                            camelVersion,
+                            mavenResolver.downloader()::resolveArtifact,
+                            mavenResolver.download(),
+                            mavenResolver.fresh())
+                    .quarkusCamelBom();
+            catalog = CatalogLoader.loadQuarkusCatalog(camelQuarkusBom, mavenResolver.downloader()::resolveArtifact);
         } else if (runtime == RuntimeType.springBoot) {
-            runtimeVersion = camelSpringBootVersion;
+            catalog = CatalogLoader.loadSpringBootCatalog(mavenResolver.repos(), camelSpringBootVersion,
+                    mavenResolver.download());
+        } else if (runtime == RuntimeType.main) {
+            catalog = CatalogLoader.loadCatalog(mavenResolver.repos(), camelVersion, mavenResolver.download());
         } else {
-            runtimeVersion = camelVersion;
+            throw new IllegalArgumentException("Unsupported runtime: " + runtime);
         }
-        CamelCatalog catalog = CatalogHelper.loadCatalog(runtime, runtimeVersion, download);
 
         List<Source> sources;
         try {
@@ -253,19 +256,14 @@ public class KubernetesExport extends Export {
             return 1;
         }
 
+        String projectName = getProjectName();
         TraitContext context = new TraitContext(projectName, getVersion(), printer(), catalog, sources);
 
         // Add annotations to TraitContext
         //
         annotations = Optional.ofNullable(annotations).orElse(new String[0]);
         context.addAnnotations(Arrays.stream(annotations)
-                .map(item -> item.split("="))
-                .filter(parts -> parts.length == 2)
-                .collect(Collectors.toMap(parts -> parts[0], parts -> parts[1])));
-
-        annotations = Optional.ofNullable(annotations).orElse(new String[0]);
-        context.addAnnotations(Arrays.stream(annotations)
-                .map(item -> item.split("="))
+                .map(item -> item.split("=", 2))
                 .filter(parts -> parts.length == 2)
                 .collect(Collectors.toMap(parts -> parts[0], parts -> parts[1])));
 
@@ -276,9 +274,13 @@ public class KubernetesExport extends Export {
         // app.kubernetes.io/version
         //
         context.addLabel("app.kubernetes.io/runtime", "camel");
+        if (observe) {
+            // Add the default label for camel dashboard to pick up the camel application
+            context.addLabel("camel.apache.org/app", context.getName());
+        }
         if (labels != null) {
             context.addLabels(Arrays.stream(labels)
-                    .map(item -> item.split("="))
+                    .map(item -> item.split("=", 2))
                     .filter(parts -> parts.length == 2)
                     .collect(Collectors.toMap(parts -> parts[0], parts -> parts[1])));
         }
@@ -382,7 +384,8 @@ public class KubernetesExport extends Export {
         var managementPort = httpManagementPort(settingsPath);
         buildProperties.add("jkube.version=%s".formatted(jkubeVersion));
 
-        boolean cronJobEnabled = traitsSpec.getCronjob() != null && traitsSpec.getCronjob().getEnabled();
+        boolean cronJobEnabled = traitsSpec.getCronjob() != null
+                && Boolean.TRUE.equals(traitsSpec.getCronjob().getEnabled());
         if (cronJobEnabled) {
             // set this property to allow the JVM to finish quickly once there are no more exchange messages
             // important for cronjobs so that the jvm can end quickly
@@ -435,13 +438,13 @@ public class KubernetesExport extends Export {
 
     protected Integer export(Path exportBaseDir, ExportBaseCommand cmd) throws Exception {
         if (runtime == RuntimeType.quarkus) {
-            cmd.pomTemplateName = "quarkus-kubernetes-pom.tmpl";
+            cmd.pomTemplateName = "quarkus-kubernetes-pom.ftl";
         }
         if (runtime == RuntimeType.springBoot) {
-            cmd.pomTemplateName = "spring-boot-kubernetes-pom.tmpl";
+            cmd.pomTemplateName = "spring-boot-kubernetes-pom.ftl";
         }
         if (runtime == RuntimeType.main) {
-            cmd.pomTemplateName = "main-kubernetes-pom.tmpl";
+            cmd.pomTemplateName = "main-kubernetes-pom.ftl";
         }
         return super.export(exportBaseDir, cmd);
     }
@@ -513,6 +516,8 @@ public class KubernetesExport extends Export {
             return "localhost:5001";
         } else if (ClusterType.MINIKUBE.isEqualTo(clusterType)) {
             return "localhost:5000";
+        } else if (ClusterType.OPENSHIFT.isEqualTo(clusterType)) {
+            return "image-registry.openshift-image-registry.svc:5000";
         }
 
         return null;
@@ -529,14 +534,12 @@ public class KubernetesExport extends Export {
             buildProperties.add("quarkus.smallrye-health.root-path=/observe/health");
             addToApplicationProperties("quarkus.management.port=" + probePort);
         } else if (RuntimeType.springBoot == runtime) {
-            // addDependencies("org.springframework.boot:spring-boot-starter-actuator");
             // jkube reads spring-boot properties to set the kubernetes container health probes path
             // in this case, jkube reads from the application.properties and not from the build properties in pom.xml
             addToApplicationProperties("management.endpoints.web.base-path=/observe",
                     "management.server.port=" + probePort,
-                    // jkube uses the old property to enable the readiness/liveness probes
-                    // TODO: rename this property once https://github.com/eclipse-jkube/jkube/issues/3690 is fixed
-                    "management.health.probes.enabled=true");
+                    // jkube inspects this property to enable the readiness/liveness probes
+                    "management.endpoint.health.probes.enabled=true");
         } else if (RuntimeType.main == runtime) {
             addToApplicationProperties("camel.management.port=" + probePort);
         }
@@ -594,14 +597,17 @@ public class KubernetesExport extends Export {
             return KubernetesHelper.sanitize(name);
         }
         if (image != null) {
-            return KubernetesHelper.sanitize(StringHelper.beforeLast(image, ":"));
+            return KubernetesHelper.sanitize(KubernetesHelper.imageWithoutTag(image));
         }
         return KubernetesHelper.sanitize(super.getProjectName());
     }
 
     protected String getVersion() {
         if (image != null) {
-            return StringHelper.afterLast(image, ":");
+            String tag = KubernetesHelper.imageTag(image);
+            if (tag != null) {
+                return tag;
+            }
         }
         return super.getVersion();
     }
@@ -623,7 +629,7 @@ public class KubernetesExport extends Export {
             List<String> files,
             String name,
             String gav,
-            String repositories,
+            String repos,
             List<String> dependencies,
             List<String> excludes,
             String mavenSettings,
@@ -639,7 +645,7 @@ public class KubernetesExport extends Export {
             String camelSpringBootVersion,
             String quarkusGroupId,
             String quarkusArtifactId,
-            String buildTool,
+            String quarkusExtensionRegistryBaseUri,
             String openapi,
             String exportDir,
             String packageName,
@@ -648,7 +654,6 @@ public class KubernetesExport extends Export {
             boolean javaLiveReload,
             boolean ignoreLoadingError,
             boolean mavenWrapper,
-            boolean gradleWrapper,
             boolean fresh,
             boolean download,
             boolean packageScanJars,
@@ -656,6 +661,9 @@ public class KubernetesExport extends Export {
             boolean logging,
             String loggingLevel,
             boolean verbose,
-            boolean skipPlugins) {
+            boolean skipPlugins,
+            String camelQuarkusGroupId,
+            String camelQuarkusArtifactId,
+            String camelQuarkusVersion) implements QuarkusPlatformMixinSpec, MavenResolverMixinSpec {
     }
 }

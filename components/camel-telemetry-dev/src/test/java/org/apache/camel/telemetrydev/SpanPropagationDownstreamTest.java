@@ -21,7 +21,7 @@ import org.apache.camel.CamelContextAware;
 import org.apache.camel.RoutesBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.ExchangeTestSupport;
+import org.apache.camel.test.junit6.ExchangeTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,6 +32,7 @@ public class SpanPropagationDownstreamTest extends ExchangeTestSupport {
     protected CamelContext createCamelContext() throws Exception {
         TelemetryDevTracer tst = new TelemetryDevTracer();
         tst.setTraceFormat("json");
+        tst.setDisableCoreProcessors(true);
         CamelContext context = super.createCamelContext();
         CamelContextAware.trySetCamelContext(tst, context);
         tst.init(context);

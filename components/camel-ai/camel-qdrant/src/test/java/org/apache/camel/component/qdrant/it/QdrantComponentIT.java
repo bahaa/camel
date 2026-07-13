@@ -29,10 +29,12 @@ import io.qdrant.client.VectorsFactory;
 import io.qdrant.client.grpc.Collections;
 import io.qdrant.client.grpc.Points;
 import org.apache.camel.Exchange;
+import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.qdrant.QdrantAction;
 import org.apache.camel.component.qdrant.QdrantActionException;
 import org.apache.camel.component.qdrant.QdrantHeaders;
 import org.apache.camel.component.qdrant.QdrantTestSupport;
+import org.apache.camel.component.qdrant.rag.RAGCreateCollection;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -43,11 +45,26 @@ import org.junit.jupiter.params.provider.EnumSource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class QdrantComponentIT extends QdrantTestSupport {
+class QdrantComponentIT extends QdrantTestSupport {
+
+    @Override
+    protected RouteBuilder createRouteBuilder() {
+        return new RouteBuilder() {
+            @Override
+            public void configure() {
+                RAGCreateCollection createCollectionProcessor = new RAGCreateCollection();
+                createCollectionProcessor.setSize("2");
+
+                from("direct:createCollection")
+                        .process(createCollectionProcessor)
+                        .to("qdrant:testComponent");
+            }
+        };
+    }
 
     @Test
     @Order(0)
-    public void collectionInfoNonExistent() {
+    void collectionInfoNonExistent() {
         Exchange result = fluentTemplate.to("qdrant:testComponent")
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.COLLECTION_INFO)
                 .request(Exchange.class);
@@ -58,8 +75,9 @@ public class QdrantComponentIT extends QdrantTestSupport {
         final QdrantActionException exception = result.getException(QdrantActionException.class);
         final Throwable cause = exception.getCause();
 
-        assertThat(cause).isNotNull();
-        assertThat(cause).isInstanceOf(StatusRuntimeException.class);
+        assertThat(cause)
+                .isNotNull()
+                .isInstanceOf(StatusRuntimeException.class);
 
         StatusRuntimeException statusRuntimeException = (StatusRuntimeException) cause;
         assertThat(statusRuntimeException.getStatus().getCode()).isEqualTo(Status.NOT_FOUND.getCode());
@@ -67,13 +85,8 @@ public class QdrantComponentIT extends QdrantTestSupport {
 
     @Test
     @Order(1)
-    public void createCollection() {
-        Exchange result = fluentTemplate.to("qdrant:testComponent")
-                .withHeader(QdrantHeaders.ACTION, QdrantAction.CREATE_COLLECTION)
-                .withBody(
-                        Collections.VectorParams.newBuilder()
-                                .setSize(2)
-                                .setDistance(Collections.Distance.Cosine).build())
+    void createCollection() {
+        Exchange result = fluentTemplate.to("direct:createCollection")
                 .request(Exchange.class);
 
         assertThat(result).isNotNull();
@@ -82,7 +95,7 @@ public class QdrantComponentIT extends QdrantTestSupport {
 
     @Test
     @Order(2)
-    public void collectionInfoExistent() {
+    void collectionInfoExistent() {
         Exchange result = fluentTemplate.to("qdrant:testComponent")
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.COLLECTION_INFO)
                 .request(Exchange.class);
@@ -94,7 +107,7 @@ public class QdrantComponentIT extends QdrantTestSupport {
 
     @Test
     @Order(3)
-    public void upsert() {
+    void upsert() {
         Exchange result = fluentTemplate.to("qdrant:testComponent")
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.UPSERT)
                 .withBody(
@@ -124,7 +137,7 @@ public class QdrantComponentIT extends QdrantTestSupport {
     @Test
     @Order(4)
     @SuppressWarnings({ "unchecked" })
-    public void retrieve() {
+    void retrieve() {
         Exchange result = fluentTemplate.to("qdrant:testComponent")
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.RETRIEVE)
                 .withBody(PointIdFactory.id(8))
@@ -142,7 +155,7 @@ public class QdrantComponentIT extends QdrantTestSupport {
     @ParameterizedTest
     @EnumSource(TestData.class)
     @Order(5)
-    public void upsertOtherVectors(TestData testData) {
+    void upsertOtherVectors(TestData testData) {
         Exchange result = fluentTemplate.to("qdrant:testComponent")
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.UPSERT)
                 .withBody(
@@ -165,7 +178,7 @@ public class QdrantComponentIT extends QdrantTestSupport {
 
     @Test
     @Order(6)
-    public void similaritySeach() {
+    void similaritySeach() {
         Exchange result = fluentTemplate.to("qdrant:testComponent")
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.SIMILARITY_SEARCH)
                 .withHeader(QdrantHeaders.INCLUDE_VECTORS, true)
@@ -184,7 +197,7 @@ public class QdrantComponentIT extends QdrantTestSupport {
 
     @Test
     @Order(7)
-    public void delete() {
+    void delete() {
         Exchange result = fluentTemplate.to("qdrant:testComponent")
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.DELETE)
                 .withBody(ConditionFactory.matchKeyword("foo", "hello"))
@@ -206,7 +219,7 @@ public class QdrantComponentIT extends QdrantTestSupport {
 
     @Test
     @Order(8)
-    public void retrieveAfterDelete() {
+    void retrieveAfterDelete() {
         Exchange result = fluentTemplate.to("qdrant:testComponent")
                 .withHeader(QdrantHeaders.ACTION, QdrantAction.RETRIEVE)
                 .withBody(PointIdFactory.id(8))
@@ -216,7 +229,7 @@ public class QdrantComponentIT extends QdrantTestSupport {
         assertThat(result.getException()).isNull();
 
         assertThat(result.getIn().getBody()).isInstanceOfSatisfying(Collection.class, c -> {
-            assertThat(c).hasSize(0);
+            assertThat(c).isEmpty();
         });
     }
 

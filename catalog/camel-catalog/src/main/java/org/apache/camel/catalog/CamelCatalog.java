@@ -36,6 +36,7 @@ import org.apache.camel.tooling.model.MainModel;
 import org.apache.camel.tooling.model.OtherModel;
 import org.apache.camel.tooling.model.PojoBeanModel;
 import org.apache.camel.tooling.model.ReleaseModel;
+import org.apache.camel.tooling.model.SecurityAdvisoryModel;
 import org.apache.camel.tooling.model.TransformerModel;
 
 /**
@@ -662,5 +663,29 @@ public interface CamelCatalog {
      * Load all Camel Quarkus releases from catalog
      */
     List<ReleaseModel> camelQuarkusReleases();
+
+    /**
+     * Load all published Camel CVE security advisories from catalog (the data behind
+     * <a href="https://camel.apache.org/security/">camel.apache.org/security</a>, synced into the catalog when it was
+     * built).
+     *
+     * @since 4.22
+     */
+    List<SecurityAdvisoryModel> camelSecurityAdvisories();
+
+    /**
+     * Checks whether two endpoint URIs refer to the same logical endpoint.
+     * <p/>
+     * Two URIs match when they share the same scheme, context-path, and &mdash; if the component declares any query
+     * parameters as {@code endpointIdentity} &mdash; the same values for those identity parameters. Non-identity query
+     * parameters (timeouts, buffer sizes, etc.) are ignored.
+     * <p/>
+     * Implemented by default via the shared base class; declared here so the full catalog interface exposes it.
+     *
+     * @param  uri1 the first endpoint uri
+     * @param  uri2 the second endpoint uri
+     * @return      {@code true} if both URIs identify the same destination
+     */
+    boolean matchEndpointIdentity(String uri1, String uri2);
 
 }

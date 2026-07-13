@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.jms.core.JmsTemplate;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -108,7 +108,9 @@ public class ConsumeJmsObjectMessageTest extends AbstractJMSTest {
             CamelContext camelContext, ConnectionFactory connectionFactory, String componentName) {
         jmsTemplate = new JmsTemplate(connectionFactory);
 
-        return super.setupComponent(camelContext, connectionFactory, componentName);
+        JmsComponent component = super.setupComponent(camelContext, connectionFactory, componentName);
+        component.setObjectMessageEnabled(true);
+        return component;
     }
 
     @Override

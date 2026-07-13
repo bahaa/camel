@@ -18,6 +18,7 @@ package org.apache.camel.component.vertx.http;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -27,6 +28,7 @@ import java.net.URISyntaxException;
 import org.apache.camel.Exchange;
 import org.apache.camel.ExchangePropertyKey;
 import org.apache.camel.Message;
+import org.apache.camel.support.DeserializationFilterHelper;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.UnsafeUriCharactersEncoder;
@@ -35,31 +37,6 @@ public final class VertxHttpHelper {
 
     private VertxHttpHelper() {
         // Utility class
-    }
-
-    /**
-     * Resolves a HTTP URI query string from the given exchange message headers
-     */
-    public static String resolveQueryString(Exchange exchange, VertxHttpEndpoint endpoint) throws URISyntaxException {
-        Message message = exchange.getMessage();
-        String queryString = (String) message.removeHeader(Exchange.REST_HTTP_QUERY);
-        if (ObjectHelper.isEmpty(queryString)) {
-            queryString = message.getHeader(VertxHttpConstants.HTTP_QUERY, String.class);
-        }
-
-        String uriString = null;
-        if (!endpoint.getConfiguration().isBridgeEndpoint()) {
-            uriString = message.getHeader(VertxHttpConstants.HTTP_URI, String.class);
-            uriString = exchange.getContext().resolvePropertyPlaceholders(uriString);
-        }
-
-        if (ObjectHelper.isNotEmpty(uriString)) {
-            uriString = UnsafeUriCharactersEncoder.encodeHttpURI(uriString);
-            URI uri = new URI(uriString);
-            queryString = uri.getQuery();
-        }
-
-        return queryString;
     }
 
     /**
@@ -96,7 +73,37 @@ public final class VertxHttpHelper {
             }
         }
 
-        uri = UnsafeUriCharactersEncoder.encodeHttpURI(uri);
+        // Get query string from headers (rest producer may provide an override)
+        String queryString = (String) message.removeHeader(Exchange.REST_HTTP_QUERY);
+        if (queryString == null) {
+            queryString = message.getHeader(VertxHttpConstants.HTTP_QUERY, String.class);
+        }
+
+        // Parse URI to check for existing query string
+        URI tempUri = new URI(uri);
+        if (queryString == null) {
+            queryString = tempUri.getRawQuery();
+        }
+        if (queryString == null && endpoint.getConfiguration().getHttpUri() != null) {
+            queryString = endpoint.getConfiguration().getHttpUri().getRawQuery();
+        }
+
+        // Build the complete URI string with encoded query (similar to camel-http approach)
+        // Encode the full URI once to avoid double-encoding
+        if (queryString != null) {
+            // Build URI string without query first
+            String baseUri = tempUri.toString();
+            int queryIndex = baseUri.indexOf('?');
+            if (queryIndex != -1) {
+                baseUri = baseUri.substring(0, queryIndex);
+            }
+            // Encode query string using RFC1738 encoding (includes [, ], #, etc.)
+            // This is stricter than encodeHttpURI() which only encodes a subset
+            queryString = UnsafeUriCharactersEncoder.encode(queryString);
+            uri = baseUri + "?" + queryString;
+        } else {
+            uri = UnsafeUriCharactersEncoder.encode(uri);
+        }
 
         return new URI(uri);
     }
@@ -118,12 +125,23 @@ public final class VertxHttpHelper {
      * Deserializes an object from the given {@link InputStream}
      */
     public static Object deserializeJavaObjectFromStream(InputStream is) throws ClassNotFoundException, IOException {
+        return deserializeJavaObjectFromStream(is, null);
+    }
+
+    /**
+     * Deserializes an object from the given {@link InputStream} applying an {@link ObjectInputFilter} resolved from the
+     * supplied pattern, the JVM-wide {@code jdk.serialFilter} or the Camel default
+     * ({@value DeserializationFilterHelper#DEFAULT_DESERIALIZATION_FILTER}) in that order.
+     */
+    public static Object deserializeJavaObjectFromStream(InputStream is, String deserializationFilter)
+            throws ClassNotFoundException, IOException {
         if (is == null) {
             return null;
         }
 
         Object answer;
         ObjectInputStream ois = new ObjectInputStream(is);
+        ois.setObjectInputFilter(DeserializationFilterHelper.resolveDeserializationFilter(deserializationFilter));
         try {
             answer = ois.readObject();
         } finally {

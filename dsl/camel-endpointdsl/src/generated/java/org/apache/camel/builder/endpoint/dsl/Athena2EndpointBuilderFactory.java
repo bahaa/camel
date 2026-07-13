@@ -1014,7 +1014,7 @@ public interface Athena2EndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final Athena2HeaderNameBuilder INSTANCE = new Athena2HeaderNameBuilder();
+        public static final Athena2HeaderNameBuilder INSTANCE = new Athena2HeaderNameBuilder();
 
         /**
          * The operation to perform. Permitted values are getQueryExecution,
@@ -1093,6 +1093,19 @@ public interface Athena2EndpointBuilderFactory {
          */
         public String awsAthenaMaxResults() {
             return "CamelAwsAthenaMaxResults";
+        }
+        /**
+         * Whether the response has more results (i.e., is truncated). If true,
+         * use the NEXT_TOKEN header to fetch the next page.
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: getQueryResults listQueryExecutions
+         * 
+         * @return the name of the header {@code AwsAthenaIsTruncated}.
+         */
+        public String awsAthenaIsTruncated() {
+            return "CamelAwsAthenaIsTruncated";
         }
         /**
          * Include useful trace information at the beginning of queries as an

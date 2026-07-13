@@ -21,8 +21,7 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.component.thrift.generated.Calculator;
 import org.apache.camel.component.thrift.generated.Operation;
 import org.apache.camel.component.thrift.generated.Work;
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
@@ -41,19 +40,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ThriftConsumerSyncTest extends CamelTestSupport {
     private static final Logger LOG = LoggerFactory.getLogger(ThriftConsumerSyncTest.class);
-    private static final int THRIFT_TEST_PORT = AvailablePortFinder.getNextAvailable();
+
     private static final int THRIFT_TEST_NUM1 = 12;
     private static final int THRIFT_TEST_NUM2 = 13;
-    private static Calculator.Client thriftClient;
+    private Calculator.Client thriftClient;
 
     private TProtocol protocol;
     private TTransport transport;
 
+    private int getActualPort() {
+        return ((ThriftConsumer) context.getRoutes().get(0).getConsumer()).getLocalPort();
+    }
+
     @BeforeEach
     public void startThriftClient() throws TTransportException {
         if (transport == null) {
-            LOG.info("Connecting to the Thrift server on port: {}", THRIFT_TEST_PORT);
-            transport = new TSocket("localhost", THRIFT_TEST_PORT);
+            int thriftTestPort = getActualPort();
+            LOG.info("Connecting to the Thrift server on port: {}", thriftTestPort);
+            transport = new TSocket("localhost", thriftTestPort);
             transport.open();
             protocol = new TBinaryProtocol(new TFramedTransport(transport));
             thriftClient = (new Calculator.Client.Factory()).getClient(protocol);
@@ -104,8 +108,7 @@ public class ThriftConsumerSyncTest extends CamelTestSupport {
             @Override
             public void configure() {
 
-                from("thrift://localhost:" + THRIFT_TEST_PORT
-                     + "/org.apache.camel.component.thrift.generated.Calculator?synchronous=true")
+                from("thrift://localhost:0/org.apache.camel.component.thrift.generated.Calculator?synchronous=true")
                         .to("mock:thrift-service").choice()
                         .when(header(ThriftConstants.THRIFT_METHOD_NAME_HEADER).isEqualTo("calculate"))
                         .setBody(simple(Integer.valueOf(THRIFT_TEST_NUM1 * THRIFT_TEST_NUM2).toString()))

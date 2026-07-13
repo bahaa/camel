@@ -27,6 +27,25 @@ import org.apache.camel.Service;
 public interface MavenDownloader extends Service {
 
     /**
+     * A single non-transitive artifact resolution - a shorthand for
+     * {@code resolveArtifacts(List.of(gav), null, false, false)}.
+     *
+     * @param  gav              the Maven artifact to resolve
+     * @throws RuntimeException if there are any resolution problems
+     */
+    default MavenArtifact resolveArtifact(MavenGav gav) {
+        try {
+            List<MavenArtifact> artifacts = resolveArtifacts(List.of(gav.toMavenResolverString()), null, false, false);
+            if (artifacts.size() != 1) {
+                throw new IllegalStateException("Could not resolve " + gav);
+            }
+            return artifacts.get(0);
+        } catch (MavenResolutionException e) {
+            throw new RuntimeException("Could not resolve " + gav, e);
+        }
+    }
+
+    /**
      * Main resolution method. Using Maven Resolver, a list of maven coordinates (in the form of
      * {@code groupId:artifactId[:packaging[:classifier]]:version}) is used to download artifacts from configured Maven
      * repositories.
@@ -84,6 +103,19 @@ public interface MavenDownloader extends Service {
      * Sets maven downloader in offline mode
      */
     void setOffline(boolean offline);
+
+    /**
+     * When enabled, resolution will first check if artifacts exist in the local Maven repository and attempt offline
+     * resolution to avoid remote repository checks. Falls back to normal resolution if offline resolution fails. This
+     * is useful for CLI tools where artifacts are typically already cached and remote SNAPSHOT metadata checks add
+     * significant latency.
+     */
+    void setPreferLocal(boolean preferLocal);
+
+    /**
+     * Whether prefer-local resolution mode is enabled.
+     */
+    boolean isPreferLocal();
 
     /**
      * Configure comma-separated list of repositories to use (in addition to the ones discovered from Maven settings).

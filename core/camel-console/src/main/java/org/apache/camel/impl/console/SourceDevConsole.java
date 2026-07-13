@@ -17,7 +17,6 @@
 package org.apache.camel.impl.console;
 
 import java.io.LineNumberReader;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -27,6 +26,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Route;
 import org.apache.camel.api.management.ManagedCamelContext;
 import org.apache.camel.api.management.mbean.ManagedRouteMBean;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.Resource;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.LoggerHelper;
@@ -35,19 +35,18 @@ import org.apache.camel.support.PluginHelper;
 import org.apache.camel.support.console.AbstractDevConsole;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.StringHelper;
+import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 
 @DevConsole(name = "source", description = "Dump route source code")
 public class SourceDevConsole extends AbstractDevConsole {
 
-    /**
-     * Filters the routes matching by route id, route uri, and source location
-     */
+    @Metadata(label = "query", description = "Filters the routes matching by route id, route uri, and source location",
+              javaType = "java.lang.String")
     public static final String FILTER = "filter";
 
-    /**
-     * Limits the number of entries displayed
-     */
+    @Metadata(label = "query", description = "Limits the number of entries displayed",
+              javaType = "java.lang.Integer")
     public static final String LIMIT = "limit";
 
     public SourceDevConsole() {
@@ -76,7 +75,7 @@ public class SourceDevConsole extends AbstractDevConsole {
                             t = reader.readLine();
                             if (t != null) {
                                 i++;
-                                code.append(String.format("\n    #%s %s", i, t));
+                                code.append(String.format("%n    #%s %s", i, t));
                             }
                         } while (t != null);
                         IOHelper.close(reader);
@@ -86,7 +85,7 @@ public class SourceDevConsole extends AbstractDevConsole {
                 }
                 sb.append(String.format("    Id: %s", mrb.getRouteId()));
                 if (mrb.getSourceLocation() != null) {
-                    sb.append(String.format("\n    Source: %s", mrb.getSourceLocation()));
+                    sb.append(String.format("%n    Source: %s", mrb.getSourceLocation()));
                 }
                 if (!code.isEmpty()) {
                     sb.append("\n");
@@ -104,7 +103,7 @@ public class SourceDevConsole extends AbstractDevConsole {
     @Override
     protected JsonObject doCallJson(Map<String, Object> options) {
         final JsonObject root = new JsonObject();
-        final List<JsonObject> list = new ArrayList<>();
+        final JsonArray list = new JsonArray();
 
         Function<ManagedRouteMBean, Object> task = mrb -> {
             JsonObject jo = new JsonObject();
@@ -117,7 +116,7 @@ public class SourceDevConsole extends AbstractDevConsole {
             }
 
             String loc = mrb.getSourceLocation();
-            List<JsonObject> code = ConsoleHelper.loadSourceAsJson(getCamelContext(), loc);
+            JsonArray code = ConsoleHelper.loadSourceAsJson(getCamelContext(), loc);
             if (code != null) {
                 jo.put("code", code);
             }
@@ -129,11 +128,10 @@ public class SourceDevConsole extends AbstractDevConsole {
     }
 
     protected void doCall(Map<String, Object> options, Function<ManagedRouteMBean, Object> task) {
-        String path = (String) options.get(Exchange.HTTP_PATH);
+        String path = optionString(options, Exchange.HTTP_PATH);
         String subPath = path != null ? StringHelper.after(path, "/") : null;
-        String filter = (String) options.get(FILTER);
-        String limit = (String) options.get(LIMIT);
-        final int max = limit == null ? Integer.MAX_VALUE : Integer.parseInt(limit);
+        String filter = optionString(options, FILTER);
+        final int max = optionInt(options, LIMIT, Integer.MAX_VALUE);
 
         ManagedCamelContext mcc = getCamelContext().getCamelContextExtension().getContextPlugin(ManagedCamelContext.class);
         if (mcc != null) {

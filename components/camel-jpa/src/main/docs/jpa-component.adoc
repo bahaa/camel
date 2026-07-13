@@ -7,8 +7,6 @@
 :supportlevel: Stable
 :tabs-sync-option:
 :component-header: Both producer and consumer are supported
-//Manually maintained attributes
-:camel-spring-boot-name: jpa
 
 *Since Camel {since}*
 
@@ -23,23 +21,23 @@ Maven users will need to add the following dependency to their `pom.xml`
 for this component:
 
 [source,xml]
-------------------------------------------------------------
+----
 <dependency>
     <groupId>org.apache.camel</groupId>
     <artifactId>camel-jpa</artifactId>
     <version>x.x.x</version>
     <!-- use the same version as your Camel core version -->
 </dependency>
-------------------------------------------------------------
+----
 
 == URI format
 
------------------------------
+----
 jpa:entityClassName[?options]
------------------------------
+----
 
 For sending to the endpoint, the _entityClassName_ is optional. If
-specified, it helps the http://camel.apache.org/type-converter.html[Type Converter] to
+specified, it helps the xref:manual::type-converter.adoc[Type Converter] to
 ensure the body is of the correct type.
 
 For consuming, the _entityClassName_ is mandatory.
@@ -58,7 +56,7 @@ include::partial$component-endpoint-headers.adoc[]
 You can store a Java entity bean in a database by sending it to a JPA
 producer endpoint. The body of the _In_ message is assumed to be an
 entity bean (that is a POJO with an
-https://jakarta.ee/specifications/persistence/2.2/apidocs/javax/persistence/entity[@Entity]
+https://jakarta.ee/specifications/persistence/3.2/apidocs/jakarta.persistence/jakarta/persistence/entity[@Entity]
 annotation on it) or a collection or array of entity beans.
 
 If the body is a List of entities, make sure to use
@@ -112,11 +110,11 @@ For example, you can instantiate a JPA component that references the
 `myEMFactory` entity manager factory, as follows:
 
 [source,xml]
--------------------------------------------------------------------
+----
 <bean id="jpa" class="org.apache.camel.component.jpa.JpaComponent">
    <property name="entityManagerFactory" ref="myEMFactory"/>
 </bean>
--------------------------------------------------------------------
+----
 
 The `JpaComponent` looks up automatically the
 `EntityManagerFactory` from the Registry which means
@@ -145,12 +143,51 @@ explicitly configure a JPA component that references the
 `myTransactionManager` transaction manager, as follows:
 
 [source,xml]
--------------------------------------------------------------------
+----
 <bean id="jpa" class="org.apache.camel.component.jpa.JpaComponent">
    <property name="entityManagerFactory" ref="myEMFactory"/>
    <property name="transactionStrategy" ref="myTransactionStrategy"/>
 </bean>
--------------------------------------------------------------------
+----
+
+=== Entity enhancement
+
+JPA providers such as OpenJPA need to enhance (byte-code weave) your `@Entity` classes so they
+can track field access and manage lazy loading. Without enhancement, you may see errors such as
+`ArgumentException: ... were not enhanced at build time or at class load time with a javaagent`
+when the entity is first used.
+
+OpenJPA supports enhancing entities either dynamically at runtime (for example through a
+`-javaagent`, or automatic class-loading hooks in a Jakarta EE/OSGi container) or at build time.
+https://openjpa.apache.org/entity-enhancement.html[Build-time enhancement] is recommended: it is
+faster and more reliable than dynamic enhancement, which OpenJPA's own documentation discourages
+for production use due to known performance and functional issues.
+
+To enable build-time enhancement with Maven, add the `openjpa-maven-plugin` to your `pom.xml`
+bound to the `process-classes` phase:
+
+[source,xml]
+----
+<plugin>
+    <groupId>org.apache.openjpa</groupId>
+    <artifactId>openjpa-maven-plugin</artifactId>
+    <!-- use the same version as your OpenJPA runtime dependency -->
+    <version>4.1.1</version>
+    <executions>
+        <execution>
+            <id>enhancer</id>
+            <phase>process-classes</phase>
+            <goals>
+                <goal>enhance</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
+----
+
+See https://openjpa.apache.org/enhancement-with-maven.html[Entity Enhancement with Maven] for the
+full set of plugin options (such as scoping enhancement to specific packages with
+`includes`/`excludes`) and for the `maven-antrun-plugin` alternative.
 
 === Using a consumer with a named query
 
@@ -158,33 +195,92 @@ For consuming only selected entities, you can use the
 `namedQuery` URI query option. First, you have to define the
 named query in the JPA Entity class:
 
+._Java-only: JPA entity class definition with @NamedQuery annotation_
 [source,java]
-----------------------------------------------------------------------------------
+----
 @Entity
 @NamedQuery(name = "step1", query = "select x from MultiSteps x where x.step = 1")
 public class MultiSteps {
    ...
 }
-----------------------------------------------------------------------------------
+----
 
 After that, you can define a consumer uri like this one:
 
+[tabs]
+====
+Java::
++
 [source,java]
-----------------------------------------------------------------------------
+----
 from("jpa://org.apache.camel.examples.MultiSteps?namedQuery=step1")
-.to("bean:myBusinessLogic");
-----------------------------------------------------------------------------
+    .to("bean:myBusinessLogic");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="jpa://org.apache.camel.examples.MultiSteps?namedQuery=step1"/>
+  <to uri="bean:myBusinessLogic"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: jpa://org.apache.camel.examples.MultiSteps
+      parameters:
+        namedQuery: step1
+      steps:
+        - to:
+            uri: bean:myBusinessLogic
+----
+====
 
 === Using a consumer with a query
 
 For consuming only selected entities, you can use the `query`
 URI query option. You only have to define the query option:
 
+[tabs]
+====
+Java::
++
 [source,java]
----------------------------------------------------------------------------------------------------------------------------------------
+----
 from("jpa://org.apache.camel.examples.MultiSteps?query=select o from org.apache.camel.examples.MultiSteps o where o.step = 1")
-.to("bean:myBusinessLogic");
----------------------------------------------------------------------------------------------------------------------------------------
+    .to("bean:myBusinessLogic");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+    <from uri="jpa://org.apache.camel.examples.MultiSteps?query=select o from org.apache.camel.examples.MultiSteps o where o.step = 1"/>
+    <to uri="bean:myBusinessLogic"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: jpa://org.apache.camel.examples.MultiSteps
+      parameters:
+        query: "select o from org.apache.camel.examples.MultiSteps o where o.step = 1"
+    steps:
+      - to:
+          uri: bean:myBusinessLogic
+----
+====
 
 === Using a consumer with a native query
 
@@ -192,11 +288,40 @@ For consuming only selected entities, you can use the
 `nativeQuery` URI query option. You only have to define the
 native query option:
 
+[tabs]
+====
+Java::
++
 [source,java]
----------------------------------------------------------------------------------------------------------------
+----
 from("jpa://org.apache.camel.examples.MultiSteps?nativeQuery=select * from MultiSteps where step = 1")
-.to("bean:myBusinessLogic");
----------------------------------------------------------------------------------------------------------------
+    .to("bean:myBusinessLogic");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+    <from uri="jpa://org.apache.camel.examples.MultiSteps?nativeQuery=select * from MultiSteps where step = 1"/>
+    <to uri="bean:myBusinessLogic"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: jpa://org.apache.camel.examples.MultiSteps
+      parameters:
+        nativeQuery: "select * from MultiSteps where step = 1"
+    steps:
+      - to:
+          uri: bean:myBusinessLogic
+----
+====
 
 If you use the native query option, you will receive an object array in
 the message body.
@@ -208,22 +333,52 @@ For retrieving selected entities or execute bulk update/delete, you can use the
 `namedQuery` URI query option. First, you have to define the
 named query in the JPA Entity class:
 
+._Java-only: JPA entity class definition with @NamedQuery annotation_
 [source,java]
-----------------------------------------------------------------------------------
+----
 @Entity
 @NamedQuery(name = "step1", query = "select x from MultiSteps x where x.step = 1")
 public class MultiSteps {
    ...
 }
-----------------------------------------------------------------------------------
+----
 
 After that, you can define a producer uri like this one:
 
+[tabs]
+====
+Java::
++
 [source,java]
-----------------------------------------------------------------------------
+----
 from("direct:namedQuery")
-.to("jpa://org.apache.camel.examples.MultiSteps?namedQuery=step1");
-----------------------------------------------------------------------------
+    .to("jpa://org.apache.camel.examples.MultiSteps?namedQuery=step1");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:namedQuery"/>
+  <to uri="jpa://org.apache.camel.examples.MultiSteps?namedQuery=step1"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:namedQuery
+      steps:
+        - to:
+            uri: jpa://org.apache.camel.examples.MultiSteps
+            parameters:
+              namedQuery: step1
+----
+====
 
 Note that you need to specify `useExecuteUpdate` option to `true` to execute `UPDATE`/`DELETE` statement
 as a named query.
@@ -233,11 +388,40 @@ as a named query.
 For retrieving selected entities or execute bulk update/delete, you can use the `query`
 URI query option. You only have to define the query option:
 
+[tabs]
+====
+Java::
++
 [source,java]
----------------------------------------------------------------------------------------------------------------------------------------
+----
 from("direct:query")
-.to("jpa://org.apache.camel.examples.MultiSteps?query=select o from org.apache.camel.examples.MultiSteps o where o.step = 1");
----------------------------------------------------------------------------------------------------------------------------------------
+    .to("jpa://org.apache.camel.examples.MultiSteps?query=select o from org.apache.camel.examples.MultiSteps o where o.step = 1");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+    <from uri="direct:query"/>
+    <to uri="jpa://org.apache.camel.examples.MultiSteps?query=select o from org.apache.camel.examples.MultiSteps o where o.step = 1"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:query
+    steps:
+      - to:
+          uri: jpa://org.apache.camel.examples.MultiSteps
+          parameters:
+            query: "select o from org.apache.camel.examples.MultiSteps o where o.step = 1"
+----
+====
 
 === Using a producer with a native query
 
@@ -245,49 +429,127 @@ For retrieving selected entities or execute bulk update/delete, you can use the
 `nativeQuery` URI query option. You only have to define the
 native query option:
 
+[tabs]
+====
+Java::
++
 [source,java]
----------------------------------------------------------------------------------------------------------------
+----
 from("direct:nativeQuery")
-.to("jpa://org.apache.camel.examples.MultiSteps?resultClass=org.apache.camel.examples.MultiSteps&nativeQuery=select * from MultiSteps where step = 1");
----------------------------------------------------------------------------------------------------------------
+    .to("jpa://org.apache.camel.examples.MultiSteps?resultClass=org.apache.camel.examples.MultiSteps&nativeQuery=select * from MultiSteps where step = 1");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+    <from uri="direct:nativeQuery"/>
+    <to uri="jpa://org.apache.camel.examples.MultiSteps?resultClass=org.apache.camel.examples.MultiSteps&amp;nativeQuery=select * from MultiSteps where step = 1"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:nativeQuery
+    steps:
+      - to:
+          uri: jpa://org.apache.camel.examples.MultiSteps
+          parameters:
+            resultClass: org.apache.camel.examples.MultiSteps
+            nativeQuery: "select * from MultiSteps where step = 1"
+----
+====
 
 If you use the native query option without specifying `resultClass`, you will receive an object array in
 the message body.
 
 === Using the JPA-Based Idempotent Repository
 
-The Idempotent Consumer from the http://camel.apache.org/enterprise-integration-patterns.html[EIP patterns] is used to filter out duplicate messages. A JPA-based idempotent repository is provided.
+Camel supports the Idempotent Consumer EIP, which is used to filter out duplicate messages. A JPA-based idempotent repository is provided.
 
 To use the JPA based idempotent repository.
 
 .Procedure
 
 . Set up a `persistence-unit` in the persistence.xml file:
++
+[source,xml]
+----
+<persistence-unit name="idempotentDb" transaction-type="RESOURCE_LOCAL">
+    <class>org.apache.camel.processor.idempotent.jpa.MessageProcessed</class>
 
-. Set up a `org.springframework.orm.jpa.JpaTemplate`
-which is used by the
-`org.apache.camel.processor.idempotent.jpa.JpaMessageIdRepository`:
+    <properties>
+        <property name="openjpa.ConnectionURL" value="jdbc:h2:./target/idempotentTest;DB_CLOSE_DELAY=-1"/>
+        <property name="openjpa.ConnectionDriverName" value="org.h2.Driver"/>
+        <property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema"/>
+    </properties>
+</persistence-unit>
+----
 
-. Configure the error formatting macro: snippet: java.lang.IndexOutOfBoundsException:
-Index: 20, Size: 20
-
-. Configure the idempotent repository:
-`org.apache.camel.processor.idempotent.jpa.JpaMessageIdRepository`:
+. Configure the `org.apache.camel.processor.idempotent.jpa.JpaMessageIdRepository` bean,
+referencing the `EntityManagerFactory` built from that persistence unit:
++
+[source,xml]
+----
+<bean id="jpaStore" class="org.apache.camel.processor.idempotent.jpa.JpaMessageIdRepository">
+    <!-- Here we refer to the entityManagerFactory -->
+    <constructor-arg index="0" ref="entityManagerFactory"/>
+    <!-- This 2nd parameter is the name (a category name).
+         You can have different repositories with different names -->
+    <constructor-arg index="1" value="myProcessorName"/>
+</bean>
+----
 
 . Create the JPA idempotent repository in the Spring XML file:
 
+[tabs]
+====
+Java::
++
+[source,java]
+----
+from("direct:start")
+    .idempotentConsumer(header("messageId")).idempotentRepository("jpaStore")
+        .to("mock:result");
+----
+
+XML::
++
 [source,xml]
----------------------------------------------------------------
-<camelContext xmlns="http://camel.apache.org/schema/spring">
-    <route id="JpaMessageIdRepositoryTest">
-        <from uri="direct:start" />
-        <idempotentConsumer idempotentRepository="jpaStore">
-            <header>messageId</header>
-            <to uri="mock:result" />
-        </idempotentConsumer>
-    </route>
-</camelContext>
----------------------------------------------------------------
+----
+<route id="JpaMessageIdRepositoryTest">
+    <from uri="direct:start" />
+    <idempotentConsumer idempotentRepository="jpaStore">
+        <header>messageId</header>
+        <to uri="mock:result" />
+    </idempotentConsumer>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    id: JpaMessageIdRepositoryTest
+    from:
+      uri: direct:start
+      steps:
+        - idempotentConsumer:
+            idempotentRepository: "#jpaStore"
+            expression:
+              header:
+                expression: messageId
+            steps:
+              - to:
+                  uri: mock:result
+----
+====
 
 == Important Development Notes
 
@@ -295,7 +557,7 @@ If you run the
 https://github.com/apache/camel/tree/main/components/camel-jpa/src/test[tests of this component]
 directly inside your IDE, and not through Maven, then you could see exceptions like these:
 
---------------------------------------------------------------------------------------------------------------------------------------------------------
+----
 org.springframework.transaction.CannotCreateTransactionException: Could not open JPA EntityManager for transaction; nested exception is
 <openjpa-2.2.1-r422266:1396819 nonfatal user error> org.apache.openjpa.persistence.ArgumentException: This configuration disallows runtime optimization,
 but the following listed types were not enhanced at build time or at class load time with a javaagent: "org.apache.camel.examples.SendEmail".
@@ -304,9 +566,9 @@ but the following listed types were not enhanced at build time or at class load 
     at org.springframework.transaction.support.TransactionTemplate.execute(TransactionTemplate.java:127)
     at org.apache.camel.processor.jpa.JpaRouteTest.cleanupRepository(JpaRouteTest.java:96)
     at org.apache.camel.processor.jpa.JpaRouteTest.createCamelContext(JpaRouteTest.java:67)
-    at org.apache.camel.test.junit5.CamelTestSupport.doSetUp(CamelTestSupport.java:238)
-    at org.apache.camel.test.junit5.CamelTestSupport.setUp(CamelTestSupport.java:208)
---------------------------------------------------------------------------------------------------------------------------------------------------------
+    at org.apache.camel.test.junit6.CamelTestSupport.doSetUp(CamelTestSupport.java:238)
+    at org.apache.camel.test.junit6.CamelTestSupport.setUp(CamelTestSupport.java:208)
+----
 
 The problem here is that the source has been compiled or recompiled through
 your IDE and not through Maven, which would
@@ -314,14 +576,10 @@ https://github.com/apache/camel/blob/main/components/camel-jpa/pom.xml[enhance
 the byte-code at build time]. To overcome this, you need to enable
 http://openjpa.apache.org/entity-enhancement.html#dynamic-enhancement[dynamic
 byte-code enhancement of OpenJPA]. For example, assuming the current
-OpenJPA version being used in Camel is 2.2.1, to run the
+OpenJPA version being used in Camel is 4.1.1, to run the
 tests inside your IDE, you would need to pass the following
 argument to the JVM:
 
--------------------------------------------------------------------------------------------
--javaagent:<path_to_your_local_m2_cache>/org/apache/openjpa/openjpa/2.2.1/openjpa-2.2.1.jar
--------------------------------------------------------------------------------------------
-
-
-
-include::spring-boot:partial$starter.adoc[]
+----
+-javaagent:<path_to_your_local_m2_cache>/org/apache/openjpa/openjpa/4.1.1/openjpa-4.1.1.jar
+----

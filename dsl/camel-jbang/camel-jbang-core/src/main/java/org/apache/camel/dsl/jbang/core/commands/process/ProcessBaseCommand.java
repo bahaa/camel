@@ -32,7 +32,7 @@ import org.apache.camel.util.json.Jsoner;
 
 abstract class ProcessBaseCommand extends CamelCommand {
 
-    public ProcessBaseCommand(CamelJBangMain main) {
+    protected ProcessBaseCommand(CamelJBangMain main) {
         super(main);
     }
 
@@ -95,6 +95,19 @@ abstract class ProcessBaseCommand extends CamelCommand {
     JsonObject loadStatus(long pid) {
         try {
             Path f = getStatusFile(Long.toString(pid));
+            if (f != null && Files.exists(f)) {
+                String text = Files.readString(f);
+                return (JsonObject) Jsoner.deserialize(text);
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return null;
+    }
+
+    JsonObject loadErrorFile(long pid) {
+        try {
+            Path f = getErrorFile(Long.toString(pid));
             if (f != null && Files.exists(f)) {
                 String text = Files.readString(f);
                 return (JsonObject) Jsoner.deserialize(text);

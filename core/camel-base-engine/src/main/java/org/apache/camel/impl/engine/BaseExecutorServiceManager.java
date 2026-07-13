@@ -372,6 +372,11 @@ public class BaseExecutorServiceManager extends ServiceSupport implements Execut
             for (LifecycleStrategy lifecycle : camelContext.getLifecycleStrategies()) {
                 lifecycle.onThreadPoolRemove(camelContext, threadPool);
             }
+        } else {
+            // for non-ThreadPoolExecutor instances (e.g., virtual thread executors)
+            for (LifecycleStrategy lifecycle : camelContext.getLifecycleStrategies()) {
+                lifecycle.onThreadPoolRemove(camelContext, executorService);
+            }
         }
 
         // remove reference as its shutdown (do not remove if fail-safe)
@@ -463,6 +468,7 @@ public class BaseExecutorServiceManager extends ServiceSupport implements Execut
                 ThreadFactoryListener.class).ifPresent(this::addThreadFactoryListener);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected void doStart() throws Exception {
         super.doStart();
@@ -476,6 +482,7 @@ public class BaseExecutorServiceManager extends ServiceSupport implements Execut
         }
 
         // enrich threads for MDC logging
+        // Deprecated since 4.19.0
         boolean usedMDCLogging = getCamelContext().isUseMDCLogging() != null && getCamelContext().isUseMDCLogging();
         if (usedMDCLogging) {
             threadFactoryListeners.add(new MDCThreadFactoryListener());
@@ -591,6 +598,11 @@ public class BaseExecutorServiceManager extends ServiceSupport implements Execut
         if (threadPool != null) {
             for (LifecycleStrategy lifecycle : camelContext.getLifecycleStrategies()) {
                 lifecycle.onThreadPoolAdd(camelContext, threadPool, id, sourceId, routeId, threadPoolProfileId);
+            }
+        } else {
+            // for non-ThreadPoolExecutor instances (e.g., virtual thread executors)
+            for (LifecycleStrategy lifecycle : camelContext.getLifecycleStrategies()) {
+                lifecycle.onThreadPoolAdd(camelContext, executorService, id, sourceId, routeId, threadPoolProfileId);
             }
         }
 

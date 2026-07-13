@@ -46,6 +46,19 @@ import org.apache.camel.builder.component.dsl.*;
 public interface ComponentsBuilderFactory {
 
     /**
+     * A2A (camel-a2a)
+     * A2A endpoint for agent-to-agent communication.
+     * 
+     * Category: ai
+     * Since: 4.21
+     * Maven coordinates: org.apache.camel:camel-a2a
+     * 
+     * @return the dsl builder
+     */
+    static A2aComponentBuilderFactory.A2aComponentBuilder a2a() {
+        return A2aComponentBuilderFactory.a2a();
+    }
+    /**
      * ActiveMQ 5.x (camel-activemq)
      * Send messages to (or consume from) Apache ActiveMQ 5.x. This component
      * extends the Camel JMS component.
@@ -75,7 +88,7 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * AMQP (camel-amqp)
-     * Messaging with AMQP protocol using Apache QPid Client.
+     * Messaging with AMQP protocol using Apache Qpid Client.
      * 
      * Category: messaging
      * Since: 1.2
@@ -205,8 +218,8 @@ public interface ComponentsBuilderFactory {
         return AwsBedrockAgentRuntimeComponentBuilderFactory.awsBedrockAgentRuntime();
     }
     /**
-     * AWS Cloudtrail (camel-aws-cloudtrail)
-     * Consume events from Amazon Cloudtrail using AWS SDK version 2.x.
+     * AWS CloudTrail (camel-aws-cloudtrail)
+     * Consume events from Amazon CloudTrail using AWS SDK version 2.x.
      * 
      * Category: cloud,management,monitoring
      * Since: 3.19
@@ -244,6 +257,19 @@ public interface ComponentsBuilderFactory {
         return AwsSecretsManagerComponentBuilderFactory.awsSecretsManager();
     }
     /**
+     * AWS Security Hub (camel-aws-security-hub)
+     * Manage and interact with AWS Security Hub for security findings.
+     * 
+     * Category: cloud,security
+     * Since: 4.18
+     * Maven coordinates: org.apache.camel:camel-aws-security-hub
+     * 
+     * @return the dsl builder
+     */
+    static AwsSecurityHubComponentBuilderFactory.AwsSecurityHubComponentBuilder awsSecurityHub() {
+        return AwsSecurityHubComponentBuilderFactory.awsSecurityHub();
+    }
+    /**
      * AWS Athena (camel-aws2-athena)
      * Access AWS Athena.
      * 
@@ -255,6 +281,20 @@ public interface ComponentsBuilderFactory {
      */
     static Aws2AthenaComponentBuilderFactory.Aws2AthenaComponentBuilder aws2Athena() {
         return Aws2AthenaComponentBuilderFactory.aws2Athena();
+    }
+    /**
+     * AWS Comprehend (camel-aws2-comprehend)
+     * Perform natural language processing using AWS Comprehend and AWS SDK
+     * version 2.x.
+     * 
+     * Category: cloud,ai
+     * Since: 4.18
+     * Maven coordinates: org.apache.camel:camel-aws2-comprehend
+     * 
+     * @return the dsl builder
+     */
+    static Aws2ComprehendComponentBuilderFactory.Aws2ComprehendComponentBuilder aws2Comprehend() {
+        return Aws2ComprehendComponentBuilderFactory.aws2Comprehend();
     }
     /**
      * AWS CloudWatch (camel-aws2-cw)
@@ -336,7 +376,8 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * AWS Eventbridge (camel-aws2-eventbridge)
-     * Send events to AWS Eventbridge cluster instances.
+     * Manage AWS EventBridge cluster instances and consume events via
+     * SQS-backed polling.
      * 
      * Category: cloud,management
      * Since: 3.6
@@ -439,6 +480,19 @@ public interface ComponentsBuilderFactory {
         return Aws2MskComponentBuilderFactory.aws2Msk();
     }
     /**
+     * AWS Polly (camel-aws2-polly)
+     * Synthesize speech using AWS Polly and AWS SDK version 2.x.
+     * 
+     * Category: cloud,ai
+     * Since: 4.18
+     * Maven coordinates: org.apache.camel:camel-aws2-polly
+     * 
+     * @return the dsl builder
+     */
+    static Aws2PollyComponentBuilderFactory.Aws2PollyComponentBuilder aws2Polly() {
+        return Aws2PollyComponentBuilderFactory.aws2Polly();
+    }
+    /**
      * AWS RedshiftData (camel-aws2-redshift)
      * Perform operations on AWS Redshift using Redshift Data API.
      * 
@@ -450,6 +504,19 @@ public interface ComponentsBuilderFactory {
      */
     static Aws2RedshiftDataComponentBuilderFactory.Aws2RedshiftDataComponentBuilder aws2RedshiftData() {
         return Aws2RedshiftDataComponentBuilderFactory.aws2RedshiftData();
+    }
+    /**
+     * AWS Rekognition (camel-aws2-rekognition)
+     * Manage and invoke AWS Rekognition.
+     * 
+     * Category: cloud,ai
+     * Since: 4.17
+     * Maven coordinates: org.apache.camel:camel-aws2-rekognition
+     * 
+     * @return the dsl builder
+     */
+    static Aws2RekognitionComponentBuilderFactory.Aws2RekognitionComponentBuilder aws2Rekognition() {
+        return Aws2RekognitionComponentBuilderFactory.aws2Rekognition();
     }
     /**
      * AWS S3 Storage Service (camel-aws2-s3)
@@ -637,6 +704,19 @@ public interface ComponentsBuilderFactory {
         return AzureFilesComponentBuilderFactory.azureFiles();
     }
     /**
+     * Azure Functions (camel-azure-functions)
+     * Invoke and manage Azure Functions.
+     * 
+     * Category: cloud,serverless
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-azure-functions
+     * 
+     * @return the dsl builder
+     */
+    static AzureFunctionsComponentBuilderFactory.AzureFunctionsComponentBuilder azureFunctions() {
+        return AzureFunctionsComponentBuilderFactory.azureFunctions();
+    }
+    /**
      * Azure Key Vault (camel-azure-key-vault)
      * Manage secrets and keys in Azure Key Vault Service
      * 
@@ -806,6 +886,20 @@ public interface ComponentsBuilderFactory {
      */
     static CaffeineLoadcacheComponentBuilderFactory.CaffeineLoadcacheComponentBuilder caffeineLoadcache() {
         return CaffeineLoadcacheComponentBuilderFactory.caffeineLoadcache();
+    }
+    /**
+     * Camunda (camel-camunda)
+     * Interact with Camunda 8 Orchestration Clusters using the Camunda Java
+     * Client.
+     * 
+     * Category: workflow,saas
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-camunda
+     * 
+     * @return the dsl builder
+     */
+    static CamundaComponentBuilderFactory.CamundaComponentBuilder camunda() {
+        return CamundaComponentBuilderFactory.camunda();
     }
     /**
      * ChatScript (camel-chatscript)
@@ -984,8 +1078,9 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * Couchbase (camel-couchbase)
-     * Query Couchbase Views with a poll strategy and/or perform various
-     * operations against Couchbase databases.
+     * Query Couchbase databases using SQL (N1QL) queries or MapReduce Views
+     * with a poll strategy and/or perform various operations against Couchbase
+     * databases.
      * 
      * Category: database
      * Since: 2.19
@@ -1200,8 +1295,8 @@ public interface ComponentsBuilderFactory {
         return DebeziumOracleComponentBuilderFactory.debeziumOracle();
     }
     /**
-     * Debezium PostgresSQL Connector (camel-debezium-postgres)
-     * Capture changes from a PostgresSQL database.
+     * Debezium PostgreSQL Connector (camel-debezium-postgres)
+     * Capture changes from a PostgreSQL database.
      * 
      * Category: database
      * Since: 3.0
@@ -1429,7 +1524,7 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * Elasticsearch (camel-elasticsearch)
-     * Send requests to ElasticSearch via Java Client API.
+     * Send requests to Elasticsearch via Java Client API.
      * 
      * Category: search,monitoring
      * Since: 3.19
@@ -1453,6 +1548,20 @@ public interface ComponentsBuilderFactory {
      */
     static ElasticsearchRestClientComponentBuilderFactory.ElasticsearchRestClientComponentBuilder elasticsearchRestClient() {
         return ElasticsearchRestClientComponentBuilderFactory.elasticsearchRestClient();
+    }
+    /**
+     * Event (camel-event)
+     * Subscribe to Camel internal events such as route started/stopped and
+     * exchange completed/failed.
+     * 
+     * Category: core,monitoring
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-event
+     * 
+     * @return the dsl builder
+     */
+    static EventComponentBuilderFactory.EventComponentBuilder event() {
+        return EventComponentBuilderFactory.event();
     }
     /**
      * Exec (camel-exec)
@@ -1629,17 +1738,17 @@ public interface ComponentsBuilderFactory {
         return GitComponentBuilderFactory.git();
     }
     /**
-     * GitHub (camel-github)
+     * GitHub2 (camel-github2)
      * Interact with the GitHub API.
      * 
      * Category: file,cloud,api
-     * Since: 2.15
-     * Maven coordinates: org.apache.camel:camel-github
+     * Since: 4.18
+     * Maven coordinates: org.apache.camel:camel-github2
      * 
      * @return the dsl builder
      */
-    static GithubComponentBuilderFactory.GithubComponentBuilder github() {
-        return GithubComponentBuilderFactory.github();
+    static Github2ComponentBuilderFactory.Github2ComponentBuilder github2() {
+        return Github2ComponentBuilderFactory.github2();
     }
     /**
      * Google BigQuery (camel-google-bigquery)
@@ -1707,6 +1816,19 @@ public interface ComponentsBuilderFactory {
         return GoogleDriveComponentBuilderFactory.googleDrive();
     }
     /**
+     * Google Firestore (camel-google-firestore)
+     * Store and retrieve data from Google Cloud Firestore NoSQL database.
+     * 
+     * Category: cloud,database
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-google-firestore
+     * 
+     * @return the dsl builder
+     */
+    static GoogleFirestoreComponentBuilderFactory.GoogleFirestoreComponentBuilder googleFirestore() {
+        return GoogleFirestoreComponentBuilderFactory.googleFirestore();
+    }
+    /**
      * Google Cloud Functions (camel-google-functions)
      * Manage and invoke Google Cloud Functions
      * 
@@ -1759,20 +1881,6 @@ public interface ComponentsBuilderFactory {
         return GooglePubsubComponentBuilderFactory.googlePubsub();
     }
     /**
-     * Google PubSub Lite (camel-google-pubsub-lite)
-     * Send and receive messages to/from Google Cloud Platform PubSub Lite
-     * Service.
-     * 
-     * Category: cloud,messaging
-     * Since: 4.6
-     * Maven coordinates: org.apache.camel:camel-google-pubsub-lite
-     * 
-     * @return the dsl builder
-     */
-    static GooglePubsubLiteComponentBuilderFactory.GooglePubsubLiteComponentBuilder googlePubsubLite() {
-        return GooglePubsubLiteComponentBuilderFactory.googlePubsubLite();
-    }
-    /**
      * Google Secret Manager (camel-google-secret-manager)
      * Manage Google Secret Manager Secrets
      * 
@@ -1812,6 +1920,19 @@ public interface ComponentsBuilderFactory {
         return GoogleSheetsStreamComponentBuilderFactory.googleSheetsStream();
     }
     /**
+     * Google Cloud Speech To Text (camel-google-speech-to-text)
+     * Transcribe audio to text using Google Cloud Speech-to-Text API
+     * 
+     * Category: cloud,ai
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-google-speech-to-text
+     * 
+     * @return the dsl builder
+     */
+    static GoogleSpeechToTextComponentBuilderFactory.GoogleSpeechToTextComponentBuilder googleSpeechToText() {
+        return GoogleSpeechToTextComponentBuilderFactory.googleSpeechToText();
+    }
+    /**
      * Google Storage (camel-google-storage)
      * Store and retrieve objects from Google Cloud Storage Service using the
      * google-cloud-storage library.
@@ -1824,6 +1945,19 @@ public interface ComponentsBuilderFactory {
      */
     static GoogleStorageComponentBuilderFactory.GoogleStorageComponentBuilder googleStorage() {
         return GoogleStorageComponentBuilderFactory.googleStorage();
+    }
+    /**
+     * Google Cloud Text To Speech (camel-google-text-to-speech)
+     * Synthesize speech from text using the Google Cloud Text-to-Speech API
+     * 
+     * Category: cloud,ai
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-google-text-to-speech
+     * 
+     * @return the dsl builder
+     */
+    static GoogleTextToSpeechComponentBuilderFactory.GoogleTextToSpeechComponentBuilder googleTextToSpeech() {
+        return GoogleTextToSpeechComponentBuilderFactory.googleTextToSpeech();
     }
     /**
      * Google Vertex AI (camel-google-vertexai)
@@ -1839,18 +1973,18 @@ public interface ComponentsBuilderFactory {
         return GoogleVertexaiComponentBuilderFactory.googleVertexai();
     }
     /**
-     * Grape (camel-grape)
-     * Fetch, load and manage additional jars dynamically after Camel Context
-     * was started.
+     * Google Cloud Vision (camel-google-vision)
+     * Detect labels, text, faces, logos and more on images through Google Cloud
+     * Vision API
      * 
-     * Category: management
-     * Since: 2.16
-     * Maven coordinates: org.apache.camel:camel-grape
+     * Category: cloud,ai
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-google-vision
      * 
      * @return the dsl builder
      */
-    static GrapeComponentBuilderFactory.GrapeComponentBuilder grape() {
-        return GrapeComponentBuilderFactory.grape();
+    static GoogleVisionComponentBuilderFactory.GoogleVisionComponentBuilder googleVision() {
+        return GoogleVisionComponentBuilderFactory.googleVision();
     }
     /**
      * GraphQL (camel-graphql)
@@ -1879,21 +2013,8 @@ public interface ComponentsBuilderFactory {
         return GrpcComponentBuilderFactory.grpc();
     }
     /**
-     * Guava EventBus (camel-guava-eventbus)
-     * Send and receive messages to/from Guava EventBus.
-     * 
-     * Category: messaging
-     * Since: 2.10
-     * Maven coordinates: org.apache.camel:camel-guava-eventbus
-     * 
-     * @return the dsl builder
-     */
-    static GuavaEventbusComponentBuilderFactory.GuavaEventbusComponentBuilder guavaEventbus() {
-        return GuavaEventbusComponentBuilderFactory.guavaEventbus();
-    }
-    /**
-     * Hashicorp Vault (camel-hashicorp-vault)
-     * Manage secrets in Hashicorp Vault Service
+     * HashiCorp Vault (camel-hashicorp-vault)
+     * Manage secrets in HashiCorp Vault Service
      * 
      * Category: cloud,cloud
      * Since: 3.18
@@ -1969,6 +2090,20 @@ public interface ComponentsBuilderFactory {
      */
     static HazelcastMultimapComponentBuilderFactory.HazelcastMultimapComponentBuilder hazelcastMultimap() {
         return HazelcastMultimapComponentBuilderFactory.hazelcastMultimap();
+    }
+    /**
+     * Hazelcast PN Counter (camel-hazelcast)
+     * Increment, decrement, get, etc. operations on a Hazelcast PN Counter
+     * (CRDT counter).
+     * 
+     * Category: cache,clustering
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-hazelcast
+     * 
+     * @return the dsl builder
+     */
+    static HazelcastPncounterComponentBuilderFactory.HazelcastPncounterComponentBuilder hazelcastPncounter() {
+        return HazelcastPncounterComponentBuilderFactory.hazelcastPncounter();
     }
     /**
      * Hazelcast Queue (camel-hazelcast)
@@ -2074,6 +2209,20 @@ public interface ComponentsBuilderFactory {
      */
     static HttpsComponentBuilderFactory.HttpsComponentBuilder https() {
         return HttpsComponentBuilderFactory.https();
+    }
+    /**
+     * Hugging Face (camel-huggingface)
+     * Integration with Hugging Face's Model Hub by using the Deep Java Library
+     * (DJL) Python bridge
+     * 
+     * Category: ai
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-huggingface
+     * 
+     * @return the dsl builder
+     */
+    static HuggingfaceComponentBuilderFactory.HuggingfaceComponentBuilder huggingface() {
+        return HuggingfaceComponentBuilderFactory.huggingface();
     }
     /**
      * Huawei Distributed Message Service (DMS) (camel-huaweicloud-dms)
@@ -2251,6 +2400,34 @@ public interface ComponentsBuilderFactory {
         return IbmWatsonTextToSpeechComponentBuilderFactory.ibmWatsonTextToSpeech();
     }
     /**
+     * IBM watsonx.ai (camel-ibm-watsonx-ai)
+     * Interact with IBM watsonx.ai foundation models for text generation, chat,
+     * embeddings, and more.
+     * 
+     * Category: ai,cloud
+     * Since: 4.18
+     * Maven coordinates: org.apache.camel:camel-ibm-watsonx-ai
+     * 
+     * @return the dsl builder
+     */
+    static IbmWatsonxAiComponentBuilderFactory.IbmWatsonxAiComponentBuilder ibmWatsonxAi() {
+        return IbmWatsonxAiComponentBuilderFactory.ibmWatsonxAi();
+    }
+    /**
+     * IBM watsonx.data (camel-ibm-watsonx-data)
+     * Interact with IBM watsonx.data lakehouse for catalog, schema, table, and
+     * engine management.
+     * 
+     * Category: cloud,database
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-ibm-watsonx-data
+     * 
+     * @return the dsl builder
+     */
+    static IbmWatsonxDataComponentBuilderFactory.IbmWatsonxDataComponentBuilder ibmWatsonxData() {
+        return IbmWatsonxDataComponentBuilderFactory.ibmWatsonxData();
+    }
+    /**
      * IEC 60870 Client (camel-iec60870)
      * IEC 60870 supervisory control and data acquisition (SCADA) client using
      * NeoSCADA implementation.
@@ -2280,10 +2457,10 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * Iggy (camel-iggy)
-     * Camel Iggy component
+     * Send and receive message to Apache Iggy streaming platform.
      * 
      * Category: messaging
-     * Since: 4.14
+     * Since: 4.17
      * Maven coordinates: org.apache.camel:camel-iggy
      * 
      * @return the dsl builder
@@ -2465,7 +2642,7 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * IRC (camel-irc)
-     * Send and receive messages to/from and IRC chat.
+     * Send and receive messages to/from an IRC chat.
      * 
      * Category: chat
      * Since: 1.1
@@ -3079,7 +3256,7 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * LangChain4j Embedding Store (camel-langchain4j-embeddingstore)
-     * Perform operations on the Langchain4jEmbeddingStores.
+     * Perform operations on the LangChain4jEmbeddingStores.
      * 
      * Category: database,ai
      * Since: 4.14
@@ -3157,7 +3334,7 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * Log Data (camel-log)
-     * Prints data form the routed message (such as body and headers) to the
+     * Prints data from the routed message (such as body and headers) to the
      * logger.
      * 
      * Category: core,monitoring
@@ -3210,7 +3387,7 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * MapStruct (camel-mapstruct)
-     * Type Conversion using Mapstruct
+     * Type Conversion using MapStruct
      * 
      * Category: transformation
      * Since: 3.19
@@ -3329,6 +3506,19 @@ public interface ComponentsBuilderFactory {
      */
     static MinaComponentBuilderFactory.MinaComponentBuilder mina() {
         return MinaComponentBuilderFactory.mina();
+    }
+    /**
+     * MINA SFTP (camel-mina-sftp)
+     * Upload and download files to/from SFTP servers using Apache MINA SSHD.
+     * 
+     * Category: file
+     * Since: 4.18
+     * Maven coordinates: org.apache.camel:camel-mina-sftp
+     * 
+     * @return the dsl builder
+     */
+    static MinaSftpComponentBuilderFactory.MinaSftpComponentBuilder minaSftp() {
+        return MinaSftpComponentBuilderFactory.minaSftp();
     }
     /**
      * Minio (camel-minio)
@@ -3502,19 +3692,6 @@ public interface ComponentsBuilderFactory {
         return NettyHttpComponentBuilderFactory.nettyHttp();
     }
     /**
-     * Nitrite (camel-nitrite)
-     * Access Nitrite databases.
-     * 
-     * Category: database
-     * Since: 3.0
-     * Maven coordinates: org.apache.camel:camel-nitrite
-     * 
-     * @return the dsl builder
-     */
-    static NitriteComponentBuilderFactory.NitriteComponentBuilder nitrite() {
-        return NitriteComponentBuilderFactory.nitrite();
-    }
-    /**
      * OAI-PMH (camel-oaipmh)
      * Harvest metadata using OAI-PMH protocol
      * 
@@ -3555,7 +3732,8 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * Once (camel-once)
-     * Camel Once component
+     * Trigger a single message only once at startup (useful for development and
+     * testing purposes).
      * 
      * Category: core,scheduling
      * Since: 4.17
@@ -3565,6 +3743,19 @@ public interface ComponentsBuilderFactory {
      */
     static OnceComponentBuilderFactory.OnceComponentBuilder once() {
         return OnceComponentBuilderFactory.once();
+    }
+    /**
+     * OpenAI (camel-openai)
+     * OpenAI endpoint for chat completion, embeddings, and audio transcription.
+     * 
+     * Category: ai
+     * Since: 4.17
+     * Maven coordinates: org.apache.camel:camel-openai
+     * 
+     * @return the dsl builder
+     */
+    static OpenaiComponentBuilderFactory.OpenaiComponentBuilder openai() {
+        return OpenaiComponentBuilderFactory.openai();
     }
     /**
      * OpenSearch (camel-opensearch)
@@ -3764,7 +3955,7 @@ public interface ComponentsBuilderFactory {
         return PdfComponentBuilderFactory.pdf();
     }
     /**
-     * PostgresSQL Replication Slot (camel-pg-replication-slot)
+     * PostgreSQL Replication Slot (camel-pg-replication-slot)
      * Poll for PostgreSQL Write-Ahead Log (WAL) records using Streaming
      * Replication Slots.
      * 
@@ -3778,7 +3969,7 @@ public interface ComponentsBuilderFactory {
         return PgReplicationSlotComponentBuilderFactory.pgReplicationSlot();
     }
     /**
-     * PostgresSQL Event (camel-pgevent)
+     * PostgreSQL Event (camel-pgevent)
      * Send and receive PostgreSQL events via LISTEN and NOTIFY commands.
      * 
      * Category: database
@@ -3789,6 +3980,19 @@ public interface ComponentsBuilderFactory {
      */
     static PgeventComponentBuilderFactory.PgeventComponentBuilder pgevent() {
         return PgeventComponentBuilderFactory.pgevent();
+    }
+    /**
+     * PGVector (camel-pgvector)
+     * Perform operations on the PostgreSQL pgvector Vector Database.
+     * 
+     * Category: database,ai
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-pgvector
+     * 
+     * @return the dsl builder
+     */
+    static PgvectorComponentBuilderFactory.PgvectorComponentBuilder pgvector() {
+        return PgvectorComponentBuilderFactory.pgvector();
     }
     /**
      * Pinecone (camel-pinecone)
@@ -3993,7 +4197,7 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * REST OpenApi (camel-rest-openapi)
-     * To call REST services using OpenAPI specification as contract.
+     * To call and expose REST services using OpenAPI specification as contract.
      * 
      * Category: rest,api
      * Since: 3.1
@@ -4137,20 +4341,6 @@ public interface ComponentsBuilderFactory {
         return SedaComponentBuilderFactory.seda();
     }
     /**
-     * Service (camel-service)
-     * Register a Camel endpoint to a Service Registry (such as Consul, Etcd)
-     * and delegate to it.
-     * 
-     * Category: cloud
-     * Since: 2.22
-     * Maven coordinates: org.apache.camel:camel-service
-     * 
-     * @return the dsl builder
-     */
-    static ServiceComponentBuilderFactory.ServiceComponentBuilder service() {
-        return ServiceComponentBuilderFactory.service();
-    }
-    /**
      * ServiceNow (camel-servicenow)
      * Interact with ServiceNow via its REST API.
      * 
@@ -4188,6 +4378,19 @@ public interface ComponentsBuilderFactory {
      */
     static SftpComponentBuilderFactory.SftpComponentBuilder sftp() {
         return SftpComponentBuilderFactory.sftp();
+    }
+    /**
+     * Shell (camel-shell)
+     * Camel Shell component
+     * 
+     * Category: api
+     * Since: 4.21
+     * Maven coordinates: org.apache.camel:camel-shell
+     * 
+     * @return the dsl builder
+     */
+    static ShellComponentBuilderFactory.ShellComponentBuilder shell() {
+        return ShellComponentBuilderFactory.shell();
     }
     /**
      * Simple JMS (camel-sjms)
@@ -4392,6 +4595,19 @@ public interface ComponentsBuilderFactory {
         return SpringAiEmbeddingsComponentBuilderFactory.springAiEmbeddings();
     }
     /**
+     * Spring AI Image (camel-spring-ai-image)
+     * Spring AI Image Generation
+     * 
+     * Category: ai
+     * Since: 4.19
+     * Maven coordinates: org.apache.camel:camel-spring-ai-image
+     * 
+     * @return the dsl builder
+     */
+    static SpringAiImageComponentBuilderFactory.SpringAiImageComponentBuilder springAiImage() {
+        return SpringAiImageComponentBuilderFactory.springAiImage();
+    }
+    /**
      * Spring AI Tools (camel-spring-ai-tools)
      * Spring AI Tools and Function Calling Features
      * 
@@ -4575,20 +4791,6 @@ public interface ComponentsBuilderFactory {
         return StitchComponentBuilderFactory.stitch();
     }
     /**
-     * Stomp (camel-stomp)
-     * Send and receive messages to/from STOMP (Simple Text Oriented Messaging
-     * Protocol) compliant message brokers.
-     * 
-     * Category: messaging
-     * Since: 2.12
-     * Maven coordinates: org.apache.camel:camel-stomp
-     * 
-     * @return the dsl builder
-     */
-    static StompComponentBuilderFactory.StompComponentBuilder stomp() {
-        return StompComponentBuilderFactory.stomp();
-    }
-    /**
      * Stream (camel-stream)
      * Read from system-in and write to system-out and system-err streams.
      * 
@@ -4616,7 +4818,7 @@ public interface ComponentsBuilderFactory {
     }
     /**
      * Stripe (camel-stripe)
-     * Camel Stripe component
+     * Interact with the Stripe payment platform.
      * 
      * Category: saas,finance
      * Since: 4.17
@@ -4745,20 +4947,6 @@ public interface ComponentsBuilderFactory {
      */
     static TimerComponentBuilderFactory.TimerComponentBuilder timer() {
         return TimerComponentBuilderFactory.timer();
-    }
-    /**
-     * TorchServe (camel-torchserve)
-     * Provide access to PyTorch TorchServe servers to run inference with
-     * PyTorch models remotely
-     * 
-     * Category: ai
-     * Since: 4.9
-     * Maven coordinates: org.apache.camel:camel-torchserve
-     * 
-     * @return the dsl builder
-     */
-    static TorchserveComponentBuilderFactory.TorchserveComponentBuilder torchserve() {
-        return TorchserveComponentBuilderFactory.torchserve();
     }
     /**
      * Twilio (camel-twilio)

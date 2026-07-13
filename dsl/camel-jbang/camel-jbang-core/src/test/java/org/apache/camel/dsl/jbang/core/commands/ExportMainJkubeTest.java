@@ -21,8 +21,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.stream.Stream;
 
@@ -46,8 +44,7 @@ class ExportMainJkubeTest {
 
     @BeforeEach
     public void setup() throws IOException {
-        Path base = Paths.get("target");
-        workingDir = Files.createTempDirectory(base, "camel-export").toFile();
+        workingDir = Files.createTempDirectory("camel-export").toFile();
     }
 
     @AfterEach
@@ -71,7 +68,9 @@ class ExportMainJkubeTest {
 
         Export command = new Export(new CamelJBangMain());
         CommandLine.populateCommand(command, "--gav=examples:route:1.0.0", "--dir=" + workingDir,
-                "--runtime=%s".formatted(rt.runtime()), "target/test-classes/route.yaml");
+                "--runtime=%s".formatted(rt.runtime()),
+                CamelCommandBaseTestSupport.quarkusExtRegistry(),
+                "target/test-classes/route.yaml");
         int exit = command.doCall();
 
         Assertions.assertEquals(0, exit);
@@ -85,14 +84,14 @@ class ExportMainJkubeTest {
                 model.getProperties().getProperty("jib.from.image"));
 
         // should contain jib and jkube plugin
-        Assertions.assertEquals(5, model.getBuild().getPlugins().size());
-        Plugin p = model.getBuild().getPlugins().get(3);
+        Assertions.assertEquals(7, model.getBuild().getPlugins().size());
+        Plugin p = model.getBuild().getPlugins().get(5);
         Assertions.assertEquals("com.google.cloud.tools", p.getGroupId());
         Assertions.assertEquals("jib-maven-plugin", p.getArtifactId());
-        p = model.getBuild().getPlugins().get(4);
+        p = model.getBuild().getPlugins().get(6);
         Assertions.assertEquals("org.eclipse.jkube", p.getGroupId());
         Assertions.assertEquals("kubernetes-maven-plugin", p.getArtifactId());
-        Assertions.assertEquals("1.18.1", p.getVersion());
+        Assertions.assertEquals("1.19.0", p.getVersion());
 
         command.printConfigurationValues("export command");
     }

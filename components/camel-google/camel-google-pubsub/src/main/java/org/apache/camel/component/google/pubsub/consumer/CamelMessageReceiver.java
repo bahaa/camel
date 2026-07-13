@@ -16,8 +16,11 @@
  */
 package org.apache.camel.component.google.pubsub.consumer;
 
+import java.util.List;
+
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.cloud.pubsub.v1.MessageReceiver;
+import com.google.cloud.pubsub.v1.Subscriber;
 import com.google.common.base.Strings;
 import com.google.pubsub.v1.PubsubMessage;
 import org.apache.camel.Exchange;
@@ -26,6 +29,8 @@ import org.apache.camel.component.google.pubsub.GooglePubsubConstants;
 import org.apache.camel.component.google.pubsub.GooglePubsubConsumer;
 import org.apache.camel.component.google.pubsub.GooglePubsubEndpoint;
 import org.apache.camel.spi.HeaderFilterStrategy;
+import org.apache.camel.spi.Synchronization;
+import org.apache.camel.support.UnitOfWorkHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +69,21 @@ public class CamelMessageReceiver implements MessageReceiver {
         // Deprecated: replaced by headerFilterStrategy
         exchange.getIn().setHeader(GooglePubsubConstants.ATTRIBUTES, pubsubMessage.getAttributesMap());
 
+        // Delivery attempt (requires dead-letter policy on subscription)
+        Integer deliveryAttempt = Subscriber.getDeliveryAttempt(pubsubMessage);
+        if (deliveryAttempt != null) {
+            exchange.getIn().setHeader(GooglePubsubConstants.DELIVERY_ATTEMPT, deliveryAttempt);
+        }
+
+        // Enforce maxDeliveryAttempts: nack without processing if limit reached
+        int maxDeliveryAttempts = consumer.getResolvedMaxDeliveryAttempts();
+        if (maxDeliveryAttempts > 0 && deliveryAttempt != null && deliveryAttempt >= maxDeliveryAttempts) {
+            localLog.info("Message {} has reached max delivery attempts ({}/{}), nacking to route to dead-letter topic",
+                    pubsubMessage.getMessageId(), deliveryAttempt, maxDeliveryAttempts);
+            ackReplyConsumer.nack();
+            return;
+        }
+
         GooglePubsubAcknowledge acknowledge = new AcknowledgeAsync(ackReplyConsumer);
         if (endpoint.getAckMode() != GooglePubsubConstants.AckMode.NONE) {
             exchange.getExchangeExtension().addOnCompletion(new AcknowledgeCompletion(acknowledge));
@@ -81,13 +101,29 @@ public class CamelMessageReceiver implements MessageReceiver {
             exchange.getIn().setHeader(pubSubHeader, value);
         }
 
+        consumer.incrementPendingExchanges();
         try {
-            processor.process(exchange);
-        } catch (Exception e) {
-            exchange.setException(e);
-        }
-        if (exchange.getException() != null) {
-            consumer.getExceptionHandler().handleException(exchange.getException());
+            try {
+                processor.process(exchange);
+            } catch (Exception e) {
+                exchange.setException(e);
+            }
+
+            // Handle exception if one occurred
+            if (exchange.getException() != null) {
+                consumer.getExceptionHandler().handleException("Error processing exchange", exchange,
+                        exchange.getException());
+            }
+
+            // Execute synchronization callbacks (ACK/NACK) based on exchange status
+            // This is required because we are directly calling processor.process() outside of the normal
+            // Camel routing engine, so we must manually trigger the OnCompletion callbacks
+            if (endpoint.getAckMode() != GooglePubsubConstants.AckMode.NONE) {
+                List<Synchronization> synchronizations = exchange.getExchangeExtension().handoverCompletions();
+                UnitOfWorkHelper.doneSynchronizations(exchange, synchronizations);
+            }
+        } finally {
+            consumer.decrementPendingExchanges();
         }
     }
 

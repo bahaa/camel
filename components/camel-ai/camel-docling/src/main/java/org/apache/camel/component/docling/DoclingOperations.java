@@ -29,7 +29,7 @@ public enum DoclingOperations {
     CONVERT_TO_HTML,
 
     /**
-     * Convert document to JSON format with structure
+     * Convert document to JSON format with user-specified or default options.
      */
     CONVERT_TO_JSON,
 
@@ -39,7 +39,10 @@ public enum DoclingOperations {
     EXTRACT_TEXT,
 
     /**
-     * Extract structured data including tables and layout
+     * Extract structured data from a document with table structure recognition enabled by default. Unlike
+     * {@link #CONVERT_TO_JSON} which performs a plain format conversion, this operation enables table structure
+     * recognition by default. Additional enrichment features (code enrichment, formula enrichment, picture
+     * classification) can be enabled via configuration properties.
      */
     EXTRACT_STRUCTURED_DATA,
 
@@ -74,13 +77,26 @@ public enum DoclingOperations {
     BATCH_EXTRACT_TEXT,
 
     /**
-     * Extract structured data from multiple documents in a batch (docling-serve only)
+     * Extract structured data from multiple documents in a batch with table structure recognition enabled
+     * (docling-serve only).
+     *
+     * @see #EXTRACT_STRUCTURED_DATA
      */
     BATCH_EXTRACT_STRUCTURED_DATA,
 
     /**
      * Extract document metadata (author, title, page count, creation date, etc.)
      */
-    EXTRACT_METADATA
+    EXTRACT_METADATA,
+
+    /**
+     * Chunk document using HybridChunker (token-aware, structure-aware) (docling-serve only)
+     */
+    CHUNK_HYBRID,
+
+    /**
+     * Chunk document using HierarchicalChunker (structure-aware) (docling-serve only)
+     */
+    CHUNK_HIERARCHICAL
 
 }

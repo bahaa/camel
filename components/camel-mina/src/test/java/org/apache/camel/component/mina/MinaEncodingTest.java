@@ -25,7 +25,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -36,7 +36,8 @@ public class MinaEncodingTest extends BaseMinaTest {
 
     @Test
     public void testTCPEncodeUTF8InputIsBytes() throws Exception {
-        final String uri = String.format("mina:tcp://localhost:%1$s?encoding=UTF-8&sync=false", getPort());
+        final String uri = String.format(
+                "mina:tcp://localhost:%1$s?encoding=UTF-8&sync=false&objectCodecPattern=[B", getPort());
         context.addRoutes(getBuilder(uri));
 
         MockEndpoint endpoint = getMockEndpoint("mock:result");

@@ -29,20 +29,15 @@ import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.apache.camel.RoutesBuilder;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
 import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class GrpcProxySyncAsyncTest extends CamelTestSupport {
+public class GrpcProxySyncAsyncTest extends GrpcTestSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(GrpcProxySyncAsyncTest.class);
-
-    private static final int GRPC_STUB_PORT = AvailablePortFinder.getNextAvailable();
-    private static final int GRPC_ROUTE_PORT = AvailablePortFinder.getNextAvailable();
 
     private static Server grpcServer;
     private ManagedChannel channel;
@@ -51,8 +46,8 @@ public class GrpcProxySyncAsyncTest extends CamelTestSupport {
 
     @BeforeAll
     public static void beforeAll() throws Exception {
-        grpcServer = ServerBuilder.forPort(GRPC_STUB_PORT).addService(new PingPongImpl()).build().start();
-        LOG.info("gRPC server started on port {}", GRPC_STUB_PORT);
+        grpcServer = ServerBuilder.forPort(0).addService(new PingPongImpl()).build().start();
+        LOG.info("gRPC server started on port {}", grpcServer.getPort());
     }
 
     @AfterAll
@@ -65,7 +60,7 @@ public class GrpcProxySyncAsyncTest extends CamelTestSupport {
 
     @BeforeEach
     public void beforeEach() {
-        channel = ManagedChannelBuilder.forAddress("localhost", GRPC_ROUTE_PORT).usePlaintext().build();
+        channel = ManagedChannelBuilder.forAddress("localhost", getRoutePort("grpc-consumer")).usePlaintext().build();
         stub = PingPongGrpc.newStub(channel);
     }
 
@@ -113,10 +108,10 @@ public class GrpcProxySyncAsyncTest extends CamelTestSupport {
             @Override
             public void configure() throws Exception {
                 onException(Exception.class).process(e -> routeHasException.set(true));
-                from("grpc://localhost:" + GRPC_ROUTE_PORT +
+                from("grpc://localhost:0" +
                      "/org.apache.camel.component.grpc.PingPong" +
-                     "?routeControlledStreamObserver=true")
-                        .toD("grpc://localhost:" + GRPC_STUB_PORT +
+                     "?routeControlledStreamObserver=true").routeId("grpc-consumer")
+                        .toD("grpc://localhost:" + grpcServer.getPort() +
                              "/org.apache.camel.component.grpc.PingPong" +
                              "?method=${header.CamelGrpcMethodName}" +
                              "&streamRepliesTo=direct:next" +

@@ -57,9 +57,9 @@ public class MailProducer extends DefaultAsyncProducer {
             MimeMessage mimeMessage;
 
             final Object body = exchange.getIn().getBody();
-            if (body instanceof MimeMessage) {
+            if (body instanceof MimeMessage mimeMsg) {
                 // Body is directly a MimeMessage
-                mimeMessage = (MimeMessage) body;
+                mimeMessage = mimeMsg;
             } else {
                 // Create a message with exchange data
                 mimeMessage = new MimeMessage(mailSender.getSession());
@@ -87,8 +87,21 @@ public class MailProducer extends DefaultAsyncProducer {
     }
 
     protected JavaMailSender getSender(Exchange exchange) {
-        // do we have special headers
-        Map<String, Object> additional = URISupport.extractProperties(exchange.getMessage().getHeaders(), "mail.smtp.");
+        // dynamic JavaMail session properties from message headers is an opt-in feature; it is disabled by
+        // default because mail.smtp.* / mail.smtps.* is a Camel-internal namespace that is not filtered by
+        // any HeaderFilterStrategy, so an untrusted producer could otherwise weaken transport security or
+        // redirect the SMTP connection (CAMEL-23522)
+        if (!getEndpoint().getConfiguration().isUseJavaMailSessionPropertiesFromHeaders()) {
+            LOG.trace("Using default JavaMailSender (useJavaMailSessionPropertiesFromHeaders=false)");
+            return defaultSender;
+        }
+        // do we have special headers (try both smtp and smtps)
+        String prefix = "mail.smtp.";
+        Map<String, Object> additional = URISupport.extractProperties(exchange.getMessage().getHeaders(), prefix);
+        if (additional.isEmpty()) {
+            prefix = "mail.smtps.";
+            additional = URISupport.extractProperties(exchange.getMessage().getHeaders(), prefix);
+        }
         if (additional.isEmpty()) {
             // no then use default sender
             LOG.trace("Using default JavaMailSender");
@@ -98,10 +111,12 @@ public class MailProducer extends DefaultAsyncProducer {
             LOG.debug("Creating new JavaMailSender to include additional {} java mail properties", additional.size());
             JavaMailSender customSender
                     = getEndpoint().getConfiguration().createJavaMailSender(getEndpoint().getCamelContext());
+            getEndpoint().getConfiguration().configureJavaMailSender(getEndpoint().getCamelContext(), customSender);
+            final String scheme = prefix;
             additional.forEach((k, v) -> {
                 if (v != null) {
                     // add with prefix so we dont loose that
-                    customSender.addAdditionalJavaMailProperty("mail.smtp." + k, v.toString());
+                    customSender.addAdditionalJavaMailProperty(scheme + k, v.toString());
                 }
             });
             return customSender;

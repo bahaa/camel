@@ -69,7 +69,7 @@ public class AWS2S3Endpoint extends ScheduledPollEndpoint implements EndpointSer
                                                          + "org.apache.camel.spi.IdempotentRepository. The in-progress repository is used to account the current in "
                                                          + "progress files being consumed. By default a memory based repository is used.")
     private IdempotentRepository inProgressRepository
-            = MemoryIdempotentRepository.memoryIdempotentRepository(DEFAULT_IN_PROGRESS_CACHE_SIZE);
+            = MemoryIdempotentRepository.memoryIdempotentRepositoryFifo(DEFAULT_IN_PROGRESS_CACHE_SIZE);
 
     public AWS2S3Endpoint(String uri, Component comp, AWS2S3Configuration configuration) {
         super(uri, comp);
@@ -99,7 +99,7 @@ public class AWS2S3Endpoint extends ScheduledPollEndpoint implements EndpointSer
 
     @Override
     public Map<String, String> getServiceMetadata() {
-        if (configuration.getRegion() != null) {
+        if (ObjectHelper.isNotEmpty(configuration.getRegion())) {
             return Map.of("region", configuration.getRegion());
         }
         return null;
@@ -131,12 +131,12 @@ public class AWS2S3Endpoint extends ScheduledPollEndpoint implements EndpointSer
     public void doStart() throws Exception {
         super.doStart();
 
-        s3Client = configuration.getAmazonS3Client() != null
+        s3Client = ObjectHelper.isNotEmpty(configuration.getAmazonS3Client())
                 ? configuration.getAmazonS3Client() : AWS2S3ClientFactory.getS3Client(configuration);
 
         String fileName = getConfiguration().getFileName();
 
-        if (fileName != null) {
+        if (ObjectHelper.isNotEmpty(fileName)) {
             LOG.trace("File name [{}] requested, so skipping bucket check...", fileName);
             return;
         }
@@ -176,7 +176,7 @@ public class AWS2S3Endpoint extends ScheduledPollEndpoint implements EndpointSer
             LOG.trace("Bucket created");
         }
 
-        if (configuration.getPolicy() != null) {
+        if (ObjectHelper.isNotEmpty(configuration.getPolicy())) {
             LOG.trace("Updating bucket [{}] with policy [{}]", bucketName, configuration.getPolicy());
 
             s3Client.putBucketPolicy(
@@ -191,7 +191,7 @@ public class AWS2S3Endpoint extends ScheduledPollEndpoint implements EndpointSer
     @Override
     public void doStop() throws Exception {
         if (ObjectHelper.isEmpty(configuration.getAmazonS3Client())) {
-            if (s3Client != null) {
+            if (ObjectHelper.isNotEmpty(s3Client)) {
                 s3Client.close();
             }
         }

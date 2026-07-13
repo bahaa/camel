@@ -19,11 +19,14 @@ package org.apache.camel.core.xml.util.jsse;
 import jakarta.xml.bind.annotation.XmlAttribute;
 import jakarta.xml.bind.annotation.XmlTransient;
 
+import org.apache.camel.CamelContextAware;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.support.jsse.BaseSSLContextParameters;
 import org.apache.camel.support.jsse.CipherSuitesParameters;
 import org.apache.camel.support.jsse.FilterParameters;
+import org.apache.camel.support.jsse.NamedGroupsParameters;
 import org.apache.camel.support.jsse.SecureSocketProtocolsParameters;
+import org.apache.camel.support.jsse.SignatureSchemesParameters;
 
 @XmlTransient
 public abstract class AbstractBaseSSLContextParametersFactoryBean<T extends BaseSSLContextParameters>
@@ -36,6 +39,14 @@ public abstract class AbstractBaseSSLContextParametersFactoryBean<T extends Base
     private SecureSocketProtocolsParametersDefinition secureSocketProtocols;
 
     private FilterParametersDefinition secureSocketProtocolsFilter;
+
+    private NamedGroupsParametersDefinition namedGroups;
+
+    private FilterParametersDefinition namedGroupsFilter;
+
+    private SignatureSchemesParametersDefinition signatureSchemes;
+
+    private FilterParametersDefinition signatureSchemesFilter;
 
     @XmlAttribute
     @Metadata(description = "The optional SSLSessionContext timeout time for javax.net.ssl.SSLSession in seconds.")
@@ -61,7 +72,7 @@ public abstract class AbstractBaseSSLContextParametersFactoryBean<T extends Base
 
     private T createInstanceInternal() throws Exception {
         T newInstance = createInstance();
-        newInstance.setCamelContext(getCamelContext());
+        CamelContextAware.trySetCamelContext(newInstance, getCamelContext());
 
         if (cipherSuites != null) {
             CipherSuitesParameters cipherSuitesInstance = new CipherSuitesParameters();
@@ -83,6 +94,26 @@ public abstract class AbstractBaseSSLContextParametersFactoryBean<T extends Base
             newInstance.setSecureSocketProtocolsFilter(createFilterParameters(secureSocketProtocolsFilter));
         }
 
+        if (namedGroups != null) {
+            NamedGroupsParameters namedGroupsInstance = new NamedGroupsParameters();
+            namedGroupsInstance.setNamedGroup(namedGroups.getNamedGroup());
+            newInstance.setNamedGroups(namedGroupsInstance);
+        }
+
+        if (namedGroupsFilter != null) {
+            newInstance.setNamedGroupsFilter(createFilterParameters(namedGroupsFilter));
+        }
+
+        if (signatureSchemes != null) {
+            SignatureSchemesParameters signatureSchemesInstance = new SignatureSchemesParameters();
+            signatureSchemesInstance.setSignatureScheme(signatureSchemes.getSignatureScheme());
+            newInstance.setSignatureSchemes(signatureSchemesInstance);
+        }
+
+        if (signatureSchemesFilter != null) {
+            newInstance.setSignatureSchemesFilter(createFilterParameters(signatureSchemesFilter));
+        }
+
         if (sessionTimeout != null) {
             newInstance.setSessionTimeout(sessionTimeout);
         }
@@ -94,7 +125,7 @@ public abstract class AbstractBaseSSLContextParametersFactoryBean<T extends Base
         FilterParameters filter = new FilterParameters();
         filter.getInclude().addAll(definition.getInclude());
         filter.getExclude().addAll(definition.getExclude());
-        filter.setCamelContext(getCamelContext());
+        CamelContextAware.trySetCamelContext(filter, getCamelContext());
 
         return filter;
     }
@@ -129,6 +160,38 @@ public abstract class AbstractBaseSSLContextParametersFactoryBean<T extends Base
 
     public void setSecureSocketProtocolsFilter(FilterParametersDefinition secureSocketProtocolsFilter) {
         this.secureSocketProtocolsFilter = secureSocketProtocolsFilter;
+    }
+
+    public NamedGroupsParametersDefinition getNamedGroups() {
+        return namedGroups;
+    }
+
+    public void setNamedGroups(NamedGroupsParametersDefinition namedGroups) {
+        this.namedGroups = namedGroups;
+    }
+
+    public FilterParametersDefinition getNamedGroupsFilter() {
+        return namedGroupsFilter;
+    }
+
+    public void setNamedGroupsFilter(FilterParametersDefinition namedGroupsFilter) {
+        this.namedGroupsFilter = namedGroupsFilter;
+    }
+
+    public SignatureSchemesParametersDefinition getSignatureSchemes() {
+        return signatureSchemes;
+    }
+
+    public void setSignatureSchemes(SignatureSchemesParametersDefinition signatureSchemes) {
+        this.signatureSchemes = signatureSchemes;
+    }
+
+    public FilterParametersDefinition getSignatureSchemesFilter() {
+        return signatureSchemesFilter;
+    }
+
+    public void setSignatureSchemesFilter(FilterParametersDefinition signatureSchemesFilter) {
+        this.signatureSchemesFilter = signatureSchemesFilter;
     }
 
     public String getSessionTimeout() {

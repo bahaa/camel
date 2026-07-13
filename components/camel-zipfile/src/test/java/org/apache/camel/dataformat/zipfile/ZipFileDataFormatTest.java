@@ -39,13 +39,13 @@ import org.apache.camel.builder.NotifyBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.converter.stream.InputStreamCache;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.util.IOHelper;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.camel.Exchange.FILE_NAME;
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
-import static org.apache.camel.test.junit5.TestSupport.deleteDirectory;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.deleteDirectory;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -325,7 +325,7 @@ public class ZipFileDataFormatTest extends CamelTestSupport {
                 from("direct:dslZip").marshal().zipFile().to("mock:dslZip");
                 from("direct:dslUnzip").unmarshal().zipFile().to("mock:dslUnzip");
                 from("direct:corruptUnzip").unmarshal().zipFile().to("mock:corruptUnzip");
-                from("direct:zipStreamCache").streamCaching().marshal().zipFile().to("mock:zipStreamCache");
+                from("direct:zipStreamCache").streamCache(true).marshal().zipFile().to("mock:zipStreamCache");
 
                 ZipFileDataFormat maxDecompressedSizeZip = new ZipFileDataFormat();
                 // Only allow 10 bytes to be decompressed

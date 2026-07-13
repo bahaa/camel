@@ -40,7 +40,7 @@ URI pattern matching by exact uri, wildcard and regular expression. See further 
 * The intercepted endpoint uri is stored as exchange property with the key
 `Exchange.INTERCEPTED_ENDPOINT`.
 
-=== Interceptors headers
+=== Interceptors metadata
 
 When using Apache Camel interceptors, the framework automatically populates exchange properties with contextual information about where the interception occurred:
 
@@ -61,23 +61,20 @@ Given the following example:
 
 Java::
 +
-
 [source,java]
--------------------------------------------------------------------------
+----
 // global interceptor for all routes
 intercept().to("log:hello");
 
 from("jms:queue:order")
   .to("bean:validateOrder")
   .to("bean:processOrder");
--------------------------------------------------------------------------
+----
 
 XML::
 +
 [source,xml]
 ----
-<camelContext>
-
   <!-- global interceptor for all routes -->
   <intercept>
     <to uri="log:hello"/>
@@ -88,8 +85,24 @@ XML::
     <to uri="bean:validateOrder"/>
     <to uri="bean:processOrder"/>
   </route>
+----
 
-</camelContext>
+YAML::
++
+[source,yaml]
+----
+- intercept:
+    steps:
+      - to:
+          uri: log:hello
+- route:
+    from:
+      uri: jms:queue:order
+      steps:
+        - to:
+            uri: bean:validateOrder
+        - to:
+            uri: bean:processOrder
 ----
 ====
 
@@ -114,7 +127,6 @@ contains the string word Hello:
 
 Java::
 +
-
 [source,java]
 ----
 intercept().onWhen(body().contains("Hello")).to("mock:intercepted");
@@ -126,37 +138,52 @@ from("jms:queue:order")
 
 XML::
 +
-
 [source,xml]
 ----
-<camelContext>
+<intercept>
+  <onWhen>
+      <simple>${body} contains 'Hello'</simple>
+  </onWhen>
+  <to uri="mock:intercepted"/>
+</intercept>
 
-  <intercept>
-      <onWhen>
-          <simple>${in.body} contains 'Hello'</simple>
-      </onWhen>
-      <to uri="mock:intercepted"/>
-  </intercept>
-
-  <route>
-    <from uri="jms:queue:order"/>
-    <to uri="bean:validateOrder"/>
-    <to uri="bean:processOrder"/>
-  </route>
-
-</camelContext>
+<route>
+  <from uri="jms:queue:order"/>
+  <to uri="bean:validateOrder"/>
+  <to uri="bean:processOrder"/>
+</route>
 ----
 
+YAML::
++
+[source,yaml]
+----
+- intercept:
+    onWhen:
+      expression:
+        simple:
+          expression: "${body} contains 'Hello'"
+    steps:
+      - to:
+          uri: log:hello
+- route:
+    from:
+      uri: jms:queue:order
+      steps:
+        - to:
+            uri: bean:validateOrder
+        - to:
+            uri: bean:processOrder
+----
 ====
 
-=== Controlling when to intercept using contextual informations
+=== Controlling when to intercept using contextual information
 
 [tabs]
 ====
 
 Java::
 +
-
 [source,java]
 ----
 intercept().choice()
@@ -168,12 +195,9 @@ intercept().choice()
 
 XML::
 +
-
 [source,xml]
 ----
-<?xml version="1.0" encoding="UTF-8"?>
-<routes xmlns="http://camel.apache.org/schema/spring">
-  <intercept>
+<intercept>
     <choice>
       <when>
         <simple>${header.CamelInterceptedRouteId} == 'criticalRoute'</simple>
@@ -183,27 +207,28 @@ XML::
         <to uri="direct:standardHandling"/>
       </otherwise>
     </choice>
-  </intercept>
-</routes>
+</intercept>
 ----
 
 YAML::
 +
-
-[source,xml]
+[source,yaml]
 ----
 - intercept:
     steps:
       - choice:
           when:
-            - simple: "${header.CamelInterceptedRouteId} == 'criticalRoute'"
+            - expression:
+                simple:
+                  expression: "${header.CamelInterceptedRouteId} == 'criticalRoute'"
               steps:
-                - to: "direct:specialHandling"
+                - to:
+                    uri: direct:specialHandling
           otherwise:
             steps:
-              - to: "direct:standardHandling"
+              - to:
+                  uri: direct:standardHandling
 ----
-
 ====
 
 === Stop routing after being intercepted
@@ -216,7 +241,6 @@ Now suppose that if the message body contains the word Hello we want to log and 
 
 Java::
 +
-
 [source,java]
 ----
 intercept().onWhen(body().contains("Hello"))
@@ -230,11 +254,8 @@ from("jms:queue:order")
 
 XML::
 +
-
 [source,xml]
 ----
-<camelContext>
-
   <intercept>
       <onWhen>
         <simple>${body} contains 'Hello'</simple>
@@ -248,8 +269,29 @@ XML::
     <to uri="bean:validateOrder"/>
     <to uri="bean:processOrder"/>
   </route>
+----
 
-</camelContext>
+YAML::
++
+[source,yaml]
+----
+- intercept:
+    onWhen:
+      expression:
+        simple:
+          expression: "${body} contains 'Hello'"
+    steps:
+      - to:
+          uri: log:test
+      - stop: {}
+- route:
+    from:
+      uri: jms:queue:order
+      steps:
+        - to:
+            uri: bean:validateOrder
+        - to:
+            uri: bean:processOrder
 ----
 
 ====
@@ -273,7 +315,6 @@ xref:ROOT:log-component.adoc[Log] component.
 
 Java::
 +
-
 [source,java]
 ----
 interceptFrom()
@@ -286,24 +327,36 @@ from("jms:queue:order")
 
 XML::
 +
-
 [source,xml]
 ----
-<camelContext>
-
-  <intercept>
+  <interceptFrom>
     <to uri="log:incoming"/>
-  </intercept>
+  </interceptFrom>
 
   <route>
     <from uri="jms:queue:order"/>
     <to uri="bean:validateOrder"/>
     <to uri="bean:processOrder"/>
   </route>
-
-</camelContext>
 ----
 
+YAML::
++
+[source,yaml]
+----
+- interceptFrom:
+    steps:
+      - to:
+          uri: log:incoming
+- route:
+    from:
+      uri: jms:queue:order
+      steps:
+        - to:
+            uri: bean:validateOrder
+        - to:
+            uri: bean:processOrder
+----
 ====
 
 If you want to only apply a specific endpoint, such as all jms endpoints,
@@ -314,7 +367,6 @@ you can do:
 
 Java::
 +
-
 [source,java]
 ----
 interceptFrom("jms*")
@@ -330,11 +382,8 @@ from("file:inbox")
 
 XML::
 +
-
 [source,xml]
 ----
-<camelContext>
-
   <interceptFrom uri="jms*">
     <to uri="log:incoming"/>
   </intercept>
@@ -348,10 +397,32 @@ XML::
     <from uri="file:inbox"/>
     <to uri="ftp:someserver/backup"/>
   </route>
-
-</camelContext>
 ----
 
+YAML::
++
+[source,yaml]
+----
+- interceptFrom:
+    uri: "jms*"
+    steps:
+      - to:
+          uri: log:incoming
+- route:
+    from:
+      uri: jms:queue:order
+      steps:
+        - to:
+            uri: bean:validateOrder
+        - to:
+            uri: bean:processOrder
+- route:
+    from:
+      uri: file:inbox
+      steps:
+        - to:
+            uri: ftp:someserver/backup
+----
 ====
 
 In this example then only messages from the JMS route are intercepted, because
@@ -385,7 +456,6 @@ message is being sent to xref:ROOT:kafka-component.adoc[kafka]:
 
 Java::
 +
-
 [source,java]
 ----
 interceptSendToEndpoint("kafka*")
@@ -399,11 +469,8 @@ from("jms:queue:order")
 
 XML::
 +
-
 [source,xml]
 ----
-<camelContext>
-
   <interceptSendToEndpoint uri="kafka*">
     <to uri="bean:beforeKafka"/>
   </interceptSendToEndpoint>
@@ -414,10 +481,28 @@ XML::
     <to uri="bean:processOrder"/>
     <to uri="kafka:order"/>
   </route>
-
-</camelContext>
 ----
 
+YAML::
++
+[source,yaml]
+----
+- interceptSendToEndpoint:
+    uri: "kafka*"
+    steps:
+      - to:
+          uri: bean:beforeKafka
+- route:
+    from:
+      uri: jms:queue:order
+      steps:
+        - to:
+            uri: bean:validateOrder
+        - to:
+            uri: bean:processOrder
+        - to:
+            uri: kafka:order
+----
 ====
 
 When you also want to process the message after it has been sent to the intended destination,
@@ -428,7 +513,6 @@ then the example is slightly _odd_ because you have to use the `afterUri` as sho
 
 Java::
 +
-
 [source,java]
 ----
 interceptSendToEndpoint("kafka*")
@@ -443,11 +527,8 @@ from("jms:queue:order")
 
 XML::
 +
-
 [source,xml]
 ----
-<camelContext>
-
   <interceptSendToEndpoint uri="kafka*" afterUri="bean:afterKafka">
     <to uri="bean:beforeKafka"/>
   </interceptSendToEndpoint>
@@ -458,10 +539,29 @@ XML::
     <to uri="bean:processOrder"/>
     <to uri="kafka:order"/>
   </route>
-
-</camelContext>
 ----
 
+YAML::
++
+[source,yaml]
+----
+- interceptSendToEndpoint:
+    uri: "kafka*"
+    afterUri: "bean:afterKafka"
+    steps:
+      - to:
+          uri: bean:beforeKafka
+- route:
+    from:
+      uri: jms:queue:order
+      steps:
+        - to:
+            uri: bean:validateOrder
+        - to:
+            uri: bean:processOrder
+        - to:
+            uri: kafka:order
+----
 ====
 
 === Skip sending to original endpoint
@@ -476,7 +576,6 @@ xref:ROOT:mock-component.adoc[mock] endpoint, it can be done as follows:
 
 Java::
 +
-
 [source,java]
 ----
 interceptSendToEndpoint("kafka*").skipSendToOriginalEndpoint()
@@ -490,11 +589,8 @@ from("jms:queue:order")
 
 XML::
 +
-
 [source,xml]
 ----
-<camelContext>
-
   <interceptSendToEndpoint uri="kafka*" skipSendToOriginalEndpoint="true">
     <to uri="mock:kafka"/>
   </interceptSendToEndpoint>
@@ -505,10 +601,29 @@ XML::
     <to uri="bean:processOrder"/>
     <to uri="kafka:order"/>
   </route>
-
-</camelContext>
 ----
 
+YAML::
++
+[source,yaml]
+----
+- interceptSendToEndpoint:
+    uri: "kafka*"
+    skipSendToOriginalEndpoint: true
+    steps:
+      - to:
+          uri: mock:kafka
+- route:
+    from:
+      uri: jms:queue:order
+      steps:
+        - to:
+            uri: bean:validateOrder
+        - to:
+            uri: bean:processOrder
+        - to:
+            uri: kafka:order
+----
 ====
 
 === Conditional skipping sending to endpoint
@@ -522,7 +637,6 @@ want to avoid sending these messages to a downstream kafka system, then this can
 
 Java::
 +
-
 [source,java]
 ----
 interceptSendToEndpoint("kafka*").skipSendToOriginalEndpoint()
@@ -537,11 +651,8 @@ from("jms:queue:order")
 
 XML::
 +
-
 [source,xml]
 ----
-<camelContext>
-
   <interceptSendToEndpoint uri="kafka*" skipSendToOriginalEndpoint="true">
     <onWhen><simple>${header.biztype} == 'TEST'</simple></onWhen>
     <log message="TEST message detected - is NOT send to kafka"/>
@@ -553,10 +664,33 @@ XML::
     <to uri="bean:processOrder"/>
     <to uri="kafka:order"/>
   </route>
-
-</camelContext>
 ----
 
+YAML::
++
+[source,yaml]
+----
+- interceptSendToEndpoint:
+    uri: "kafka*"
+    skipSendToOriginalEndpoint: true
+    onWhen:
+      expression:
+        simple:
+          expression: "${header.biztype} == 'TEST'"
+    steps:
+      - log:
+          message: "TEST message detected - is NOT send to kafka"
+- route:
+    from:
+      uri: jms:queue:order
+      steps:
+        - to:
+            uri: bean:validateOrder
+        - to:
+            uri: bean:processOrder
+        - to:
+            uri: kafka:order
+----
 ====
 
 == Intercepting endpoints using pattern matching
@@ -574,10 +708,37 @@ This matches only a specific endpoint with exactly the same URI.
 
 For example, to intercept messages being sent to a specific JMS queue, you can do:
 
+[tabs]
+====
+
+Java::
++
 [source,java]
--------------------------------------
-interceptSendToEndpoint("jms:queue:cheese").to("log:smelly");
--------------------------------------
+----
+interceptSendToEndpoint("jms:queue:cheese")
+  .to("log:smelly");
+----
+
+XML::
++
+[source,xml]
+----
+  <interceptSendToEndpoint uri="jms:queue:cheese">
+    <to uri="log:smelly"/>
+  </interceptSendToEndpoint>
+----
+
+YAML::
++
+[source,yaml]
+----
+- interceptSendToEndpoint:
+    uri: "jms:queue:cheese"
+    steps:
+      - to:
+          uri: log:smelly
+----
+====
 
 === Intercepting when matching endpoints by wildcard
 
@@ -585,10 +746,37 @@ Match by wildcard allows you to match a range of endpoints or all of a
 given type.
 For instance use `file:*` will match all xref:ROOT:file-component.adoc[file-based] endpoints.
 
+[tabs]
+====
+
+Java::
++
 [source,java]
--------------------------------------
-interceptFrom("file:*").to("log:from-file");
--------------------------------------
+----
+interceptFrom("file:*")
+  .to("log:from-file");
+----
+
+XML::
++
+[source,xml]
+----
+  <interceptFrom uri="file:*">
+    <to uri="log:from-file"/>
+  </interceptFrom>
+----
+
+YAML::
++
+[source,yaml]
+----
+- interceptFrom:
+    uri: "file:*"
+    steps:
+      - to:
+          uri: log:from-file
+----
+====
 
 Match by wildcard works so that the pattern ends with a `\*` and that
 the uri matches if it starts with the same pattern.
@@ -596,10 +784,37 @@ the uri matches if it starts with the same pattern.
 For example, you can be more specific, to only match for files
 from specific folders like:
 
+[tabs]
+====
+
+Java::
++
 [source,java]
-----------------------------------------------------------
-interceptFrom("file:order/inbox/*").to("log:new-file-orders");
-----------------------------------------------------------
+----
+interceptFrom("file:order/inbox/*")
+  .to("log:new-file-orders");
+----
+
+XML::
++
+[source,xml]
+----
+  <interceptFrom uri="file:order/inbox/*">
+    <to uri="log:new-file-orders"/>
+  </interceptFrom>
+----
+
+YAML::
++
+[source,yaml]
+----
+- interceptFrom:
+    uri: "file:order/inbox/*"
+    steps:
+      - to:
+          uri: log:new-file-orders
+----
+====
 
 === Intercepting when matching endpoints by regular expression
 
@@ -607,7 +822,34 @@ Match by regular expression is just like match by wildcard but using
 regex instead. So if we want to intercept incoming messages from gold
 and silver JMS queues, we can do:
 
+[tabs]
+====
+
+Java::
++
 [source,java]
------------------------------------------------------------
-interceptFrom("jms:queue:(gold|silver)").to("seda:handleFast");
------------------------------------------------------------
+----
+interceptFrom("jms:queue:(gold|silver)")
+  .to("seda:handleFast");
+----
+
+XML::
++
+[source,xml]
+----
+  <interceptFrom uri="jms:queue:(gold|silver)">
+    <to uri="seda:handleFast"/>
+  </interceptFrom>
+----
+
+YAML::
++
+[source,yaml]
+----
+- interceptFrom:
+    uri: "jms:queue:(gold|silver)"
+    steps:
+      - to:
+          uri: seda:handleFast
+----
+====

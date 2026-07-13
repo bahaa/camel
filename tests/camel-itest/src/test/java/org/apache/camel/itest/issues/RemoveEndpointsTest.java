@@ -24,12 +24,14 @@ import org.apache.camel.component.jms.JmsComponent;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.itest.utils.extensions.JmsServiceExtension;
 import org.apache.camel.spi.Registry;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@Timeout(60)
 public class RemoveEndpointsTest extends CamelTestSupport {
     @RegisterExtension
     public static JmsServiceExtension jmsServiceExtension = JmsServiceExtension.createExtension();
@@ -64,9 +66,9 @@ public class RemoveEndpointsTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from("direct:foo").to("jms:queue:foo");
-                from("jms:queue:foo").to("mock:jms-queue");
-                from("jms:topic:bar").to("mock:jms-topic");
+                from("direct:foo").to("jms:queue:foo." + RemoveEndpointsTest.class.getSimpleName());
+                from("jms:queue:foo." + RemoveEndpointsTest.class.getSimpleName()).to("mock:jms-queue");
+                from("jms:topic:bar." + RemoveEndpointsTest.class.getSimpleName()).to("mock:jms-topic");
                 from("seda:mem-queue").to("mock:seda-queue");
             }
         };

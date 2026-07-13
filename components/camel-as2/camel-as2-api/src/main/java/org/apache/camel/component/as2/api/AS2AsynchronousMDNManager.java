@@ -44,7 +44,6 @@ import org.apache.hc.core5.http.protocol.HttpProcessorBuilder;
 import org.apache.hc.core5.http.protocol.RequestConnControl;
 import org.apache.hc.core5.http.protocol.RequestContent;
 import org.apache.hc.core5.http.protocol.RequestDate;
-import org.apache.hc.core5.http.protocol.RequestExpectContinue;
 import org.apache.hc.core5.http.protocol.RequestTargetHost;
 import org.apache.hc.core5.http.protocol.RequestUserAgent;
 
@@ -61,12 +60,18 @@ public class AS2AsynchronousMDNManager {
 
     /**
      * The HTTP Context Attribute containing the HTTP request message transporting the EDI message
+     *
+     * @deprecated Use getter method from HttpContext implementation.
      */
+    @Deprecated
     public static final String HTTP_REQUEST = HttpCoreContext.HTTP_REQUEST;
 
     /**
      * The HTTP Context Attribute containing the HTTP response message transporting the EDI message
+     *
+     * @deprecated Use getter method from HttpContext implementation.
      */
+    @Deprecated
     public static final String HTTP_RESPONSE = HttpCoreContext.HTTP_RESPONSE;
 
     /**
@@ -111,7 +116,7 @@ public class AS2AsynchronousMDNManager {
         // Build Processor
         httpProcessor = HttpProcessorBuilder.create().add(new RequestAsynchronousMDN(as2Version, senderFQDN))
                 .add(new RequestTargetHost()).add(new RequestUserAgent(userAgent)).add(new RequestDate())
-                .add(new RequestContent(true)).add(new RequestConnControl()).add(new RequestExpectContinue())
+                .add(new RequestContent(true)).add(new RequestConnControl())
                 .build();
     }
 
@@ -142,7 +147,7 @@ public class AS2AsynchronousMDNManager {
             ClassicHttpRequest request = new BasicClassicHttpRequest("POST", uri);
             request.setHeader(AS2Header.CONTENT_TYPE, contentType);
             AS2HeaderUtils.addAuthorizationHeader(request, userName, password, accessToken);
-            httpContext.setAttribute(HttpCoreContext.HTTP_REQUEST, request);
+            httpContext.setRequest(request);
             multipartMimeEntity.setMainBody(true);
             EntityUtils.setMessageEntity(request, multipartMimeEntity);
 
@@ -153,7 +158,7 @@ public class AS2AsynchronousMDNManager {
             } catch (IOException e) {
                 throw new HttpException("Failed to send http request message", e);
             }
-            httpContext.setAttribute(HTTP_RESPONSE, response);
+            httpContext.setResponse(response);
 
             return httpContext;
         } catch (Exception e) {

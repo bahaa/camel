@@ -31,6 +31,7 @@ import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,18 +67,18 @@ public class ManagedFromRestPlaceholderTest extends ManagementTestSupport {
         assertTrue(xml.contains("</rests>"));
 
         assertTrue(xml.contains(
-                "<param defaultValue=\"1\" dataType=\"integer\" name=\"header_count\" description=\"header param description1\" type=\"header\""));
+                "<param description=\"header param description1\" name=\"header_count\" type=\"header\" defaultValue=\"1\" dataType=\"integer\">"));
         assertTrue(xml.contains(
-                "<param defaultValue=\"b\" name=\"header_letter\" description=\"header param description2\" type=\"query\" collectionFormat=\"multi\" required=\"false\""));
+                "<param description=\"header param description2\" name=\"header_letter\" type=\"query\" defaultValue=\"b\" required=\"false\" collectionFormat=\"multi\">"));
         assertTrue(xml.contains("<value>1</value>"));
         assertTrue(xml.contains("<value>a</value>"));
 
-        assertTrue(xml.contains("<responseMessage code=\"300\" responseModel=\"java.lang.Integer\" message=\"test msg\"/>"));
+        assertTrue(xml.contains("<responseMessage code=\"300\" message=\"test msg\" responseModel=\"java.lang.Integer\"/>"));
 
         String xml2 = (String) mbeanServer.invoke(on, "dumpRoutesAsXml", null, null);
         log.info(xml2);
-        // and we should have rest in the routes that indicate its from a rest dsl
-        assertTrue(xml2.contains("rest=\"true\""));
+        // rest/template/kamelet are @XmlTransient so not in XML dump
+        assertFalse(xml2.contains("rest=\"true\""));
 
         // there should be 3 routes (inlined)
         assertEquals(3, context.getRouteDefinitions().size());

@@ -21,11 +21,11 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.avro.example.Value;
 import org.apache.camel.model.dataformat.AvroLibrary;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AvroMarshalAndUnmarshalTest extends CamelTestSupport {
 
@@ -46,7 +46,7 @@ public class AvroMarshalAndUnmarshalTest extends CamelTestSupport {
 
     @Test
     public void testMarshalAndUnmarshalWithDSL3() {
-        try {
+        assertThrows(Exception.class, () -> {
             context.addRoutes(new RouteBuilder() {
                 @Override
                 public void configure() {
@@ -54,10 +54,7 @@ public class AvroMarshalAndUnmarshalTest extends CamelTestSupport {
                             .to("mock:reverse");
                 }
             });
-            fail("Expect the exception here");
-        } catch (Exception ex) {
-            // expected
-        }
+        }, "Expect the exception here");
     }
 
     private void marshalAndUnmarshal(String inURI, String outURI) throws Exception {

@@ -59,6 +59,35 @@ XML::
 <bean id="normalizer" class="org.apache.camel.processor.MyNormalizer"/>
 ----
 
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:start
+      steps:
+        - choice:
+            when:
+              - expression:
+                  xpath:
+                    expression: /employee
+                steps:
+                  - to:
+                      uri: bean:normalizer
+                      parameters:
+                        method: employeeToPerson
+              - expression:
+                  xpath:
+                    expression: /customer
+                steps:
+                  - to:
+                      uri: bean:normalizer
+                      parameters:
+                        method: customerToPerson
+        - to:
+            uri: mock:result
+----
 ====
 
 In this case, we're using a Java xref:ROOT:bean-component.adoc[Bean] as the normalizer.

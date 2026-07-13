@@ -114,6 +114,10 @@ public class DebeziumSqlserverComponentConfigurer extends PropertyConfigurerSupp
         case "maxQueueSize": getOrCreateConfiguration(target).setMaxQueueSize(property(camelContext, int.class, value)); return true;
         case "maxqueuesizeinbytes":
         case "maxQueueSizeInBytes": getOrCreateConfiguration(target).setMaxQueueSizeInBytes(property(camelContext, long.class, value)); return true;
+        case "memorymanagementschemasclass":
+        case "memoryManagementSchemasClass": getOrCreateConfiguration(target).setMemoryManagementSchemasClass(property(camelContext, java.lang.String.class, value)); return true;
+        case "memorymanagementtablesclass":
+        case "memoryManagementTablesClass": getOrCreateConfiguration(target).setMemoryManagementTablesClass(property(camelContext, java.lang.String.class, value)); return true;
         case "messagekeycolumns":
         case "messageKeyColumns": getOrCreateConfiguration(target).setMessageKeyColumns(property(camelContext, java.lang.String.class, value)); return true;
         case "notificationenabledchannels":
@@ -190,6 +194,8 @@ public class DebeziumSqlserverComponentConfigurer extends PropertyConfigurerSupp
         case "snapshotLockTimeoutMs": getOrCreateConfiguration(target).setSnapshotLockTimeoutMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "snapshotmaxthreads":
         case "snapshotMaxThreads": getOrCreateConfiguration(target).setSnapshotMaxThreads(property(camelContext, int.class, value)); return true;
+        case "snapshotmaxthreadsmultiplier":
+        case "snapshotMaxThreadsMultiplier": getOrCreateConfiguration(target).setSnapshotMaxThreadsMultiplier(property(camelContext, int.class, value)); return true;
         case "snapshotmode":
         case "snapshotMode": getOrCreateConfiguration(target).setSnapshotMode(property(camelContext, java.lang.String.class, value)); return true;
         case "snapshotmodeconfigurationbasedsnapshotdata":
@@ -210,6 +216,8 @@ public class DebeziumSqlserverComponentConfigurer extends PropertyConfigurerSupp
         case "snapshotTablesOrderByRowCount": getOrCreateConfiguration(target).setSnapshotTablesOrderByRowCount(property(camelContext, java.lang.String.class, value)); return true;
         case "sourceinfostructmaker":
         case "sourceinfoStructMaker": getOrCreateConfiguration(target).setSourceinfoStructMaker(property(camelContext, java.lang.String.class, value)); return true;
+        case "statisticsmetricsenabled":
+        case "statisticsMetricsEnabled": getOrCreateConfiguration(target).setStatisticsMetricsEnabled(property(camelContext, boolean.class, value)); return true;
         case "streamingdelayms":
         case "streamingDelayMs": getOrCreateConfiguration(target).setStreamingDelayMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "streamingfetchsize":
@@ -321,6 +329,10 @@ public class DebeziumSqlserverComponentConfigurer extends PropertyConfigurerSupp
         case "maxQueueSize": return int.class;
         case "maxqueuesizeinbytes":
         case "maxQueueSizeInBytes": return long.class;
+        case "memorymanagementschemasclass":
+        case "memoryManagementSchemasClass": return java.lang.String.class;
+        case "memorymanagementtablesclass":
+        case "memoryManagementTablesClass": return java.lang.String.class;
         case "messagekeycolumns":
         case "messageKeyColumns": return java.lang.String.class;
         case "notificationenabledchannels":
@@ -397,6 +409,8 @@ public class DebeziumSqlserverComponentConfigurer extends PropertyConfigurerSupp
         case "snapshotLockTimeoutMs": return long.class;
         case "snapshotmaxthreads":
         case "snapshotMaxThreads": return int.class;
+        case "snapshotmaxthreadsmultiplier":
+        case "snapshotMaxThreadsMultiplier": return int.class;
         case "snapshotmode":
         case "snapshotMode": return java.lang.String.class;
         case "snapshotmodeconfigurationbasedsnapshotdata":
@@ -417,6 +431,8 @@ public class DebeziumSqlserverComponentConfigurer extends PropertyConfigurerSupp
         case "snapshotTablesOrderByRowCount": return java.lang.String.class;
         case "sourceinfostructmaker":
         case "sourceinfoStructMaker": return java.lang.String.class;
+        case "statisticsmetricsenabled":
+        case "statisticsMetricsEnabled": return boolean.class;
         case "streamingdelayms":
         case "streamingDelayMs": return long.class;
         case "streamingfetchsize":
@@ -529,6 +545,10 @@ public class DebeziumSqlserverComponentConfigurer extends PropertyConfigurerSupp
         case "maxQueueSize": return getOrCreateConfiguration(target).getMaxQueueSize();
         case "maxqueuesizeinbytes":
         case "maxQueueSizeInBytes": return getOrCreateConfiguration(target).getMaxQueueSizeInBytes();
+        case "memorymanagementschemasclass":
+        case "memoryManagementSchemasClass": return getOrCreateConfiguration(target).getMemoryManagementSchemasClass();
+        case "memorymanagementtablesclass":
+        case "memoryManagementTablesClass": return getOrCreateConfiguration(target).getMemoryManagementTablesClass();
         case "messagekeycolumns":
         case "messageKeyColumns": return getOrCreateConfiguration(target).getMessageKeyColumns();
         case "notificationenabledchannels":
@@ -605,6 +625,8 @@ public class DebeziumSqlserverComponentConfigurer extends PropertyConfigurerSupp
         case "snapshotLockTimeoutMs": return getOrCreateConfiguration(target).getSnapshotLockTimeoutMs();
         case "snapshotmaxthreads":
         case "snapshotMaxThreads": return getOrCreateConfiguration(target).getSnapshotMaxThreads();
+        case "snapshotmaxthreadsmultiplier":
+        case "snapshotMaxThreadsMultiplier": return getOrCreateConfiguration(target).getSnapshotMaxThreadsMultiplier();
         case "snapshotmode":
         case "snapshotMode": return getOrCreateConfiguration(target).getSnapshotMode();
         case "snapshotmodeconfigurationbasedsnapshotdata":
@@ -625,6 +647,8 @@ public class DebeziumSqlserverComponentConfigurer extends PropertyConfigurerSupp
         case "snapshotTablesOrderByRowCount": return getOrCreateConfiguration(target).getSnapshotTablesOrderByRowCount();
         case "sourceinfostructmaker":
         case "sourceinfoStructMaker": return getOrCreateConfiguration(target).getSourceinfoStructMaker();
+        case "statisticsmetricsenabled":
+        case "statisticsMetricsEnabled": return getOrCreateConfiguration(target).isStatisticsMetricsEnabled();
         case "streamingdelayms":
         case "streamingDelayMs": return getOrCreateConfiguration(target).getStreamingDelayMs();
         case "streamingfetchsize":

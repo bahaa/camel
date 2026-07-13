@@ -33,6 +33,7 @@ import org.apache.camel.test.infra.core.DefaultCamelContextExtension;
 import org.apache.camel.test.infra.core.annotations.RouteFixture;
 import org.apache.camel.test.infra.kafka.services.ContainerLocalAuthKafkaService;
 import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.header.internals.RecordHeader;
@@ -59,9 +60,9 @@ import static org.junit.jupiter.api.Assertions.fail;
  * A KafkaContainer that supports JAAS+SASL based authentication
  */
 @EnabledIfSystemProperties({
-        @EnabledIfSystemProperty(named = "kafka.instance.type", matches = "local-kafka3-container",
-                                 disabledReason = "Requires Kafka 3.x"),
-        @EnabledIfSystemProperty(named = "kafka.instance.type", matches = "kafka", disabledReason = "Requires Kafka 3.x")
+        @EnabledIfSystemProperty(named = "kafka.instance.type", matches = "local-kafka-container",
+                                 disabledReason = "Requires Kafka container"),
+        @EnabledIfSystemProperty(named = "kafka.instance.type", matches = "kafka", disabledReason = "Requires Kafka container")
 })
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class KafkaConsumerAuthIT {
@@ -79,7 +80,7 @@ public class KafkaConsumerAuthIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaConsumerAuthIT.class);
 
-    private org.apache.kafka.clients.producer.KafkaProducer<String, String> producer;
+    private KafkaProducer<String, String> producer;
 
     @BeforeEach
     public void before() {
@@ -91,7 +92,7 @@ public class KafkaConsumerAuthIT {
         props.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
 
         try {
-            producer = new org.apache.kafka.clients.producer.KafkaProducer<>(props);
+            producer = new KafkaProducer<>(props);
         } catch (Exception e) {
             fail(e.getMessage());
         }

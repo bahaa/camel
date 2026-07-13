@@ -22,6 +22,7 @@ import org.apache.camel.health.HealthCheck;
 import org.apache.camel.health.HealthCheckHelper;
 import org.apache.camel.health.WritableHealthCheckRepository;
 import org.apache.camel.support.DefaultProducer;
+import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.URISupport;
 
 /**
@@ -44,6 +45,12 @@ public class Ddb2Producer extends DefaultProducer {
             case BatchGetItems:
                 new BatchGetItemsCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
                 break;
+            case BatchWriteItems:
+                new BatchWriteItemCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
+                break;
+            case BatchExecuteStatement:
+                new BatchExecuteStatementCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
+                break;
             case DeleteItem:
                 new DeleteItemCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
                 break;
@@ -52,6 +59,9 @@ public class Ddb2Producer extends DefaultProducer {
                 break;
             case DescribeTable:
                 new DescribeTableCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
+                break;
+            case ExecuteStatement:
+                new ExecuteStatementCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
                 break;
             case GetItem:
                 new GetItemCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
@@ -64,6 +74,12 @@ public class Ddb2Producer extends DefaultProducer {
                 break;
             case Scan:
                 new ScanCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
+                break;
+            case TransactGetItems:
+                new TransactGetItemsCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
+                break;
+            case TransactWriteItems:
+                new TransactWriteItemsCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
                 break;
             case UpdateItem:
                 new UpdateItemCommand(getEndpoint().getDdbClient(), getConfiguration(), exchange).execute();
@@ -78,7 +94,7 @@ public class Ddb2Producer extends DefaultProducer {
 
     private Ddb2Operations determineOperation(Exchange exchange) {
         Ddb2Operations operation = exchange.getIn().getHeader(Ddb2Constants.OPERATION, Ddb2Operations.class);
-        return operation != null ? operation : getConfiguration().getOperation();
+        return ObjectHelper.isNotEmpty(operation) ? operation : getConfiguration().getOperation();
     }
 
     protected Ddb2Configuration getConfiguration() {
@@ -106,7 +122,7 @@ public class Ddb2Producer extends DefaultProducer {
                 "producers",
                 WritableHealthCheckRepository.class);
 
-        if (healthCheckRepository != null) {
+        if (ObjectHelper.isNotEmpty(healthCheckRepository)) {
             String id = getEndpoint().getId();
             producerHealthCheck = new Db2ProducerHealthCheck(getEndpoint(), id);
             producerHealthCheck.setEnabled(getEndpoint().getComponent().isHealthCheckProducerEnabled());
@@ -116,7 +132,7 @@ public class Ddb2Producer extends DefaultProducer {
 
     @Override
     protected void doStop() throws Exception {
-        if (healthCheckRepository != null && producerHealthCheck != null) {
+        if (ObjectHelper.isNotEmpty(healthCheckRepository) && ObjectHelper.isNotEmpty(producerHealthCheck)) {
             healthCheckRepository.removeHealthCheck(producerHealthCheck);
             producerHealthCheck = null;
         }

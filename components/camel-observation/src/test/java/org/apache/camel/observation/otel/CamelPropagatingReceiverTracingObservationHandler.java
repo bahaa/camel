@@ -22,7 +22,8 @@ import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.PropagatingReceiverTracingObservationHandler;
 import io.micrometer.tracing.propagation.Propagator;
 
-public class CamelPropagatingReceiverTracingObservationHandler<T extends ReceiverContext>
+@Deprecated(since = "4.19.0")
+public class CamelPropagatingReceiverTracingObservationHandler<T extends ReceiverContext<?>>
         extends PropagatingReceiverTracingObservationHandler<T> {
 
     static final String SPAN_DECORATOR_INTERNAL = "camel.micrometer.abstract-internal";

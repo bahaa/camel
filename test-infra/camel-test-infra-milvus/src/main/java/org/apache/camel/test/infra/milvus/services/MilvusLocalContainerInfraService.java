@@ -32,7 +32,7 @@ import org.testcontainers.milvus.MilvusContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @InfraService(service = MilvusInfraService.class,
-              description = "Milvus Vector Database",
+              description = "Milvus is an open source vector database for AI applications",
               serviceAlias = { "milvus" })
 public class MilvusLocalContainerInfraService implements MilvusInfraService, ContainerService<MilvusContainer> {
 
@@ -61,11 +61,11 @@ public class MilvusLocalContainerInfraService implements MilvusInfraService, Con
             public TestInfraMilvusContainer(boolean fixedPort) {
                 super(DockerImageName.parse(imageName).asCompatibleSubstituteFor("milvusdb/milvus"));
                 withStartupTimeout(Duration.ofMinutes(3L));
+                withEnv("DEPLOY_MODE", "STANDALONE");
 
-                if (fixedPort) {
-                    addFixedExposedPort(9091, 9091);
-                    addFixedExposedPort(19530, 19530);
-                }
+                ContainerEnvironmentUtil.configurePorts(this, fixedPort,
+                        ContainerEnvironmentUtil.PortConfig.primary(19530),
+                        ContainerEnvironmentUtil.PortConfig.secondary(9091));
             }
         }
 

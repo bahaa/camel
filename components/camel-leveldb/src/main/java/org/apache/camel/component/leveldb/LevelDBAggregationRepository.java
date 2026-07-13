@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
           description = "Aggregation repository that uses LevelDB to store exchanges.",
           annotations = { "interfaceName=org.apache.camel.spi.AggregationRepository" })
 @Configurer(metadataOnly = true)
+@Deprecated
 public class LevelDBAggregationRepository extends ServiceSupport implements RecoverableAggregationRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(LevelDBAggregationRepository.class);
@@ -71,12 +72,31 @@ public class LevelDBAggregationRepository extends ServiceSupport implements Reco
     private int maximumRedeliveries;
     @Metadata(description = "Sets an optional dead letter channel which exhausted recovered Exchange should be send to.")
     private String deadLetterUri;
-    @Metadata(label = "advanced",
+    @Metadata(label = "advanced", security = "insecure:serialization",
               description = "Whether headers on the Exchange that are Java objects and Serializable should be included and saved to the repository")
     private boolean allowSerializedHeaders;
     @Metadata(label = "advanced",
               description = "To use a custom serializer for LevelDB")
     private LevelDBSerializer serializer;
+
+    /**
+     * Default deserialization filter. Denies {@code java.net.**} and otherwise allows {@code java.**} and
+     * {@code org.apache.camel.**}; applies JEP-290 graph-shape limits ({@code maxdepth}, {@code maxrefs},
+     * {@code maxbytes}) as defense-in-depth against resource-exhaustion payloads.
+     */
+    static final String DEFAULT_DESERIALIZATION_FILTER
+            = "!java.net.**;java.**;org.apache.camel.**;maxdepth=20;maxrefs=10000;maxbytes=10485760;!*";
+
+    @Metadata(label = "advanced",
+              description = "Sets a deserialization filter while reading Object from Aggregation Repository."
+                            + " By default the filter denies java.net.** (to avoid classes whose hash/equals methods perform"
+                            + " network I/O) and otherwise allows all java packages and subpackages and all org.apache.camel"
+                            + " packages and subpackages, while the remaining will be blacklisted and not deserialized."
+                            + " It also applies JEP-290 graph-shape limits (maxdepth, maxrefs, maxbytes) as defense-in-depth"
+                            + " against resource-exhaustion payloads."
+                            + " This parameter should be customized if you're using classes you trust to be deserialized.",
+              defaultValue = DEFAULT_DESERIALIZATION_FILTER)
+    private String deserializationFilter = DEFAULT_DESERIALIZATION_FILTER;
 
     /**
      * Creates an aggregation repository
@@ -142,9 +162,9 @@ public class LevelDBAggregationRepository extends ServiceSupport implements Reco
 
             // only return old exchange if enabled
             if (isReturnOldExchange()) {
-                return codec().unmarshallExchange(camelContext, rc);
+                return codec().unmarshallExchange(camelContext, rc, deserializationFilter);
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeCamelException("Error adding to repository " + repositoryName + " with key " + key, e);
         }
 
@@ -161,9 +181,9 @@ public class LevelDBAggregationRepository extends ServiceSupport implements Reco
             byte[] rc = levelDBFile.getDb().get(lDbKey);
 
             if (rc != null) {
-                answer = codec().unmarshallExchange(camelContext, rc);
+                answer = codec().unmarshallExchange(camelContext, rc, deserializationFilter);
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeCamelException("Error getting key " + key + " from repository " + repositoryName, e);
         }
 
@@ -308,9 +328,9 @@ public class LevelDBAggregationRepository extends ServiceSupport implements Reco
             byte[] rc = levelDBFile.getDb().get(completedLDBKey);
 
             if (rc != null) {
-                answer = codec().unmarshallExchange(camelContext, rc);
+                answer = codec().unmarshallExchange(camelContext, rc, deserializationFilter);
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeCamelException(
                     "Error recovering exchangeId " + exchangeId + " from repository " + repositoryName, e);
         }
@@ -494,6 +514,14 @@ public class LevelDBAggregationRepository extends ServiceSupport implements Reco
 
     public void setSerializer(LevelDBSerializer serializer) {
         this.serializer = serializer;
+    }
+
+    public String getDeserializationFilter() {
+        return deserializationFilter;
+    }
+
+    public void setDeserializationFilter(String deserializationFilter) {
+        this.deserializationFilter = deserializationFilter;
     }
 
     public LevelDBCamelCodec codec() {

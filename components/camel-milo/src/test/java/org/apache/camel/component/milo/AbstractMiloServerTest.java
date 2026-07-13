@@ -27,9 +27,10 @@ import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.component.milo.server.MiloServerComponent;
 import org.apache.camel.component.mock.AssertionClause;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.opentest4j.AssertionFailedError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,15 +44,25 @@ public abstract class AbstractMiloServerTest extends CamelTestSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractMiloServerTest.class);
 
-    private int serverPort;
+    // Password with special characters (@ $ ? & / # % (URL escaped: %25) . : * and non-ASCII ö) to verify
+    // that the credential parser handles delimiters and URI-sensitive chars correctly
+    protected static final String SPECIAL_CHAR_CREDENTIAL = "pass@$?&/#%25.:*wörd3";
 
-    @Override
-    protected void doPreSetup() throws Exception {
-        this.serverPort = AvailablePortFinder.getNextAvailable();
-    }
+    // Username with special characters ($ and non-ASCII ü) to verify that usernames
+    // containing non-alphanumeric and non-ASCII characters are parsed correctly
+    protected static final String SPECIAL_CHAR_USER = "üs$er4";
+
+    // Comma-separated "user:pass" pairs: two plain, one with special-char password and special-char username
+    private static final String TEST_CREDENTIALS = String.join(",",
+            "foo:bar",
+            "foo2:bar2",
+            SPECIAL_CHAR_USER + ":" + SPECIAL_CHAR_CREDENTIAL);
+
+    @RegisterExtension
+    AvailablePortFinder.Port serverPortHolder = AvailablePortFinder.find();
 
     public int getServerPort() {
-        return this.serverPort;
+        return serverPortHolder.getPort();
     }
 
     protected boolean isAddServer() {
@@ -69,7 +80,7 @@ public abstract class AbstractMiloServerTest extends CamelTestSupport {
             return uri;
         }
 
-        return uri.replace("@@port@@", Integer.toString(this.serverPort));
+        return uri.replace("@@port@@", Integer.toString(getServerPort()));
     }
 
     public static void testBody(final AssertionClause clause, final Consumer<DataValue> valueConsumer) {
@@ -111,8 +122,8 @@ public abstract class AbstractMiloServerTest extends CamelTestSupport {
 
     protected void configureMiloServer(final MiloServerComponent server) throws Exception {
         server.setBindAddresses("localhost");
-        server.setPort(this.serverPort);
-        server.setUserAuthenticationCredentials("foo:bar,foo2:bar2");
+        server.setPort(getServerPort());
+        server.setUserAuthenticationCredentials(TEST_CREDENTIALS);
         server.setUsernameSecurityPolicyUri(SecurityPolicy.None);
         server.setSecurityPoliciesById("None");
         server.setEnableAnonymousAuthentication(true);

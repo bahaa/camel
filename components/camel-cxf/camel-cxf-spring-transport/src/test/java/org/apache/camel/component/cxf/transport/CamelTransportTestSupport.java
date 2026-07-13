@@ -19,7 +19,7 @@ package org.apache.camel.component.cxf.transport;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.cxf.Bus;
 import org.apache.cxf.BusFactory;
 import org.apache.cxf.message.Exchange;
@@ -45,7 +45,7 @@ public abstract class CamelTransportTestSupport extends CamelTestSupport {
     protected Message inMessage;
 
     @Override
-    public void doPostSetup() {
+    public void setupResources() {
         BusFactory bf = BusFactory.newInstance();
         //setup the camel transport for the bus
         bus = bf.createBus();
@@ -61,7 +61,7 @@ public abstract class CamelTransportTestSupport extends CamelTestSupport {
     }
 
     @Override
-    public void doPostTearDown() {
+    public void cleanupResources() {
         bus.shutdown(true);
     }
 

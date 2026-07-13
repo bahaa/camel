@@ -20,7 +20,7 @@ import javax.xml.xpath.XPathFactory;
 
 import net.sf.saxon.xpath.XPathFactoryImpl;
 import org.apache.camel.language.xpath.XPathBuilder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
@@ -63,7 +63,7 @@ public class XPathTest extends CamelTestSupport {
     public void testXPathFunctionTokenizeUsingSaxonXPathFactory() {
         // START SNIPPET: e1
         // create a Saxon factory
-        XPathFactory fac = new net.sf.saxon.xpath.XPathFactoryImpl();
+        XPathFactory fac = new XPathFactoryImpl();
 
         // create a builder to evaluate the xpath using the saxon factory
         XPathBuilder builder = XPathBuilder.xpath("tokenize(/foo/bar, '_')[2]").factory(fac);

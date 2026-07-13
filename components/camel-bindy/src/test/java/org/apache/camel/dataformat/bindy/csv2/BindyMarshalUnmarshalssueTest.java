@@ -20,7 +20,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.bindy.csv.BindyCsvDataFormat;
 import org.apache.camel.model.dataformat.BindyType;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,11 +56,11 @@ public class BindyMarshalUnmarshalssueTest extends CamelTestSupport {
             @Override
             public void configure() {
                 from("direct:start")
-                        .marshal().bindy(BindyType.Csv, org.apache.camel.dataformat.bindy.csv2.WeatherModel.class)
+                        .marshal().bindy(BindyType.Csv, WeatherModel.class)
                         .to("direct:middle");
 
                 from("direct:middle")
-                        .unmarshal(new BindyCsvDataFormat(org.apache.camel.dataformat.bindy.csv2.WeatherModel.class))
+                        .unmarshal(new BindyCsvDataFormat(WeatherModel.class))
                         .to("mock:result");
             }
         };

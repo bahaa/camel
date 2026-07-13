@@ -25,7 +25,6 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.is;
 
 public class VertxPlatformServerRequestValidationTest {
-
     @Test
     void testServerRequestFalse() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -50,7 +49,7 @@ public class VertxPlatformServerRequestValidationTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .body("<hello>World</hello>")
@@ -97,7 +96,7 @@ public class VertxPlatformServerRequestValidationTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .body("<hello>World</hello>")

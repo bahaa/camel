@@ -16,6 +16,7 @@
  */
 package org.apache.camel.component.infinispan.remote;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +30,6 @@ import org.apache.camel.component.infinispan.InfinispanConstants;
 import org.apache.camel.component.infinispan.InfinispanOperation;
 import org.apache.camel.component.infinispan.remote.embeddingstore.EmbeddingStoreUtil;
 import org.apache.camel.spi.DataType;
-import org.apache.commons.lang3.SystemUtils;
 import org.awaitility.Awaitility;
 import org.infinispan.api.annotations.indexing.option.VectorSimilarity;
 import org.infinispan.client.hotrod.RemoteCacheManager;
@@ -65,6 +65,7 @@ public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSuppor
                 .withBody(embedding)
                 .send();
 
+        @SuppressWarnings("unchecked")
         List<Object> results = fluentTemplate.toF("direct:query")
                 .withBody(embedding)
                 .request(List.class);
@@ -75,48 +76,44 @@ public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSuppor
     public void dimensionUnspecifiedThrowsException() throws Exception {
         assertThrows(IllegalArgumentException.class, () -> {
             InfinispanRemoteConfiguration configuration = new InfinispanRemoteConfiguration();
-            new InfinispanRemoteManager(context, configuration).start();
+            try (InfinispanRemoteManager manager = new InfinispanRemoteManager(context, configuration)) {
+                manager.start();
+            }
         });
     }
 
     @Test
-    public void embeddingStoreDisabled() {
+    public void embeddingStoreDisabled() throws IOException {
         InfinispanRemoteConfiguration configuration = createInfinispanRemoteConfiguration();
         configuration.setEmbeddingStoreEnabled(false);
 
-        InfinispanRemoteManager manager = new InfinispanRemoteManager(context, configuration);
-        try {
+        try (InfinispanRemoteManager manager = new InfinispanRemoteManager(context, configuration)) {
             manager.start();
 
             Optional<Schema> metadata
                     = cacheContainer.administration().schemas().get(EmbeddingStoreUtil.getSchemeFileName(configuration));
             assertTrue(metadata.isEmpty());
-        } finally {
-            manager.stop();
         }
     }
 
     @Test
-    public void registerSchemaDisabled() {
+    public void registerSchemaDisabled() throws IOException {
         InfinispanRemoteConfiguration configuration = createInfinispanRemoteConfiguration();
         configuration.setEmbeddingStoreRegisterSchema(false);
         configuration.setEmbeddingStoreDimension(999);
 
-        InfinispanRemoteManager manager = new InfinispanRemoteManager(context, configuration);
-        try {
+        try (InfinispanRemoteManager manager = new InfinispanRemoteManager(context, configuration)) {
             manager.start();
 
             Optional<Schema> metadata
                     = cacheContainer.administration().schemas().get(EmbeddingStoreUtil.getSchemeFileName(configuration));
             assertTrue(metadata.isEmpty());
-        } finally {
-            manager.stop();
         }
     }
 
     @ParameterizedTest
     @EnumSource(VectorSimilarity.class)
-    public void registerSchema(VectorSimilarity similarity) {
+    public void registerSchema(VectorSimilarity similarity) throws IOException {
         int dimension = 900 + similarity.ordinal();
         String typeName = EmbeddingStoreUtil.DEFAULT_TYPE_NAME_PREFIX + dimension;
 
@@ -125,9 +122,8 @@ public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSuppor
         configuration.setEmbeddingStoreTypeName(typeName);
         configuration.setEmbeddingStoreVectorSimilarity(similarity);
 
-        InfinispanRemoteManager manager = new InfinispanRemoteManager(context, configuration);
         BasicCache<Object, Object> metadataCache = null;
-        try {
+        try (InfinispanRemoteManager manager = new InfinispanRemoteManager(context, configuration)) {
             manager.start();
 
             Optional<Schema> metadata
@@ -138,7 +134,6 @@ public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSuppor
             if (metadataCache != null) {
                 metadataCache.remove(EmbeddingStoreUtil.getSchemeFileName(configuration));
             }
-            manager.stop();
         }
     }
 
@@ -196,13 +191,11 @@ public class InfinispanRemoteEmbeddingStoreIT extends InfinispanRemoteTestSuppor
         configuration.setHosts(service.getServiceAddress());
         configuration.setUsername(service.username());
         configuration.setPassword(service.password());
-        configuration.setSaslMechanism("DIGEST-MD5");
+        configuration.setSaslMechanism("SCRAM-SHA-512");
         configuration.setSecurityRealm("default");
         configuration.setSecure(true);
 
-        if (SystemUtils.IS_OS_MAC) {
-            configuration.addConfigurationProperty("infinispan.client.hotrod.client_intelligence", "BASIC");
-        }
+        configuration.addConfigurationProperty("infinispan.client.hotrod.client_intelligence", "BASIC");
 
         return configuration;
     }

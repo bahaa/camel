@@ -21,17 +21,15 @@ import java.io.FileInputStream;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.util.IOHelper;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.equalToCompressingWhiteSpace;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class PlatformHttpRestOpenApiConsumerRestDslTest {
-
     @Test
     public void testRestOpenApi() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -50,7 +48,7 @@ public class PlatformHttpRestOpenApiConsumerRestDslTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -81,7 +79,7 @@ public class PlatformHttpRestOpenApiConsumerRestDslTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -109,7 +107,7 @@ public class PlatformHttpRestOpenApiConsumerRestDslTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -145,12 +143,9 @@ public class PlatformHttpRestOpenApiConsumerRestDslTest {
                 }
             });
 
-            context.start();
-            fail();
-        } catch (Exception e) {
-            Assertions.assertTrue(
-                    e.getCause().getMessage()
-                            .startsWith("OpenAPI specification has 18 unmapped operations to corresponding routes"));
+            assertThrows(Exception.class, () -> {
+                VertxPlatformHttpEngineTest.startCamelContext(context);
+            }, "OpenAPI specification has 18 unmapped operations to corresponding routes");
         } finally {
             context.stop();
         }
@@ -171,7 +166,7 @@ public class PlatformHttpRestOpenApiConsumerRestDslTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -198,7 +193,7 @@ public class PlatformHttpRestOpenApiConsumerRestDslTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -225,10 +220,10 @@ public class PlatformHttpRestOpenApiConsumerRestDslTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
-                    .when()
+                    .when().contentType("application/json")
                     .put("/api/v3/pet")
                     .then()
                     .statusCode(400); // no request body
@@ -249,7 +244,7 @@ public class PlatformHttpRestOpenApiConsumerRestDslTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -285,7 +280,7 @@ public class PlatformHttpRestOpenApiConsumerRestDslTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()

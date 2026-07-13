@@ -19,7 +19,6 @@ package org.apache.camel.processor.aggregate.hazelcast;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.XmlConfigBuilder;
@@ -32,6 +31,7 @@ import com.hazelcast.transaction.TransactionalMap;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.RuntimeCamelException;
+import org.apache.camel.component.hazelcast.HazelcastSerializationFilterHelper;
 import org.apache.camel.spi.Configurer;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.OptimisticLockingAggregationRepository;
@@ -87,7 +87,7 @@ public class HazelcastAggregationRepository extends ServiceSupport
                             + " When this limit is hit, then the Exchange is moved to the dead letter channel.",
               defaultValue = "3")
     protected int maximumRedeliveries = 3;
-    @Metadata(label = "advanced",
+    @Metadata(label = "advanced", security = "insecure:serialization",
               description = "Whether headers on the Exchange that are Java objects and Serializable should be included and saved to the repository")
     protected boolean allowSerializedHeaders;
 
@@ -233,15 +233,15 @@ public class HazelcastAggregationRepository extends ServiceSupport
             throw new UnsupportedOperationException();
         }
         LOG.trace("Adding an Exchange with ID {} for key {} in a thread-safe manner.", exchange.getExchangeId(), key);
-        Lock l = hazelcastInstance.getCPSubsystem().getLock(mapName);
+        // Use IMap-based locking (community edition compatible)
+        cache.lock(key);
         try {
-            l.lock();
             DefaultExchangeHolder newHolder = DefaultExchangeHolder.marshal(exchange, true, allowSerializedHeaders);
             DefaultExchangeHolder oldHolder = cache.put(key, newHolder);
             return unmarshallExchange(camelContext, oldHolder);
         } finally {
             LOG.trace("Added an Exchange with ID {} for key {} in a thread-safe manner.", exchange.getExchangeId(), key);
-            l.unlock();
+            cache.unlock(key);
         }
     }
 
@@ -451,6 +451,7 @@ public class HazelcastAggregationRepository extends ServiceSupport
             useLocalHzInstance = true;
             Config cfg = new XmlConfigBuilder().build();
             cfg.setProperty("hazelcast.version.check.enabled", "false");
+            HazelcastSerializationFilterHelper.applyDefault(cfg);
             hazelcastInstance = Hazelcast.newHazelcastInstance(cfg);
         } else {
             ObjectHelper.notNull(hazelcastInstance, "hazelcastInstance");

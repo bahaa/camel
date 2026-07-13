@@ -60,6 +60,7 @@ import org.apache.camel.spi.InternalProcessorFactory;
 import org.apache.camel.spi.ProcessorExchangeFactory;
 import org.apache.camel.spi.ReactiveExecutor;
 import org.apache.camel.spi.RouteIdAware;
+import org.apache.camel.spi.StepIdAware;
 import org.apache.camel.spi.UnitOfWork;
 import org.apache.camel.support.AsyncProcessorConverterHelper;
 import org.apache.camel.support.AsyncProcessorSupport;
@@ -87,7 +88,7 @@ import static org.apache.camel.util.ObjectHelper.notNull;
  * of the message exchange.
  */
 public class MulticastProcessor extends BaseProcessorSupport
-        implements Navigate<Processor>, Traceable, IdAware, RouteIdAware, ErrorHandlerAware {
+        implements Navigate<Processor>, Traceable, IdAware, RouteIdAware, StepIdAware, ErrorHandlerAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(MulticastProcessor.class);
 
@@ -170,6 +171,7 @@ public class MulticastProcessor extends BaseProcessorSupport
     private Processor errorHandler;
     private String id;
     private String routeId;
+    private String stepId;
     private final Collection<Processor> processors;
     private final AggregationStrategy aggregationStrategy;
     private final boolean parallelProcessing;
@@ -257,6 +259,16 @@ public class MulticastProcessor extends BaseProcessorSupport
     @Override
     public void setRouteId(String routeId) {
         this.routeId = routeId;
+    }
+
+    @Override
+    public String getStepId() {
+        return stepId;
+    }
+
+    @Override
+    public void setStepId(String stepId) {
+        this.stepId = stepId;
     }
 
     @Override
@@ -383,6 +395,7 @@ public class MulticastProcessor extends BaseProcessorSupport
 
     protected void schedule(final Runnable runnable, boolean transacted) {
         if (isParallelProcessing()) {
+            @SuppressWarnings("deprecation")
             Runnable task = prepareMDCParallelTask(camelContext, runnable);
             try {
                 executorService.submit(() -> reactiveExecutor.scheduleSync(task));
@@ -411,9 +424,11 @@ public class MulticastProcessor extends BaseProcessorSupport
         final AtomicInteger nbAggregated = new AtomicInteger();
         final AtomicBoolean allSent = new AtomicBoolean();
         final AtomicBoolean done = new AtomicBoolean();
+        @Deprecated(since = "4.19.0")
         final Map<String, String> mdc;
         final ScheduledFuture<?> timeoutTask;
 
+        @SuppressWarnings("deprecation")
         MulticastTask(Exchange original, Iterable<ProcessorExchangePair> pairs, AsyncCallback callback, int capacity,
                       boolean transacted) {
             this.original = original;
@@ -428,6 +443,7 @@ public class MulticastProcessor extends BaseProcessorSupport
             // if MDC is enabled we must make a copy in this constructor when the task
             // is created by the caller thread, and then propagate back when run is called
             // which can happen from another thread
+            // Deprecated since 4.19.0
             if (isParallelProcessing() && original.getContext().isUseMDCLogging()) {
                 this.mdc = MDC.getCopyOfContextMap();
             } else {
@@ -583,7 +599,7 @@ public class MulticastProcessor extends BaseProcessorSupport
                             msg = "Multicast processing failed for number " + index;
                         }
                         boolean continueProcessing = PipelineHelper.continueProcessing(exchange, msg, LOG);
-                        if (stopOnException && !continueProcessing) {
+                        if (!continueProcessing && !shouldContinueOnFailure(exchange, original, index)) {
                             if (exchange.getException() != null) {
                                 // wrap in exception to explain where it failed
                                 exchange.setException(new CamelExchangeException(
@@ -719,7 +735,7 @@ public class MulticastProcessor extends BaseProcessorSupport
                 msg = "Multicast processing failed for number " + index;
             }
             boolean continueProcessing = PipelineHelper.continueProcessing(exchange, msg, LOG);
-            if (stopOnException && !continueProcessing) {
+            if (!continueProcessing && !shouldContinueOnFailure(exchange, original, index)) {
                 if (exchange.getException() != null) {
                     // wrap in exception to explain where it failed
                     exchange.setException(new CamelExchangeException(
@@ -753,6 +769,22 @@ public class MulticastProcessor extends BaseProcessorSupport
             LOG.trace("Run next: {}", next);
             return next;
         }
+    }
+
+    /**
+     * Determines whether processing should continue after a sub-exchange has failed.
+     * <p>
+     * The default implementation returns {@code false} when {@code stopOnException} is enabled (meaning processing
+     * should stop). Subclasses (e.g., Splitter) can override this to implement more sophisticated failure policies such
+     * as error threshold checking.
+     *
+     * @param  subExchange the failed sub-exchange
+     * @param  original    the original exchange
+     * @param  index       the index of the failed sub-exchange
+     * @return             {@code true} to continue processing despite the failure, {@code false} to stop
+     */
+    protected boolean shouldContinueOnFailure(Exchange subExchange, Exchange original, int index) {
+        return !stopOnException;
     }
 
     protected ScheduledFuture<?> schedule(Executor executor, Runnable runnable, long delay, TimeUnit unit) {

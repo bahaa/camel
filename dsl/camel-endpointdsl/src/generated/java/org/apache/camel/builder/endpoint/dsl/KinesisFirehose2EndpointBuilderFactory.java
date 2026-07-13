@@ -598,7 +598,7 @@ public interface KinesisFirehose2EndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final KinesisFirehose2HeaderNameBuilder INSTANCE = new KinesisFirehose2HeaderNameBuilder();
+        public static final KinesisFirehose2HeaderNameBuilder INSTANCE = new KinesisFirehose2HeaderNameBuilder();
 
         /**
          * The record ID, as defined in
@@ -637,6 +637,57 @@ public interface KinesisFirehose2EndpointBuilderFactory {
          */
         public String awsKinesisFirehoseDeliveryStreamName() {
             return "CamelAwsKinesisFirehoseDeliveryStreamName";
+        }
+        /**
+         * The ARN of the delivery stream.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: createDeliveryStream
+         * 
+         * @return the name of the header {@code
+         * AwsKinesisFirehoseDeliveryStreamArn}.
+         */
+        public String awsKinesisFirehoseDeliveryStreamArn() {
+            return "CamelAwsKinesisFirehoseDeliveryStreamArn";
+        }
+        /**
+         * The number of records that failed in a batch put operation.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: sendBatchRecord
+         * 
+         * @return the name of the header {@code
+         * AwsKinesisFirehoseFailedRecordCount}.
+         */
+        public String awsKinesisFirehoseFailedRecordCount() {
+            return "CamelAwsKinesisFirehoseFailedRecordCount";
+        }
+        /**
+         * Whether the batch operation was encrypted.
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: sendBatchRecord
+         * 
+         * @return the name of the header {@code AwsKinesisFirehoseEncrypted}.
+         */
+        public String awsKinesisFirehoseEncrypted() {
+            return "CamelAwsKinesisFirehoseEncrypted";
+        }
+        /**
+         * The status of the delivery stream.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: describeDeliveryStream
+         * 
+         * @return the name of the header {@code
+         * AwsKinesisFirehoseDeliveryStreamStatus}.
+         */
+        public String awsKinesisFirehoseDeliveryStreamStatus() {
+            return "CamelAwsKinesisFirehoseDeliveryStreamStatus";
         }
     }
     static KinesisFirehose2EndpointBuilder endpointBuilder(String componentName, String path) {

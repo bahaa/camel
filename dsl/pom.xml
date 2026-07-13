@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-parent</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
@@ -51,6 +51,7 @@
         <module>camel-xml-jaxb-dsl</module>
         <module>camel-xml-jaxb-dsl-test</module>
         <module>camel-yaml-dsl</module>
+        <module>camel-kamelet-main-support</module>
         <module>camel-kamelet-main</module>
         <module>camel-jbang</module>
     </modules>

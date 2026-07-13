@@ -23,7 +23,11 @@ import org.apache.camel.dsl.jbang.core.common.LoggingLevelCompletionCandidates;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "script", description = "Run Camel integration as shell script for terminal scripting",
-                     sortOptions = false, showDefaultValues = true)
+                     sortOptions = false, showDefaultValues = true,
+                     footer = {
+                             "%nExamples:",
+                             "  camel script hello.java",
+                             "  camel script hello.java --max-messages=10" })
 public class Script extends CamelCommand {
 
     @CommandLine.Parameters(description = "Name of file", arity = "1",
@@ -75,12 +79,12 @@ public class Script extends CamelCommand {
         }
 
         Run run = new Run(getMain());
-        run.logging = logging;
-        run.loggingLevel = loggingLevel;
-        run.loggingColor = false;
-        run.maxSeconds = maxSeconds;
-        run.maxMessages = maxMessages;
-        run.maxIdleSeconds = maxIdleSeconds;
+        run.loggingOptions.logging = logging;
+        run.loggingOptions.loggingLevel = loggingLevel;
+        run.loggingOptions.loggingColor = false;
+        run.executionLimitOptions.maxSeconds = maxSeconds;
+        run.executionLimitOptions.maxMessages = maxMessages;
+        run.executionLimitOptions.maxIdleSeconds = maxIdleSeconds;
         run.property = property;
         run.propertiesFiles = propertiesFiles;
         return run.runScript(file);

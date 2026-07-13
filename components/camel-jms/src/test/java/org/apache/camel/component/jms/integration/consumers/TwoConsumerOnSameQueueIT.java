@@ -23,18 +23,18 @@ import jakarta.jms.ConnectionFactory;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.jms.JmsTestHelper;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.infra.artemis.common.ConnectionFactoryHelper;
 import org.apache.camel.test.infra.artemis.services.ArtemisService;
 import org.apache.camel.test.infra.artemis.services.ArtemisServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.apache.camel.component.jms.JmsComponent.jmsComponentAutoAcknowledge;
@@ -69,7 +69,6 @@ public class TwoConsumerOnSameQueueIT extends CamelTestSupport {
     }
 
     @Test
-    @DisabledIfSystemProperty(named = "ci.env.name", matches = ".*", disabledReason = "Flaky on Github CI")
     public void testStopAndStartOneRoute() throws Exception {
         sendTwoMessagesWhichShouldReceivedOnBothEndpointsAndAssert();
 
@@ -82,6 +81,7 @@ public class TwoConsumerOnSameQueueIT extends CamelTestSupport {
         getMockEndpoint("mock:a").expectedMessageCount(0);
         getMockEndpoint("mock:b").expectedBodiesReceived("Bye World", "Bye World");
 
+        JmsTestHelper.waitForJmsConsumerRoutes(context, "b");
         template.sendBody("activemq:queue:TwoConsumerOnSameQueueTest", "Bye World");
         template.sendBody("activemq:queue:TwoConsumerOnSameQueueTest", "Bye World");
 
@@ -97,7 +97,6 @@ public class TwoConsumerOnSameQueueIT extends CamelTestSupport {
     }
 
     @Test
-    @DisabledIfSystemProperty(named = "ci.env.name", matches = ".*", disabledReason = "Flaky on Github CI")
     public void testRemoveOneRoute() throws Exception {
         sendTwoMessagesWhichShouldReceivedOnBothEndpointsAndAssert();
 
@@ -111,6 +110,7 @@ public class TwoConsumerOnSameQueueIT extends CamelTestSupport {
         getMockEndpoint("mock:a").expectedMessageCount(0);
         getMockEndpoint("mock:b").expectedBodiesReceived("Bye World", "Bye World");
 
+        JmsTestHelper.waitForJmsConsumerRoutes(context, "b");
         template.sendBody("activemq:queue:TwoConsumerOnSameQueueTest", "Bye World");
         template.sendBody("activemq:queue:TwoConsumerOnSameQueueTest", "Bye World");
 
@@ -120,6 +120,8 @@ public class TwoConsumerOnSameQueueIT extends CamelTestSupport {
     private void sendTwoMessagesWhichShouldReceivedOnBothEndpointsAndAssert() throws InterruptedException {
         final MockEndpoint mockB = getMockEndpoint("mock:b");
         final MockEndpoint mockA = getMockEndpoint("mock:a");
+
+        JmsTestHelper.waitForJmsConsumerRoutes(context, "a", "b");
 
         template.sendBody("activemq:queue:TwoConsumerOnSameQueueTest", "Hello World");
         template.sendBody("activemq:queue:TwoConsumerOnSameQueueTest", "Hello World");

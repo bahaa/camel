@@ -30,7 +30,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 public class SAXSourceLogBodyTest extends CamelTestSupport {
@@ -49,7 +49,7 @@ public class SAXSourceLogBodyTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from("direct:start").streamCaching()
+                from("direct:start").streamCache(true)
                         // attach a SaxSource to body
                         .process(new Processor() {
                             @Override

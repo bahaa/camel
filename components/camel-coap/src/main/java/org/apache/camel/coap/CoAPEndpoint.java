@@ -19,6 +19,7 @@ package org.apache.camel.coap;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -38,10 +39,13 @@ import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
 import org.apache.camel.spi.EndpointServiceLocation;
+import org.apache.camel.spi.HeaderFilterStrategy;
+import org.apache.camel.spi.HeaderFilterStrategyAware;
 import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
+import org.apache.camel.support.DefaultHeaderFilterStrategy;
 import org.apache.camel.support.jsse.ClientAuthentication;
 import org.apache.camel.support.jsse.KeyManagersParameters;
 import org.apache.camel.support.jsse.SSLContextParameters;
@@ -76,13 +80,13 @@ import static org.eclipse.californium.scandium.config.DtlsConfig.DTLS_RECOMMENDE
  */
 @UriEndpoint(firstVersion = "2.16.0", scheme = "coap,coaps,coap+tcp,coaps+tcp", title = "CoAP", syntax = "coap:uri",
              category = { Category.IOT }, headersClass = CoAPConstants.class)
-public class CoAPEndpoint extends DefaultEndpoint implements EndpointServiceLocation {
+public class CoAPEndpoint extends DefaultEndpoint implements EndpointServiceLocation, HeaderFilterStrategyAware {
     final static Logger LOGGER = LoggerFactory.getLogger(CoAPEndpoint.class);
     @UriPath
     private URI uri;
     @UriParam(label = "consumer", enums = "DELETE,GET,POST,PUT")
     private String coapMethodRestrict;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private PrivateKey privateKey;
     @UriParam(label = "security")
     private PublicKey publicKey;
@@ -107,6 +111,11 @@ public class CoAPEndpoint extends DefaultEndpoint implements EndpointServiceLoca
     private boolean observable;
     @UriParam(label = "producer", defaultValue = "false")
     private boolean notify;
+    @UriParam(label = "producer,advanced")
+    private CoapClient client;
+    @UriParam(label = "advanced",
+              description = "To use a custom HeaderFilterStrategy to filter header to and from Camel message.")
+    private HeaderFilterStrategy headerFilterStrategy;
 
     private CoAPComponent component;
 
@@ -114,7 +123,7 @@ public class CoAPEndpoint extends DefaultEndpoint implements EndpointServiceLoca
         super(uri, component);
         try {
             this.uri = new URI(uri);
-        } catch (java.net.URISyntaxException use) {
+        } catch (URISyntaxException use) {
             this.uri = null;
         }
         this.component = component;
@@ -153,7 +162,9 @@ public class CoAPEndpoint extends DefaultEndpoint implements EndpointServiceLoca
         if (isNotify()) {
             return new CoAPNotifier(this);
         } else {
-            return new CoAPProducer(this);
+            CoAPProducer answer = new CoAPProducer(this);
+            answer.setClient(client);
+            return answer;
         }
     }
 
@@ -255,6 +266,33 @@ public class CoAPEndpoint extends DefaultEndpoint implements EndpointServiceLoca
      */
     public void setNotify(boolean notify) {
         this.notify = notify;
+    }
+
+    public CoapClient getClient() {
+        return client;
+    }
+
+    /**
+     * To use a shared client for the producers
+     */
+    public void setClient(CoapClient client) {
+        this.client = client;
+    }
+
+    @Override
+    public HeaderFilterStrategy getHeaderFilterStrategy() {
+        if (headerFilterStrategy == null) {
+            headerFilterStrategy = new DefaultHeaderFilterStrategy();
+        }
+        return headerFilterStrategy;
+    }
+
+    /**
+     * To use a custom {@link org.apache.camel.spi.HeaderFilterStrategy} to filter header to and from Camel message.
+     */
+    @Override
+    public void setHeaderFilterStrategy(HeaderFilterStrategy headerFilterStrategy) {
+        this.headerFilterStrategy = headerFilterStrategy;
     }
 
     /**
@@ -478,7 +516,7 @@ public class CoAPEndpoint extends DefaultEndpoint implements EndpointServiceLoca
         }
 
         if (getConfiguredCipherSuites() != null) {
-            LOGGER.debug("There are configured cipher suites: {}", getConfiguredCipherSuites());
+            LOGGER.debug("There are configured cipher suites: {}", Arrays.toString(getConfiguredCipherSuites()));
             builder.set(DTLS_CIPHER_SUITES, CipherSuite.getTypesByNames(getConfiguredCipherSuites()));
         }
 

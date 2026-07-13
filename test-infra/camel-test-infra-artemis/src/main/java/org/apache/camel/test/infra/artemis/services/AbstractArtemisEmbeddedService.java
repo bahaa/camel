@@ -19,7 +19,7 @@ package org.apache.camel.test.infra.artemis.services;
 import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import jakarta.jms.ConnectionFactory;
@@ -34,6 +34,7 @@ import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ;
 import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.infra.artemis.common.ArtemisRunException;
 import org.apache.camel.test.infra.artemis.common.ConnectionFactoryHelper;
+import org.apache.camel.test.infra.common.services.ContainerEnvironmentUtil;
 import org.apache.camel.test.infra.messaging.services.ConnectionFactoryAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,15 +42,30 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractArtemisEmbeddedService implements ArtemisInfraService, ConnectionFactoryAware {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractArtemisEmbeddedService.class);
-    private static final LongAdder BROKER_COUNT = new LongAdder();
+    private static final AtomicInteger BROKER_COUNT = new AtomicInteger();
 
     protected final EmbeddedActiveMQ embeddedBrokerService;
     private final Configuration artemisConfiguration;
     private Consumer<Configuration> customConfigurator;
     private final int port;
 
-    public AbstractArtemisEmbeddedService() {
-        this(AvailablePortFinder.getNextAvailable());
+    private static final int DEFAULT_PORT = 61616;
+
+    protected AbstractArtemisEmbeddedService() {
+        this(getPort());
+    }
+
+    private static int getPort() {
+        // Check if a port is configured via system property
+        String portStr = System.getProperty(ContainerEnvironmentUtil.INFRA_PORT_PROPERTY);
+        if (portStr != null && !portStr.isEmpty()) {
+            try {
+                return Integer.parseInt(portStr);
+            } catch (NumberFormatException e) {
+                // Fall through to random port
+            }
+        }
+        return AvailablePortFinder.getNextAvailable();
     }
 
     /**
@@ -91,9 +107,7 @@ public abstract class AbstractArtemisEmbeddedService implements ArtemisInfraServ
      * @return the broker ID to use
      */
     protected int computeBrokerId() {
-        final int brokerId = BROKER_COUNT.intValue();
-        BROKER_COUNT.increment();
-        return brokerId;
+        return BROKER_COUNT.getAndIncrement();
     }
 
     private static File createInstance(int brokerId) {
@@ -155,7 +169,9 @@ public abstract class AbstractArtemisEmbeddedService implements ArtemisInfraServ
 
                 embeddedBrokerService.start();
 
-                embeddedBrokerService.getActiveMQServer().waitForActivation(20, TimeUnit.SECONDS);
+                if (!embeddedBrokerService.getActiveMQServer().waitForActivation(20, TimeUnit.SECONDS)) {
+                    LOG.warn("Artemis broker did not activate within 20 seconds, proceeding anyway");
+                }
             }
         } catch (Exception e) {
             LOG.warn("Unable to start embedded Artemis broker: {}", e.getMessage(), e);

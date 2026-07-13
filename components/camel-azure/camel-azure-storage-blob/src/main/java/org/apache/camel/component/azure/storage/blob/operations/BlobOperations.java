@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -35,6 +36,9 @@ import com.azure.storage.blob.models.AccessTier;
 import com.azure.storage.blob.models.AppendBlobItem;
 import com.azure.storage.blob.models.BlobDownloadHeaders;
 import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.models.BlobImmutabilityPolicy;
+import com.azure.storage.blob.models.BlobImmutabilityPolicyMode;
+import com.azure.storage.blob.models.BlobLegalHoldResult;
 import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.BlobRange;
 import com.azure.storage.blob.models.BlobRequestConditions;
@@ -48,11 +52,15 @@ import com.azure.storage.blob.models.PageBlobItem;
 import com.azure.storage.blob.models.PageRange;
 import com.azure.storage.blob.models.PageRangeItem;
 import com.azure.storage.blob.models.ParallelTransferOptions;
+import com.azure.storage.blob.models.RehydratePriority;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
+import com.azure.storage.blob.specialized.BlobClientBase;
 import com.azure.storage.blob.specialized.BlobLeaseClient;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
+import org.apache.camel.WrappedFile;
+import org.apache.camel.component.azure.common.AzureFileNameHelper;
 import org.apache.camel.component.azure.storage.blob.BlobBlock;
 import org.apache.camel.component.azure.storage.blob.BlobCommonRequestOptions;
 import org.apache.camel.component.azure.storage.blob.BlobConfiguration;
@@ -62,6 +70,8 @@ import org.apache.camel.component.azure.storage.blob.BlobExchangeHeaders;
 import org.apache.camel.component.azure.storage.blob.BlobStreamAndLength;
 import org.apache.camel.component.azure.storage.blob.BlobUtils;
 import org.apache.camel.component.azure.storage.blob.client.BlobClientWrapper;
+import org.apache.camel.support.SynchronizationAdapter;
+import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,21 +103,35 @@ public class BlobOperations {
         final OutputStream outputStream = ObjectHelper.isEmpty(message) ? null : message.getBody(OutputStream.class);
         final BlobRange blobRange = configurationProxy.getBlobRange(exchange);
         final BlobCommonRequestOptions blobCommonRequestOptions = getCommonRequestOptions(exchange);
+        final BlobClientWrapper readClient = client.withSnapshot(configurationProxy.getSnapshotId(exchange))
+                .withVersion(configurationProxy.getVersionId(exchange));
 
         if (outputStream == null) {
             // Then we create an input stream
             final Map<String, Object> blobInputStream
-                    = client.openInputStream(blobRange, blobCommonRequestOptions.getBlobRequestConditions());
+                    = readClient.openInputStream(blobRange, blobCommonRequestOptions.getBlobRequestConditions());
             final BlobExchangeHeaders blobExchangeHeaders = BlobExchangeHeaders
                     .createBlobExchangeHeadersFromBlobProperties((BlobProperties) blobInputStream.get("properties"));
+            InputStream is = (InputStream) blobInputStream.get("inputStream");
 
-            return BlobOperationResponse.create(blobInputStream.get("inputStream"), blobExchangeHeaders.toMap());
+            // Wrap to ensure closure when Exchange completes
+            if (exchange != null && configurationProxy.getConfiguration().isCloseStreamAfterRead()) {
+                // Register stream for auto-close on Exchange completion to avoid potential OOM during downloads
+                exchange.getExchangeExtension().addOnCompletion(new SynchronizationAdapter() {
+                    @Override
+                    public void onDone(Exchange exchange) {
+                        IOHelper.close(is);
+                    }
+                });
+            }
+
+            return BlobOperationResponse.create(is, blobExchangeHeaders.toMap());
         }
         // we have an outputStream set, so we use it
         final DownloadRetryOptions downloadRetryOptions = getDownloadRetryOptions(configurationProxy);
 
         try {
-            final ResponseBase<BlobDownloadHeaders, Void> response = client.downloadWithResponse(outputStream, blobRange,
+            final ResponseBase<BlobDownloadHeaders, Void> response = readClient.downloadWithResponse(outputStream, blobRange,
                     downloadRetryOptions, blobCommonRequestOptions.getBlobRequestConditions(),
                     blobCommonRequestOptions.getContentMD5() != null, blobCommonRequestOptions.getTimeout());
 
@@ -130,13 +154,15 @@ public class BlobOperations {
             throw new IllegalArgumentException("In order to download a blob, you will need to specify the fileDir in the URI");
         }
 
-        final File fileToDownload = new File(fileDir, client.getBlobName());
+        final File fileToDownload = AzureFileNameHelper.resolveWithinDirectory(fileDir, client.getBlobName());
         final BlobCommonRequestOptions commonRequestOptions = getCommonRequestOptions(exchange);
         final BlobRange blobRange = configurationProxy.getBlobRange(exchange);
         final ParallelTransferOptions parallelTransferOptions = configurationProxy.getParallelTransferOptions(exchange);
         final DownloadRetryOptions downloadRetryOptions = getDownloadRetryOptions(configurationProxy);
+        final BlobClientWrapper readClient = client.withSnapshot(configurationProxy.getSnapshotId(exchange))
+                .withVersion(configurationProxy.getVersionId(exchange));
 
-        final Response<BlobProperties> response = client.downloadToFileWithResponse(fileToDownload.toString(), blobRange,
+        final Response<BlobProperties> response = readClient.downloadToFileWithResponse(fileToDownload.toString(), blobRange,
                 parallelTransferOptions, downloadRetryOptions,
                 commonRequestOptions.getBlobRequestConditions(), commonRequestOptions.getContentMD5() != null,
                 commonRequestOptions.getTimeout());
@@ -173,7 +199,11 @@ public class BlobOperations {
 
         final BlobServiceSasSignatureValues serviceSasSignatureValues
                 = new BlobServiceSasSignatureValues(offsetDateTimeToSet, sasPermission);
-        final String url = client.getBlobUrl() + "?" + client.generateSas(serviceSasSignatureValues);
+        final BlobClientWrapper readClient = client.withSnapshot(configurationProxy.getSnapshotId(exchange))
+                .withVersion(configurationProxy.getVersionId(exchange));
+        final String blobUrl = readClient.getBlobUrl();
+        final String sasToken = readClient.generateSas(serviceSasSignatureValues);
+        final String url = blobUrl + (blobUrl.contains("?") ? "&" : "?") + sasToken;
 
         final BlobExchangeHeaders headers = BlobExchangeHeaders.create().downloadLink(url);
 
@@ -203,6 +233,99 @@ public class BlobOperations {
             closeInputStreamIfNeeded(blobStreamAndLength.getInputStream());
             releaseLeaseIfAcquired(leaseClient);
         }
+    }
+
+    public BlobOperationResponse uploadBlockBlobChunked(final Exchange exchange) throws IOException {
+        ObjectHelper.notNull(exchange, MISSING_EXCHANGE);
+
+        final BlobCommonRequestOptions commonRequestOptions = getCommonRequestOptions(exchange);
+        final ParallelTransferOptions parallelTransferOptions = configurationProxy.getUploadParallelTransferOptions(exchange);
+
+        // Try to determine file path first (for file-based uploads which are most efficient)
+        final String filePath = determineFilePath(exchange);
+
+        BlobLeaseClient leaseClient = null;
+        try {
+            leaseClient = acquireLeaseIfConfigured(commonRequestOptions.getBlobRequestConditions(), exchange);
+
+            Response<BlockBlobItem> response;
+
+            if (filePath != null) {
+                // File-based upload (uses memory-mapped I/O, most efficient)
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("Uploading block blob from file [{}] to blob [{}] from exchange [{}]...",
+                            filePath, configurationProxy.getBlobName(exchange), exchange);
+                }
+
+                response = client.uploadBlockBlobChunked(
+                        filePath,
+                        parallelTransferOptions,
+                        commonRequestOptions.getBlobHttpHeaders(),
+                        commonRequestOptions.getMetadata(),
+                        commonRequestOptions.getAccessTier(),
+                        commonRequestOptions.getBlobRequestConditions(),
+                        commonRequestOptions.getTimeout());
+            } else {
+                // Stream-based upload with parallel options (for InputStream bodies)
+                final BlobStreamAndLength blobStreamAndLength
+                        = BlobStreamAndLength.createBlobStreamAndLengthFromExchangeBody(exchange);
+
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("Uploading block blob from stream (length: {}) to blob [{}] from exchange [{}]...",
+                            blobStreamAndLength.getStreamLength(), configurationProxy.getBlobName(exchange), exchange);
+                }
+
+                try {
+                    response = client.uploadBlockBlobWithParallelOptions(
+                            blobStreamAndLength.getInputStream(),
+                            blobStreamAndLength.getStreamLength(),
+                            parallelTransferOptions,
+                            commonRequestOptions.getBlobHttpHeaders(),
+                            commonRequestOptions.getMetadata(),
+                            commonRequestOptions.getAccessTier(),
+                            commonRequestOptions.getBlobRequestConditions(),
+                            commonRequestOptions.getTimeout());
+                } finally {
+                    closeInputStreamIfNeeded(blobStreamAndLength.getInputStream());
+                }
+            }
+
+            final BlobExchangeHeaders blobExchangeHeaders
+                    = BlobExchangeHeaders.createBlobExchangeHeadersFromBlockBlobItem(response.getValue())
+                            .httpHeaders(response.getHeaders());
+
+            return BlobOperationResponse.create(true, blobExchangeHeaders.toMap());
+        } finally {
+            releaseLeaseIfAcquired(leaseClient);
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private String determineFilePath(final Exchange exchange) {
+        // First check header
+        String filePath = configurationProxy.getFilePath(exchange);
+        if (filePath != null) {
+            return filePath;
+        }
+
+        // Then check body - only return file path if body is File/Path/String (not InputStream)
+        Object body = exchange.getIn().getBody();
+
+        if (body instanceof Path path) {
+            return path.toAbsolutePath().toString();
+        }
+        if (body instanceof File file) {
+            return file.getAbsolutePath();
+        }
+        if (body instanceof WrappedFile wrappedFile) {
+            Object file = wrappedFile.getFile();
+            if (file instanceof File f) {
+                return f.getAbsolutePath();
+            }
+        }
+
+        // For InputStream or other types, return null to trigger stream-based upload
+        return null;
     }
 
     public BlobOperationResponse stageBlockBlobList(final Exchange exchange) throws Exception {
@@ -471,6 +594,202 @@ public class BlobOperations {
                         commonRequestOptions.getTimeout());
 
         return BlobOperationResponse.create(response);
+    }
+
+    public BlobOperationResponse createBlobSnapshot(final Exchange exchange) {
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Creating a snapshot of blob [{}] from exchange [{}]...", configurationProxy.getBlobName(exchange),
+                    exchange);
+        }
+
+        final BlobCommonRequestOptions commonRequestOptions = getCommonRequestOptions(exchange);
+
+        final Response<BlobClientBase> response = client.createSnapshot(
+                commonRequestOptions.getMetadata(),
+                commonRequestOptions.getBlobRequestConditions(),
+                commonRequestOptions.getTimeout());
+
+        final BlobClientBase snapshotClient = response.getValue();
+        final BlobExchangeHeaders exchangeHeaders = BlobExchangeHeaders.create()
+                .snapshotId(snapshotClient.getSnapshotId())
+                .httpHeaders(response.getHeaders());
+
+        return BlobOperationResponse.create(snapshotClient.getSnapshotId(), exchangeHeaders.toMap());
+    }
+
+    @SuppressWarnings("unchecked")
+    public BlobOperationResponse setBlobTags(final Exchange exchange) {
+        ObjectHelper.notNull(exchange, MISSING_EXCHANGE);
+
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Setting tags on blob [{}] from exchange [{}]...", configurationProxy.getBlobName(exchange), exchange);
+        }
+
+        Map<String, String> tags = configurationProxy.getBlobTags(exchange);
+        if (tags == null) {
+            tags = exchange.getIn().getBody(Map.class);
+        }
+        if (tags == null || tags.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Tags must be specified either as the message body (Map<String,String>) or via the "
+                                               + BlobConstants.BLOB_TAGS + " header.");
+        }
+
+        final BlobCommonRequestOptions commonRequestOptions = getCommonRequestOptions(exchange);
+
+        final Response<Void> response = client.setTags(
+                tags,
+                commonRequestOptions.getBlobRequestConditions(),
+                commonRequestOptions.getTimeout());
+
+        final BlobExchangeHeaders exchangeHeaders = BlobExchangeHeaders.create()
+                .httpHeaders(response.getHeaders());
+
+        return BlobOperationResponse.createWithEmptyBody(exchangeHeaders.toMap());
+    }
+
+    public BlobOperationResponse getBlobTags(final Exchange exchange) {
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Getting tags from blob [{}] from exchange [{}]...", configurationProxy.getBlobName(exchange), exchange);
+        }
+
+        final BlobCommonRequestOptions commonRequestOptions = getCommonRequestOptions(exchange);
+
+        final Response<Map<String, String>> response = client.getTags(
+                commonRequestOptions.getBlobRequestConditions(),
+                commonRequestOptions.getTimeout());
+
+        final Map<String, String> tags = response.getValue();
+        final BlobExchangeHeaders exchangeHeaders = BlobExchangeHeaders.create()
+                .blobTags(tags)
+                .httpHeaders(response.getHeaders());
+
+        return BlobOperationResponse.create(tags, exchangeHeaders.toMap());
+    }
+
+    public BlobOperationResponse setBlobLegalHold(final Exchange exchange) {
+        ObjectHelper.notNull(exchange, MISSING_EXCHANGE);
+
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Setting legal hold on blob [{}] from exchange [{}]...", configurationProxy.getBlobName(exchange),
+                    exchange);
+        }
+
+        Boolean legalHold = configurationProxy.getBlobLegalHold(exchange);
+        if (legalHold == null) {
+            legalHold = exchange.getIn().getBody(Boolean.class);
+        }
+        if (legalHold == null) {
+            throw new IllegalArgumentException(
+                    "Legal hold flag must be specified either as the message body (Boolean) or via the "
+                                               + BlobConstants.BLOB_LEGAL_HOLD + " header.");
+        }
+
+        final BlobCommonRequestOptions commonRequestOptions = getCommonRequestOptions(exchange);
+
+        final Response<BlobLegalHoldResult> response = client.setLegalHold(legalHold, commonRequestOptions.getTimeout());
+
+        final boolean hasLegalHold = response.getValue() != null && response.getValue().hasLegalHold();
+        final BlobExchangeHeaders exchangeHeaders = BlobExchangeHeaders.create()
+                .blobLegalHold(hasLegalHold)
+                .httpHeaders(response.getHeaders());
+
+        return BlobOperationResponse.create(hasLegalHold, exchangeHeaders.toMap());
+    }
+
+    public BlobOperationResponse setBlobImmutabilityPolicy(final Exchange exchange) {
+        ObjectHelper.notNull(exchange, MISSING_EXCHANGE);
+
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Setting immutability policy on blob [{}] from exchange [{}]...",
+                    configurationProxy.getBlobName(exchange), exchange);
+        }
+
+        BlobImmutabilityPolicy policy = configurationProxy.getBlobImmutabilityPolicy(exchange);
+        if (policy == null) {
+            final Object body = exchange.getIn().getBody();
+            if (body instanceof BlobImmutabilityPolicy) {
+                policy = (BlobImmutabilityPolicy) body;
+            }
+        }
+        if (policy == null) {
+            final OffsetDateTime expiryTime = configurationProxy.getBlobImmutabilityPolicyExpiryTime(exchange);
+            if (expiryTime == null) {
+                throw new IllegalArgumentException(
+                        "Immutability policy expiry time must be specified via the "
+                                                   + BlobConstants.BLOB_IMMUTABILITY_POLICY_EXPIRY_TIME
+                                                   + " header, or a pre-built BlobImmutabilityPolicy must be provided via the message body or "
+                                                   + BlobConstants.BLOB_IMMUTABILITY_POLICY + " header.");
+            }
+            BlobImmutabilityPolicyMode policyMode = configurationProxy.getBlobImmutabilityPolicyMode(exchange);
+            if (policyMode == null) {
+                policyMode = BlobImmutabilityPolicyMode.UNLOCKED;
+            }
+            policy = new BlobImmutabilityPolicy().setExpiryTime(expiryTime).setPolicyMode(policyMode);
+        }
+
+        final BlobCommonRequestOptions commonRequestOptions = getCommonRequestOptions(exchange);
+
+        final Response<BlobImmutabilityPolicy> response = client.setImmutabilityPolicy(
+                policy,
+                commonRequestOptions.getBlobRequestConditions(),
+                commonRequestOptions.getTimeout());
+
+        final BlobImmutabilityPolicy result = response.getValue();
+        final BlobExchangeHeaders exchangeHeaders = BlobExchangeHeaders.create()
+                .httpHeaders(response.getHeaders());
+        if (result != null) {
+            exchangeHeaders.blobImmutabilityPolicyExpiryTime(result.getExpiryTime())
+                    .blobImmutabilityPolicyMode(result.getPolicyMode());
+        }
+
+        return BlobOperationResponse.create(result, exchangeHeaders.toMap());
+    }
+
+    public BlobOperationResponse undeleteBlob(final Exchange exchange) {
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Undeleting blob [{}] from exchange [{}]...", configurationProxy.getBlobName(exchange), exchange);
+        }
+
+        final BlobCommonRequestOptions commonRequestOptions = getCommonRequestOptions(exchange);
+
+        final Response<Void> response = client.undelete(commonRequestOptions.getTimeout());
+
+        final BlobExchangeHeaders exchangeHeaders = BlobExchangeHeaders.create()
+                .httpHeaders(response.getHeaders());
+
+        return BlobOperationResponse.createWithEmptyBody(exchangeHeaders.toMap());
+    }
+
+    public BlobOperationResponse setBlobTier(final Exchange exchange) {
+        ObjectHelper.notNull(exchange, MISSING_EXCHANGE);
+
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Setting access tier on blob [{}] from exchange [{}]...", configurationProxy.getBlobName(exchange),
+                    exchange);
+        }
+
+        AccessTier tier = configurationProxy.getAccessTier(exchange);
+        if (tier == null) {
+            tier = exchange.getIn().getBody(AccessTier.class);
+        }
+        if (tier == null) {
+            throw new IllegalArgumentException(
+                    "Access tier must be specified either as the message body (AccessTier) or via the "
+                                               + BlobConstants.ACCESS_TIER + " header.");
+        }
+
+        final RehydratePriority priority = configurationProxy.getRehydratePriority(exchange);
+        final BlobCommonRequestOptions commonRequestOptions = getCommonRequestOptions(exchange);
+
+        final Response<Void> response = client.setAccessTier(tier, priority, commonRequestOptions.leaseId(),
+                commonRequestOptions.getTimeout());
+
+        final BlobExchangeHeaders exchangeHeaders = BlobExchangeHeaders.create()
+                .accessTierHeader(tier)
+                .httpHeaders(response.getHeaders());
+
+        return BlobOperationResponse.create(tier, exchangeHeaders.toMap());
     }
 
     private DownloadRetryOptions getDownloadRetryOptions(final BlobConfigurationOptionsProxy configurationProxy) {

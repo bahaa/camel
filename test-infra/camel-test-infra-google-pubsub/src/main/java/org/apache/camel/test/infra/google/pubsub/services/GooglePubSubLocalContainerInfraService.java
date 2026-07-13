@@ -27,7 +27,7 @@ import org.testcontainers.gcloud.PubSubEmulatorContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @InfraService(service = GooglePubSubInfraService.class,
-              description = "Google Cloud SDK Tool",
+              description = "Google Cloud Pub/Sub is a messaging service for event-driven systems",
               serviceAlias = "google",
               serviceImplementationAlias = "pub-sub")
 public class GooglePubSubLocalContainerInfraService
@@ -67,11 +67,7 @@ public class GooglePubSubLocalContainerInfraService
             public TestInfraPubSubEmulatorContainer(boolean fixedPort) {
                 super(DockerImageName.parse(imageName));
 
-                if (fixedPort) {
-                    addFixedExposedPort(PORT, PORT);
-                } else {
-                    addExposedPort(PORT);
-                }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, PORT);
             }
         }
         return new TestInfraPubSubEmulatorContainer(ContainerEnvironmentUtil.isFixedPort(this.getClass()));

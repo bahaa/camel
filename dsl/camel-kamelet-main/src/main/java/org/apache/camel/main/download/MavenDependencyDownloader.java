@@ -75,6 +75,7 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
     private KnownReposResolver knownReposResolver;
     private VersionResolver versionResolver;
     private boolean download = true;
+    private boolean preferLocal;
 
     // all maven-resolver work is delegated to camel-tooling-maven
     private MavenDownloader mavenDownloader;
@@ -181,6 +182,16 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
 
     public void setDownload(boolean download) {
         this.download = download;
+    }
+
+    @Override
+    public boolean isPreferLocal() {
+        return preferLocal;
+    }
+
+    @Override
+    public void setPreferLocal(boolean preferLocal) {
+        this.preferLocal = preferLocal;
     }
 
     @Override
@@ -418,12 +429,12 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
         return answer;
     }
 
-    private void resolveQuarkus(String minimumVersion, String v, Set<String> extraRepos, List<String[]> answer)
+    private void resolveQuarkus(String minimumVersion, String camelVersion, Set<String> extraRepos, List<String[]> answer)
             throws Exception {
-        if (VersionHelper.isGE(v, MINIMUM_QUARKUS_VERSION)) {
-            String cv = resolveCamelVersionByQuarkusVersion(v, extraRepos);
+        if (VersionHelper.isGE(camelVersion, MINIMUM_QUARKUS_VERSION)) {
+            String cv = resolveCamelVersionByQuarkusVersion(camelVersion, extraRepos);
             if (cv != null && VersionHelper.isGE(cv, minimumVersion)) {
-                answer.add(new String[] { cv, v });
+                answer.add(new String[] { cv, camelVersion });
             }
         }
     }
@@ -549,6 +560,7 @@ public class MavenDependencyDownloader extends ServiceSupport implements Depende
         mavenDownloaderImpl.setRepos(repositories);
         mavenDownloaderImpl.setFresh(fresh);
         mavenDownloaderImpl.setOffline(!download);
+        mavenDownloaderImpl.setPreferLocal(preferLocal);
         // use listener to keep track of which JARs was downloaded from a remote Maven repo (and how long time it took)
         mavenDownloaderImpl.setRemoteArtifactDownloadListener(new RemoteArtifactDownloadListener() {
             @Override

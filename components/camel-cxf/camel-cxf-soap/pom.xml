@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-cxf-parent</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-cxf-soap</artifactId>
@@ -102,7 +102,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-junit5</artifactId>
+            <artifactId>camel-test-junit6</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -147,8 +147,8 @@
                     <artifactId>undertow-servlet</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>io.undertow</groupId>
-                    <artifactId>undertow-servlet-jakarta</artifactId>
+                    <groupId>io.undertow.ee</groupId>
+                    <artifactId>undertow-servlet</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>io.undertow</groupId>
@@ -194,7 +194,13 @@
             <groupId>org.apache.cxf</groupId>
             <artifactId>cxf-rt-ws-security</artifactId>
             <version>${cxf-version}</version>
-            <scope>test</scope>
+            <optional>true</optional>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.opensaml</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
 

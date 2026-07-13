@@ -23,22 +23,13 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>tooling</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-tooling-maven</artifactId>
 
     <name>Camel :: Tooling :: Maven</name>
     <description>Utilities to make Maven operations easier</description>
-
-    <properties>
-        <camel.osgi.import.pkg>
-            *
-        </camel.osgi.import.pkg>
-        <camel.osgi.export.pkg>
-            org.apache.camel.tooling.maven
-        </camel.osgi.export.pkg>
-    </properties>
 
     <dependencies>
 
@@ -47,28 +38,7 @@
             <artifactId>camel-support</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>jakarta.inject</groupId>
-            <artifactId>jakarta.inject-api</artifactId>
-            <version>${jakarta-inject-version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
-        </dependency>
-
-        <!-- maven / maven resolver -->
-        <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-resolver-provider</artifactId>
-            <version>${maven-version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-settings-builder</artifactId>
-            <version>${maven-version}</version>
-        </dependency>
+        <!-- maven resolver -->
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-api</artifactId>
@@ -81,12 +51,22 @@
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-connector-basic</artifactId>
+            <version>${maven-resolver-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-named-locks</artifactId>
+            <version>${maven-resolver-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-impl</artifactId>
             <version>${maven-resolver-version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-connector-basic</artifactId>
+            <artifactId>maven-resolver-util</artifactId>
             <version>${maven-resolver-version}</version>
         </dependency>
         <dependency>
@@ -98,17 +78,22 @@
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-transport-http</artifactId>
             <version>${maven-resolver-version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-codec</groupId>
-                    <artifactId>commons-codec</artifactId>
-                </exclusion>
-            </exclusions>
+        </dependency>
+
+        <!-- MIMA - Minimal Maven -->
+        <dependency>
+            <groupId>eu.maveniverse.maven.mima</groupId>
+            <artifactId>context</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-util</artifactId>
-            <version>${maven-resolver-version}</version>
+            <groupId>eu.maveniverse.maven.mima.runtime</groupId>
+            <artifactId>embedded-maven</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>eu.maveniverse.maven.mima.runtime</groupId>
+            <artifactId>standalone-static</artifactId>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
@@ -116,6 +101,17 @@
         </dependency>
 
         <!-- testing -->
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>${httpcore4-version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

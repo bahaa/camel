@@ -82,7 +82,7 @@ public class AS2ServerManagerITBase extends AbstractAS2ITSupport {
 
     protected static final String METHOD = "POST";
     protected static final String TARGET_HOST = "localhost";
-    protected static final int TARGET_PORT = 8889;
+    protected int targetPort;
     protected static final Duration HTTP_SOCKET_TIMEOUT = Duration.ofSeconds(5);
     protected static final Duration HTTP_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
     protected static final Integer HTTP_CONNECTION_POOL_SIZE = 5;
@@ -96,32 +96,33 @@ public class AS2ServerManagerITBase extends AbstractAS2ITSupport {
     protected static final String CLIENT_FQDN = "example.org";
     protected static final String DISPOSITION_NOTIFICATION_TO = "mrAS@example.org";
     protected static final String SIGNED_RECEIPT_MIC_ALGORITHMS = "sha1,md5";
-    protected static final String EDI_MESSAGE = "UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'\n"
-                                                + "UNH+00000000000117+INVOIC:D:97B:UN'\n"
-                                                + "BGM+380+342459+9'\n"
-                                                + "DTM+3:20060515:102'\n"
-                                                + "RFF+ON:521052'\n"
-                                                + "NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'\n"
-                                                + "NAD+SE+005435656::16++GENERAL WIDGET COMPANY'\n"
-                                                + "CUX+1:USD'\n"
-                                                + "LIN+1++157870:IN'\n"
-                                                + "IMD+F++:::WIDGET'\n"
-                                                + "QTY+47:1020:EA'\n"
-                                                + "ALI+US'\n"
-                                                + "MOA+203:1202.58'\n"
-                                                + "PRI+INV:1.179'\n"
-                                                + "LIN+2++157871:IN'\n"
-                                                + "IMD+F++:::DIFFERENT WIDGET'\n"
-                                                + "QTY+47:20:EA'\n"
-                                                + "ALI+JP'\n"
-                                                + "MOA+203:410'\n"
-                                                + "PRI+INV:20.5'\n"
-                                                + "UNS+S'\n"
-                                                + "MOA+39:2137.58'\n"
-                                                + "ALC+C+ABG'\n"
-                                                + "MOA+8:525'\n"
-                                                + "UNT+23+00000000000117'\n"
-                                                + "UNZ+1+00000000000778'";
+    protected static final String EDI_MESSAGE = """
+            UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'
+            UNH+00000000000117+INVOIC:D:97B:UN'
+            BGM+380+342459+9'
+            DTM+3:20060515:102'
+            RFF+ON:521052'
+            NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'
+            NAD+SE+005435656::16++GENERAL WIDGET COMPANY'
+            CUX+1:USD'
+            LIN+1++157870:IN'
+            IMD+F++:::WIDGET'
+            QTY+47:1020:EA'
+            ALI+US'
+            MOA+203:1202.58'
+            PRI+INV:1.179'
+            LIN+2++157871:IN'
+            IMD+F++:::DIFFERENT WIDGET'
+            QTY+47:20:EA'
+            ALI+JP'
+            MOA+203:410'
+            PRI+INV:20.5'
+            UNS+S'
+            MOA+39:2137.58'
+            ALC+C+ABG'
+            MOA+8:525'
+            UNT+23+00000000000117'
+            UNZ+1+00000000000778'""";
 
     protected static AS2SignedDataGenerator gen;
     protected static KeyPair issueKP;
@@ -139,6 +140,22 @@ public class AS2ServerManagerITBase extends AbstractAS2ITSupport {
     }
 
     @Override
+    protected void customizeConfiguration(AS2Configuration configuration) {
+        configuration.setServerPortNumber(0);
+    }
+
+    @Override
+    protected void doPostSetup() throws Exception {
+        super.doPostSetup();
+        for (var e : context.getEndpoints()) {
+            if (e instanceof AS2Endpoint as2e && as2e.getAS2ServerConnection() != null) {
+                targetPort = as2e.getAS2ServerConnection().getLocalPort();
+                break;
+            }
+        }
+    }
+
+    @Override
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
@@ -148,7 +165,7 @@ public class AS2ServerManagerITBase extends AbstractAS2ITSupport {
 
                 // test route processing exception
                 Processor failingProcessor = new Processor() {
-                    public void process(org.apache.camel.Exchange exchange) throws Exception {
+                    public void process(Exchange exchange) throws Exception {
                         throw new Exception(PROCESSOR_EXCEPTION_MSG);
                     }
                 };
@@ -181,7 +198,8 @@ public class AS2ServerManagerITBase extends AbstractAS2ITSupport {
         // Create signing attributes
         ASN1EncodableVector attributes = new ASN1EncodableVector();
         attributes.add(new SMIMEEncryptionKeyPreferenceAttribute(
-                new IssuerAndSerialNumber(new X500Name(signingCert.getIssuerDN().getName()), signingCert.getSerialNumber())));
+                new IssuerAndSerialNumber(
+                        new X500Name(signingCert.getIssuerX500Principal().getName()), signingCert.getSerialNumber())));
         attributes.add(new SMIMECapabilitiesAttribute(capabilities));
 
         gen = SigningUtils.createSigningGenerator(AS2SignatureAlgorithm.SHA256WITHRSA, certList.toArray(new X509Certificate[0]),
@@ -192,7 +210,7 @@ public class AS2ServerManagerITBase extends AbstractAS2ITSupport {
     protected static void setupKeysAndCertificates() throws Exception {
         // set up our certificates
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
-        kpg.initialize(1024, new SecureRandom());
+        kpg.initialize(2048, new SecureRandom());
 
         String issueDN = "O=Punkhorn Software, C=US";
         issueKP = kpg.generateKeyPair();
@@ -281,7 +299,7 @@ public class AS2ServerManagerITBase extends AbstractAS2ITSupport {
         assertEquals(AS2_NAME, request.getFirstHeader(AS2Header.AS2_TO).getValue(), "Unexpected AS2 to value");
         assertTrue(request.getFirstHeader(AS2Header.MESSAGE_ID).getValue().endsWith(CLIENT_FQDN + ">"),
                 "Unexpected message id value");
-        assertEquals(TARGET_HOST + ":" + TARGET_PORT, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
+        assertEquals(TARGET_HOST + ":" + targetPort, request.getFirstHeader(AS2Header.TARGET_HOST).getValue(),
                 "Unexpected target host value");
         assertEquals(USER_AGENT, request.getFirstHeader(AS2Header.USER_AGENT).getValue(), "Unexpected user agent value");
         assertNotNull(request.getFirstHeader(AS2Header.DATE), "Date value missing");

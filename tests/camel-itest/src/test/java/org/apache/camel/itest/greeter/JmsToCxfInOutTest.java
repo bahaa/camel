@@ -17,11 +17,11 @@
 package org.apache.camel.itest.greeter;
 
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.component.cxf.common.message.CxfConstants;
 import org.apache.camel.itest.utils.extensions.JmsServiceExtension;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -31,15 +31,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @CamelSpringTest
 @ContextConfiguration
+@Timeout(60)
 public class JmsToCxfInOutTest {
     @RegisterExtension
     public static JmsServiceExtension jmsServiceExtension = JmsServiceExtension.createExtension();
 
-    private static int port = AvailablePortFinder.getNextAvailable();
+    @RegisterExtension
+    static AvailablePortFinder.Port port = AvailablePortFinder.find();
     static {
         //set them as system properties so Spring can use the property place holder
         //things to set them into the URL's in the spring contexts
-        System.setProperty("JmsToCxfInOutTest.port", Integer.toString(port));
+        System.setProperty("JmsToCxfInOutTest.port", Integer.toString(port.getPort()));
     }
 
     @Autowired
@@ -49,12 +51,16 @@ public class JmsToCxfInOutTest {
     void testJmsToCxfInOut() {
         assertNotNull(template);
 
-        String out = template.requestBodyAndHeader("jms:queue:bridge.cxf", "Willem", CxfConstants.OPERATION_NAME, "greetMe",
+        // The CXF operation header value now begins with "Camel" and is therefore
+        // filtered by JmsHeaderFilterStrategy at the transport boundary. Send the
+        // operation as a non-Camel-prefixed carrier header; the route maps it to
+        // CxfConstants.OPERATION_NAME between the JMS from and the cxf: to.
+        String out = template.requestBodyAndHeader("jms:queue:bridge.cxf", "Willem", "operationName", "greetMe",
                 String.class);
         assertEquals("Hello Willem", out);
 
         // call for the other operation
-        out = template.requestBodyAndHeader("jms:queue:bridge.cxf", new Object[0], CxfConstants.OPERATION_NAME, "sayHi",
+        out = template.requestBodyAndHeader("jms:queue:bridge.cxf", new Object[0], "operationName", "sayHi",
                 String.class);
         assertEquals("Bonjour", out);
     }

@@ -21,6 +21,7 @@ import java.net.URI;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.net.ClientOptionsBase;
 import io.vertx.core.net.ProxyType;
+import io.vertx.core.tracing.TracingPolicy;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.spi.CookieStore;
 import org.apache.camel.spi.HeaderFilterStrategy;
@@ -49,8 +50,10 @@ public class VertxHttpConfiguration {
     private VertxHttpBinding vertxHttpBinding;
     @UriParam(label = "producer", defaultValue = "true")
     private boolean throwExceptionOnFailure = true;
-    @UriParam(label = "producer", defaultValue = "false")
+    @UriParam(label = "producer", defaultValue = "false", security = "insecure:serialization")
     private boolean transferException;
+    @UriParam(label = "advanced,security")
+    private String deserializationFilter;
     @UriParam(label = "producer", defaultValue = "200-299")
     private String okStatusCodeRange = "200-299";
     @UriParam(label = "producer", defaultValue = "false")
@@ -63,9 +66,9 @@ public class VertxHttpConfiguration {
     private boolean responsePayloadAsByteArray = true;
     @UriParam(label = "security")
     private String basicAuthUsername;
-    @UriParam(label = "security")
+    @UriParam(label = "security", security = "secret")
     private String basicAuthPassword;
-    @UriParam(label = "security")
+    @UriParam(label = "security", security = "secret")
     private String bearerToken;
     @UriParam(label = "security")
     private SSLContextParameters sslContextParameters;
@@ -77,7 +80,7 @@ public class VertxHttpConfiguration {
     private ProxyType proxyType;
     @UriParam(label = "proxy")
     private String proxyUsername;
-    @UriParam(label = "proxy")
+    @UriParam(label = "proxy", security = "secret")
     private String proxyPassword;
     @UriParam(label = "producer")
     private WebClientOptions webClientOptions;
@@ -90,6 +93,9 @@ public class VertxHttpConfiguration {
     @UriParam(label = "producer",
               description = "If the option is true, the Exchange.HTTP_URI header will be ignored and the endpoint URI will be used for the HTTP request. You may also set option throwExceptionOnFailure to false to return the fault response back to the client.")
     private boolean bridgeEndpoint;
+    @UriParam(label = "producer",
+              description = "The tracing policy used by the HTTP client when integrating with observability frameworks such as OpenTelemetry. If not specified the HTTP client applies a default tracing policy of PROPAGATE.")
+    private TracingPolicy tracingPolicy;
 
     /**
      * The HTTP URI to connect to
@@ -194,6 +200,22 @@ public class VertxHttpConfiguration {
 
     public boolean isTransferException() {
         return transferException;
+    }
+
+    public String getDeserializationFilter() {
+        return deserializationFilter;
+    }
+
+    /**
+     * Sets an ObjectInputFilter pattern (jdk.serialFilter syntax) applied when deserializing Java objects from HTTP
+     * responses with Content-Type application/x-java-serialized-object. This is used when transferException is enabled
+     * (or when allowJavaSerializedObject is enabled on the component) and the remote side returns a serialized payload.
+     * When not set, the filter configured via the JVM system property jdk.serialFilter is used when present; otherwise
+     * a conservative default filter denying java.net. and otherwise allowing java., javax. and org.apache.camel.
+     * packages is applied.
+     */
+    public void setDeserializationFilter(String deserializationFilter) {
+        this.deserializationFilter = deserializationFilter;
     }
 
     /**
@@ -387,5 +409,13 @@ public class VertxHttpConfiguration {
 
     public void setBridgeEndpoint(boolean bridgeEndpoint) {
         this.bridgeEndpoint = bridgeEndpoint;
+    }
+
+    public TracingPolicy getTracingPolicy() {
+        return tracingPolicy;
+    }
+
+    public void setTracingPolicy(TracingPolicy tracingPolicy) {
+        this.tracingPolicy = tracingPolicy;
     }
 }

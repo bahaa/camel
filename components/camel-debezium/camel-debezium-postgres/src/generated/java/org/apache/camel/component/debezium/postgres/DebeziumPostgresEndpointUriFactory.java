@@ -21,9 +21,10 @@ public class DebeziumPostgresEndpointUriFactory extends org.apache.camel.support
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(129);
+        Set<String> props = new HashSet<>(133);
         props.add("additionalProperties");
         props.add("binaryHandlingMode");
         props.add("bridgeErrorHandler");
@@ -75,6 +76,8 @@ public class DebeziumPostgresEndpointUriFactory extends org.apache.camel.support
         props.add("maxBatchSize");
         props.add("maxQueueSize");
         props.add("maxQueueSizeInBytes");
+        props.add("memoryManagementSchemasClass");
+        props.add("memoryManagementTablesClass");
         props.add("messageKeyColumns");
         props.add("messagePrefixExcludeList");
         props.add("messagePrefixIncludeList");
@@ -129,6 +132,7 @@ public class DebeziumPostgresEndpointUriFactory extends org.apache.camel.support
         props.add("snapshotLockingMode");
         props.add("snapshotLockingModeCustomName");
         props.add("snapshotMaxThreads");
+        props.add("snapshotMaxThreadsMultiplier");
         props.add("snapshotMode");
         props.add("snapshotModeConfigurationBasedSnapshotData");
         props.add("snapshotModeConfigurationBasedSnapshotOnDataError");
@@ -141,6 +145,7 @@ public class DebeziumPostgresEndpointUriFactory extends org.apache.camel.support
         props.add("snapshotSelectStatementOverrides");
         props.add("snapshotTablesOrderByRowCount");
         props.add("sourceinfoStructMaker");
+        props.add("statisticsMetricsEnabled");
         props.add("statusUpdateIntervalMs");
         props.add("streamingDelayMs");
         props.add("tableExcludeList");
@@ -155,6 +160,7 @@ public class DebeziumPostgresEndpointUriFactory extends org.apache.camel.support
         props.add("xminFetchIntervalMs");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         SECRET_PROPERTY_NAMES = Collections.emptySet();
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         Map<String, String> prefixes = new HashMap<>(1);
         prefixes.put("additionalProperties", "additionalProperties.");
         MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
@@ -185,6 +191,11 @@ public class DebeziumPostgresEndpointUriFactory extends org.apache.camel.support
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

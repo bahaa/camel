@@ -30,7 +30,7 @@ import org.testcontainers.utility.DockerImageName;
  * A service for a local instance of Apache Cassandra running with TestContainers
  */
 @InfraService(service = CassandraInfraService.class,
-              description = "Apache Cassandra NoSQL Database",
+              description = "Apache Cassandra is a distributed NoSQL database",
               serviceAlias = { "cassandra" })
 public class CassandraLocalContainerInfraService implements CassandraInfraService, ContainerService<CassandraContainer> {
     private static final Logger LOG = LoggerFactory.getLogger(CassandraLocalContainerInfraService.class);
@@ -60,11 +60,7 @@ public class CassandraLocalContainerInfraService implements CassandraInfraServic
             public CassandraContainerWithFixedPort(boolean fixedPort) {
                 super(DockerImageName.parse(imageName).asCompatibleSubstituteFor("cassandra"));
 
-                if (fixedPort) {
-                    addFixedExposedPort(9042, 9042);
-                } else {
-                    withExposedPorts(9042);
-                }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, 9042);
             }
         }
 

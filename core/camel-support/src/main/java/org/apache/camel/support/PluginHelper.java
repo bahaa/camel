@@ -41,6 +41,7 @@ import org.apache.camel.spi.InterceptEndpointFactory;
 import org.apache.camel.spi.InternalProcessorFactory;
 import org.apache.camel.spi.LanguageResolver;
 import org.apache.camel.spi.ModelJAXBContextFactory;
+import org.apache.camel.spi.ModelToJavaDumper;
 import org.apache.camel.spi.ModelToStructureDumper;
 import org.apache.camel.spi.ModelToXMLDumper;
 import org.apache.camel.spi.ModelToYAMLDumper;
@@ -53,8 +54,12 @@ import org.apache.camel.spi.ProcessorFactory;
 import org.apache.camel.spi.ResourceLoader;
 import org.apache.camel.spi.RestBindingJacksonXmlDataFormatFactory;
 import org.apache.camel.spi.RestBindingJaxbDataFormatFactory;
+import org.apache.camel.spi.RestRegistry;
+import org.apache.camel.spi.RouteDiagramDumper;
 import org.apache.camel.spi.RouteFactory;
+import org.apache.camel.spi.RouteTopologyDumper;
 import org.apache.camel.spi.RoutesLoader;
+import org.apache.camel.spi.SimpleFunctionRegistry;
 import org.apache.camel.spi.UnitOfWorkFactory;
 import org.apache.camel.spi.UriFactoryResolver;
 import org.apache.camel.support.task.TaskManagerRegistry;
@@ -560,10 +565,24 @@ public final class PluginHelper {
     }
 
     /**
-     * Gets the {@link ModelToXMLDumper} to be used.
+     * Gets the {@link ModelToYAMLDumper} to be used.
      */
     public static ModelToYAMLDumper getModelToYAMLDumper(ExtendedCamelContext extendedCamelContext) {
         return extendedCamelContext.getContextPlugin(ModelToYAMLDumper.class);
+    }
+
+    /**
+     * Gets the {@link ModelToJavaDumper} to be used.
+     */
+    public static ModelToJavaDumper getModelToJavaDumper(CamelContext camelContext) {
+        return getModelToJavaDumper(camelContext.getCamelContextExtension());
+    }
+
+    /**
+     * Gets the {@link ModelToJavaDumper} to be used.
+     */
+    public static ModelToJavaDumper getModelToJavaDumper(ExtendedCamelContext extendedCamelContext) {
+        return extendedCamelContext.getContextPlugin(ModelToJavaDumper.class);
     }
 
     /**
@@ -578,6 +597,20 @@ public final class PluginHelper {
      */
     public static ModelToStructureDumper getModelToStructureDumper(ExtendedCamelContext extendedCamelContext) {
         return extendedCamelContext.getContextPlugin(ModelToStructureDumper.class);
+    }
+
+    /**
+     * Gets the {@link RouteTopologyDumper} to use.
+     */
+    public static RouteTopologyDumper getRouteTopologyDumper(CamelContext camelContext) {
+        return getRouteTopologyDumper(camelContext.getCamelContextExtension());
+    }
+
+    /**
+     * Gets the {@link RouteTopologyDumper} to use.
+     */
+    public static RouteTopologyDumper getRouteTopologyDumper(ExtendedCamelContext extendedCamelContext) {
+        return extendedCamelContext.getContextPlugin(RouteTopologyDumper.class);
     }
 
     /**
@@ -622,6 +655,48 @@ public final class PluginHelper {
      */
     public static TaskManagerRegistry getTaskManagerRegistry(ExtendedCamelContext extendedCamelContext) {
         return extendedCamelContext.getContextPlugin(TaskManagerRegistry.class);
+    }
+
+    /**
+     * Gets the {@link SimpleFunctionRegistry} to use.
+     */
+    public static SimpleFunctionRegistry getSimpleFunctionRegistry(CamelContext camelContext) {
+        return camelContext.getCamelContextExtension().getContextPlugin(SimpleFunctionRegistry.class);
+    }
+
+    /**
+     * Gets the {@link SimpleFunctionRegistry} to use.
+     */
+    public static SimpleFunctionRegistry getSimpleFunctionRegistry(ExtendedCamelContext extendedCamelContext) {
+        return extendedCamelContext.getContextPlugin(SimpleFunctionRegistry.class);
+    }
+
+    /**
+     * Gets the {@link RestRegistry} to use.
+     */
+    public static RestRegistry getRestRegistry(CamelContext camelContext) {
+        return camelContext.getCamelContextExtension().getContextPlugin(RestRegistry.class);
+    }
+
+    /**
+     * Gets the {@link RestRegistry} to use.
+     */
+    public static RestRegistry getRestRegistry(ExtendedCamelContext extendedCamelContext) {
+        return extendedCamelContext.getContextPlugin(RestRegistry.class);
+    }
+
+    /**
+     * Gets the {@link RouteDiagramDumper} to use.
+     */
+    public static RouteDiagramDumper getRouteDiagramDumper(CamelContext camelContext) {
+        return camelContext.getCamelContextExtension().getContextPlugin(RouteDiagramDumper.class);
+    }
+
+    /**
+     * Gets the {@link RouteDiagramDumper} to use.
+     */
+    public static RouteDiagramDumper getRouteDiagramDumper(ExtendedCamelContext extendedCamelContext) {
+        return extendedCamelContext.getContextPlugin(RouteDiagramDumper.class);
     }
 
 }

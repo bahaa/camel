@@ -18,6 +18,7 @@ package org.apache.camel.model.language;
 
 import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlAttribute;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 
@@ -27,16 +28,33 @@ import org.apache.camel.spi.Metadata;
 /**
  * Evaluates a Camel simple expression.
  */
-@Metadata(firstVersion = "1.1.0", label = "language,core,java", title = "Simple")
+@Metadata(firstVersion = "1.1.0", label = "language,core,java", title = "Simple",
+          description = "Evaluates a Camel simple expression")
 @XmlRootElement(name = "simple")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SimpleExpression extends TypedExpressionDefinition {
+
+    @XmlAttribute
+    @Metadata(defaultValue = "false", javaType = "java.lang.Boolean",
+              description = "Whether to trim the returned values when this language is in use.")
+    private String trimResult;
+    @XmlAttribute
+    @Metadata(defaultValue = "false", javaType = "java.lang.Boolean",
+              description = "To pretty format the output (only JSon or XML supported).")
+    private String pretty;
+    @XmlAttribute
+    @Metadata(defaultValue = "false", javaType = "java.lang.Boolean", label = "advanced",
+              description = "If the result is a nested simple expression should this expression be evaluated as well.")
+    private String nested;
 
     public SimpleExpression() {
     }
 
     protected SimpleExpression(SimpleExpression source) {
         super(source);
+        this.trimResult = source.trimResult;
+        this.pretty = source.pretty;
+        this.nested = source.nested;
     }
 
     public SimpleExpression(String expression) {
@@ -49,6 +67,9 @@ public class SimpleExpression extends TypedExpressionDefinition {
 
     private SimpleExpression(Builder builder) {
         super(builder);
+        this.trimResult = builder.trimResult;
+        this.pretty = builder.pretty;
+        this.nested = builder.nested;
     }
 
     @Override
@@ -61,11 +82,97 @@ public class SimpleExpression extends TypedExpressionDefinition {
         return "simple";
     }
 
+    public String getTrimResult() {
+        return trimResult;
+    }
+
+    public void setTrimResult(String trimResult) {
+        this.trimResult = trimResult;
+    }
+
+    public String getPretty() {
+        return pretty;
+    }
+
+    public void setPretty(String pretty) {
+        this.pretty = pretty;
+    }
+
+    public String getNested() {
+        return nested;
+    }
+
+    public void setNested(String nested) {
+        this.nested = nested;
+    }
+
     /**
      * {@code Builder} is a specific builder for {@link SimpleExpression}.
      */
     @XmlTransient
     public static class Builder extends AbstractBuilder<Builder, SimpleExpression> {
+
+        private String trimResult;
+        private String pretty;
+        private String nested;
+
+        /**
+         * Whether to trim the returned values when this language are in use.
+         *
+         * For example the output result may contain unwanted line breaks at the beginning and end such as when using
+         * Java DSL with multi-line blocks.
+         *
+         * Is default false to be backwards compatible with existing behavior.
+         */
+        public Builder trimResult(String trimResult) {
+            this.trimResult = trimResult;
+            return this;
+        }
+
+        /**
+         * Whether to trim the returned values when this language are in use.
+         *
+         * For example the output result may contain unwanted line breaks at the beginning and end such as when using
+         * Java DSL with multi-line blocks.
+         *
+         * Is default false to be backwards compatible with existing behavior.
+         */
+        public Builder trimResult(boolean trimResult) {
+            this.trimResult = Boolean.toString(trimResult);
+            return this;
+        }
+
+        /**
+         * To pretty format the output (only JSon or XML supported)
+         */
+        public Builder pretty(String pretty) {
+            this.pretty = pretty;
+            return this;
+        }
+
+        /**
+         * To pretty format the output (only JSon or XML supported)
+         */
+        public Builder pretty(boolean pretty) {
+            this.pretty = Boolean.toString(pretty);
+            return this;
+        }
+
+        /**
+         * If the result is a nested simple expression should this expression be evaluated as well
+         */
+        public Builder nested(String nested) {
+            this.nested = nested;
+            return this;
+        }
+
+        /**
+         * If the result is a nested simple expression should this expression be evaluated as well
+         */
+        public Builder nested(boolean nested) {
+            this.nested = Boolean.toString(nested);
+            return this;
+        }
 
         @Override
         public SimpleExpression end() {

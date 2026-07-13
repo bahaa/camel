@@ -48,6 +48,7 @@ import org.apache.camel.Navigate;
 import org.apache.camel.Processor;
 import org.apache.camel.Route;
 import org.apache.camel.RuntimeExchangeException;
+import org.apache.camel.Traceable;
 import org.apache.camel.api.management.ManagedAttribute;
 import org.apache.camel.api.management.ManagedOperation;
 import org.apache.camel.api.management.ManagedResource;
@@ -73,7 +74,7 @@ import org.slf4j.LoggerFactory;
  */
 @ManagedResource(description = "Managed Resilience Processor")
 public class ResilienceProcessor extends BaseProcessorSupport
-        implements CamelContextAware, Navigate<Processor>, org.apache.camel.Traceable, IdAware, RouteIdAware {
+        implements CamelContextAware, Navigate<Processor>, Traceable, IdAware, RouteIdAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(ResilienceProcessor.class);
 
@@ -516,12 +517,8 @@ public class ResilienceProcessor extends BaseProcessorSupport
             Callable<Exchange> callable;
 
             if (timeLimiter != null) {
-                Supplier<CompletableFuture<Exchange>> futureSupplier;
-                if (executorService == null) {
-                    futureSupplier = () -> CompletableFuture.supplyAsync(ftask);
-                } else {
-                    futureSupplier = () -> CompletableFuture.supplyAsync(ftask, executorService);
-                }
+                Supplier<CompletableFuture<Exchange>> futureSupplier
+                        = () -> CompletableFuture.supplyAsync(ftask, executorService);
                 callable = TimeLimiter.decorateFutureSupplier(timeLimiter, futureSupplier);
             } else {
                 callable = task;

@@ -92,6 +92,7 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         map.put("MainListeners", java.util.List.class);
         map.put("MdcLoggingKeysPattern", java.lang.String.class);
         map.put("MessageHistory", boolean.class);
+        map.put("MessageSizeEnabled", boolean.class);
         map.put("Modeline", boolean.class);
         map.put("Name", java.lang.String.class);
         map.put("ProducerTemplateCacheSize", int.class);
@@ -132,6 +133,7 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         map.put("StreamCachingSpoolCipher", java.lang.String.class);
         map.put("StreamCachingSpoolDirectory", java.lang.String.class);
         map.put("StreamCachingSpoolEnabled", boolean.class);
+        map.put("StreamCachingSpoolRules", java.lang.String.class);
         map.put("StreamCachingSpoolThreshold", long.class);
         map.put("StreamCachingSpoolUsedHeapMemoryLimit", java.lang.String.class);
         map.put("StreamCachingSpoolUsedHeapMemoryThreshold", int.class);
@@ -147,6 +149,8 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         map.put("UseDataType", boolean.class);
         map.put("UseMdcLogging", boolean.class);
         map.put("UuidGenerator", java.lang.String.class);
+        map.put("VirtualThreadsEnabled", boolean.class);
+        map.put("YamlDslCompactNotationWarn", boolean.class);
         ALL_OPTIONS = map;
     }
 
@@ -292,6 +296,8 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         case "mdcLoggingKeysPattern": target.setMdcLoggingKeysPattern(property(camelContext, java.lang.String.class, value)); return true;
         case "messagehistory":
         case "messageHistory": target.setMessageHistory(property(camelContext, boolean.class, value)); return true;
+        case "messagesizeenabled":
+        case "messageSizeEnabled": target.setMessageSizeEnabled(property(camelContext, boolean.class, value)); return true;
         case "modeline": target.setModeline(property(camelContext, boolean.class, value)); return true;
         case "name": target.setName(property(camelContext, java.lang.String.class, value)); return true;
         case "producertemplatecachesize":
@@ -369,6 +375,8 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         case "streamCachingSpoolDirectory": target.setStreamCachingSpoolDirectory(property(camelContext, java.lang.String.class, value)); return true;
         case "streamcachingspoolenabled":
         case "streamCachingSpoolEnabled": target.setStreamCachingSpoolEnabled(property(camelContext, boolean.class, value)); return true;
+        case "streamcachingspoolrules":
+        case "streamCachingSpoolRules": target.setStreamCachingSpoolRules(property(camelContext, java.lang.String.class, value)); return true;
         case "streamcachingspoolthreshold":
         case "streamCachingSpoolThreshold": target.setStreamCachingSpoolThreshold(property(camelContext, long.class, value)); return true;
         case "streamcachingspoolusedheapmemorylimit":
@@ -398,6 +406,10 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         case "useMdcLogging": target.setUseMdcLogging(property(camelContext, boolean.class, value)); return true;
         case "uuidgenerator":
         case "uuidGenerator": target.setUuidGenerator(property(camelContext, java.lang.String.class, value)); return true;
+        case "virtualthreadsenabled":
+        case "virtualThreadsEnabled": target.setVirtualThreadsEnabled(property(camelContext, boolean.class, value)); return true;
+        case "yamldslcompactnotationwarn":
+        case "yamlDslCompactNotationWarn": target.setYamlDslCompactNotationWarn(property(camelContext, boolean.class, value)); return true;
         default: return false;
         }
     }
@@ -548,6 +560,8 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         case "mdcLoggingKeysPattern": return java.lang.String.class;
         case "messagehistory":
         case "messageHistory": return boolean.class;
+        case "messagesizeenabled":
+        case "messageSizeEnabled": return boolean.class;
         case "modeline": return boolean.class;
         case "name": return java.lang.String.class;
         case "producertemplatecachesize":
@@ -625,6 +639,8 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         case "streamCachingSpoolDirectory": return java.lang.String.class;
         case "streamcachingspoolenabled":
         case "streamCachingSpoolEnabled": return boolean.class;
+        case "streamcachingspoolrules":
+        case "streamCachingSpoolRules": return java.lang.String.class;
         case "streamcachingspoolthreshold":
         case "streamCachingSpoolThreshold": return long.class;
         case "streamcachingspoolusedheapmemorylimit":
@@ -654,6 +670,10 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         case "useMdcLogging": return boolean.class;
         case "uuidgenerator":
         case "uuidGenerator": return java.lang.String.class;
+        case "virtualthreadsenabled":
+        case "virtualThreadsEnabled": return boolean.class;
+        case "yamldslcompactnotationwarn":
+        case "yamlDslCompactNotationWarn": return boolean.class;
         default: return null;
         }
     }
@@ -800,6 +820,8 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         case "mdcLoggingKeysPattern": return target.getMdcLoggingKeysPattern();
         case "messagehistory":
         case "messageHistory": return target.isMessageHistory();
+        case "messagesizeenabled":
+        case "messageSizeEnabled": return target.isMessageSizeEnabled();
         case "modeline": return target.isModeline();
         case "name": return target.getName();
         case "producertemplatecachesize":
@@ -877,6 +899,8 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         case "streamCachingSpoolDirectory": return target.getStreamCachingSpoolDirectory();
         case "streamcachingspoolenabled":
         case "streamCachingSpoolEnabled": return target.isStreamCachingSpoolEnabled();
+        case "streamcachingspoolrules":
+        case "streamCachingSpoolRules": return target.getStreamCachingSpoolRules();
         case "streamcachingspoolthreshold":
         case "streamCachingSpoolThreshold": return target.getStreamCachingSpoolThreshold();
         case "streamcachingspoolusedheapmemorylimit":
@@ -906,6 +930,10 @@ public class MainConfigurationPropertiesConfigurer extends org.apache.camel.supp
         case "useMdcLogging": return target.isUseMdcLogging();
         case "uuidgenerator":
         case "uuidGenerator": return target.getUuidGenerator();
+        case "virtualthreadsenabled":
+        case "virtualThreadsEnabled": return target.isVirtualThreadsEnabled();
+        case "yamldslcompactnotationwarn":
+        case "yamlDslCompactNotationWarn": return target.isYamlDslCompactNotationWarn();
         default: return null;
         }
     }

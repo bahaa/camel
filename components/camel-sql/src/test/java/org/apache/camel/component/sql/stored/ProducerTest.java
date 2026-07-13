@@ -22,7 +22,7 @@ import java.util.Map;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
@@ -33,16 +33,26 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class ProducerTest extends CamelTestSupport {
 
+    /* This is necessary when debugging tests to enable HSQLDB to find
+       the classes in the classpath. */
+    /*
+    static {
+        if (System.getProperty("hsqldb.method_class_names") == null) {
+            System.setProperty(
+                    "hsqldb.method_class_names",
+                    "org.apache.camel.component.sql.stored.*");
+        }
+    }
+    */
+
     EmbeddedDatabase db;
 
     @Override
-
     public void doPreSetup() throws Exception {
         db = new EmbeddedDatabaseBuilder()
                 .setName(getClass().getSimpleName())
-                .setType(EmbeddedDatabaseType.DERBY)
+                .setType(EmbeddedDatabaseType.HSQL)
                 .addScript("sql/storedProcedureTest.sql").build();
-
     }
 
     @Override
@@ -78,8 +88,9 @@ public class ProducerTest extends CamelTestSupport {
                 // required for the sql component
                 getContext().getComponent("sql-stored", SqlStoredComponent.class).setDataSource(db);
 
-                from("direct:query").to("sql-stored:SUBNUMBERS(INTEGER ${headers.num1},INTEGER ${headers"
-                                        + ".num2},OUT INTEGER resultofsub)")
+                from("direct:query")
+                        .to("sql-stored:SUBNUMBERS(INTEGER ${headers.num1},INTEGER ${headers"
+                            + ".num2},OUT INTEGER resultofsub)")
                         .to("mock:query");
             }
         };

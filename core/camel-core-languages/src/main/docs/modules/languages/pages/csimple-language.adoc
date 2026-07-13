@@ -1,16 +1,20 @@
-= CSimple Language
+= CSimple Language (deprecated)
 :doctitle: CSimple
 :shortname: csimple
 :artifactid: camel-core-languages
-:description: Evaluate a compiled simple expression.
+:description: Evaluate a compiled simple expression
 :since: 3.7
-:supportlevel: Stable
+:supportlevel: Stable-deprecated
+:deprecated: *deprecated*
 :tabs-sync-option:
-//Manually maintained attributes
-:camel-spring-boot-name: core
-:starter-artifactid: camel-core-starter
 
 *Since Camel {since}*
+
+[WARNING]
+====
+The CSimple (compiled simple) language is *deprecated* (since Camel 4.19) and will be removed in a future release.
+Use the xref:simple-language.adoc[Simple] language instead.
+====
 
 The CSimple language is *compiled* xref:simple-language.adoc[Simple] language.
 
@@ -187,7 +191,9 @@ include::partial$language-options.adoc[]
 Currently, the csimple language does **not** support:
 
 - nested functions (aka functions inside functions)
-- the _null safe_ operator (`?`).
+- the _null safe_ operator (`?.`).
+
+NOTE: The ternary operator (`? :`) IS supported in csimple. The limitation above refers only to the null-safe operator used in OGNL expressions (e.g., `${body?.address}`).
 
 For example the following scripts cannot compile:
 
@@ -236,6 +242,10 @@ echo()=${bodyAs(String)} ${bodyAs(String)}
 
 Which allows to use _echo()_ in the csimple language script such as:
 
+[tabs]
+====
+Java::
++
 [source,java]
 ----
 from("direct:hello")
@@ -243,8 +253,37 @@ from("direct:hello")
     .log("You said ${body}");
 ----
 
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:hello"/>
+  <transform>
+    <csimple>Hello echo()</csimple>
+  </transform>
+  <log message="You said ${body}"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:hello
+      steps:
+        - transform:
+            csimple: "Hello echo()"
+        - log:
+            message: "You said ${body}"
+----
+====
+
 The _echo()_ alias will be replaced with its value resulting in a script as:
 
+._Java-only: expanded echo() alias_
 [source,java]
 ----
     .transform(csimple("Hello ${bodyAs(String)} ${bodyAs(String)}"))
@@ -254,4 +293,6 @@ The _echo()_ alias will be replaced with its value resulting in a script as:
 
 See the xref:simple-language.adoc[Simple] language as csimple has the same set of functions as simple language.
 
-include::spring-boot:partial$starter.adoc[]
+== Dependencies
+
+The CSimple language is part of *camel-core* and also requires *camel-simple-joor* JAR.

@@ -30,9 +30,10 @@ import org.apache.camel.component.jms.JmsComponent;
 import org.apache.camel.itest.utils.extensions.JmsServiceExtension;
 import org.apache.camel.spi.Registry;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,13 +44,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
  * Doing request/reply over Netty with async processing.
  */
+@Timeout(60)
 public class NettyAsyncRequestReplyTest extends CamelTestSupport {
     @RegisterExtension
     public static JmsServiceExtension jmsServiceExtension = JmsServiceExtension.createExtension();
 
+    @RegisterExtension
+    static AvailablePortFinder.Port portFinder = AvailablePortFinder.find();
+
     private static final Logger LOG = LoggerFactory.getLogger(NettyAsyncRequestReplyTest.class);
 
-    private int port;
+    private int port = portFinder.getPort();
 
     @Test
     void testNetty() {
@@ -99,7 +104,6 @@ public class NettyAsyncRequestReplyTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                port = AvailablePortFinder.getNextAvailable();
 
                 from("netty:tcp://localhost:" + port + "?textline=true&sync=true&reuseAddress=true&synchronous=false")
                         .to("activemq:queue:NettyAsyncRequestReplyTest")

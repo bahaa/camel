@@ -19,6 +19,7 @@ package org.apache.camel.component.smb;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.EnumSet;
 
@@ -45,6 +46,7 @@ import org.apache.camel.component.file.FileComponent;
 import org.apache.camel.component.file.GenericFile;
 import org.apache.camel.component.file.GenericFileEndpoint;
 import org.apache.camel.component.file.GenericFileExist;
+import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.IOHelper;
@@ -181,6 +183,17 @@ public class SmbOperations implements SmbFileOperations {
                     SMB2ShareAccess.ALL,
                     SMB2CreateDisposition.FILE_OPEN, null)) {
                 f.deleteOnClose();
+            } catch (SMBApiException e) {
+                if (e.getStatusCode() == 0xc0000022L) {
+                    throw new GenericFileOperationFailedException(
+                            "Access denied when trying to delete file: " + name
+                                                                  + ". Ensure the authenticated user has DELETE permission on the file"
+                                                                  + " and that the server's volume security style allows SMB-based access control."
+                                                                  + " If the volume uses UNIX security style, NTFS ACLs are ignored"
+                                                                  + " and only file ownership and UNIX mode bits (chmod/chown) are evaluated.",
+                            e);
+                }
+                throw e;
             }
         }
         return true;
@@ -224,7 +237,8 @@ public class SmbOperations implements SmbFileOperations {
     public boolean atomicRenameFile(File src, String to)
             throws GenericFileOperationFailedException {
         try {
-            src.rename(to);
+            // SMB protocol requires backslashes as path separators
+            src.rename(to.replace('/', '\\'));
             LOG.debug("Renamed file: {} to: {} using atomic rename", src.getUncPath(), to);
             return true;
         } catch (SMBRuntimeException e) {
@@ -325,11 +339,18 @@ public class SmbOperations implements SmbFileOperations {
             // use relative filename in local work directory
             String relativeName = file.getRelativeFilePath();
 
+            java.io.File localWorkDir = local;
             temp = new java.io.File(local, relativeName + ".inprogress");
+            local = new java.io.File(local, relativeName);
+
+            // ensure the local work file stays within the local work directory (CAMEL-23765)
+            if (endpoint.isJailStartingDirectory()) {
+                GenericFileHelper.jailToLocalWorkDirectory(temp, localWorkDir);
+                GenericFileHelper.jailToLocalWorkDirectory(local, localWorkDir);
+            }
 
             // create directory to local work file
-            local.mkdirs();
-            local = new java.io.File(local, relativeName);
+            localWorkDir.mkdirs();
 
             // delete any existing files
             if (temp.exists()) {
@@ -360,7 +381,7 @@ public class SmbOperations implements SmbFileOperations {
 
                 try (InputStream is = shareFile.getInputStream()) {
                     // store content as a file in the local work directory in the temp handle
-                    java.nio.file.Files.copy(is, temp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    Files.copy(is, temp.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
 
                 exchange.getIn().setHeader(SmbConstants.SMB_UNC_PATH, shareFile.getUncPath());
@@ -501,6 +522,24 @@ public class SmbOperations implements SmbFileOperations {
         } finally {
             IOHelper.close(is, "store: " + name, LOG);
         }
+    }
+
+    @Override
+    public boolean storeFileDirectly(String name, String payload) throws GenericFileOperationFailedException {
+        ByteArrayInputStream bis = new ByteArrayInputStream(payload.getBytes());
+        try {
+            try (File shareFile = share.openFile(name, EnumSet.of(AccessMask.FILE_WRITE_DATA),
+                    EnumSet.of(FileAttributes.FILE_ATTRIBUTE_NORMAL),
+                    SMB2ShareAccess.ALL, SMB2CreateDisposition.FILE_OVERWRITE_IF,
+                    EnumSet.of(SMB2CreateOptions.FILE_DIRECTORY_FILE))) {
+                writeToFile(name, shareFile, bis);
+            }
+        } catch (IOException e) {
+            throw new GenericFileOperationFailedException(e.getMessage(), e);
+        } finally {
+            IOHelper.close(bis);
+        }
+        return true;
     }
 
     public void createDirectory(DiskShare share, String fileName) {

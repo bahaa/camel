@@ -790,7 +790,7 @@ public interface Sns2EndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final Sns2HeaderNameBuilder INSTANCE = new Sns2HeaderNameBuilder();
+        public static final Sns2HeaderNameBuilder INSTANCE = new Sns2HeaderNameBuilder();
 
         /**
          * The Amazon SNS message ID.
@@ -828,6 +828,42 @@ public interface Sns2EndpointBuilderFactory {
          */
         public String awsSnsMessageStructure() {
             return "CamelAwsSnsMessageStructure";
+        }
+        /**
+         * The sequence number for FIFO topics.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsSnsSequenceNumber}.
+         */
+        public String awsSnsSequenceNumber() {
+            return "CamelAwsSnsSequenceNumber";
+        }
+        /**
+         * The number of failed messages in a batch publish operation.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsSnsFailedMessageCount}.
+         */
+        public String awsSnsFailedMessageCount() {
+            return "CamelAwsSnsFailedMessageCount";
+        }
+        /**
+         * The number of successful messages in a batch publish operation.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AwsSnsSuccessfulMessageCount}.
+         */
+        public String awsSnsSuccessfulMessageCount() {
+            return "CamelAwsSnsSuccessfulMessageCount";
         }
     }
     static Sns2EndpointBuilder endpointBuilder(String componentName, String path) {

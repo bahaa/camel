@@ -21,9 +21,10 @@ public class KafkaEndpointUriFactory extends org.apache.camel.support.component.
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(112);
+        Set<String> props = new HashSet<>(121);
         props.add("additionalProperties");
         props.add("allowManualCommit");
         props.add("autoCommitEnable");
@@ -52,6 +53,8 @@ public class KafkaEndpointUriFactory extends org.apache.camel.support.component.
         props.add("fetchWaitMaxMs");
         props.add("groupId");
         props.add("groupInstanceId");
+        props.add("groupProtocol");
+        props.add("groupRemoteAssignor");
         props.add("headerDeserializer");
         props.add("headerFilterStrategy");
         props.add("headerSerializer");
@@ -81,6 +84,10 @@ public class KafkaEndpointUriFactory extends org.apache.camel.support.component.
         props.add("metricReporters");
         props.add("metricsSampleWindowMs");
         props.add("noOfMetricsSample");
+        props.add("oauthClientId");
+        props.add("oauthClientSecret");
+        props.add("oauthScope");
+        props.add("oauthTokenEndpointUri");
         props.add("offsetRepository");
         props.add("partitionAssignor");
         props.add("partitionKey");
@@ -100,9 +107,12 @@ public class KafkaEndpointUriFactory extends org.apache.camel.support.component.
         props.add("retries");
         props.add("retryBackoffMaxMs");
         props.add("retryBackoffMs");
+        props.add("saslAuthType");
         props.add("saslJaasConfig");
         props.add("saslKerberosServiceName");
         props.add("saslMechanism");
+        props.add("saslPassword");
+        props.add("saslUsername");
         props.add("schemaRegistryURL");
         props.add("securityProtocol");
         props.add("seekTo");
@@ -137,12 +147,15 @@ public class KafkaEndpointUriFactory extends org.apache.camel.support.component.
         props.add("workerPoolCoreSize");
         props.add("workerPoolMaxSize");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
-        Set<String> secretProps = new HashSet<>(4);
+        Set<String> secretProps = new HashSet<>(6);
+        secretProps.add("oauthClientSecret");
         secretProps.add("saslJaasConfig");
+        secretProps.add("saslPassword");
         secretProps.add("sslKeyPassword");
         secretProps.add("sslKeystorePassword");
         secretProps.add("sslTruststorePassword");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         Map<String, String> prefixes = new HashMap<>(1);
         prefixes.put("additionalProperties", "additionalProperties.");
         MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
@@ -173,6 +186,11 @@ public class KafkaEndpointUriFactory extends org.apache.camel.support.component.
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

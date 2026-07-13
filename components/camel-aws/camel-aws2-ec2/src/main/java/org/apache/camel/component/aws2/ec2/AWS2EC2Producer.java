@@ -18,6 +18,9 @@ package org.apache.camel.component.aws2.ec2;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.camel.Endpoint;
 import org.apache.camel.Exchange;
@@ -146,10 +149,10 @@ public class AWS2EC2Producer extends DefaultProducer {
         InstanceType instanceType;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof RunInstancesRequest) {
+            if (payload instanceof RunInstancesRequest runInstancesRequest) {
                 RunInstancesResponse result;
                 try {
-                    result = ec2Client.runInstances((RunInstancesRequest) payload);
+                    result = ec2Client.runInstances(runInstancesRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Run Instances command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -237,15 +240,15 @@ public class AWS2EC2Producer extends DefaultProducer {
         Collection<String> instanceIds;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof StartInstancesRequest) {
+            if (payload instanceof StartInstancesRequest startInstancesRequest) {
                 StartInstancesResponse result;
                 try {
-                    result = ec2Client.startInstances((StartInstancesRequest) payload);
+                    result = ec2Client.startInstances(startInstancesRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Start Instances command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
                 }
-                LOG.trace("Starting instances with Ids [{}] ", ((StartInstancesRequest) payload).instanceIds());
+                LOG.trace("Starting instances with Ids [{}] ", startInstancesRequest.instanceIds());
                 Message message = getMessageForResponse(exchange);
                 message.setBody(result);
             }
@@ -279,15 +282,15 @@ public class AWS2EC2Producer extends DefaultProducer {
         Collection<String> instanceIds;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof StopInstancesRequest) {
+            if (payload instanceof StopInstancesRequest stopInstancesRequest) {
                 StopInstancesResponse result;
                 try {
-                    result = ec2Client.stopInstances((StopInstancesRequest) payload);
+                    result = ec2Client.stopInstances(stopInstancesRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Stop Instances command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
                 }
-                LOG.trace("Stopping instances with Ids [{}] ", ((StopInstancesRequest) payload).instanceIds());
+                LOG.trace("Stopping instances with Ids [{}] ", stopInstancesRequest.instanceIds());
                 Message message = getMessageForResponse(exchange);
                 message.setBody(result);
             }
@@ -321,15 +324,15 @@ public class AWS2EC2Producer extends DefaultProducer {
         Collection<String> instanceIds;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof TerminateInstancesRequest) {
+            if (payload instanceof TerminateInstancesRequest terminateInstancesRequest) {
                 TerminateInstancesResponse result;
                 try {
-                    result = ec2Client.terminateInstances((TerminateInstancesRequest) payload);
+                    result = ec2Client.terminateInstances(terminateInstancesRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Terminate Instances command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
                 }
-                LOG.trace("Terminating instances with Ids [{}] ", ((TerminateInstancesRequest) payload).instanceIds());
+                LOG.trace("Terminating instances with Ids [{}] ", terminateInstancesRequest.instanceIds());
                 Message message = getMessageForResponse(exchange);
                 message.setBody(result);
             }
@@ -360,71 +363,62 @@ public class AWS2EC2Producer extends DefaultProducer {
 
     @SuppressWarnings("unchecked")
     private void describeInstances(Ec2Client ec2Client, Exchange exchange) throws InvalidPayloadException {
-        Collection<String> instanceIds;
-        if (getConfiguration().isPojoRequest()) {
-            Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof DescribeInstancesRequest) {
-                DescribeInstancesResponse result;
-                try {
-                    result = ec2Client.describeInstances((DescribeInstancesRequest) payload);
-                } catch (AwsServiceException ase) {
-                    LOG.trace("Describe Instances command returned the error code {}", ase.awsErrorDetails().errorCode());
-                    throw ase;
-                }
-                Message message = getMessageForResponse(exchange);
-                message.setBody(result);
-            }
-        } else {
-            DescribeInstancesRequest.Builder builder = DescribeInstancesRequest.builder();
-            if (ObjectHelper.isNotEmpty(exchange.getIn().getHeader(AWS2EC2Constants.INSTANCES_IDS))) {
-                instanceIds = exchange.getIn().getHeader(AWS2EC2Constants.INSTANCES_IDS, Collection.class);
-                builder.instanceIds(instanceIds);
-            }
-            DescribeInstancesResponse result;
-            try {
-                result = ec2Client.describeInstances(builder.build());
-            } catch (AwsServiceException ase) {
-                LOG.trace("Describe Instances command returned the error code {}", ase.awsErrorDetails().errorCode());
-                throw ase;
-            }
-            Message message = getMessageForResponse(exchange);
-            message.setBody(result);
-        }
+        executeOperation(
+                exchange,
+                DescribeInstancesRequest.class,
+                ec2Client::describeInstances,
+                () -> {
+                    DescribeInstancesRequest.Builder builder = DescribeInstancesRequest.builder();
+                    Collection<String> instanceIds
+                            = getOptionalHeader(exchange, AWS2EC2Constants.INSTANCES_IDS, Collection.class);
+                    if (ObjectHelper.isNotEmpty(instanceIds)) {
+                        builder.instanceIds(instanceIds);
+                    }
+                    String nextToken = getOptionalHeader(exchange, AWS2EC2Constants.NEXT_TOKEN, String.class);
+                    if (ObjectHelper.isNotEmpty(nextToken)) {
+                        builder.nextToken(nextToken);
+                    }
+                    Integer maxResults = getOptionalHeader(exchange, AWS2EC2Constants.MAX_RESULTS, Integer.class);
+                    if (ObjectHelper.isNotEmpty(maxResults)) {
+                        builder.maxResults(maxResults);
+                    }
+                    return ec2Client.describeInstances(builder.build());
+                },
+                "Describe Instances",
+                (DescribeInstancesResponse response, Message message) -> {
+                    message.setHeader(AWS2EC2Constants.NEXT_TOKEN, response.nextToken());
+                    message.setHeader(AWS2EC2Constants.IS_TRUNCATED, ObjectHelper.isNotEmpty(response.nextToken()));
+                });
     }
 
     @SuppressWarnings("unchecked")
     private void describeInstancesStatus(Ec2Client ec2Client, Exchange exchange) throws InvalidPayloadException {
-        Collection<String> instanceIds;
-        if (getConfiguration().isPojoRequest()) {
-            Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof DescribeInstanceStatusRequest) {
-                DescribeInstanceStatusResponse result;
-                try {
-                    result = ec2Client.describeInstanceStatus((DescribeInstanceStatusRequest) payload);
-                } catch (AwsServiceException ase) {
-                    LOG.trace("Describe Instances Status command returned the error code {}",
-                            ase.awsErrorDetails().errorCode());
-                    throw ase;
-                }
-                Message message = getMessageForResponse(exchange);
-                message.setBody(result);
-            }
-        } else {
-            DescribeInstanceStatusRequest.Builder builder = DescribeInstanceStatusRequest.builder();
-            if (ObjectHelper.isNotEmpty(exchange.getIn().getHeader(AWS2EC2Constants.INSTANCES_IDS))) {
-                instanceIds = exchange.getIn().getHeader(AWS2EC2Constants.INSTANCES_IDS, Collection.class);
-                builder.instanceIds(instanceIds);
-            }
-            DescribeInstanceStatusResponse result;
-            try {
-                result = ec2Client.describeInstanceStatus(builder.build());
-            } catch (AwsServiceException ase) {
-                LOG.trace("Describe Instances Status command returned the error code {}", ase.awsErrorDetails().errorCode());
-                throw ase;
-            }
-            Message message = getMessageForResponse(exchange);
-            message.setBody(result);
-        }
+        executeOperation(
+                exchange,
+                DescribeInstanceStatusRequest.class,
+                ec2Client::describeInstanceStatus,
+                () -> {
+                    DescribeInstanceStatusRequest.Builder builder = DescribeInstanceStatusRequest.builder();
+                    Collection<String> instanceIds
+                            = getOptionalHeader(exchange, AWS2EC2Constants.INSTANCES_IDS, Collection.class);
+                    if (ObjectHelper.isNotEmpty(instanceIds)) {
+                        builder.instanceIds(instanceIds);
+                    }
+                    String nextToken = getOptionalHeader(exchange, AWS2EC2Constants.NEXT_TOKEN, String.class);
+                    if (ObjectHelper.isNotEmpty(nextToken)) {
+                        builder.nextToken(nextToken);
+                    }
+                    Integer maxResults = getOptionalHeader(exchange, AWS2EC2Constants.MAX_RESULTS, Integer.class);
+                    if (ObjectHelper.isNotEmpty(maxResults)) {
+                        builder.maxResults(maxResults);
+                    }
+                    return ec2Client.describeInstanceStatus(builder.build());
+                },
+                "Describe Instances Status",
+                (DescribeInstanceStatusResponse response, Message message) -> {
+                    message.setHeader(AWS2EC2Constants.NEXT_TOKEN, response.nextToken());
+                    message.setHeader(AWS2EC2Constants.IS_TRUNCATED, ObjectHelper.isNotEmpty(response.nextToken()));
+                });
     }
 
     @SuppressWarnings("unchecked")
@@ -432,10 +426,10 @@ public class AWS2EC2Producer extends DefaultProducer {
         Collection<String> instanceIds;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof RebootInstancesRequest) {
+            if (payload instanceof RebootInstancesRequest rebootInstancesRequest) {
                 try {
-                    LOG.trace("Rebooting instances with Ids [{}] ", ((RebootInstancesRequest) payload).instanceIds());
-                    ec2Client.rebootInstances((RebootInstancesRequest) payload);
+                    LOG.trace("Rebooting instances with Ids [{}] ", rebootInstancesRequest.instanceIds());
+                    ec2Client.rebootInstances(rebootInstancesRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Reboot Instances command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -467,15 +461,15 @@ public class AWS2EC2Producer extends DefaultProducer {
         Collection<String> instanceIds;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof MonitorInstancesRequest) {
+            if (payload instanceof MonitorInstancesRequest monitorInstancesRequest) {
                 MonitorInstancesResponse result;
                 try {
-                    result = ec2Client.monitorInstances((MonitorInstancesRequest) payload);
+                    result = ec2Client.monitorInstances(monitorInstancesRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Monitor Instances command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
                 }
-                LOG.trace("Start Monitoring instances with Ids [{}] ", ((MonitorInstancesRequest) payload).instanceIds());
+                LOG.trace("Start Monitoring instances with Ids [{}] ", monitorInstancesRequest.instanceIds());
                 Message message = getMessageForResponse(exchange);
                 message.setBody(result);
             }
@@ -509,15 +503,15 @@ public class AWS2EC2Producer extends DefaultProducer {
         Collection<String> instanceIds;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof UnmonitorInstancesRequest) {
+            if (payload instanceof UnmonitorInstancesRequest unmonitorInstancesRequest) {
                 UnmonitorInstancesResponse result;
                 try {
-                    result = ec2Client.unmonitorInstances((UnmonitorInstancesRequest) payload);
+                    result = ec2Client.unmonitorInstances(unmonitorInstancesRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Unmonitor Instances command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
                 }
-                LOG.trace("Stop Monitoring instances with Ids [{}] ", ((UnmonitorInstancesRequest) payload).instanceIds());
+                LOG.trace("Stop Monitoring instances with Ids [{}] ", unmonitorInstancesRequest.instanceIds());
                 Message message = getMessageForResponse(exchange);
                 message.setBody(result);
             }
@@ -551,15 +545,15 @@ public class AWS2EC2Producer extends DefaultProducer {
         Collection<String> instanceIds;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof CreateTagsRequest) {
+            if (payload instanceof CreateTagsRequest createTagsRequest) {
                 CreateTagsResponse result;
                 try {
-                    result = ec2Client.createTags((CreateTagsRequest) payload);
+                    result = ec2Client.createTags(createTagsRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Create tags command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
                 }
-                LOG.trace("Created tags [{}] ", ((CreateTagsRequest) payload).tags());
+                LOG.trace("Created tags [{}] ", createTagsRequest.tags());
                 Message message = getMessageForResponse(exchange);
                 message.setBody(result);
             }
@@ -600,15 +594,15 @@ public class AWS2EC2Producer extends DefaultProducer {
         Collection<String> instanceIds;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof DeleteTagsRequest) {
+            if (payload instanceof DeleteTagsRequest deleteTagsRequest) {
                 DeleteTagsResponse result;
                 try {
-                    result = ec2Client.deleteTags((DeleteTagsRequest) payload);
+                    result = ec2Client.deleteTags(deleteTagsRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Delete tags command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
                 }
-                LOG.trace("Delete tags [{}]  ", ((DeleteTagsRequest) payload).tags());
+                LOG.trace("Delete tags [{}]  ", deleteTagsRequest.tags());
                 Message message = getMessageForResponse(exchange);
                 message.setBody(result);
             }
@@ -648,6 +642,82 @@ public class AWS2EC2Producer extends DefaultProducer {
         return exchange.getMessage();
     }
 
+    /**
+     * Executes an EC2 operation with POJO request support.
+     */
+    private <REQ, RES> void executeOperation(
+            Exchange exchange,
+            Class<REQ> requestClass,
+            Function<REQ, RES> pojoExecutor,
+            Supplier<RES> headerExecutor,
+            String operationName)
+            throws InvalidPayloadException {
+        executeOperation(exchange, requestClass, pojoExecutor, headerExecutor, operationName, null);
+    }
+
+    /**
+     * Executes an EC2 operation with POJO request support and optional response post-processing.
+     */
+    private <REQ, RES> void executeOperation(
+            Exchange exchange,
+            Class<REQ> requestClass,
+            Function<REQ, RES> pojoExecutor,
+            Supplier<RES> headerExecutor,
+            String operationName,
+            BiConsumer<RES, Message> responseProcessor)
+            throws InvalidPayloadException {
+
+        RES result;
+        if (getConfiguration().isPojoRequest()) {
+            Object payload = exchange.getIn().getMandatoryBody();
+            if (requestClass.isInstance(payload)) {
+                try {
+                    result = pojoExecutor.apply(requestClass.cast(payload));
+                } catch (AwsServiceException ase) {
+                    LOG.trace("{} command returned the error code {}", operationName, ase.awsErrorDetails().errorCode());
+                    throw ase;
+                }
+                LOG.trace("{} request performing", operationName);
+            } else {
+                throw new IllegalArgumentException(
+                        String.format("Expected body of type %s but was %s",
+                                requestClass.getName(),
+                                ObjectHelper.isNotEmpty(payload) ? payload.getClass().getName() : "null"));
+            }
+        } else {
+            try {
+                result = headerExecutor.get();
+            } catch (AwsServiceException ase) {
+                LOG.trace("{} command returned the error code {}", operationName, ase.awsErrorDetails().errorCode());
+                throw ase;
+            }
+        }
+        Message message = getMessageForResponse(exchange);
+        message.setBody(result);
+        if (ObjectHelper.isNotEmpty(responseProcessor)) {
+            responseProcessor.accept(result, message);
+        }
+    }
+
+    /**
+     * Gets a required header value or throws an IllegalArgumentException.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> T getRequiredHeader(Exchange exchange, String headerName, Class<T> headerType, String errorMessage) {
+        T value = exchange.getIn().getHeader(headerName, headerType);
+        if (ObjectHelper.isEmpty(value)) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+        return value;
+    }
+
+    /**
+     * Gets an optional header value.
+     */
+    private <T> T getOptionalHeader(Exchange exchange, String headerName, Class<T> headerType) {
+        return exchange.getIn().getHeader(headerName, headerType);
+    }
+
     @Override
     protected void doStart() throws Exception {
         // health-check is optional so discover and resolve
@@ -656,7 +726,7 @@ public class AWS2EC2Producer extends DefaultProducer {
                 "producers",
                 WritableHealthCheckRepository.class);
 
-        if (healthCheckRepository != null) {
+        if (ObjectHelper.isNotEmpty(healthCheckRepository)) {
             String id = getEndpoint().getId();
             producerHealthCheck = new AWS2EC2ProducerHealthCheck(getEndpoint(), id);
             producerHealthCheck.setEnabled(getEndpoint().getComponent().isHealthCheckProducerEnabled());
@@ -666,7 +736,7 @@ public class AWS2EC2Producer extends DefaultProducer {
 
     @Override
     protected void doStop() throws Exception {
-        if (healthCheckRepository != null && producerHealthCheck != null) {
+        if (ObjectHelper.isNotEmpty(healthCheckRepository) && ObjectHelper.isNotEmpty(producerHealthCheck)) {
             healthCheckRepository.removeHealthCheck(producerHealthCheck);
             producerHealthCheck = null;
         }

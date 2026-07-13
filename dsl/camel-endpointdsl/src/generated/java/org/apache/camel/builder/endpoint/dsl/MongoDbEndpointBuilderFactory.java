@@ -249,6 +249,52 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
+         * A change stream token as a serialized BSON document JSON string.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param changeStreamToken the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder changeStreamToken(String changeStreamToken) {
+            doSetProperty("changeStreamToken", changeStreamToken);
+            return this;
+        }
+        /**
+         * The repository to store change stream tokens.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.spi.StateRepository&lt;java.lang.String,
+         * java.lang.String&gt;</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param changeStreamTokenRepository the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder changeStreamTokenRepository(org.apache.camel.spi.StateRepository<java.lang.String, java.lang.String> changeStreamTokenRepository) {
+            doSetProperty("changeStreamTokenRepository", changeStreamTokenRepository);
+            return this;
+        }
+        /**
+         * The repository to store change stream tokens.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.spi.StateRepository&lt;java.lang.String,
+         * java.lang.String&gt;</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param changeStreamTokenRepository the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder changeStreamTokenRepository(String changeStreamTokenRepository) {
+            doSetProperty("changeStreamTokenRepository", changeStreamTokenRepository);
+            return this;
+        }
+        /**
          * Consumer type.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -459,6 +505,38 @@ public interface MongoDbEndpointBuilderFactory {
          */
         default MongoDbEndpointConsumerBuilder password(String password) {
             doSetProperty("password", password);
+            return this;
+        }
+        /**
+         * SSL configuration using a Camel SSLContextParameters object. When
+         * configured, TLS is automatically enabled on the connection.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.support.jsse.SSLContextParameters</code> type.
+         * 
+         * Group: security
+         * 
+         * @param sslContextParameters the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder sslContextParameters(org.apache.camel.support.jsse.SSLContextParameters sslContextParameters) {
+            doSetProperty("sslContextParameters", sslContextParameters);
+            return this;
+        }
+        /**
+         * SSL configuration using a Camel SSLContextParameters object. When
+         * configured, TLS is automatically enabled on the connection.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.support.jsse.SSLContextParameters</code> type.
+         * 
+         * Group: security
+         * 
+         * @param sslContextParameters the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointConsumerBuilder sslContextParameters(String sslContextParameters) {
+            doSetProperty("sslContextParameters", sslContextParameters);
             return this;
         }
         /**
@@ -1778,6 +1856,38 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
+         * SSL configuration using a Camel SSLContextParameters object. When
+         * configured, TLS is automatically enabled on the connection.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.support.jsse.SSLContextParameters</code> type.
+         * 
+         * Group: security
+         * 
+         * @param sslContextParameters the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointProducerBuilder sslContextParameters(org.apache.camel.support.jsse.SSLContextParameters sslContextParameters) {
+            doSetProperty("sslContextParameters", sslContextParameters);
+            return this;
+        }
+        /**
+         * SSL configuration using a Camel SSLContextParameters object. When
+         * configured, TLS is automatically enabled on the connection.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.support.jsse.SSLContextParameters</code> type.
+         * 
+         * Group: security
+         * 
+         * @param sslContextParameters the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointProducerBuilder sslContextParameters(String sslContextParameters) {
+            doSetProperty("sslContextParameters", sslContextParameters);
+            return this;
+        }
+        /**
          * Specifies that all communication with MongoDB instances should use
          * TLS. Supersedes the ssl option. Default: false.
          * 
@@ -3023,6 +3133,38 @@ public interface MongoDbEndpointBuilderFactory {
             return this;
         }
         /**
+         * SSL configuration using a Camel SSLContextParameters object. When
+         * configured, TLS is automatically enabled on the connection.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.support.jsse.SSLContextParameters</code> type.
+         * 
+         * Group: security
+         * 
+         * @param sslContextParameters the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointBuilder sslContextParameters(org.apache.camel.support.jsse.SSLContextParameters sslContextParameters) {
+            doSetProperty("sslContextParameters", sslContextParameters);
+            return this;
+        }
+        /**
+         * SSL configuration using a Camel SSLContextParameters object. When
+         * configured, TLS is automatically enabled on the connection.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.support.jsse.SSLContextParameters</code> type.
+         * 
+         * Group: security
+         * 
+         * @param sslContextParameters the value to set
+         * @return the dsl builder
+         */
+        default MongoDbEndpointBuilder sslContextParameters(String sslContextParameters) {
+            doSetProperty("sslContextParameters", sslContextParameters);
+            return this;
+        }
+        /**
          * Specifies that all communication with MongoDB instances should use
          * TLS. Supersedes the ssl option. Default: false.
          * 
@@ -4046,7 +4188,7 @@ public interface MongoDbEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final MongoDbHeaderNameBuilder INSTANCE = new MongoDbHeaderNameBuilder();
+        public static final MongoDbHeaderNameBuilder INSTANCE = new MongoDbHeaderNameBuilder();
 
         /**
          * The operation this endpoint will execute against MongoDB.

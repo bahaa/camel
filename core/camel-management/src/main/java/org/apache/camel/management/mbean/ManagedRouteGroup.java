@@ -16,27 +16,27 @@
  */
 package org.apache.camel.management.mbean;
 
+import java.util.Date;
 import java.util.List;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.ManagementStatisticsLevel;
 import org.apache.camel.Route;
 import org.apache.camel.ServiceStatus;
-import org.apache.camel.TimerListener;
 import org.apache.camel.api.management.ManagedResource;
 import org.apache.camel.api.management.mbean.ManagedRouteGroupMBean;
+import org.apache.camel.api.management.mbean.RouteError;
 import org.apache.camel.spi.ManagementStrategy;
 import org.apache.camel.util.TimeUtils;
 
 @ManagedResource(description = "Managed Route Group")
-public class ManagedRouteGroup extends ManagedPerformanceCounter implements TimerListener, ManagedRouteGroupMBean {
+public class ManagedRouteGroup extends ManagedPerformanceCounter implements ManagedRouteGroupMBean {
 
     public static final String VALUE_UNKNOWN = "Unknown";
 
     protected final String group;
     protected final CamelContext context;
     private final LoadTriplet load = new LoadTriplet();
-    private final LoadThroughput thp = new LoadThroughput();
     private final String jmxDomain;
 
     public ManagedRouteGroup(CamelContext context, String group) {
@@ -51,6 +51,9 @@ public class ManagedRouteGroup extends ManagedPerformanceCounter implements Time
         boolean enabled
                 = context.getManagementStrategy().getManagementAgent().getStatisticsLevel() != ManagementStatisticsLevel.Off;
         setStatisticsEnabled(enabled);
+        if (context.getManagementStrategy().getManagementAgent().getStatisticsLevel().isExtended()) {
+            initExtendedStatistics();
+        }
     }
 
     public CamelContext getContext() {
@@ -151,20 +154,63 @@ public class ManagedRouteGroup extends ManagedPerformanceCounter implements Time
     }
 
     @Override
-    public String getThroughput() {
-        double d = thp.getThroughput();
-        if (Double.isNaN(d)) {
-            // empty string if load statistics is disabled
-            return "";
+    public RouteError getLastError() {
+        org.apache.camel.spi.RouteError last = null;
+        for (Route route : context.getRoutesByGroup(group)) {
+            var e = route.getLastError();
+            if (e != null) {
+                if (last == null) {
+                    last = e;
+                } else if (e.getDate().compareTo(last.getDate()) > 0) {
+                    last = e;
+                }
+            }
+        }
+        if (last == null) {
+            return null;
         } else {
-            return String.format("%.2f", d);
+            final org.apache.camel.spi.RouteError error = last;
+            return new RouteError() {
+                @Override
+                public Phase getPhase() {
+                    if (error.getPhase() != null) {
+                        switch (error.getPhase()) {
+                            case START:
+                                return Phase.START;
+                            case STOP:
+                                return Phase.STOP;
+                            case SUSPEND:
+                                return Phase.SUSPEND;
+                            case RESUME:
+                                return Phase.RESUME;
+                            case SHUTDOWN:
+                                return Phase.SHUTDOWN;
+                            case REMOVE:
+                                return Phase.REMOVE;
+                            default:
+                                throw new IllegalStateException();
+                        }
+                    }
+                    return null;
+                }
+
+                @Override
+                public Throwable getException() {
+                    return error.getException();
+                }
+
+                @Override
+                public Date getDate() {
+                    return error.getDate();
+                }
+            };
         }
     }
 
     @Override
     public void onTimer() {
+        super.onTimer();
         load.update(getInflightExchanges());
-        thp.update(getExchangesTotal());
     }
 
     private Integer getInflightExchanges() {

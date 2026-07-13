@@ -16,6 +16,8 @@
  */
 package org.apache.camel.component.vertx.websocket;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 import io.vertx.core.http.ServerWebSocket;
 import io.vertx.core.net.SocketAddress;
 import org.apache.camel.Route;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.console.AbstractDevConsole;
 import org.apache.camel.util.json.JsonArray;
@@ -30,9 +33,8 @@ import org.apache.camel.util.json.JsonObject;
 
 @DevConsole(name = "vertx-websocket", displayName = "Vert.x WebSocket", description = "Vert.x WebSocket consumer details")
 public class VertxWebsocketDevConsole extends AbstractDevConsole {
-    /**
-     * Whether to include WebSocket peer connection header details in the output
-     */
+    @Metadata(label = "query", description = "Whether to include WebSocket peer connection header details in the output",
+              defaultValue = "true", javaType = "java.lang.Boolean")
     public static final String INCLUDE_HEADERS = "includeHeaders";
 
     public VertxWebsocketDevConsole() {
@@ -41,7 +43,7 @@ public class VertxWebsocketDevConsole extends AbstractDevConsole {
 
     @Override
     protected String doCallText(Map<String, Object> options) {
-        boolean includeHeaders = "true".equals(options.getOrDefault(INCLUDE_HEADERS, "true"));
+        boolean includeHeaders = optionBoolean(options, INCLUDE_HEADERS, true);
 
         StringBuilder sb = new StringBuilder();
 
@@ -49,11 +51,11 @@ public class VertxWebsocketDevConsole extends AbstractDevConsole {
 
         for (Map.Entry<VertxWebsocketHostKey, List<VertxWebsocketConsumer>> hostEntry : consumersByHost.entrySet()) {
             VertxWebsocketHostKey hostKey = hostEntry.getKey();
-            sb.append(String.format("\n    Host: %s", hostKey.toString()));
+            sb.append(String.format("%n    Host: %s", hostKey.toString()));
 
             for (VertxWebsocketConsumer consumer : hostEntry.getValue()) {
                 String path = consumer.getEndpoint().getConfiguration().getWebsocketURI().getPath();
-                sb.append(String.format("\n        Path: %s", path));
+                sb.append(String.format("%n        Path: %s", path));
 
                 List<VertxWebsocketPeer> pathPeers = consumer.getEndpoint().getVertxHostRegistry()
                         .values()
@@ -62,24 +64,24 @@ public class VertxWebsocketDevConsole extends AbstractDevConsole {
                         .filter(peer -> peer.getRawPath().equals(path))
                         .toList();
 
-                sb.append(String.format("\n            Connected Peers (%d): ", pathPeers.size()));
+                sb.append(String.format("%n            Connected Peers (%d): ", pathPeers.size()));
 
                 for (VertxWebsocketPeer peer : pathPeers) {
-                    sb.append(String.format("\n                ID: %s", peer.getConnectionKey()));
-                    sb.append(String.format("\n                Path: %s", peer.getPath()));
-                    sb.append(String.format("\n                Raw Path: %s", peer.getRawPath()));
+                    sb.append(String.format("%n                ID: %s", peer.getConnectionKey()));
+                    sb.append(String.format("%n                Path: %s", peer.getPath()));
+                    sb.append(String.format("%n                Raw Path: %s", peer.getRawPath()));
 
                     ServerWebSocket webSocket = peer.getWebSocket();
                     SocketAddress socketAddress = webSocket.localAddress();
                     String hostAddress = socketAddress == null ? "Unknown" : socketAddress.hostAddress();
-                    sb.append(String.format("\n                Host Address: %s", hostAddress));
+                    sb.append(String.format("%n                Host Address: %s", hostAddress));
 
                     if (webSocket.subProtocol() != null) {
-                        sb.append(String.format("\n                Sub Protocol: %s", webSocket.subProtocol()));
+                        sb.append(String.format("%n                Sub Protocol: %s", webSocket.subProtocol()));
                     }
 
                     if (includeHeaders) {
-                        sb.append(String.format("\n                Headers: %s", webSocket.headers().entries().stream()
+                        sb.append(String.format("%n                Headers: %s", webSocket.headers().entries().stream()
                                 .map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.joining(", "))));
                     }
                 }
@@ -91,7 +93,7 @@ public class VertxWebsocketDevConsole extends AbstractDevConsole {
 
     @Override
     protected Map<String, Object> doCallJson(Map<String, Object> options) {
-        boolean includeHeaders = "true".equals(options.getOrDefault(INCLUDE_HEADERS, "true"));
+        boolean includeHeaders = optionBoolean(options, INCLUDE_HEADERS, true);
 
         JsonObject root = new JsonObject();
         JsonArray hosts = new JsonArray();
@@ -155,13 +157,13 @@ public class VertxWebsocketDevConsole extends AbstractDevConsole {
     }
 
     Map<VertxWebsocketHostKey, List<VertxWebsocketConsumer>> getConsumersByHost() {
-        Map<VertxWebsocketHostKey, List<VertxWebsocketConsumer>> consumersByHost = new java.util.LinkedHashMap<>();
+        Map<VertxWebsocketHostKey, List<VertxWebsocketConsumer>> consumersByHost = new LinkedHashMap<>();
         for (Route route : getCamelContext().getRoutes()) {
             if (route.getConsumer() instanceof VertxWebsocketConsumer consumer) {
                 VertxWebsocketHostKey hostKey = new VertxWebsocketHostKey(
                         consumer.getEndpoint().getConfiguration().getWebsocketURI().getHost(),
                         consumer.getEndpoint().getConfiguration().getWebsocketURI().getPort());
-                consumersByHost.computeIfAbsent(hostKey, k -> new java.util.ArrayList<>()).add(consumer);
+                consumersByHost.computeIfAbsent(hostKey, k -> new ArrayList<>()).add(consumer);
             }
         }
         return consumersByHost;

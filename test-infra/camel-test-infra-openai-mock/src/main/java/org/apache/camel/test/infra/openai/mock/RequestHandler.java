@@ -17,6 +17,7 @@
 package org.apache.camel.test.infra.openai.mock;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -44,7 +45,10 @@ public class RequestHandler {
 
     public String handleRequest(HttpExchange exchange) throws IOException {
         try {
-            String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            String requestBody;
+            try (InputStream is = exchange.getRequestBody()) {
+                requestBody = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            }
             LOG.debug("Processing request: {}", requestBody);
 
             JsonNode rootNode = objectMapper.readTree(requestBody);
@@ -86,7 +90,7 @@ public class RequestHandler {
         } else {
             LOG.debug("Tool sequence completed for expectation: {}", originalInput);
             return responseBuilder.createFinalToolResponse(context.getMessagesNode(), expectation.getExpectedResponse(),
-                    expectation.getToolContentResponse());
+                    expectation.getToolContentResponse(), expectation.getReasoningContent());
         }
     }
 
@@ -124,7 +128,8 @@ public class RequestHandler {
             case SIMPLE_TEXT:
             default:
                 LOG.debug("Creating simple text response");
-                return responseBuilder.createSimpleTextResponse(expectation.getExpectedResponse());
+                return responseBuilder.createSimpleTextResponse(
+                        expectation.getExpectedResponse(), expectation.getReasoningContent());
         }
     }
 

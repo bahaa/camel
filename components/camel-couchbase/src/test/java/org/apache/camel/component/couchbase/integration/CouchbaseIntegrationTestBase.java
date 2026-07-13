@@ -23,13 +23,14 @@ import java.util.Collections;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.couchbase.client.java.manager.bucket.BucketType;
+import com.couchbase.client.java.manager.bucket.StorageBackend;
 import com.couchbase.client.java.manager.view.DesignDocument;
 import com.couchbase.client.java.manager.view.View;
 import com.couchbase.client.java.view.DesignDocumentNamespace;
 import org.apache.camel.test.infra.common.TestUtils;
 import org.apache.camel.test.infra.couchbase.services.CouchbaseService;
 import org.apache.camel.test.infra.couchbase.services.CouchbaseServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +38,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class CouchbaseIntegrationTestBase extends CamelTestSupport {
     @RegisterExtension
-    public static CouchbaseService service = CouchbaseServiceFactory.createService();
+    public static CouchbaseService service = CouchbaseServiceFactory.createSingletonService();
 
     protected static String bucketName;
     protected static Cluster cluster;
@@ -48,7 +49,8 @@ public class CouchbaseIntegrationTestBase extends CamelTestSupport {
         cluster = Cluster.connect(service.getConnectionString(), service.getUsername(), service.getPassword());
 
         cluster.buckets().createBucket(
-                BucketSettings.create(bucketName).bucketType(BucketType.COUCHBASE).flushEnabled(true));
+                BucketSettings.create(bucketName).bucketType(BucketType.COUCHBASE)
+                        .storageBackend(StorageBackend.COUCHSTORE).flushEnabled(true));
 
         cluster.bucket(bucketName);
         DesignDocument designDoc = new DesignDocument(
@@ -69,8 +71,11 @@ public class CouchbaseIntegrationTestBase extends CamelTestSupport {
     }
 
     public String getConnectionUri() {
-        return String.format("couchbase:http://%s:%d?bucket=%s&username=%s&password=%s", service.getHostname(),
-                service.getPort(), bucketName, service.getUsername(), service.getPassword());
+        return String.format(
+                "couchbase:http://%s:%d?bucket=%s&username=%s&password=%s&connectionString=%s",
+                service.getHostname(),
+                service.getPort(), bucketName, service.getUsername(), service.getPassword(),
+                service.getConnectionString());
     }
 
 }

@@ -64,14 +64,16 @@ public class MicroprofileLRALocalContainerInfraService
                 super(DockerImageName.parse(imageName));
 
                 withNetworkAliases(networkAlias)
+                        // Shorten the Narayana recovery period so that failed LRA
+                        // participant callbacks are retried quickly in tests
+                        // (default: periodicRecoveryPeriod=120s, recoveryBackoffPeriod=10s).
+                        .withEnv("JAVA_TOOL_OPTIONS",
+                                "-Dcom.arjuna.ats.arjuna.recovery.periodicRecoveryPeriod=2 "
+                                                      + "-Dcom.arjuna.ats.arjuna.recovery.recoveryBackoffPeriod=1")
                         .waitingFor(Wait.forListeningPort())
                         .waitingFor(Wait.forLogMessage(".*lra-coordinator-quarkus.*Listening on.*", 1));
 
-                if (fixedPort) {
-                    addFixedExposedPort(MicroprofileLRAProperties.DEFAULT_PORT, MicroprofileLRAProperties.DEFAULT_PORT);
-                } else {
-                    withExposedPorts(MicroprofileLRAProperties.DEFAULT_PORT);
-                }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, MicroprofileLRAProperties.DEFAULT_PORT);
             }
         }
 

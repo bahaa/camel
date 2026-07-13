@@ -1,7 +1,7 @@
 = Convert Body To EIP
 :doctitle: Convert Body To
 :shortname: convertBodyTo
-:description: Converts the message body to another type
+:description: Converts the message body to a specified Java type using Camel's built-in type converters
 :since: 
 :supportlevel: Stable
 :tabs-sync-option:
@@ -52,12 +52,13 @@ YAML::
 +
 [source,yaml]
 ----
-- from:
-    uri: file:inbox
-    steps:
-      - convertBodyTo:
-          type: String
-      - log:
-          message: "The file content: ${body}"
+- route:
+    from:
+      uri: file:inbox
+      steps:
+        - convertBodyTo:
+            type: String
+        - log:
+            message: "The file content: ${body}"
 ----
 ====

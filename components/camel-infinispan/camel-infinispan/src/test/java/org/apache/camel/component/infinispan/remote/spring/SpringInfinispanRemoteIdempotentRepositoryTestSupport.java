@@ -18,10 +18,11 @@ package org.apache.camel.component.infinispan.remote.spring;
 
 import java.util.UUID;
 
+import org.apache.camel.component.infinispan.remote.InfinispanRemoteTestSupport;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.infra.infinispan.services.InfinispanService;
 import org.apache.camel.test.infra.infinispan.services.InfinispanServiceFactory;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
@@ -53,16 +54,19 @@ public abstract class SpringInfinispanRemoteIdempotentRepositoryTestSupport exte
 
         // add security info
         clientBuilder
+                .socketTimeout(15000)
+                .connectionTimeout(15000)
                 .security()
                 .authentication()
                 .username(service.username())
                 .password(service.password())
                 .serverName("infinispan")
-                .saslMechanism("DIGEST-MD5")
+                .saslMechanism("SCRAM-SHA-512")
                 .realm("default");
 
         RemoteCacheManager manager = new RemoteCacheManager(clientBuilder.create());
         MarshallerRegistration.init(MarshallerUtil.getSerializationContext(manager));
+        InfinispanRemoteTestSupport.waitForCacheReady(manager, "idempotent", 30000);
         RemoteCache<Object, Object> cache = manager.administration().getOrCreateCache("idempotent", (String) null);
         assertNotNull(cache);
     }

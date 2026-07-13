@@ -27,7 +27,7 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.bindy.model.simple.bool.BooleanExample;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -73,7 +73,7 @@ public class BindySimpleCsvBooleanFalseMarshallTest {
         @Override
         public void configure() {
             BindyCsvDataFormat camelDataFormat = new BindyCsvDataFormat(
-                    org.apache.camel.dataformat.bindy.model.simple.bool.BooleanExample.class);
+                    BooleanExample.class);
 
             camelDataFormat.setLocale("en");
 

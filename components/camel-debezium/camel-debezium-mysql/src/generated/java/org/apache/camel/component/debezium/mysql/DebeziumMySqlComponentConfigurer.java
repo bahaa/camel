@@ -38,6 +38,10 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "bigintUnsignedHandlingMode": getOrCreateConfiguration(target).setBigintUnsignedHandlingMode(property(camelContext, java.lang.String.class, value)); return true;
         case "binlogbuffersize":
         case "binlogBufferSize": getOrCreateConfiguration(target).setBinlogBufferSize(property(camelContext, int.class, value)); return true;
+        case "binlognetreadtimeout":
+        case "binlogNetReadTimeout": getOrCreateConfiguration(target).setBinlogNetReadTimeout(property(camelContext, long.class, value)); return true;
+        case "binlognetwritetimeout":
+        case "binlogNetWriteTimeout": getOrCreateConfiguration(target).setBinlogNetWriteTimeout(property(camelContext, long.class, value)); return true;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
         case "columnexcludelist":
@@ -96,6 +100,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "databaseUser": getOrCreateConfiguration(target).setDatabaseUser(property(camelContext, java.lang.String.class, value)); return true;
         case "datatypepropagatesourcetype":
         case "datatypePropagateSourceType": getOrCreateConfiguration(target).setDatatypePropagateSourceType(property(camelContext, java.lang.String.class, value)); return true;
+        case "ddlparsertype":
+        case "ddlParserType": getOrCreateConfiguration(target).setDdlParserType(property(camelContext, java.lang.String.class, value)); return true;
         case "decimalhandlingmode":
         case "decimalHandlingMode": getOrCreateConfiguration(target).setDecimalHandlingMode(property(camelContext, java.lang.String.class, value)); return true;
         case "enabletimeadjuster":
@@ -110,6 +116,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "executorShutdownTimeoutMs": getOrCreateConfiguration(target).setExecutorShutdownTimeoutMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "extendedheadersenabled":
         case "extendedHeadersEnabled": getOrCreateConfiguration(target).setExtendedHeadersEnabled(property(camelContext, boolean.class, value)); return true;
+        case "gtidignoreonrecovery":
+        case "gtidIgnoreOnRecovery": getOrCreateConfiguration(target).setGtidIgnoreOnRecovery(property(camelContext, boolean.class, value)); return true;
         case "gtidsourceexcludes":
         case "gtidSourceExcludes": getOrCreateConfiguration(target).setGtidSourceExcludes(property(camelContext, java.lang.String.class, value)); return true;
         case "gtidsourcefilterdmlevents":
@@ -150,6 +158,10 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "maxQueueSize": getOrCreateConfiguration(target).setMaxQueueSize(property(camelContext, int.class, value)); return true;
         case "maxqueuesizeinbytes":
         case "maxQueueSizeInBytes": getOrCreateConfiguration(target).setMaxQueueSizeInBytes(property(camelContext, long.class, value)); return true;
+        case "memorymanagementschemasclass":
+        case "memoryManagementSchemasClass": getOrCreateConfiguration(target).setMemoryManagementSchemasClass(property(camelContext, java.lang.String.class, value)); return true;
+        case "memorymanagementtablesclass":
+        case "memoryManagementTablesClass": getOrCreateConfiguration(target).setMemoryManagementTablesClass(property(camelContext, java.lang.String.class, value)); return true;
         case "messagekeycolumns":
         case "messageKeyColumns": getOrCreateConfiguration(target).setMessageKeyColumns(property(camelContext, java.lang.String.class, value)); return true;
         case "minrowcounttostreamresults":
@@ -230,6 +242,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "snapshotLockingMode": getOrCreateConfiguration(target).setSnapshotLockingMode(property(camelContext, java.lang.String.class, value)); return true;
         case "snapshotmaxthreads":
         case "snapshotMaxThreads": getOrCreateConfiguration(target).setSnapshotMaxThreads(property(camelContext, int.class, value)); return true;
+        case "snapshotmaxthreadsmultiplier":
+        case "snapshotMaxThreadsMultiplier": getOrCreateConfiguration(target).setSnapshotMaxThreadsMultiplier(property(camelContext, int.class, value)); return true;
         case "snapshotmode":
         case "snapshotMode": getOrCreateConfiguration(target).setSnapshotMode(property(camelContext, java.lang.String.class, value)); return true;
         case "snapshotmodeconfigurationbasedsnapshotdata":
@@ -254,6 +268,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "snapshotTablesOrderByRowCount": getOrCreateConfiguration(target).setSnapshotTablesOrderByRowCount(property(camelContext, java.lang.String.class, value)); return true;
         case "sourceinfostructmaker":
         case "sourceinfoStructMaker": getOrCreateConfiguration(target).setSourceinfoStructMaker(property(camelContext, java.lang.String.class, value)); return true;
+        case "statisticsmetricsenabled":
+        case "statisticsMetricsEnabled": getOrCreateConfiguration(target).setStatisticsMetricsEnabled(property(camelContext, boolean.class, value)); return true;
         case "streamingdelayms":
         case "streamingDelayMs": getOrCreateConfiguration(target).setStreamingDelayMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "tableexcludelist":
@@ -289,6 +305,10 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "bigintUnsignedHandlingMode": return java.lang.String.class;
         case "binlogbuffersize":
         case "binlogBufferSize": return int.class;
+        case "binlognetreadtimeout":
+        case "binlogNetReadTimeout": return long.class;
+        case "binlognetwritetimeout":
+        case "binlogNetWriteTimeout": return long.class;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
         case "columnexcludelist":
@@ -347,6 +367,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "databaseUser": return java.lang.String.class;
         case "datatypepropagatesourcetype":
         case "datatypePropagateSourceType": return java.lang.String.class;
+        case "ddlparsertype":
+        case "ddlParserType": return java.lang.String.class;
         case "decimalhandlingmode":
         case "decimalHandlingMode": return java.lang.String.class;
         case "enabletimeadjuster":
@@ -361,6 +383,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "executorShutdownTimeoutMs": return long.class;
         case "extendedheadersenabled":
         case "extendedHeadersEnabled": return boolean.class;
+        case "gtidignoreonrecovery":
+        case "gtidIgnoreOnRecovery": return boolean.class;
         case "gtidsourceexcludes":
         case "gtidSourceExcludes": return java.lang.String.class;
         case "gtidsourcefilterdmlevents":
@@ -401,6 +425,10 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "maxQueueSize": return int.class;
         case "maxqueuesizeinbytes":
         case "maxQueueSizeInBytes": return long.class;
+        case "memorymanagementschemasclass":
+        case "memoryManagementSchemasClass": return java.lang.String.class;
+        case "memorymanagementtablesclass":
+        case "memoryManagementTablesClass": return java.lang.String.class;
         case "messagekeycolumns":
         case "messageKeyColumns": return java.lang.String.class;
         case "minrowcounttostreamresults":
@@ -481,6 +509,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "snapshotLockingMode": return java.lang.String.class;
         case "snapshotmaxthreads":
         case "snapshotMaxThreads": return int.class;
+        case "snapshotmaxthreadsmultiplier":
+        case "snapshotMaxThreadsMultiplier": return int.class;
         case "snapshotmode":
         case "snapshotMode": return java.lang.String.class;
         case "snapshotmodeconfigurationbasedsnapshotdata":
@@ -505,6 +535,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "snapshotTablesOrderByRowCount": return java.lang.String.class;
         case "sourceinfostructmaker":
         case "sourceinfoStructMaker": return java.lang.String.class;
+        case "statisticsmetricsenabled":
+        case "statisticsMetricsEnabled": return boolean.class;
         case "streamingdelayms":
         case "streamingDelayMs": return long.class;
         case "tableexcludelist":
@@ -541,6 +573,10 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "bigintUnsignedHandlingMode": return getOrCreateConfiguration(target).getBigintUnsignedHandlingMode();
         case "binlogbuffersize":
         case "binlogBufferSize": return getOrCreateConfiguration(target).getBinlogBufferSize();
+        case "binlognetreadtimeout":
+        case "binlogNetReadTimeout": return getOrCreateConfiguration(target).getBinlogNetReadTimeout();
+        case "binlognetwritetimeout":
+        case "binlogNetWriteTimeout": return getOrCreateConfiguration(target).getBinlogNetWriteTimeout();
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
         case "columnexcludelist":
@@ -599,6 +635,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "databaseUser": return getOrCreateConfiguration(target).getDatabaseUser();
         case "datatypepropagatesourcetype":
         case "datatypePropagateSourceType": return getOrCreateConfiguration(target).getDatatypePropagateSourceType();
+        case "ddlparsertype":
+        case "ddlParserType": return getOrCreateConfiguration(target).getDdlParserType();
         case "decimalhandlingmode":
         case "decimalHandlingMode": return getOrCreateConfiguration(target).getDecimalHandlingMode();
         case "enabletimeadjuster":
@@ -613,6 +651,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "executorShutdownTimeoutMs": return getOrCreateConfiguration(target).getExecutorShutdownTimeoutMs();
         case "extendedheadersenabled":
         case "extendedHeadersEnabled": return getOrCreateConfiguration(target).isExtendedHeadersEnabled();
+        case "gtidignoreonrecovery":
+        case "gtidIgnoreOnRecovery": return getOrCreateConfiguration(target).isGtidIgnoreOnRecovery();
         case "gtidsourceexcludes":
         case "gtidSourceExcludes": return getOrCreateConfiguration(target).getGtidSourceExcludes();
         case "gtidsourcefilterdmlevents":
@@ -653,6 +693,10 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "maxQueueSize": return getOrCreateConfiguration(target).getMaxQueueSize();
         case "maxqueuesizeinbytes":
         case "maxQueueSizeInBytes": return getOrCreateConfiguration(target).getMaxQueueSizeInBytes();
+        case "memorymanagementschemasclass":
+        case "memoryManagementSchemasClass": return getOrCreateConfiguration(target).getMemoryManagementSchemasClass();
+        case "memorymanagementtablesclass":
+        case "memoryManagementTablesClass": return getOrCreateConfiguration(target).getMemoryManagementTablesClass();
         case "messagekeycolumns":
         case "messageKeyColumns": return getOrCreateConfiguration(target).getMessageKeyColumns();
         case "minrowcounttostreamresults":
@@ -733,6 +777,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "snapshotLockingMode": return getOrCreateConfiguration(target).getSnapshotLockingMode();
         case "snapshotmaxthreads":
         case "snapshotMaxThreads": return getOrCreateConfiguration(target).getSnapshotMaxThreads();
+        case "snapshotmaxthreadsmultiplier":
+        case "snapshotMaxThreadsMultiplier": return getOrCreateConfiguration(target).getSnapshotMaxThreadsMultiplier();
         case "snapshotmode":
         case "snapshotMode": return getOrCreateConfiguration(target).getSnapshotMode();
         case "snapshotmodeconfigurationbasedsnapshotdata":
@@ -757,6 +803,8 @@ public class DebeziumMySqlComponentConfigurer extends PropertyConfigurerSupport 
         case "snapshotTablesOrderByRowCount": return getOrCreateConfiguration(target).getSnapshotTablesOrderByRowCount();
         case "sourceinfostructmaker":
         case "sourceinfoStructMaker": return getOrCreateConfiguration(target).getSourceinfoStructMaker();
+        case "statisticsmetricsenabled":
+        case "statisticsMetricsEnabled": return getOrCreateConfiguration(target).isStatisticsMetricsEnabled();
         case "streamingdelayms":
         case "streamingDelayMs": return getOrCreateConfiguration(target).getStreamingDelayMs();
         case "tableexcludelist":

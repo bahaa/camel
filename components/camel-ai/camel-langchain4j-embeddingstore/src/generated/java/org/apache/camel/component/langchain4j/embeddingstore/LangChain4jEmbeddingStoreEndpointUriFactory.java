@@ -21,15 +21,21 @@ public class LangChain4jEmbeddingStoreEndpointUriFactory extends org.apache.came
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(4);
+        Set<String> props = new HashSet<>(8);
+        props.add("action");
         props.add("embeddingStore");
         props.add("embeddingStoreFactory");
         props.add("embeddingStoreId");
         props.add("lazyStartProducer");
+        props.add("maxResults");
+        props.add("minScore");
+        props.add("returnTextContent");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         SECRET_PROPERTY_NAMES = Collections.emptySet();
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
@@ -58,6 +64,11 @@ public class LangChain4jEmbeddingStoreEndpointUriFactory extends org.apache.came
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

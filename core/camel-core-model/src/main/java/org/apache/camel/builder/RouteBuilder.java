@@ -60,6 +60,7 @@ import org.apache.camel.spi.Resource;
 import org.apache.camel.spi.ResourceAware;
 import org.apache.camel.spi.RestConfiguration;
 import org.apache.camel.spi.SupervisingRouteController;
+import org.apache.camel.spi.annotations.Dataformat;
 import org.apache.camel.support.LifecycleStrategySupport;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StringHelper;
@@ -90,11 +91,11 @@ public abstract class RouteBuilder extends BuilderSupport implements RoutesBuild
     private RouteTemplatesDefinition routeTemplateCollection = new RouteTemplatesDefinition();
     private TemplatedRoutesDefinition templatedRouteCollection = new TemplatedRoutesDefinition();
 
-    public RouteBuilder() {
+    protected RouteBuilder() {
         this(null);
     }
 
-    public RouteBuilder(CamelContext context) {
+    protected RouteBuilder(CamelContext context) {
         super(context);
     }
 
@@ -244,8 +245,8 @@ public abstract class RouteBuilder extends BuilderSupport implements RoutesBuild
         }
         if (obj == null && DataFormat.class.isAssignableFrom(type)) {
             // it's maybe a dataformat
-            org.apache.camel.spi.annotations.Dataformat ann
-                    = type.getAnnotation(org.apache.camel.spi.annotations.Dataformat.class);
+            Dataformat ann
+                    = type.getAnnotation(Dataformat.class);
             if (ann != null) {
                 String name = ann.value();
                 obj = (T) getCamelContext().resolveDataFormat(name);

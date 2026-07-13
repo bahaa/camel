@@ -1,7 +1,7 @@
 = Set Body EIP
 :doctitle: Set Body
 :shortname: setBody
-:description: Sets the contents of the message body
+:description: Sets the message body to a value computed by an expression
 :since: 
 :supportlevel: Stable
 :tabs-sync-option:
@@ -77,8 +77,9 @@ YAML::
       uri: direct:cheese
       steps:
         - setBody:
-            simple:
-              expression: Hello ${body}
+            expression:
+              simple:
+                expression: "Hello ${body}"
         - to:
             uri: log:hello
 ----

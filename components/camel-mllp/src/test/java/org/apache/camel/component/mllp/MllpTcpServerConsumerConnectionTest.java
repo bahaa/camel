@@ -25,12 +25,12 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.junit.rule.mllp.MllpClientResource;
 import org.apache.camel.test.junit.rule.mllp.MllpJUnitResourceException;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import static org.apache.camel.test.junit5.ThrottlingExecutor.slowly;
+import static org.apache.camel.test.junit6.ThrottlingExecutor.slowly;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -38,6 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class MllpTcpServerConsumerConnectionTest extends CamelTestSupport {
     static final int RECEIVE_TIMEOUT = 1000;
     static final int READ_TIMEOUT = 500;
+
+    @RegisterExtension
+    AvailablePortFinder.Port mllpClientPort = AvailablePortFinder.find();
 
     @RegisterExtension
     public MllpClientResource mllpClient = new MllpClientResource();
@@ -53,7 +56,7 @@ public class MllpTcpServerConsumerConnectionTest extends CamelTestSupport {
     @Override
     protected void doPreSetup() throws Exception {
         mllpClient.setMllpHost("localhost");
-        mllpClient.setMllpPort(AvailablePortFinder.getNextAvailable());
+        mllpClient.setMllpPort(mllpClientPort.getPort());
     }
 
     /**

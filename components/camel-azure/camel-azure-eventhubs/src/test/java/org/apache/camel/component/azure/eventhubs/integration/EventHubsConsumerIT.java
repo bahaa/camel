@@ -37,7 +37,7 @@ import org.apache.camel.component.azure.eventhubs.EventHubsConstants;
 import org.apache.camel.component.azure.eventhubs.TestUtils;
 import org.apache.camel.component.azure.eventhubs.client.EventHubsClientFactory;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -62,7 +62,7 @@ class EventHubsConsumerIT extends CamelTestSupport {
 
     @BeforeAll
     public void prepare() throws Exception {
-        containerName = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+        containerName = RandomStringUtils.secure().nextAlphabetic(5).toLowerCase();
 
         final Properties properties = TestUtils.loadAzureAccessFromJvmEnv();
 
@@ -84,8 +84,8 @@ class EventHubsConsumerIT extends CamelTestSupport {
         final EventHubProducerAsyncClient producerAsyncClient
                 = EventHubsClientFactory.createEventHubProducerAsyncClient(configuration);
 
-        final String messageBody = RandomStringUtils.randomAlphabetic(30);
-        final String messageKey = RandomStringUtils.randomAlphabetic(5);
+        final String messageBody = RandomStringUtils.secure().nextAlphabetic(30);
+        final String messageKey = RandomStringUtils.secure().nextAlphabetic(5);
 
         producerAsyncClient
                 .send(Collections.singletonList(new EventData(messageBody)), new SendOptions().setPartitionKey(messageKey))

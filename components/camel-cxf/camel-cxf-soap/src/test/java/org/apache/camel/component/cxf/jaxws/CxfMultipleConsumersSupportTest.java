@@ -19,11 +19,11 @@ package org.apache.camel.component.cxf.jaxws;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.cxf.common.CXFTestSupport;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class CxfMultipleConsumersSupportTest extends CamelTestSupport {
     protected static int port1 = CXFTestSupport.getPort1();
@@ -40,6 +40,8 @@ public class CxfMultipleConsumersSupportTest extends CamelTestSupport {
 
     @Test
     public void testMultipleConsumersNotAllowed() throws Exception {
+        testConfiguration().withUseRouteBuilder(false);
+        context.stop();
         context.addRoutes(new RouteBuilder() {
             @Override
             public void configure() throws Exception {
@@ -50,18 +52,16 @@ public class CxfMultipleConsumersSupportTest extends CamelTestSupport {
                 from(SIMPLE_ENDPOINT_URI).to("mock:b");
             }
         });
-        try {
-            context.start();
-            fail("Should have thrown an exception");
-        } catch (Exception e) {
-            assertTrue(e.getMessage().endsWith(
-                    "Multiple consumers for the same endpoint is not allowed: cxf://http://localhost:" + port1
-                                               + "/CxfMultipleConsumersSupportTest/test?serviceClass=org.apache.camel.component.cxf.jaxws.HelloService"));
-        }
+        Exception e = assertThrows(Exception.class, context::start);
+        assertTrue(e.getMessage().endsWith(
+                "Multiple consumers for the same endpoint is not allowed: cxf://http://localhost:" + port1
+                                           + "/CxfMultipleConsumersSupportTest/test?serviceClass=org.apache.camel.component.cxf.jaxws.HelloService"));
     }
 
     @Test
     public void testNoMultipleConsumers() throws Exception {
+        testConfiguration().withUseRouteBuilder(false);
+        context.stop();
         context.addRoutes(new RouteBuilder() {
             @Override
             public void configure() throws Exception {
@@ -83,8 +83,4 @@ public class CxfMultipleConsumersSupportTest extends CamelTestSupport {
         MockEndpoint.assertIsSatisfied(context);
     }
 
-    @Override
-    public boolean isUseRouteBuilder() {
-        return false;
-    }
 }

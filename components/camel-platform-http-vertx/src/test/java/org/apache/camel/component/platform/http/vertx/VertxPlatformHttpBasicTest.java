@@ -41,7 +41,7 @@ public class VertxPlatformHttpBasicTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .body("Hello World")
@@ -67,7 +67,7 @@ public class VertxPlatformHttpBasicTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .body("Hello World")

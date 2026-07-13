@@ -29,7 +29,7 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.exec.internal.ExecutableJavaProgram;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 
@@ -293,6 +293,9 @@ public class ExecJavaProcessRecipientListTest extends CamelTestSupport {
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
+                // turn on dynamic headers on exec component
+                context.getComponent("exec", ExecComponent.class).setAllowControlHeaders(true);
+
                 from("direct:input")
                         .recipientList(header("whereTo")).to("mock:output");
 

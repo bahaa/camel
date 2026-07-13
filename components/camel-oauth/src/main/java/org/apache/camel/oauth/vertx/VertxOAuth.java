@@ -30,6 +30,8 @@ import io.vertx.ext.auth.oauth2.OAuth2Options;
 import io.vertx.ext.auth.oauth2.Oauth2Credentials;
 import io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth;
 import org.apache.camel.CamelContext;
+import org.apache.camel.oauth.AuthCodeCredentials;
+import org.apache.camel.oauth.ClientCredentials;
 import org.apache.camel.oauth.OAuth;
 import org.apache.camel.oauth.OAuthCodeFlowParams;
 import org.apache.camel.oauth.OAuthConfig;
@@ -104,16 +106,16 @@ public class VertxOAuth extends OAuth {
     public UserProfile authenticate(org.apache.camel.oauth.Credentials creds) throws OAuthException {
 
         Credentials vtxCreds;
-        if (creds instanceof org.apache.camel.oauth.UserCredentials) {
+        if (creds instanceof UserCredentials uc) {
 
-            var userProfile = ((UserCredentials) creds).getUserProfile();
+            var userProfile = uc.getUserProfile();
             log.info("Authenticate userProfile: {}", userProfile.subject());
             var scope = (String) userProfile.principal().get("scope");
             vtxCreds = new TokenCredentials()
                     .setToken(userProfile.accessToken().orElseThrow())
                     .addScope(scope);
 
-        } else if (creds instanceof org.apache.camel.oauth.AuthCodeCredentials params) {
+        } else if (creds instanceof AuthCodeCredentials params) {
 
             vtxCreds = new Oauth2Credentials()
                     .setFlow(OAuth2FlowType.AUTH_CODE)
@@ -125,7 +127,7 @@ public class VertxOAuth extends OAuth {
             vtxCreds = new TokenCredentials()
                     .setToken(params.getToken());
 
-        } else if (creds instanceof org.apache.camel.oauth.ClientCredentials params) {
+        } else if (creds instanceof ClientCredentials params) {
 
             vtxCreds = new Oauth2Credentials()
                     .setFlow(OAuth2FlowType.CLIENT)

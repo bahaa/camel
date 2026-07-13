@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.component.pulsar.utils.consumers.SubscriptionInitialPosition;
+import org.apache.camel.component.pulsar.utils.consumers.SubscriptionMode;
 import org.apache.camel.component.pulsar.utils.consumers.SubscriptionType;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriParams;
@@ -31,6 +32,7 @@ import org.apache.pulsar.client.api.RedeliveryBackoff;
 import org.apache.pulsar.client.api.RegexSubscriptionMode;
 
 import static org.apache.camel.component.pulsar.utils.consumers.SubscriptionInitialPosition.LATEST;
+import static org.apache.camel.component.pulsar.utils.consumers.SubscriptionMode.DURABLE;
 import static org.apache.camel.component.pulsar.utils.consumers.SubscriptionType.EXCLUSIVE;
 
 @UriParams
@@ -50,6 +52,10 @@ public class PulsarConfiguration implements Cloneable {
     private String subscriptionName = "subs";
     @UriParam(label = "consumer", defaultValue = "EXCLUSIVE", enums = "EXCLUSIVE,SHARED,FAILOVER,KEY_SHARED")
     private SubscriptionType subscriptionType = EXCLUSIVE;
+    @UriParam(label = "consumer", defaultValue = "DURABLE", enums = "DURABLE,NON_DURABLE",
+              description = "Determines the subscription mode for the consumer. Durable subscriptions persist the cursor position "
+                            + "if the consumer disconnects while non-durable subscriptions do not.")
+    private SubscriptionMode subscriptionMode = DURABLE;
     @UriParam(label = "consumer", defaultValue = "1")
     private int numberOfConsumers = 1;
     @UriParam(label = "consumer", defaultValue = "10")
@@ -76,6 +82,12 @@ public class PulsarConfiguration implements Cloneable {
     private SubscriptionInitialPosition subscriptionInitialPosition = LATEST;
     @UriParam(label = "consumer", defaultValue = "false")
     private boolean readCompacted;
+    @UriParam(label = "consumer", defaultValue = "false",
+              description = "When enabled, allows each individual message in a batch to be acknowledged independently."
+                            + " By default Pulsar redelivers the entire batch when any single message in the batch is"
+                            + " not acknowledged. This option also requires the Pulsar broker to be configured with"
+                            + " acknowledgmentAtBatchIndexLevelEnabled=true.")
+    private boolean enableBatchIndexAcknowledgment;
     @UriParam(label = "consumer",
               description = "Maximum number of times that a message will be redelivered before being sent to the dead letter queue. If this value is not set, no Dead Letter Policy will be created")
     private Integer maxRedeliverCount;
@@ -199,6 +211,17 @@ public class PulsarConfiguration implements Cloneable {
      */
     public void setSubscriptionType(SubscriptionType subscriptionType) {
         this.subscriptionType = subscriptionType;
+    }
+
+    public SubscriptionMode getSubscriptionMode() {
+        return subscriptionMode;
+    }
+
+    /**
+     * Determines the subscription mode for the consumer [DURABLE|NON_DURABLE], defaults to DURABLE
+     */
+    public void setSubscriptionMode(SubscriptionMode subscriptionMode) {
+        this.subscriptionMode = subscriptionMode;
     }
 
     public int getNumberOfConsumers() {
@@ -416,6 +439,17 @@ public class PulsarConfiguration implements Cloneable {
 
     public void setReadCompacted(boolean readCompacted) {
         this.readCompacted = readCompacted;
+    }
+
+    /**
+     * Whether each message in a batch can be acknowledged independently.
+     */
+    public boolean isEnableBatchIndexAcknowledgment() {
+        return enableBatchIndexAcknowledgment;
+    }
+
+    public void setEnableBatchIndexAcknowledgment(boolean enableBatchIndexAcknowledgment) {
+        this.enableBatchIndexAcknowledgment = enableBatchIndexAcknowledgment;
     }
 
     /**

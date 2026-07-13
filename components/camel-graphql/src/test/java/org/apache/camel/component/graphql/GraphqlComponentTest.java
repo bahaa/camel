@@ -26,7 +26,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.graphql.server.GraphqlServer;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.http.base.HttpOperationFailedException;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.json.JsonObject;
@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class GraphqlComponentTest extends CamelTestSupport {
 
@@ -244,14 +244,11 @@ public class GraphqlComponentTest extends CamelTestSupport {
     public void checkThrowException() throws Exception {
         result.expectedMessageCount(0);
 
-        try {
-            template.sendBodyAndHeader("direct:start9", "", "kaboom", "force some error");
-            fail();
-        } catch (Exception e) {
-            HttpOperationFailedException he = assertInstanceOf(HttpOperationFailedException.class, e.getCause());
-            assertEquals(500, he.getStatusCode());
-            assertEquals("Forced error due to kaboom", he.getHttpResponseStatus());
-        }
+        Exception e = assertThrows(Exception.class,
+                () -> template.sendBodyAndHeader("direct:start9", "", "kaboom", "force some error"));
+        HttpOperationFailedException he = assertInstanceOf(HttpOperationFailedException.class, e.getCause());
+        assertEquals(500, he.getStatusCode());
+        assertEquals("Forced error due to kaboom", he.getHttpResponseStatus());
 
         result.assertIsSatisfied();
     }

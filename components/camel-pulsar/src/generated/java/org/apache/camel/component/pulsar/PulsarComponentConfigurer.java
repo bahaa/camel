@@ -71,6 +71,8 @@ public class PulsarComponentConfigurer extends PropertyConfigurerSupport impleme
         case "consumerQueueSize": getOrCreateConfiguration(target).setConsumerQueueSize(property(camelContext, int.class, value)); return true;
         case "deadlettertopic":
         case "deadLetterTopic": getOrCreateConfiguration(target).setDeadLetterTopic(property(camelContext, java.lang.String.class, value)); return true;
+        case "enablebatchindexacknowledgment":
+        case "enableBatchIndexAcknowledgment": getOrCreateConfiguration(target).setEnableBatchIndexAcknowledgment(property(camelContext, boolean.class, value)); return true;
         case "enableretry":
         case "enableRetry": getOrCreateConfiguration(target).setEnableRetry(property(camelContext, boolean.class, value)); return true;
         case "hashingscheme":
@@ -117,6 +119,8 @@ public class PulsarComponentConfigurer extends PropertyConfigurerSupport impleme
         case "serviceUrl": getOrCreateConfiguration(target).setServiceUrl(property(camelContext, java.lang.String.class, value)); return true;
         case "subscriptioninitialposition":
         case "subscriptionInitialPosition": getOrCreateConfiguration(target).setSubscriptionInitialPosition(property(camelContext, org.apache.camel.component.pulsar.utils.consumers.SubscriptionInitialPosition.class, value)); return true;
+        case "subscriptionmode":
+        case "subscriptionMode": getOrCreateConfiguration(target).setSubscriptionMode(property(camelContext, org.apache.camel.component.pulsar.utils.consumers.SubscriptionMode.class, value)); return true;
         case "subscriptionname":
         case "subscriptionName": getOrCreateConfiguration(target).setSubscriptionName(property(camelContext, java.lang.String.class, value)); return true;
         case "subscriptiontopicsmode":
@@ -178,6 +182,8 @@ public class PulsarComponentConfigurer extends PropertyConfigurerSupport impleme
         case "consumerQueueSize": return int.class;
         case "deadlettertopic":
         case "deadLetterTopic": return java.lang.String.class;
+        case "enablebatchindexacknowledgment":
+        case "enableBatchIndexAcknowledgment": return boolean.class;
         case "enableretry":
         case "enableRetry": return boolean.class;
         case "hashingscheme":
@@ -224,6 +230,8 @@ public class PulsarComponentConfigurer extends PropertyConfigurerSupport impleme
         case "serviceUrl": return java.lang.String.class;
         case "subscriptioninitialposition":
         case "subscriptionInitialPosition": return org.apache.camel.component.pulsar.utils.consumers.SubscriptionInitialPosition.class;
+        case "subscriptionmode":
+        case "subscriptionMode": return org.apache.camel.component.pulsar.utils.consumers.SubscriptionMode.class;
         case "subscriptionname":
         case "subscriptionName": return java.lang.String.class;
         case "subscriptiontopicsmode":
@@ -281,6 +289,8 @@ public class PulsarComponentConfigurer extends PropertyConfigurerSupport impleme
         case "consumerQueueSize": return getOrCreateConfiguration(target).getConsumerQueueSize();
         case "deadlettertopic":
         case "deadLetterTopic": return getOrCreateConfiguration(target).getDeadLetterTopic();
+        case "enablebatchindexacknowledgment":
+        case "enableBatchIndexAcknowledgment": return getOrCreateConfiguration(target).isEnableBatchIndexAcknowledgment();
         case "enableretry":
         case "enableRetry": return getOrCreateConfiguration(target).isEnableRetry();
         case "hashingscheme":
@@ -327,6 +337,8 @@ public class PulsarComponentConfigurer extends PropertyConfigurerSupport impleme
         case "serviceUrl": return getOrCreateConfiguration(target).getServiceUrl();
         case "subscriptioninitialposition":
         case "subscriptionInitialPosition": return getOrCreateConfiguration(target).getSubscriptionInitialPosition();
+        case "subscriptionmode":
+        case "subscriptionMode": return getOrCreateConfiguration(target).getSubscriptionMode();
         case "subscriptionname":
         case "subscriptionName": return getOrCreateConfiguration(target).getSubscriptionName();
         case "subscriptiontopicsmode":

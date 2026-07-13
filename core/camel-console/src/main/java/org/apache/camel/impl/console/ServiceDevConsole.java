@@ -16,14 +16,13 @@
  */
 package org.apache.camel.impl.console;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.spi.EndpointServiceRegistry;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.console.AbstractDevConsole;
 import org.apache.camel.util.URISupport;
+import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 
 @DevConsole(name = "service", displayName = "Services", description = "Services used for network communication with clients")
@@ -42,16 +41,16 @@ public class ServiceDevConsole extends AbstractDevConsole {
             if (!sb.isEmpty()) {
                 sb.append("\n");
             }
-            sb.append(String.format("\n    Component: %s", es.getComponent()));
-            sb.append(String.format("\n    Direction: %s", es.getDirection()));
-            sb.append(String.format("\n    Hosted: %b", es.isHostedService()));
-            sb.append(String.format("\n    Protocol: %s", es.getServiceProtocol()));
-            sb.append(String.format("\n    Service: %s", es.getServiceUrl()));
-            sb.append(String.format("\n    Endpoint: %s", URISupport.sanitizeUri(es.getServiceUrl())));
+            sb.append(String.format("%n    Component: %s", es.getComponent()));
+            sb.append(String.format("%n    Direction: %s", es.getDirection()));
+            sb.append(String.format("%n    Hosted: %b", es.isHostedService()));
+            sb.append(String.format("%n    Protocol: %s", es.getServiceProtocol()));
+            sb.append(String.format("%n    Service: %s", es.getServiceUrl()));
+            sb.append(String.format("%n    Endpoint: %s", URISupport.sanitizeUri(es.getServiceUrl())));
             if (es.getRouteId() != null) {
-                sb.append(String.format("\n    Route Id: %s", es.getRouteId()));
+                sb.append(String.format("%n    Route Id: %s", es.getRouteId()));
             }
-            sb.append(String.format("\n    Total Messages: %d", es.getHits()));
+            sb.append(String.format("%n    Total Messages: %d", es.getHits()));
         }
         sb.append("\n");
 
@@ -62,7 +61,7 @@ public class ServiceDevConsole extends AbstractDevConsole {
     protected Map<String, Object> doCallJson(Map<String, Object> options) {
         JsonObject root = new JsonObject();
 
-        List<JsonObject> list = new ArrayList<>();
+        JsonArray list = new JsonArray();
         root.put("services", list);
 
         EndpointServiceRegistry esr = getCamelContext().getCamelContextExtension().getEndpointServiceRegistry();

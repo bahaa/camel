@@ -17,54 +17,66 @@
 package org.apache.camel.component.google.pubsub;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.api.core.AbstractApiService;
 import com.google.api.core.ApiFuture;
 import com.google.api.gax.rpc.ApiException;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Subscriber;
+import com.google.cloud.pubsub.v1.SubscriptionAdminClient;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
 import com.google.common.base.Strings;
+import com.google.pubsub.v1.DeadLetterPolicy;
 import com.google.pubsub.v1.ProjectSubscriptionName;
 import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.PullRequest;
 import com.google.pubsub.v1.PullResponse;
 import com.google.pubsub.v1.ReceivedMessage;
+import com.google.pubsub.v1.Subscription;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.camel.ShutdownRunningTask;
 import org.apache.camel.component.google.pubsub.consumer.AcknowledgeCompletion;
 import org.apache.camel.component.google.pubsub.consumer.AcknowledgeSync;
 import org.apache.camel.component.google.pubsub.consumer.CamelMessageReceiver;
 import org.apache.camel.component.google.pubsub.consumer.GooglePubsubAcknowledge;
 import org.apache.camel.spi.HeaderFilterStrategy;
+import org.apache.camel.spi.ShutdownAware;
+import org.apache.camel.spi.Synchronization;
 import org.apache.camel.support.DefaultConsumer;
+import org.apache.camel.support.UnitOfWorkHelper;
+import org.apache.camel.support.task.Tasks;
+import org.apache.camel.support.task.budget.Budgets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GooglePubsubConsumer extends DefaultConsumer {
+public class GooglePubsubConsumer extends DefaultConsumer implements ShutdownAware {
 
     private final Logger localLog;
 
     private final GooglePubsubEndpoint endpoint;
     private final Processor processor;
+    private final AtomicInteger pendingExchanges = new AtomicInteger();
     private ExecutorService executor;
     private final List<Subscriber> subscribers;
     private final Set<ApiFuture<PullResponse>> pendingSynchronousPullResponses;
     private final HeaderFilterStrategy headerFilterStrategy;
+    private int resolvedMaxDeliveryAttempts;
 
     GooglePubsubConsumer(GooglePubsubEndpoint endpoint, Processor processor) {
         super(endpoint, processor);
         this.endpoint = endpoint;
         this.processor = processor;
-        this.subscribers = Collections.synchronizedList(new LinkedList<>());
+        this.subscribers = new CopyOnWriteArrayList<>();
         this.pendingSynchronousPullResponses = ConcurrentHashMap.newKeySet();
         String loggerId = endpoint.getLoggerId();
 
@@ -81,6 +93,13 @@ public class GooglePubsubConsumer extends DefaultConsumer {
         super.doStart();
 
         localLog.info("Starting Google PubSub consumer for {}/{}", endpoint.getProjectId(), endpoint.getDestinationName());
+
+        resolvedMaxDeliveryAttempts = resolveMaxDeliveryAttempts();
+        if (resolvedMaxDeliveryAttempts > 0) {
+            localLog.info("Max delivery attempts enforcement enabled: {} for subscription {}",
+                    resolvedMaxDeliveryAttempts, endpoint.getDestinationName());
+        }
+
         executor = endpoint.createExecutor(this);
         for (int i = 0; i < endpoint.getConcurrentConsumers(); i++) {
             executor.submit(new SubscriberWrapper());
@@ -91,15 +110,18 @@ public class GooglePubsubConsumer extends DefaultConsumer {
     protected void doStop() throws Exception {
         localLog.info("Stopping Google PubSub consumer for {}/{}", endpoint.getProjectId(), endpoint.getDestinationName());
 
-        synchronized (subscribers) {
-            if (!subscribers.isEmpty()) {
-                localLog.info("Stopping subscribers for {}/{}", endpoint.getProjectId(), endpoint.getDestinationName());
-                subscribers.forEach(AbstractApiService::stopAsync);
-            }
+        if (!subscribers.isEmpty()) {
+            localLog.info("Stopping subscribers for {}/{}", endpoint.getProjectId(), endpoint.getDestinationName());
+            subscribers.forEach(AbstractApiService::stopAsync);
         }
 
         safeCancelSynchronousPullResponses();
 
+        super.doStop();
+    }
+
+    @Override
+    protected void doShutdown() throws Exception {
         if (executor != null) {
             if (getEndpoint() != null && getEndpoint().getCamelContext() != null) {
                 getEndpoint().getCamelContext().getExecutorServiceManager().shutdownGraceful(executor);
@@ -109,7 +131,26 @@ public class GooglePubsubConsumer extends DefaultConsumer {
         }
         executor = null;
 
-        super.doStop();
+        super.doShutdown();
+    }
+
+    @Override
+    public boolean deferShutdown(ShutdownRunningTask shutdownRunningTask) {
+        if (!subscribers.isEmpty()) {
+            subscribers.forEach(AbstractApiService::stopAsync);
+        }
+        safeCancelSynchronousPullResponses();
+        return true;
+    }
+
+    @Override
+    public int getPendingExchangesSize() {
+        return pendingExchanges.get();
+    }
+
+    @Override
+    public void prepareShutdown(boolean suspendOnly, boolean forced) {
+        // noop
     }
 
     private void safeCancelSynchronousPullResponses() {
@@ -121,6 +162,48 @@ public class GooglePubsubConsumer extends DefaultConsumer {
             }
         }
         pendingSynchronousPullResponses.clear();
+    }
+
+    private int resolveMaxDeliveryAttempts() {
+        if (endpoint.isMaxDeliveryAttemptsExplicitlySet()) {
+            localLog.debug("Using explicitly configured maxDeliveryAttempts: {}", endpoint.getMaxDeliveryAttempts());
+            return endpoint.getMaxDeliveryAttempts();
+        }
+
+        String subscriptionName = ProjectSubscriptionName.format(endpoint.getProjectId(), endpoint.getDestinationName());
+        try (SubscriptionAdminClient adminClient = endpoint.getComponent().getSubscriptionAdminClient(endpoint)) {
+            Subscription subscription = adminClient.getSubscription(subscriptionName);
+            if (subscription.hasDeadLetterPolicy()) {
+                DeadLetterPolicy dlp = subscription.getDeadLetterPolicy();
+                int maxAttempts = dlp.getMaxDeliveryAttempts();
+                if (maxAttempts > 0) {
+                    localLog.info("Auto-fetched maxDeliveryAttempts={} from subscription dead-letter policy for {}",
+                            maxAttempts, endpoint.getDestinationName());
+                    return maxAttempts;
+                }
+            }
+            localLog.debug("No dead-letter policy found on subscription {}, maxDeliveryAttempts enforcement disabled",
+                    endpoint.getDestinationName());
+        } catch (Exception e) {
+            localLog.warn("Failed to auto-fetch maxDeliveryAttempts from subscription {}: {}. "
+                          + "Max delivery attempts enforcement will be disabled. "
+                          + "Set the maxDeliveryAttempts endpoint option explicitly to enable enforcement.",
+                    endpoint.getDestinationName(), e.getMessage());
+            localLog.debug("Auto-fetch failure details", e);
+        }
+        return 0;
+    }
+
+    public int getResolvedMaxDeliveryAttempts() {
+        return resolvedMaxDeliveryAttempts;
+    }
+
+    public void incrementPendingExchanges() {
+        pendingExchanges.incrementAndGet();
+    }
+
+    public void decrementPendingExchanges() {
+        pendingExchanges.decrementAndGet();
     }
 
     private class SubscriberWrapper implements Runnable {
@@ -163,20 +246,61 @@ public class GooglePubsubConsumer extends DefaultConsumer {
                 MessageReceiver messageReceiver = new CamelMessageReceiver(GooglePubsubConsumer.this, endpoint, processor);
 
                 Subscriber subscriber = endpoint.getComponent().getSubscriber(subscriptionName, messageReceiver, endpoint);
+                boolean subscriberAdded = false;
                 try {
-                    subscribers.add(subscriber);
                     subscriber.startAsync().awaitRunning();
+                    // Only add to list after successful startup
+                    subscribers.add(subscriber);
+                    subscriberAdded = true;
                     subscriber.awaitTerminated();
                 } catch (Exception e) {
-                    localLog.error("Failure getting messages from PubSub", e);
+                    // Remove from list if it was added
+                    if (subscriberAdded) {
+                        subscribers.remove(subscriber);
+                    }
+
+                    // Check if error is recoverable
+                    boolean isRecoverable = false;
+                    if (e instanceof ApiException ae) {
+                        isRecoverable = ae.isRetryable();
+                    } else if (e.getCause() instanceof ApiException ae) {
+                        isRecoverable = ae.isRetryable();
+                    }
+
+                    if (isRecoverable) {
+                        localLog.error("Retryable error getting messages from PubSub", e);
+                    } else {
+                        localLog.error("Non-recoverable error getting messages from PubSub, stopping subscriber loop", e);
+                    }
 
                     // allow camel error handler to be aware
                     if (endpoint.isBridgeErrorHandler()) {
                         getExceptionHandler().handleException(e);
                     }
+
+                    // For non-recoverable errors, exit the loop
+                    if (!isRecoverable) {
+                        break;
+                    }
+
+                    // Add backoff delay for recoverable errors to prevent tight loop
+                    // We use initialDelay for the actual delay, and maxIterations(1) to run once
+                    Tasks.foregroundTask()
+                            .withBudget(Budgets.iterationBudget()
+                                    .withMaxIterations(1)
+                                    .withInitialDelay(Duration.ofSeconds(5))
+                                    .withInterval(Duration.ZERO)
+                                    .build())
+                            .withName("PubSubRetryDelay")
+                            .build()
+                            .run(getEndpoint().getCamelContext(), () -> true);
                 } finally {
                     localLog.debug("Stopping async subscriber {}", subscriptionName);
                     subscriber.stopAsync();
+                    // Ensure cleanup from list
+                    if (subscriberAdded) {
+                        subscribers.remove(subscriber);
+                    }
                 }
             }
         }
@@ -207,6 +331,23 @@ public class GooglePubsubConsumer extends DefaultConsumer {
                         // Deprecated:  replaced by headerFilterStrategy
                         exchange.getIn().setHeader(GooglePubsubConstants.ATTRIBUTES, pubsubMessage.getAttributesMap());
 
+                        // Delivery attempt (requires dead-letter policy on subscription)
+                        int deliveryAttempt = message.getDeliveryAttempt();
+                        if (deliveryAttempt > 0) {
+                            exchange.getIn().setHeader(GooglePubsubConstants.DELIVERY_ATTEMPT, deliveryAttempt);
+                        }
+
+                        // Enforce maxDeliveryAttempts: nack without processing if limit reached
+                        if (resolvedMaxDeliveryAttempts > 0 && deliveryAttempt >= resolvedMaxDeliveryAttempts) {
+                            localLog.info(
+                                    "Message {} has reached max delivery attempts ({}/{}), nacking to route to dead-letter topic",
+                                    pubsubMessage.getMessageId(), deliveryAttempt, resolvedMaxDeliveryAttempts);
+                            GooglePubsubAcknowledge ack = new AcknowledgeSync(
+                                    () -> endpoint.getComponent().getSubscriberStub(endpoint), subscriptionName);
+                            ack.nack(exchange);
+                            continue;
+                        }
+
                         //existing subscriber can not be propagated, because it will be closed at the end of this block
                         //subscriber will be created at the moment of use
                         // (see  https://issues.apache.org/jira/browse/CAMEL-18447)
@@ -228,10 +369,30 @@ public class GooglePubsubConsumer extends DefaultConsumer {
                             exchange.getIn().setHeader(pubSubHeader, value);
                         }
 
+                        pendingExchanges.incrementAndGet();
                         try {
-                            processor.process(exchange);
-                        } catch (Exception e) {
-                            getExceptionHandler().handleException(e);
+                            try {
+                                processor.process(exchange);
+                            } catch (Exception e) {
+                                exchange.setException(e);
+                            }
+
+                            // Handle exception if one occurred
+                            if (exchange.getException() != null) {
+                                getExceptionHandler().handleException("Error processing exchange", exchange,
+                                        exchange.getException());
+                            }
+
+                            // Execute synchronization callbacks (ACK/NACK) based on exchange status
+                            // This is required because we are directly calling processor.process() outside of the normal
+                            // Camel routing engine, so we must manually trigger the OnCompletion callbacks
+                            if (endpoint.getAckMode() != GooglePubsubConstants.AckMode.NONE) {
+                                List<Synchronization> synchronizations
+                                        = exchange.getExchangeExtension().handoverCompletions();
+                                UnitOfWorkHelper.doneSynchronizations(exchange, synchronizations);
+                            }
+                        } finally {
+                            pendingExchanges.decrementAndGet();
                         }
                     }
                 } catch (CancellationException e) {

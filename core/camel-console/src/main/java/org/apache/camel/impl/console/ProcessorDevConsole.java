@@ -30,6 +30,7 @@ import org.apache.camel.api.management.ManagedCamelContext;
 import org.apache.camel.api.management.mbean.ManagedDestinationAware;
 import org.apache.camel.api.management.mbean.ManagedProcessorMBean;
 import org.apache.camel.api.management.mbean.ManagedRouteMBean;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.LoggerHelper;
 import org.apache.camel.support.PatternHelper;
@@ -46,19 +47,17 @@ public class ProcessorDevConsole extends AbstractDevConsole {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProcessorDevConsole.class);
 
-    /**
-     * Filters the processors matching by processor id, route id, or route group, and source location
-     */
+    @Metadata(label = "query",
+              description = "Filters the processors matching by processor id, route id, or route group, and source location",
+              javaType = "java.lang.String")
     public static final String FILTER = "filter";
 
-    /**
-     * Limits the number of entries displayed
-     */
+    @Metadata(label = "query", description = "Limits the number of entries displayed", javaType = "java.lang.Integer")
     public static final String LIMIT = "limit";
 
-    /**
-     * Action to perform such as start,stop,suspend,resume,enable,disable on one or more processors
-     */
+    @Metadata(label = "query",
+              description = "Action to perform such as start,stop,enable,disable on one or more processors",
+              javaType = "java.lang.String", enums = "start,stop,enable,disable")
     public static final String ACTION = "action";
 
     public ProcessorDevConsole() {
@@ -67,10 +66,9 @@ public class ProcessorDevConsole extends AbstractDevConsole {
 
     @Override
     protected String doCallText(Map<String, Object> options) {
-        String action = (String) options.get(ACTION);
-        String filter = (String) options.get(FILTER);
-        String limit = (String) options.get(LIMIT);
-        final int max = limit == null ? Integer.MAX_VALUE : Integer.parseInt(limit);
+        String action = optionString(options, ACTION);
+        String filter = optionString(options, FILTER);
+        final int max = optionInt(options, LIMIT, Integer.MAX_VALUE);
         if (action != null) {
             doAction(getCamelContext(), action, filter);
             return "";
@@ -121,74 +119,78 @@ public class ProcessorDevConsole extends AbstractDevConsole {
                 return;
             }
             sb.append("\n");
-            sb.append(String.format("\n        Route Id: %s", mp.getRouteId()));
-            sb.append(String.format("\n        Id: %s", mp.getProcessorId()));
+            sb.append(String.format("%n        Route Id: %s", mp.getRouteId()));
+            sb.append(String.format("%n        Id: %s", mp.getProcessorId()));
             if (mp.getNodePrefixId() != null) {
-                sb.append(String.format("\n        Node Prefix Id: %s", mp.getNodePrefixId()));
+                sb.append(String.format("%n        Node Prefix Id: %s", mp.getNodePrefixId()));
             }
             if (mp.getDescription() != null) {
-                sb.append(String.format("\n        Description: %s", mp.getDescription()));
+                sb.append(String.format("%n        Description: %s", mp.getDescription()));
             }
             if (mp.getNote() != null) {
-                sb.append(String.format("\n        Note: %s", mp.getNote()));
+                sb.append(String.format("%n        Note: %s", mp.getNote()));
             }
-            sb.append(String.format("\n        Processor: %s", mp.getProcessorName()));
+            sb.append(String.format("%n        Processor: %s", mp.getProcessorName()));
             if (mp.getStepId() != null) {
-                sb.append(String.format("\n        Step Id: %s", mp.getStepId()));
+                sb.append(String.format("%n        Step Id: %s", mp.getStepId()));
             }
-            sb.append(String.format("\n        Level: %d", mp.getLevel()));
+            sb.append(String.format("%n        Level: %d", mp.getLevel()));
             if (mp.getSourceLocation() != null) {
                 String loc = mp.getSourceLocation();
                 if (mp.getSourceLineNumber() != null) {
                     loc += ":" + mp.getSourceLineNumber();
                 }
-                sb.append(String.format("\n        Source: %s", loc));
+                sb.append(String.format("%n        Source: %s", loc));
             }
 
             // processors which can send to a destination (such as to/toD/poll etc)
             String destination = getDestination(camelContext, mp);
             if (destination != null) {
-                sb.append(String.format("\n        Uri: %s", destination));
+                sb.append(String.format("%n        Uri: %s", destination));
             }
 
-            sb.append(String.format("\n        State: %s", mp.getState()));
-            sb.append(String.format("\n        Disabled: %s", mp.getDisabled()));
-            sb.append(String.format("\n        Total: %s", mp.getExchangesTotal()));
-            sb.append(String.format("\n        Failed: %s", mp.getExchangesFailed()));
-            sb.append(String.format("\n        Inflight: %s", mp.getExchangesInflight()));
+            sb.append(String.format("%n        State: %s", mp.getState()));
+            sb.append(String.format("%n        Disabled: %s", mp.getDisabled()));
+            sb.append(String.format("%n        Total: %s", mp.getExchangesTotal()));
+            sb.append(String.format("%n        Failed: %s", mp.getExchangesFailed()));
+            sb.append(String.format("%n        Inflight: %s", mp.getExchangesInflight()));
             long idle = mp.getIdleSince();
             if (idle > 0) {
-                sb.append(String.format("\n        Idle Since: %s", TimeUtils.printDuration(idle)));
+                sb.append(String.format("%n        Idle Since: %s", TimeUtils.printDuration(idle)));
             } else {
-                sb.append(String.format("\n        Idle Since: %s", ""));
+                sb.append(String.format("%n        Idle Since: %s", ""));
             }
-            sb.append(String.format("\n        Mean Time: %s", TimeUtils.printDuration(mp.getMeanProcessingTime(), true)));
-            sb.append(String.format("\n        Max Time: %s", TimeUtils.printDuration(mp.getMaxProcessingTime(), true)));
-            sb.append(String.format("\n        Min Time: %s", TimeUtils.printDuration(mp.getMinProcessingTime(), true)));
+            sb.append(String.format("%n        Mean Time: %s", TimeUtils.printDuration(mp.getMeanProcessingTime(), true)));
+            sb.append(String.format("%n        Max Time: %s", TimeUtils.printDuration(mp.getMaxProcessingTime(), true)));
+            sb.append(String.format("%n        Min Time: %s", TimeUtils.printDuration(mp.getMinProcessingTime(), true)));
             if (mp.getExchangesTotal() > 0) {
-                sb.append(String.format("\n        Last Time: %s", TimeUtils.printDuration(mp.getLastProcessingTime(), true)));
+                sb.append(String.format("%n        Last Time: %s", TimeUtils.printDuration(mp.getLastProcessingTime(), true)));
                 sb.append(
-                        String.format("\n        Delta Time: %s", TimeUtils.printDuration(mp.getDeltaProcessingTime(), true)));
+                        String.format("%n        Delta Time: %s", TimeUtils.printDuration(mp.getDeltaProcessingTime(), true)));
             }
             Date last = mp.getLastExchangeCompletedTimestamp();
             if (last != null) {
                 String ago = TimeUtils.printSince(last.getTime());
-                sb.append(String.format("\n        Since Last Completed: %s", ago));
+                sb.append(String.format("%n        Since Last Completed: %s", ago));
+            }
+            last = mp.getLastExchangeFailureHandledTimestamp();
+            if (last != null) {
+                String ago = TimeUtils.printSince(last.getTime());
+                sb.append(String.format("%n        Since Last Failure Handled: %s", ago));
             }
             last = mp.getLastExchangeFailureTimestamp();
             if (last != null) {
                 String ago = TimeUtils.printSince(last.getTime());
-                sb.append(String.format("\n        Since Last Failed: %s", ago));
+                sb.append(String.format("%n        Since Last Failed: %s", ago));
             }
         }
     }
 
     @Override
     protected JsonObject doCallJson(Map<String, Object> options) {
-        String action = (String) options.get(ACTION);
-        String filter = (String) options.get(FILTER);
-        String limit = (String) options.get(LIMIT);
-        final int max = limit == null ? Integer.MAX_VALUE : Integer.parseInt(limit);
+        String action = optionString(options, ACTION);
+        String filter = optionString(options, FILTER);
+        final int max = optionInt(options, LIMIT, Integer.MAX_VALUE);
         if (action != null) {
             doAction(getCamelContext(), action, filter);
             return new JsonObject();
@@ -306,7 +308,7 @@ public class ProcessorDevConsole extends AbstractDevConsole {
                 jo.put("uri", destination);
             }
 
-            final JsonObject stats = getStatsObject(mp);
+            final JsonObject stats = gatherProcessorStats(mp);
             jo.put("statistics", stats);
         }
     }
@@ -325,7 +327,7 @@ public class ProcessorDevConsole extends AbstractDevConsole {
         return null;
     }
 
-    private static JsonObject getStatsObject(ManagedProcessorMBean mp) {
+    public static JsonObject gatherProcessorStats(ManagedProcessorMBean mp) {
         JsonObject stats = new JsonObject();
         stats.put("idleSince", mp.getIdleSince());
         stats.put("exchangesTotal", mp.getExchangesTotal());
@@ -334,6 +336,11 @@ public class ProcessorDevConsole extends AbstractDevConsole {
         stats.put("meanProcessingTime", mp.getMeanProcessingTime());
         stats.put("maxProcessingTime", mp.getMaxProcessingTime());
         stats.put("minProcessingTime", mp.getMinProcessingTime());
+        if (mp.getProcessingTimeP50() >= 0) {
+            stats.put("p50ProcessingTime", mp.getProcessingTimeP50());
+            stats.put("p95ProcessingTime", mp.getProcessingTimeP95());
+            stats.put("p99ProcessingTime", mp.getProcessingTimeP99());
+        }
         if (mp.getExchangesTotal() > 0) {
             stats.put("lastProcessingTime", mp.getLastProcessingTime());
             stats.put("deltaProcessingTime", mp.getDeltaProcessingTime());
@@ -345,6 +352,10 @@ public class ProcessorDevConsole extends AbstractDevConsole {
         last = mp.getLastExchangeCompletedTimestamp();
         if (last != null) {
             stats.put("lastCompletedExchangeTimestamp", last.getTime());
+        }
+        last = mp.getLastExchangeFailureHandledTimestamp();
+        if (last != null) {
+            stats.put("lastFailureHandledExchangeTimestamp", last.getTime());
         }
         last = mp.getLastExchangeFailureTimestamp();
         if (last != null) {

@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/classes/compliance_finding",
+  "title": "ComplianceFinding",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.ComplianceFinding",
+  "description": "ComplianceFinding event class.",
+  "extends": {
+    "$ref": "OcsfEvent.json"
+  },
+  "properties": {
+    "compliance": {
+      "$ref": "Compliance.json"
+    },
+    "comment": {
+      "type": "string",
+      "title": "Comment"
+    },
+    "device": {
+      "$ref": "Device.json"
+    },
+    "confidence": {
+      "type": "string",
+      "title": "Confidence"
+    },
+    "resources": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "ResourceDetails.json"
+      }
+    },
+    "confidence_id": {
+      "type": "integer",
+      "title": "Confidence ID"
+    },
+    "confidence_score": {
+      "type": "integer",
+      "title": "Confidence Score"
+    },
+    "remediation": {
+      "$ref": "Remediation.json"
+    },
+    "vendor_attributes": {
+      "$ref": "VendorAttributes.json"
+    },
+    "evidences": {
+      "type": "array",
+      "title": "Evidence Artifacts",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "finding_info": {
+      "$ref": "FindingInfo.json"
+    },
+    "resource": {
+      "$ref": "ResourceDetails.json"
+    },
+    "raw_data_size": {
+      "type": "integer",
+      "title": "Raw Data Size"
+    },
+    "raw_data_hash": {
+      "$ref": "Fingerprint.json"
+    },
+    "enrichments": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Enrichment.json"
+      }
+    }
+  }
+}

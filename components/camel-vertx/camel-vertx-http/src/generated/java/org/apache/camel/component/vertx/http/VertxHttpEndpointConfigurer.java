@@ -35,6 +35,8 @@ public class VertxHttpEndpointConfigurer extends PropertyConfigurerSupport imple
         case "connectTimeout": target.getConfiguration().setConnectTimeout(property(camelContext, int.class, value)); return true;
         case "cookiestore":
         case "cookieStore": target.getConfiguration().setCookieStore(property(camelContext, io.vertx.ext.web.client.spi.CookieStore.class, value)); return true;
+        case "deserializationfilter":
+        case "deserializationFilter": target.getConfiguration().setDeserializationFilter(property(camelContext, java.lang.String.class, value)); return true;
         case "headerfilterstrategy":
         case "headerFilterStrategy": target.getConfiguration().setHeaderFilterStrategy(property(camelContext, org.apache.camel.spi.HeaderFilterStrategy.class, value)); return true;
         case "httpmethod":
@@ -66,6 +68,8 @@ public class VertxHttpEndpointConfigurer extends PropertyConfigurerSupport imple
         case "throwexceptiononfailure":
         case "throwExceptionOnFailure": target.getConfiguration().setThrowExceptionOnFailure(property(camelContext, boolean.class, value)); return true;
         case "timeout": target.getConfiguration().setTimeout(property(camelContext, long.class, value)); return true;
+        case "tracingpolicy":
+        case "tracingPolicy": target.getConfiguration().setTracingPolicy(property(camelContext, io.vertx.core.tracing.TracingPolicy.class, value)); return true;
         case "transferexception":
         case "transferException": target.getConfiguration().setTransferException(property(camelContext, boolean.class, value)); return true;
         case "usecompression":
@@ -93,6 +97,8 @@ public class VertxHttpEndpointConfigurer extends PropertyConfigurerSupport imple
         case "connectTimeout": return int.class;
         case "cookiestore":
         case "cookieStore": return io.vertx.ext.web.client.spi.CookieStore.class;
+        case "deserializationfilter":
+        case "deserializationFilter": return java.lang.String.class;
         case "headerfilterstrategy":
         case "headerFilterStrategy": return org.apache.camel.spi.HeaderFilterStrategy.class;
         case "httpmethod":
@@ -124,6 +130,8 @@ public class VertxHttpEndpointConfigurer extends PropertyConfigurerSupport imple
         case "throwexceptiononfailure":
         case "throwExceptionOnFailure": return boolean.class;
         case "timeout": return long.class;
+        case "tracingpolicy":
+        case "tracingPolicy": return io.vertx.core.tracing.TracingPolicy.class;
         case "transferexception":
         case "transferException": return boolean.class;
         case "usecompression":
@@ -152,6 +160,8 @@ public class VertxHttpEndpointConfigurer extends PropertyConfigurerSupport imple
         case "connectTimeout": return target.getConfiguration().getConnectTimeout();
         case "cookiestore":
         case "cookieStore": return target.getConfiguration().getCookieStore();
+        case "deserializationfilter":
+        case "deserializationFilter": return target.getConfiguration().getDeserializationFilter();
         case "headerfilterstrategy":
         case "headerFilterStrategy": return target.getConfiguration().getHeaderFilterStrategy();
         case "httpmethod":
@@ -183,6 +193,8 @@ public class VertxHttpEndpointConfigurer extends PropertyConfigurerSupport imple
         case "throwexceptiononfailure":
         case "throwExceptionOnFailure": return target.getConfiguration().isThrowExceptionOnFailure();
         case "timeout": return target.getConfiguration().getTimeout();
+        case "tracingpolicy":
+        case "tracingPolicy": return target.getConfiguration().getTracingPolicy();
         case "transferexception":
         case "transferException": return target.getConfiguration().isTransferException();
         case "usecompression":

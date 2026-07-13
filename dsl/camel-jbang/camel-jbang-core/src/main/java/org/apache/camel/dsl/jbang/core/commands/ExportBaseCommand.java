@@ -16,6 +16,7 @@
  */
 package org.apache.camel.dsl.jbang.core.commands;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -27,6 +28,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -47,22 +49,22 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.camel.catalog.DefaultCamelCatalog;
 import org.apache.camel.dsl.jbang.core.commands.catalog.KameletCatalogHelper;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.HawtioVersion;
+import org.apache.camel.dsl.jbang.core.common.JavaVersionCompletionCandidates;
+import org.apache.camel.dsl.jbang.core.common.LoggingLevelCompletionCandidates;
 import org.apache.camel.dsl.jbang.core.common.Plugin;
 import org.apache.camel.dsl.jbang.core.common.PluginExporter;
 import org.apache.camel.dsl.jbang.core.common.PluginHelper;
 import org.apache.camel.dsl.jbang.core.common.Printer;
+import org.apache.camel.dsl.jbang.core.common.ProfileCompletionCandidates;
 import org.apache.camel.dsl.jbang.core.common.RuntimeCompletionCandidates;
 import org.apache.camel.dsl.jbang.core.common.RuntimeType;
 import org.apache.camel.dsl.jbang.core.common.RuntimeTypeConverter;
 import org.apache.camel.dsl.jbang.core.common.RuntimeUtil;
 import org.apache.camel.dsl.jbang.core.common.VersionHelper;
 import org.apache.camel.tooling.maven.MavenArtifact;
-import org.apache.camel.tooling.maven.MavenDownloader;
-import org.apache.camel.tooling.maven.MavenDownloaderImpl;
 import org.apache.camel.tooling.maven.MavenGav;
 import org.apache.camel.tooling.maven.MavenResolutionException;
 import org.apache.camel.util.CamelCaseOrderedProperties;
@@ -71,6 +73,7 @@ import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StringHelper;
 import picocli.CommandLine;
+import picocli.CommandLine.Mixin;
 
 import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.*;
 
@@ -97,18 +100,15 @@ public abstract class ExportBaseCommand extends CamelCommand {
     private static final Set<String> EXCLUDED_GROUP_IDS = Set.of("org.fusesource.jansi", "org.apache.logging.log4j");
 
     protected Path exportBaseDir;
-    private MavenDownloader downloader;
     private Printer quietPrinter;
+    // Map to store deferred symbolic links: target path in BUILD_DIR → original source path
+    private Map<Path, Path> deferredSymlinks = new HashMap<>();
 
     @CommandLine.Parameters(description = "The Camel file(s) to export. If no files is specified then what was last run will be exported.",
                             arity = "0..9", paramLabel = "<files>", parameterConsumer = FilesConsumer.class)
     protected Path[] filePaths; // Defined only for file path completion; the field never used
 
     protected List<String> files = new ArrayList<>();
-
-    @CommandLine.Option(names = { "--repo", "--repos" },
-                        description = "Additional maven repositories (Use commas to separate multiple repositories)")
-    protected String repositories;
 
     @CommandLine.Option(names = { "--dep", "--dependency" }, description = "Add additional dependencies",
                         split = ",")
@@ -160,7 +160,10 @@ public abstract class ExportBaseCommand extends CamelCommand {
                         defaultValue = "CamelApplication")
     protected String mainClassname = "CamelApplication";
 
-    @CommandLine.Option(names = { "--java-version" }, description = "Java version", defaultValue = "21")
+    @CommandLine.Option(names = {
+            "--java-version",
+            "--java" }, completionCandidates = JavaVersionCompletionCandidates.class,
+                        description = "Java version (${COMPLETION-CANDIDATES})", defaultValue = "21")
     protected String javaVersion = "21";
 
     @CommandLine.Option(names = { "--camel-version" },
@@ -168,12 +171,12 @@ public abstract class ExportBaseCommand extends CamelCommand {
     protected String camelVersion;
 
     @CommandLine.Option(names = {
-            "--kamelets-version" }, description = "Apache Camel Kamelets version",
-                        defaultValue = RuntimeType.KAMELETS_VERSION)
-    protected String kameletsVersion = RuntimeType.KAMELETS_VERSION;
+            "--kamelets-version" }, description = "Apache Camel Kamelets version (auto-detected from classpath if not set)")
+    protected String kameletsVersion;
 
     @CommandLine.Option(names = { "--profile" }, scope = CommandLine.ScopeType.INHERIT,
-                        description = "Profile to export (dev, test, or prod).")
+                        completionCandidates = ProfileCompletionCandidates.class,
+                        description = "Profile to export (${COMPLETION-CANDIDATES}).")
     protected String profile;
 
     @CommandLine.Option(names = { "--local-kamelet-dir" },
@@ -187,31 +190,23 @@ public abstract class ExportBaseCommand extends CamelCommand {
     @CommandLine.Option(names = { "--camel-spring-boot-version" }, description = "Camel version to use with Spring Boot")
     protected String camelSpringBootVersion;
 
-    @CommandLine.Option(names = { "--quarkus-group-id" }, description = "Quarkus Platform Maven groupId",
-                        defaultValue = "io.quarkus.platform")
-    protected String quarkusGroupId = "io.quarkus.platform";
+    @CommandLine.Mixin
+    protected QuarkusPlatformMixin quarkusPlatform;
 
-    @CommandLine.Option(names = { "--quarkus-artifact-id" }, description = "Quarkus Platform Maven artifactId",
-                        defaultValue = "quarkus-bom")
-    protected String quarkusArtifactId = "quarkus-bom";
-
-    @CommandLine.Option(names = { "--quarkus-version" }, description = "Quarkus Platform version",
-                        defaultValue = RuntimeType.QUARKUS_VERSION)
-    protected String quarkusVersion = RuntimeType.QUARKUS_VERSION;
+    @Deprecated
+    @CommandLine.Option(names = { "--quarkus-package-type" },
+                        description = "Deprecated: Quarkus always uses fast-jar (layered) packaging",
+                        defaultValue = "fast-jar",
+                        hidden = true)
+    protected String quarkusPackageType = "fast-jar";
 
     @CommandLine.Option(names = { "--maven-wrapper" }, defaultValue = "true",
                         description = "Include Maven Wrapper files in exported project")
     protected boolean mavenWrapper = true;
 
-    @CommandLine.Option(names = { "--gradle-wrapper" }, defaultValue = "true",
-                        description = "DEPRECATED: Include Gradle Wrapper files in exported project")
-    @Deprecated
-    protected boolean gradleWrapper = true;
-
-    @CommandLine.Option(names = { "--build-tool" }, defaultValue = "maven",
-                        description = "DEPRECATED: Build tool to use (maven or gradle) (gradle is deprecated)")
-    @Deprecated
-    protected String buildTool = "maven";
+    @CommandLine.Option(names = { "--docker" }, defaultValue = "true",
+                        description = "Include Docker files in exported project")
+    protected boolean docker = true;
 
     @CommandLine.Option(names = { "--open-api" }, description = "Adds an OpenAPI spec from the given file (json or yaml file)")
     protected String openapi;
@@ -229,7 +224,13 @@ public abstract class ExportBaseCommand extends CamelCommand {
                         description = "If exporting to current directory (default) then all existing files are preserved. Enabling this option will force cleaning current directory including all sub dirs (use this with care)")
     protected boolean cleanExportDir;
 
-    @CommandLine.Option(names = { "--logging-level" }, defaultValue = "info", description = "Logging level")
+    @CommandLine.Option(names = { "--yes", "-y" }, defaultValue = "false",
+                        description = "Automatically answer yes to confirmation prompts (e.g. when using --clean-dir)")
+    protected boolean yes;
+
+    @CommandLine.Option(names = { "--logging-level" }, defaultValue = "info",
+                        completionCandidates = LoggingLevelCompletionCandidates.class,
+                        description = "Logging level (${COMPLETION-CANDIDATES})")
     protected String loggingLevel = "info";
 
     @CommandLine.Option(names = { "--package-name" },
@@ -237,20 +238,15 @@ public abstract class ExportBaseCommand extends CamelCommand {
                                       + "Use false to turn off and not include package name in the Java source files.")
     protected String packageName;
 
-    @CommandLine.Option(names = { "--fresh" }, defaultValue = "false",
-                        description = "Make sure we use fresh (i.e. non-cached) resources")
-    protected boolean fresh;
-
-    @CommandLine.Option(names = { "--download" }, defaultValue = "true",
-                        description = "Whether to allow automatic downloading JAR dependencies (over the internet)")
-    protected boolean download = true;
+    @CommandLine.Mixin
+    protected MavenResolverMixin mavenResolver;
 
     @CommandLine.Option(names = { "--package-scan-jars" }, defaultValue = "false",
-                        description = "Whether to automatic package scan JARs for custom Spring or Quarkus beans making them available for Camel JBang")
+                        description = "Whether to automatic package scan JARs for custom Spring or Quarkus beans making them available for Camel CLI")
     protected boolean packageScanJars;
 
     @CommandLine.Option(names = { "--build-property" },
-                        description = "Maven/Gradle build properties, ex. --build-property=prop1=foo")
+                        description = "Maven build properties, ex. --build-property=prop1=foo")
     protected List<String> buildProperties = new ArrayList<>();
 
     @CommandLine.Option(names = { "--prop", "--property" },
@@ -268,6 +264,10 @@ public abstract class ExportBaseCommand extends CamelCommand {
     @CommandLine.Option(names = { "--verbose" }, defaultValue = "false",
                         description = "Verbose output of startup activity (dependency resolution and downloading")
     protected boolean verbose;
+
+    @CommandLine.Option(names = { "--dry-run" }, defaultValue = "false",
+                        description = "Preview export without writing files")
+    protected boolean dryRun;
 
     @CommandLine.Option(names = { "--ignore-loading-error" }, defaultValue = "false",
                         description = "Whether to ignore route loading and compilation errors (use this with care!)")
@@ -297,7 +297,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
     protected boolean javaLiveReload; // reload java codes in dev
     public String pomTemplateName;   // support for specialised pom templates
 
-    public ExportBaseCommand(CamelJBangMain main) {
+    protected ExportBaseCommand(CamelJBangMain main) {
         super(main);
     }
 
@@ -314,95 +314,211 @@ public abstract class ExportBaseCommand extends CamelCommand {
         if (!quiet) {
             printConfigurationValues("Exporting integration with the following configuration:");
         }
+
+        if (dryRun) {
+            return doDryRunExport();
+        }
+
         // export
         return export();
     }
 
-    protected static String mavenRepositoriesAsPomXml(String repos) {
-        StringBuilder sb = new StringBuilder();
-        int i = 1;
-        sb.append("    <repositories>\n");
-        if (!repos.isEmpty()) {
-            for (String repo : repos.split(",")) {
-                sb.append("        <repository>\n");
-                sb.append("            <id>custom").append(i++).append("</id>\n");
-                sb.append("            <url>").append(repo).append("</url>\n");
-                if (repo.contains("snapshots")) {
-                    sb.append("            <releases>\n");
-                    sb.append("                <enabled>false</enabled>\n");
-                    sb.append("            </releases>\n");
-                    sb.append("            <snapshots>\n");
-                    sb.append("                <enabled>true</enabled>\n");
-                    sb.append("            </snapshots>\n");
-                }
-                sb.append("        </repository>\n");
+    /**
+     * Performs a dry-run export: runs the export to a temporary directory, lists the files that would be generated, and
+     * cleans up.
+     */
+    private Integer doDryRunExport() throws Exception {
+        // Save original state
+        String originalExportDir = this.exportDir;
+        boolean originalCleanExportDir = this.cleanExportDir;
+        boolean originalQuiet = this.quiet;
+        Path tempDir = Files.createTempDirectory("camel-export-dry-run-");
+        try {
+            // Redirect export to temp directory
+            this.exportDir = tempDir.toString();
+            this.cleanExportDir = false;
+            this.dryRun = false; // avoid recursion in subclasses
+            this.quiet = true; // suppress normal output
+
+            Integer result = export();
+
+            // Restore quiet so output works correctly
+            this.quiet = originalQuiet;
+
+            printer().println("Dry-run export preview:");
+            printer().println();
+            printer().println("Target directory: " + (originalExportDir != null ? originalExportDir : "."));
+            printer().println();
+            printer().println("Files that would be created:");
+            try (Stream<Path> walk = Files.walk(tempDir)) {
+                walk.filter(Files::isRegularFile)
+                        .sorted()
+                        .forEach(p -> {
+                            Path rel = tempDir.relativize(p);
+                            try {
+                                long size = Files.size(p);
+                                printer().printf("  %s (%s)%n", rel, humanReadableSize(size));
+                            } catch (IOException e) {
+                                printer().printf("  %s%n", rel);
+                            }
+                        });
+            }
+
+            return result;
+        } finally {
+            // Restore original state
+            this.exportDir = originalExportDir;
+            this.cleanExportDir = originalCleanExportDir;
+            this.quiet = originalQuiet;
+            this.dryRun = true;
+            // Clean up temp directory
+            try (Stream<Path> walk = Files.walk(tempDir)) {
+                walk.sorted(Comparator.reverseOrder())
+                        .forEach(p -> {
+                            try {
+                                Files.deleteIfExists(p);
+                            } catch (IOException e) {
+                                // ignore
+                            }
+                        });
             }
         }
-        sb.append("    </repositories>\n");
-        sb.append("    <pluginRepositories>\n");
-        if (!repos.isEmpty()) {
+    }
+
+    private static String humanReadableSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " bytes";
+        } else if (bytes < 1024 * 1024) {
+            return String.format("%.1f KB", bytes / 1024.0);
+        } else {
+            return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
+        }
+    }
+
+    /**
+     * Builds a list of repository data maps from a comma-separated repos string, for use with FreeMarker templates.
+     */
+    protected static List<Map<String, Object>> buildRepositoryList(String repos) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (repos != null && !repos.isEmpty()) {
+            int i = 1;
             for (String repo : repos.split(",")) {
-                sb.append("        <pluginRepository>\n");
-                sb.append("            <id>custom").append(i++).append("</id>\n");
-                sb.append("            <url>").append(repo).append("</url>\n");
-                if (repo.contains("snapshots")) {
-                    sb.append("            <releases>\n");
-                    sb.append("                <enabled>false</enabled>\n");
-                    sb.append("            </releases>\n");
-                    sb.append("            <snapshots>\n");
-                    sb.append("                <enabled>true</enabled>\n");
-                    sb.append("            </snapshots>\n");
-                }
-                sb.append("        </pluginRepository>\n");
+                Map<String, Object> r = new HashMap<>();
+                r.put("id", "custom" + i++);
+                r.put("url", repo);
+                r.put("isSnapshot", repo.contains("snapshots"));
+                result.add(r);
             }
         }
-        sb.append("    </pluginRepositories>\n");
-        return sb.toString();
+        return result;
     }
 
-    protected abstract Integer export() throws Exception;
+    /**
+     * Builds a list of dependency data maps from the deps set, for use with FreeMarker templates.
+     */
+    protected List<Map<String, Object>> buildDependencyList(Set<String> deps) {
+        List<MavenGav> gavs = new ArrayList<>();
+        for (String dep : deps) {
+            MavenGav gav = parseMavenGav(dep);
+            String gid = gav.getGroupId();
+            if ("org.apache.camel".equals(gid)) {
+                // uses BOM so version should not be included
+                gav.setVersion(null);
+            }
+            gavs.add(gav);
+        }
 
-    protected Integer runSilently(boolean ignoreLoadingError, boolean lazyBean, boolean verbose) throws Exception {
-        Run run = new Run(getMain());
-        // need to declare the profile to use for run
-        run.exportBaseDir = exportBaseDir;
-        run.dependencies = dependencies;
-        run.files = files;
-        run.name = name;
-        run.port = port;
-        run.managementPort = managementPort;
-        run.excludes = excludes;
-        run.openapi = openapi;
-        run.observe = observe;
-        run.download = download;
-        run.packageScanJars = packageScanJars;
-        run.runtime = runtime;
-        run.camelVersion = camelVersion;
-        run.camelSpringBootVersion = camelSpringBootVersion;
-        run.quarkusVersion = quarkusVersion;
-        run.quarkusGroupId = quarkusGroupId;
-        run.springBootVersion = springBootVersion;
-        run.kameletsVersion = kameletsVersion;
-        run.localKameletDir = localKameletDir;
-        run.ignoreLoadingError = ignoreLoadingError;
-        run.lazyBean = lazyBean;
-        run.property = applicationProperties;
-        run.repositories = repositories;
-        run.verbose = verbose;
-        run.logging = logging;
-        return run.runExport(ignoreLoadingError);
+        // sort artifacts
+        gavs.sort(mavenGavComparator());
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (MavenGav gav : gavs) {
+            Map<String, Object> dep = new HashMap<>();
+            dep.put("groupId", gav.getGroupId());
+            dep.put("artifactId", gav.getArtifactId());
+            dep.put("version", gav.getVersion());
+            dep.put("scope", gav.getScope());
+            dep.put("isLib", "lib".equals(gav.getPackaging()));
+            dep.put("isKameletsUtils", "camel-kamelets-utils".equals(gav.getArtifactId()));
+            result.add(dep);
+        }
+        return result;
     }
 
-    protected void addDependencies(String... deps) {
-        var depsArray = Optional.ofNullable(deps).orElse(new String[0]);
-        dependencies.addAll(Arrays.asList(depsArray));
+    public Comparator<MavenGav> mavenGavComparator() {
+        return new Comparator<MavenGav>() {
+            @Override
+            public int compare(MavenGav o1, MavenGav o2) {
+                int r1 = rankGroupId(o1);
+                int r2 = rankGroupId(o2);
+
+                if (r1 > r2) {
+                    return -1;
+                } else if (r2 > r1) {
+                    return 1;
+                } else {
+                    return o1.toString().compareTo(o2.toString());
+                }
+            }
+
+            int rankGroupId(MavenGav o1) {
+                String g1 = o1.getGroupId();
+                if (g1 == null) {
+                    return 0;
+                }
+
+                switch (g1) {
+                    case "org.springframework.boot" -> {
+                        return 30;
+                    }
+                    case "io.quarkus" -> {
+                        return 30;
+                    }
+                    case "org.apache.camel.quarkus" -> {
+                        String a1 = o1.getArtifactId();
+                        // main/core/engine first
+                        if ("camel-quarkus-core".equals(a1)) {
+                            return 21;
+                        }
+                        return 20;
+                    }
+                    case "org.apache.camel.springboot" -> {
+                        String a1 = o1.getArtifactId();
+                        // main/core/engine first
+                        if ("camel-spring-boot-starter".equals(a1)) {
+                            return 21;
+                        } else if ("camel-spring-boot-engine-starter".equals(a1)) {
+                            return 22;
+                        }
+                        return 20;
+                    }
+                    case "org.apache.camel" -> {
+                        String a1 = o1.getArtifactId();
+                        // main/core/engine first
+                        if ("camel-main".equals(a1)) {
+                            return 11;
+                        }
+                        return 10;
+                    }
+                    case "org.apache.camel.kamelets" -> {
+                        return 5;
+                    }
+                    default -> {
+                        return 0;
+                    }
+                }
+            }
+        };
     }
 
-    protected String replaceBuildProperties(String context) {
+    /**
+     * Formats build properties as XML property lines for inclusion in POM templates.
+     */
+    protected String formatBuildProperties() {
         Properties properties = mapBuildProperties();
 
         if (!skipPlugins) {
-            Set<PluginExporter> exporters = PluginHelper.getActivePlugins(getMain(), repositories).values()
+            Set<PluginExporter> exporters = PluginHelper.getActivePlugins(getMain(), mavenResolver.repos()).values()
                     .stream()
                     .map(Plugin::getExporter)
                     .filter(Optional::isPresent)
@@ -414,14 +530,60 @@ public abstract class ExportBaseCommand extends CamelCommand {
             }
         }
 
-        String mavenProperties = properties.entrySet().stream()
-                .map(item -> {
-                    return String.format("        <%s>%s</%s>", item.getKey(), item.getValue(), item.getKey());
-                })
+        return properties.entrySet().stream()
+                .map(item -> String.format("        <%s>%s</%s>", item.getKey(), item.getValue(), item.getKey()))
                 .collect(Collectors.joining(System.lineSeparator()));
+    }
 
+    protected abstract Integer export() throws Exception;
+
+    protected Integer runSilently(boolean ignoreLoadingError, boolean lazyBean, boolean verbose) throws Exception {
+        if (kameletsVersion == null) {
+            kameletsVersion = VersionHelper.extractKameletsVersion();
+        }
+        Run run = new Run(getMain());
+        // need to declare the profile to use for run
+        run.exportBaseDir = exportBaseDir;
+        run.dependencies = dependencies;
+        run.files = files;
+        run.name = name;
+        run.serverOptions.port = port;
+        run.serverOptions.managementPort = managementPort;
+        run.excludes = excludes;
+        run.openapi = openapi;
+        run.serverOptions.observe = observe;
+        run.mavenResolver = mavenResolver;
+        run.packageScanJars = packageScanJars;
+        run.runtime = runtime;
+        run.camelVersion = camelVersion;
+        run.camelSpringBootVersion = camelSpringBootVersion;
+        run.quarkusPlatform = quarkusPlatform;
+        run.springBootVersion = springBootVersion;
+        run.kameletsVersion = kameletsVersion;
+        run.javaVersion = javaVersion;
+        run.localKameletDir = localKameletDir;
+        run.ignoreLoadingError = ignoreLoadingError;
+        run.lazyBean = lazyBean;
+        run.property = applicationProperties;
+        run.verbose = verbose;
+        run.loggingOptions.logging = logging;
+        return run.runExport(ignoreLoadingError);
+    }
+
+    protected void addDependencies(String... deps) {
+        var depsArray = Optional.ofNullable(deps).orElse(new String[0]);
+        dependencies.addAll(Arrays.asList(depsArray));
+    }
+
+    /**
+     * @deprecated Use {@link #formatBuildProperties()} instead for FreeMarker templates.
+     */
+    @Deprecated
+    protected String replaceBuildProperties(String context) {
+        String mavenProperties = formatBuildProperties();
         if (!mavenProperties.isEmpty()) {
-            context = context.replaceFirst(Pattern.quote("{{ .BuildProperties }}"), Matcher.quoteReplacement(mavenProperties));
+            context = context.replaceFirst(Pattern.quote("{{ .BuildProperties }}"),
+                    Matcher.quoteReplacement(mavenProperties));
         } else {
             context = context.replaceFirst(Pattern.quote("{{ .BuildProperties }}"), "");
         }
@@ -453,7 +615,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
         List<String> lines = RuntimeUtil.loadPropertiesLines(settings);
 
         // check if we use custom and/or official ASF kamelets
-        List<String> officialKamelets = KameletCatalogHelper.findKameletNames(kameletsVersion, repositories);
+        List<String> officialKamelets = KameletCatalogHelper.findKameletNames(kameletsVersion, mavenResolver.repos());
         boolean kamelets = false;
         boolean asfKamelets = false;
         for (String line : lines) {
@@ -597,10 +759,20 @@ public abstract class ExportBaseCommand extends CamelCommand {
                     || "true".equalsIgnoreCase(prop.getProperty("camel.server.metricsEnabled"))) {
                 answer.add("camel:micrometer-prometheus");
             }
+            // automatic add needed dependencies when opentelemetry is enabled
+            if (prop.stringPropertyNames().stream().anyMatch(k -> k.startsWith("camel.opentelemetry2."))) {
+                answer.add("camel:opentelemetry2");
+            } else if (prop.stringPropertyNames().stream().anyMatch(k -> k.startsWith("camel.opentelemetry."))) {
+                answer.add("camel:opentelemetry");
+            }
+            // automatic add needed dependencies when LRA saga is enabled
+            if (prop.stringPropertyNames().stream().anyMatch(k -> k.startsWith("camel.lra."))) {
+                answer.add("camel:lra");
+            }
         }
 
         if (!skipPlugins) {
-            Set<PluginExporter> exporters = PluginHelper.getActivePlugins(getMain(), repositories).values()
+            Set<PluginExporter> exporters = PluginHelper.getActivePlugins(getMain(), mavenResolver.repos()).values()
                     .stream()
                     .map(Plugin::getExporter)
                     .filter(Optional::isPresent)
@@ -610,6 +782,11 @@ public abstract class ExportBaseCommand extends CamelCommand {
             for (PluginExporter exporter : exporters) {
                 answer.addAll(exporter.getDependencies(runtime));
             }
+        }
+
+        // automatic add hibernate as JPA provider when using camel-jpa
+        if (answer.stream().anyMatch(s -> s.contains("camel-jpa") || s.equals("camel:jpa"))) {
+            answer.add("mvn:org.hibernate.orm:hibernate-core");
         }
 
         // remove duplicate versions (keep first)
@@ -726,17 +903,26 @@ public abstract class ExportBaseCommand extends CamelCommand {
                     }
                     if (!java) {
                         if (kamelet) {
-                            ExportHelper.safeCopy(source, out, true, symbolicLink);
+                            ExportHelper.safeCopy(source, out, true);
+                            if (symbolicLink) {
+                                deferredSymlinks.put(out, source);
+                            }
                         } else if (jkube) {
                             // file should be renamed and moved into src/main/jkube
                             f = f.replace(".jkube.yaml", ".yaml");
                             f = f.replace(".jkube.yml", ".yml");
                             out = srcCamelResourcesDir.getParent().getParent().resolve("jkube/" + f);
                             Files.createDirectories(out.getParent());
-                            ExportHelper.safeCopy(source, out, true, symbolicLink);
+                            ExportHelper.safeCopy(source, out, true);
+                            if (symbolicLink) {
+                                deferredSymlinks.put(out, source);
+                            }
                         } else {
                             Files.createDirectories(out.getParent());
-                            ExportHelper.safeCopy(getClass().getClassLoader(), scheme, source, out, true, symbolicLink);
+                            ExportHelper.safeCopy(getClass().getClassLoader(), scheme, source, out, true);
+                            if (symbolicLink) {
+                                deferredSymlinks.put(out, source);
+                            }
                         }
                     } else {
                         // need to append package name in java source file
@@ -764,7 +950,10 @@ public abstract class ExportBaseCommand extends CamelCommand {
                             }
                         }
                         if (javaLiveReload) {
-                            ExportHelper.safeCopy(source, out, true, symbolicLink);
+                            ExportHelper.safeCopy(source, out, true);
+                            if (symbolicLink) {
+                                deferredSymlinks.put(out, source);
+                            }
                         } else {
                             fos = Files.newOutputStream(out);
                             for (String line : lines) {
@@ -780,7 +969,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
         }
 
         if (!skipPlugins) {
-            Set<PluginExporter> exporters = PluginHelper.getActivePlugins(getMain(), repositories).values()
+            Set<PluginExporter> exporters = PluginHelper.getActivePlugins(getMain(), mavenResolver.repos()).values()
                     .stream()
                     .map(Plugin::getExporter)
                     .filter(Optional::isPresent)
@@ -826,6 +1015,11 @@ public abstract class ExportBaseCommand extends CamelCommand {
             customize.apply(profileProps);
         }
 
+        // include camel profile if set (so exported runtimes like Spring Boot and Quarkus know the profile)
+        if (this.profile != null && !profileProps.containsKey("camel.main.profile")) {
+            profileProps.put("camel.main.profile", this.profile);
+        }
+
         StringBuilder content = new StringBuilder();
         for (Map.Entry<Object, Object> entry : profileProps.entrySet()) {
             String k = entry.getKey().toString();
@@ -837,7 +1031,9 @@ public abstract class ExportBaseCommand extends CamelCommand {
             }
 
             // files are now loaded in classpath
-            v = v.replaceAll("file:", "classpath:");
+            if (v.startsWith("file:")) {
+                v = "classpath:" + v.substring(5);
+            }
             if ("camel.main.routesIncludePattern".equals(k)) {
                 // camel.main.routesIncludePattern should remove all .java as we use move them to regular src/main/java
                 // camel.main.routesIncludePattern should remove all file: classpath: as we copy
@@ -868,6 +1064,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
         }
 
         // write all the properties
+        Files.createDirectories(targetDir);
         Path appPropsPath = targetDir.resolve("application.properties");
         Files.writeString(appPropsPath, content.toString(), StandardCharsets.UTF_8);
     }
@@ -881,10 +1078,9 @@ public abstract class ExportBaseCommand extends CamelCommand {
         if (propertySources != null) {
             for (String[] props : Arrays.stream(propertySources).filter(Objects::nonNull).toList()) {
                 for (String s : props) {
-                    String[] kv = s.split("=");
-                    if (kv.length != 2) {
-                        // likely a user mistake, we warn the user
-                        printer().println("WARN: property '" + s + "'' has a bad format (should be 'key=value'), skipping.");
+                    String[] kv = s.split("=", 2);
+                    if (kv.length < 2) {
+                        printer().println("WARN: property '" + s + "' has a bad format (should be 'key=value'), skipping.");
                     } else {
                         result.put(kv[0], kv[1]);
                     }
@@ -903,7 +1099,8 @@ public abstract class ExportBaseCommand extends CamelCommand {
         var answer = new Properties();
         buildProperties.stream()
                 .filter(item -> !item.isEmpty())
-                .map(item -> item.split("="))
+                .map(item -> item.split("=", 2))
+                .filter(toks -> toks.length == 2)
                 .forEach(toks -> answer.setProperty(toks[0], toks[1]));
         return answer;
     }
@@ -936,35 +1133,6 @@ public abstract class ExportBaseCommand extends CamelCommand {
         FileUtil.setPosixFilePermissions(mvnwCmdPath, "rwxr-xr-x");
     }
 
-    protected void copyGradleWrapper() throws Exception {
-        Path wrapperPath = Paths.get(BUILD_DIR, "gradle/wrapper");
-        Files.createDirectories(wrapperPath);
-        // copy files
-        Path gradlewPath = Paths.get(BUILD_DIR, "gradlew");
-        Path gradlewBatPath = Paths.get(BUILD_DIR, "gradlew.bat");
-        Path wrapperJarPath = wrapperPath.resolve("gradle-wrapper.jar");
-        Path wrapperPropsPath = wrapperPath.resolve("gradle-wrapper.properties");
-
-        try (InputStream is = ExportBaseCommand.class.getClassLoader().getResourceAsStream("gradle-wrapper/gradlew")) {
-            Files.copy(is, gradlewPath, StandardCopyOption.REPLACE_EXISTING);
-        }
-        try (InputStream is = ExportBaseCommand.class.getClassLoader().getResourceAsStream("gradle-wrapper/gradlew.bat")) {
-            Files.copy(is, gradlewBatPath, StandardCopyOption.REPLACE_EXISTING);
-        }
-        try (InputStream is
-                = ExportBaseCommand.class.getClassLoader().getResourceAsStream("gradle-wrapper/gradle-wrapper.jar")) {
-            Files.copy(is, wrapperJarPath, StandardCopyOption.REPLACE_EXISTING);
-        }
-        try (InputStream is
-                = ExportBaseCommand.class.getClassLoader().getResourceAsStream("gradle-wrapper/gradle-wrapper.properties")) {
-            Files.copy(is, wrapperPropsPath, StandardCopyOption.REPLACE_EXISTING);
-        }
-
-        // set execute file permission on gradlew/gradlew.bat files
-        FileUtil.setPosixFilePermissions(gradlewPath, "rwxr-xr-x");
-        FileUtil.setPosixFilePermissions(gradlewBatPath, "rwxr-xr-x");
-    }
-
     protected String applicationPropertyLine(String key, String value) {
         return key + "=" + value;
     }
@@ -977,6 +1145,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
      * @return              repositories or null if none are in use
      */
     protected String getMavenRepositories(Path settings, Properties prop, String camelVersion) throws Exception {
+        Objects.requireNonNull(camelVersion, "camelVersion");
         Set<String> answer = new LinkedHashSet<>();
 
         String propRepositories = prop.getProperty(REPOS);
@@ -984,9 +1153,6 @@ public abstract class ExportBaseCommand extends CamelCommand {
             answer.add(propRepositories);
         }
 
-        if (camelVersion == null) {
-            camelVersion = new DefaultCamelCatalog().getCatalogVersion();
-        }
         // include apache snapshot repo if we use SNAPSHOT version of Camel
         if (camelVersion.endsWith("-SNAPSHOT")) {
             answer.add("https://repository.apache.org/content/groups/snapshots/");
@@ -1001,8 +1167,8 @@ public abstract class ExportBaseCommand extends CamelCommand {
             }
         }
 
-        if (repositories != null) {
-            Collections.addAll(answer, this.repositories.split(","));
+        if (mavenResolver.repos() != null) {
+            Collections.addAll(answer, this.mavenResolver.repos().split(","));
         }
 
         return answer.stream()
@@ -1058,7 +1224,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
                 // ignore
             }
         }
-        return answer != null ? answer : "3.4.5";
+        return answer != null ? answer : "3.5.1";
     }
 
     protected static String jkubeMavenPluginVersion(Path settings, Properties props) {
@@ -1076,18 +1242,54 @@ public abstract class ExportBaseCommand extends CamelCommand {
                 // ignore
             }
         }
-        return answer != null ? answer : "1.18.1";
+        return answer != null ? answer : "1.19.0";
     }
 
     // This method is kept for backward compatibility with derived classes
     @Deprecated
-    protected void safeCopy(java.io.File source, java.io.File target, boolean override) throws Exception {
-        ExportHelper.safeCopy(source.toPath(), target.toPath(), override, symbolicLink);
+    protected void safeCopy(File source, File target, boolean override) throws Exception {
+        ExportHelper.safeCopy(source.toPath(), target.toPath(), override);
+    }
+
+    /**
+     * Creates symbolic links for files that were deferred during the copy phase. This method should be called after
+     * copying BUILD_DIR to exportDir and before deleting BUILD_DIR.
+     *
+     * @param  buildDir  the temporary build directory
+     * @param  exportDir the final export directory
+     * @throws Exception if symbolic link creation fails
+     */
+    protected void createDeferredSymlinks(Path buildDir, Path exportDir) throws Exception {
+        if (!symbolicLink || deferredSymlinks.isEmpty()) {
+            return;
+        }
+
+        for (Map.Entry<Path, Path> entry : deferredSymlinks.entrySet()) {
+            Path targetInBuildDir = entry.getKey();
+            Path originalSource = entry.getValue();
+
+            // Compute relative path from buildDir to target
+            Path relativePath = buildDir.relativize(targetInBuildDir);
+
+            // Create symlink in exportDir at same relative path
+            Path linkInExportDir = exportDir.resolve(relativePath);
+
+            // Delete the copied file and create symlink instead
+            if (Files.exists(linkInExportDir)) {
+                Files.delete(linkInExportDir);
+            }
+
+            // Create symbolic link pointing to the original source
+            Path absoluteSource = originalSource.toAbsolutePath();
+            Files.createSymbolicLink(linkInExportDir, absoluteSource);
+        }
+
+        deferredSymlinks.clear();
     }
 
     // This method is kept for backward compatibility with derived classes
     @Deprecated
-    protected void safeCopy(InputStream source, java.io.File target) throws Exception {
+    protected void safeCopy(InputStream source, File target) throws Exception {
         ExportHelper.safeCopy(source, target.toPath());
     }
 
@@ -1184,7 +1386,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
                 String n = d.substring(4);
                 Path sourcePath = Paths.get(n);
                 Path targetPath = libDirPath.resolve(n);
-                ExportHelper.safeCopy(sourcePath, targetPath, true, symbolicLink);
+                ExportHelper.safeCopy(sourcePath, targetPath, true);
             }
         }
     }
@@ -1203,7 +1405,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
 
     private void copyAgentLibDependencies(MavenGav gav) {
         try {
-            List<MavenArtifact> artifacts = getDownloader().resolveArtifacts(
+            List<MavenArtifact> artifacts = mavenResolver.downloader().resolveArtifacts(
                     List.of(gav.toString()), Set.of(), true, gav.getVersion().contains("SNAPSHOT"));
             for (MavenArtifact artifact : artifacts) {
                 Path target = Paths.get(BUILD_DIR, "agent", artifact.getFile().getName());
@@ -1243,7 +1445,7 @@ public abstract class ExportBaseCommand extends CamelCommand {
                     })
                     .forEach(p -> {
                         try {
-                            ExportHelper.safeCopy(p, srcResourcesDir.resolve(p.getFileName()), true, symbolicLink);
+                            ExportHelper.safeCopy(p, srcResourcesDir.resolve(p.getFileName()), true);
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
@@ -1255,20 +1457,8 @@ public abstract class ExportBaseCommand extends CamelCommand {
 
     // This method is kept for backward compatibility with derived classes
     @Deprecated
-    protected void copyApplicationPropertiesFiles(java.io.File srcResourcesDir) throws Exception {
+    protected void copyApplicationPropertiesFiles(File srcResourcesDir) throws Exception {
         copyApplicationPropertiesFiles(srcResourcesDir.toPath());
-    }
-
-    private MavenDownloader getDownloader() {
-        if (downloader == null) {
-            init();
-        }
-        return downloader;
-    }
-
-    private void init() {
-        this.downloader = new MavenDownloaderImpl();
-        ((MavenDownloaderImpl) downloader).build();
     }
 
     protected Printer outPrinter() {

@@ -24,7 +24,6 @@ import java.net.http.HttpResponse;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
-import org.apache.camel.test.AvailablePortFinder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -33,9 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MainHttpServerRouteTest {
 
-    private static final int port = AvailablePortFinder.getNextAvailable();
-
     private static CamelContext camelContext;
+    private static MainHttpServer httpServer;
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -51,8 +49,8 @@ class MainHttpServerRouteTest {
 
         // MainHttpServer needs to get registered/started explicitly
         // https://issues.apache.org/jira/browse/CAMEL-21741
-        MainHttpServer httpServer = new MainHttpServer();
-        httpServer.setPort(port);
+        httpServer = new MainHttpServer();
+        httpServer.setPort(0);
 
         camelContext.addService(httpServer);
         camelContext.start();
@@ -69,7 +67,7 @@ class MainHttpServerRouteTest {
     public void routeStatusOk() throws Exception {
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:" + port + "/hello"))
+                .uri(URI.create("http://localhost:" + httpServer.getPort() + "/hello"))
                 .build();
 
         HttpResponse<String> response = HttpClient.newBuilder().build()

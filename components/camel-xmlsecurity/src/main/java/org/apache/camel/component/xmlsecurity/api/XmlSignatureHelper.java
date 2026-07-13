@@ -56,6 +56,7 @@ import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.SAXException;
 
 import org.apache.camel.util.IOHelper;
+import org.apache.camel.util.ObjectHelper;
 
 /**
  * Helps to construct the transformations and the canonicalization methods for the XML Signature generator.
@@ -153,9 +154,7 @@ public final class XmlSignatureHelper {
         return getXpathFilter(xpath, null);
     }
 
-    @SuppressWarnings("unchecked")
     public static XPathExpression getXPathExpression(XPathFilterParameterSpec xpathFilter) throws XPathExpressionException {
-
         XPathFactory factory = XPathFactory.newInstance();
         XPath xpath = factory.newXPath();
         if (xpathFilter.getNamespaceMap() != null) {
@@ -195,7 +194,7 @@ public final class XmlSignatureHelper {
 
         // This method isn't necessary for XPath processing either.
         @Override
-        @SuppressWarnings("rawtypes")
+        @SuppressWarnings({ "rawtypes", "unchecked" })
         public Iterator getPrefixes(String uri) {
             throw new UnsupportedOperationException();
         }
@@ -340,7 +339,7 @@ public final class XmlSignatureHelper {
         if (path == null) {
             throw new IllegalArgumentException("path is null");
         }
-        InputStream is = org.apache.camel.util.ObjectHelper.loadResourceAsStream(path);
+        InputStream is = ObjectHelper.loadResourceAsStream(path);
         if (is == null) {
             is = XmlSignatureHelper.class.getResourceAsStream(path);
         }

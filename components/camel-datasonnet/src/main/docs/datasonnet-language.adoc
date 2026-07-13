@@ -2,12 +2,10 @@
 :doctitle: DataSonnet
 :shortname: datasonnet
 :artifactid: camel-datasonnet
-:description: To use DataSonnet scripts for message transformations.
+:description: To use DataSonnet scripts for message transformations
 :since: 3.7
 :supportlevel: Stable
 :tabs-sync-option:
-//Manually maintained attributes
-:camel-spring-boot-name: datasonnet
 
 *Since Camel {since}*
 
@@ -22,10 +20,11 @@ xref:eips:recipientList-eip.adoc[Recipient List].
 
 To use a DataSonnet expression, use the following Java code:
 
+._Java-only: creating a DataSonnet expression_
 [source,java]
----------------------------------------
+----
 datasonnet("someDSExpression");
----------------------------------------
+----
 
 == DataSonnet Options
 
@@ -115,6 +114,141 @@ xref:ROOT:properties-component.adoc[Properties] component (property placeholders
 |cml.variable |the variable name |String |Will return the exchange variable.
 |===
 
+=== Null Handling Functions
+
+[width="100%",cols="20%,30%,50%",options="header",]
+|===
+|Function |Example |Description
+
+|cml.defaultVal(value, fallback) |`cml.defaultVal(body.currency, 'USD')` |Returns `value` if non-null, `fallback` otherwise.
+
+|cml.isEmpty(value) |`cml.isEmpty(body.name)` |Returns `true` if the value is null, an empty string, or an empty array.
+|===
+
+=== Type Coercion Functions
+
+[width="100%",cols="20%,30%,50%",options="header",]
+|===
+|Function |Example |Description
+
+|cml.toInteger(value) |`cml.toInteger('42')` |Converts a string or number to an integer. Returns null for null input.
+
+|cml.toDecimal(value) |`cml.toDecimal('3.14')` |Converts a string to a decimal number. Returns null for null input.
+
+|cml.toBoolean(value) |`cml.toBoolean('true')` |Converts a string (`true`/`false`/`yes`/`no`/`1`/`0`) or number to boolean. Returns null for null input.
+|===
+
+=== Date/Time Functions
+
+[width="100%",cols="20%,30%,50%",options="header",]
+|===
+|Function |Example |Description
+
+|cml.now() |`cml.now()` |Returns the current timestamp as an ISO-8601 string.
+
+|cml.nowFmt(format) |`cml.nowFmt('yyyy-MM-dd')` |Returns the current UTC time formatted with the given pattern.
+
+|cml.formatDate(value, format) |`cml.formatDate('2026-03-20T10:30:00Z', 'dd/MM/yyyy')` |Reformats an ISO-8601 date string using the given pattern. Returns null for null input.
+
+|cml.parseDate(value, format) |`cml.parseDate('20/03/2026', 'dd/MM/yyyy')` |Parses a date string into epoch milliseconds. Returns null for null input.
+|===
+
+=== Math Functions
+
+[width="100%",cols="20%,30%,50%",options="header",]
+|===
+|Function |Example |Description
+
+|cml.sqrt(value) |`cml.sqrt(body.x)` |Computes the square root of a number. Returns null for null input.
+|===
+
+=== Utility Functions
+
+[width="100%",cols="20%,30%,50%",options="header",]
+|===
+|Function |Example |Description
+
+|cml.uuid() |`cml.uuid()` |Generates a random UUID string.
+
+|cml.typeOf(value) |`cml.typeOf(body.x)` |Returns the type name: `string`, `number`, `boolean`, `object`, `array`, `null`, or `function`.
+|===
+
+=== Camel Standard Library (`camel.libsonnet`)
+
+Camel ships a standard library of helper functions that can be imported in any DataSonnet script:
+
+[source,datasonnet]
+----
+local c = import 'camel.libsonnet';
+{
+  total: c.sumBy(body.items, function(i) i.price * i.qty),
+  names: c.join(std.map(function(i) i.name, body.items), ', '),
+  topItem: c.first(c.sortBy(body.items, function(i) -i.price))
+}
+----
+
+==== String Helpers
+
+[width="100%",cols="30%,70%",options="header",]
+|===
+|Function |Description
+
+|`c.capitalize(s)` |Capitalizes the first letter.
+|`c.trim(s)` |Strips whitespace from both ends.
+|`c.split(s, sep)` |Splits a string by separator.
+|`c.join(arr, sep)` |Joins an array of strings with separator.
+|`c.contains(s, sub)` |Checks if string contains substring.
+|`c.startsWith(s, prefix)` |Checks if string starts with prefix.
+|`c.endsWith(s, suffix)` |Checks if string ends with suffix.
+|`c.replace(s, old, new)` |Replaces all occurrences.
+|`c.lower(s)` / `c.upper(s)` |Case conversion.
+|===
+
+==== Collection Helpers
+
+[width="100%",cols="30%,70%",options="header",]
+|===
+|Function |Description
+
+|`c.sum(arr)` |Sums all elements.
+|`c.sumBy(arr, f)` |Sums by applying function `f` to each element.
+|`c.first(arr)` / `c.last(arr)` |First/last element, or null if empty.
+|`c.count(arr)` |Array length.
+|`c.avg(arr)` |Average of all elements, or null if empty.
+|`c.distinct(arr)` |Removes duplicates.
+|`c.distinctBy(arr, f)` |Removes duplicates by key function (keeps first occurrence).
+|`c.flatMap(arr, f)` |Maps and flattens.
+|`c.sortBy(arr, f)` |Sorts by key function.
+|`c.groupBy(arr, f)` |Groups into object by key function.
+|`c.min(arr)` / `c.max(arr)` |Minimum/maximum element.
+|`c.take(arr, n)` / `c.drop(arr, n)` |First/last n elements.
+|`c.zip(a, b)` |Zips two arrays into pairs.
+|===
+
+==== Math Helpers
+
+[width="100%",cols="30%,70%",options="header",]
+|===
+|Function |Description
+
+|`c.abs(x)` |Absolute value.
+|`c.round(x)` |Rounds to nearest integer.
+|===
+
+==== Object Helpers
+
+[width="100%",cols="30%,70%",options="header",]
+|===
+|Function |Description
+
+|`c.pick(obj, keys)` |Selects only the listed keys.
+|`c.omit(obj, keys)` |Removes the listed keys.
+|`c.merge(a, b)` |Merges two objects (b overrides a).
+|`c.keys(obj)` / `c.values(obj)` |Object keys/values as arrays.
+|`c.entries(obj)` |Converts to `[{key, value}]` array.
+|`c.fromEntries(arr)` |Converts `[{key, value}]` array back to object.
+|===
+
 Here's an example showing some of these functions in use:
 
 [tabs]
@@ -122,16 +256,16 @@ Here's an example showing some of these functions in use:
 Java::
 +
 [source,java]
-------------------------------------------------------------------------------------------------
+----
 from("direct:in")
     .setBody(datasonnet("'hello, ' + cml.properties('toGreet')", String.class))
     .to("mock:camel");
-------------------------------------------------------------------------------------------------
+----
 
 XML::
 +
 [source,xml]
------------------------------------------------------------------------------
+----
 <route>
     <from uri="direct:in"/>
     <setBody>
@@ -139,7 +273,24 @@ XML::
     </setBody>
     <to uri="mock:camel"/>
 </route>
------------------------------------------------------------------------------
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:in
+      steps:
+        - setBody:
+            expression:
+              datasonnet:
+                expression: "'hello, ' + cml.properties('toGreet')"
+                resultType: java.lang.String
+        - to:
+            uri: mock:camel
+----
 ====
 
 === Loading script from external resource
@@ -149,10 +300,11 @@ such as `"classpath:"`, `"file:"`, or `"http:"`. +
 This is done using the following syntax: `"resource:scheme:location"`,
 e.g., to refer to a file on the classpath you can do:
 
+._Java-only: loading a DataSonnet script from an external resource_
 [source,java]
--------------------------------------------------------------------
+----
 .setHeader("myHeader").datasonnet("resource:classpath:mydatasonnet.ds");
--------------------------------------------------------------------
+----
 
 == Examples
 
@@ -163,17 +315,17 @@ Here is a simple example using a DataSonnet expression as a predicate in a Messa
 Java::
 +
 [source,java]
-------------------------------------------------------------------------------------------------
+----
 // let's route if a line item is over $100
 from("queue:foo")
     .filter(datasonnet("ds.arrays.firstWith(body.lineItems, function(item) item > 100) != null"))
     .to("queue:bar");
-------------------------------------------------------------------------------------------------
+----
 
 XML::
 +
 [source,xml]
------------------------------------------------------------------------------
+----
 <route>
     <from uri="queue:foo"/>
     <filter>
@@ -181,7 +333,24 @@ XML::
         <to uri="queue:bar"/>
     </filter>
 </route>
------------------------------------------------------------------------------
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: queue:foo
+      steps:
+        - filter:
+            expression:
+              datasonnet:
+                expression: "ds.arrays.firstWith(body.lineItems, function(item) item > 100) != null"
+            steps:
+              - to:
+                  uri: queue:bar
+----
 ====
 
 
@@ -193,16 +362,16 @@ Here is an example of a simple DataSonnet expression as a transformation EIP. Th
 Java::
 +
 [source,java]
-------------------------------------------------------------------------------------------------
+----
 from("queue:foo")
     .transform(datasonnet("ds.filter(body.lineItems, function(item) item > 100)", String.class, "application/xml", "application/json"))
     .to("queue:bar");
-------------------------------------------------------------------------------------------------
+----
 
 XML::
 +
 [source,xml]
------------------------------------------------------------------------------
+----
 <route>
     <from uri="queue:foo"/>
     <filter>
@@ -212,10 +381,57 @@ XML::
         <to uri="queue:bar"/>
     </filter>
 </route>
------------------------------------------------------------------------------
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: queue:foo
+      steps:
+        - transform:
+            expression:
+              datasonnet:
+                expression: "ds.filter(body.lineItems, function(item) item > 100)"
+                resultType: java.lang.String
+                bodyMediaType: application/xml
+                outputMediaType: application/json
+        - to:
+            uri: queue:bar
+----
 ====
 
 
+== Migrating from DataWeave
+
+If you have existing DataWeave (`.dwl`) scripts, Camel provides a transpiler to convert them to DataSonnet format via the Camel CLI CLI.
+
+=== Converting an inline expression
+
+[source,bash]
+----
+camel transform dataweave -e "payload.name ++ ' ' ++ payload.surname"
+----
+
+=== Converting a file or directory
+
+[source,bash]
+----
+camel transform dataweave --input my-transform.dwl --output my-transform.ds
+camel transform dataweave --input src/main/resources/dwl/ --output src/main/resources/ds/
+----
+
+The transpiler automatically maps DataWeave constructs to their DataSonnet equivalents, including:
+
+- `payload` to `body`, `vars` to `cml.variable()`, `attributes.headers` to `cml.header()`
+- Operators: `++` to `+`, `default` to `cml.defaultVal()`, `as Number/String/Boolean` to `cml.toInteger()/std.toString()/cml.toBoolean()`
+- Collection operations: `map`, `filter`, `reduce`, `flatMap`, `groupBy`, `orderBy`, `distinctBy`
+- String operations: `contains`, `startsWith`, `endsWith`, `splitBy`, `joinBy`, `replace`
+- Functions: `sizeOf`, `upper`, `lower`, `trim`, `now`, `uuid`, `abs`, `round`, `sqrt`
+
+Constructs that cannot be automatically converted (such as `match` expressions) are marked with `TODO` comments in the output for manual review.
 
 == Dependencies
 
@@ -227,13 +443,10 @@ substituting the version number for the latest and greatest release (see
 the download page for the latest versions).
 
 [source,xml]
----------------------------------------
+----
 <dependency>
   <groupId>org.apache.camel</groupId>
   <artifactId>camel-datasonnet</artifactId>
   <version>x.x.x</version>
 </dependency>
----------------------------------------
-
-
-include::spring-boot:partial$starter.adoc[]
+----

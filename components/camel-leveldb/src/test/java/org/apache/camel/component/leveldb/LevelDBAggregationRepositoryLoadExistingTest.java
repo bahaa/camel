@@ -20,11 +20,11 @@ import java.io.File;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.support.DefaultExchange;
-import org.apache.camel.test.junit5.params.Test;
+import org.apache.camel.test.junit6.params.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
-import static org.apache.camel.test.junit5.TestSupport.deleteDirectory;
+import static org.apache.camel.test.junit6.TestSupport.deleteDirectory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -62,8 +62,6 @@ public class LevelDBAggregationRepositoryLoadExistingTest extends LevelDBTestSup
 
         // stop the repo
         levelDBFile.stop();
-
-        Thread.sleep(1000);
 
         // load the repo again
         levelDBFile.start();

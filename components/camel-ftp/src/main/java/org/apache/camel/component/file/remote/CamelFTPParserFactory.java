@@ -16,6 +16,7 @@
  */
 package org.apache.camel.component.file.remote;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 import org.apache.camel.spi.ClassResolver;
@@ -84,7 +85,7 @@ public class CamelFTPParserFactory extends DefaultFTPFileEntryParserFactory {
         if (JAVA_QUALIFIED_NAME_PATTERN.matcher(key).matches()) {
             Class<?> parserClass = ocr.resolveClass(key);
             try {
-                parser = (FTPFileEntryParser) parserClass.newInstance();
+                parser = (FTPFileEntryParser) parserClass.getDeclaredConstructor().newInstance();
             } catch (ClassCastException e) {
                 throw new ParserInitializationException(
                         parserClass.getName() + " does not implement the interface "
@@ -95,7 +96,7 @@ public class CamelFTPParserFactory extends DefaultFTPFileEntryParserFactory {
             }
         }
         if (parser == null) {
-            final String ukey = key.toUpperCase(java.util.Locale.ENGLISH);
+            final String ukey = key.toUpperCase(Locale.ENGLISH);
             if (ukey.indexOf(FTPClientConfig.SYST_UNIX_TRIM_LEADING) >= 0) {
                 parser = new UnixFTPEntryParser(config, true);
                 // must check this after SYST_UNIX_TRIM_LEADING as it is a substring of it

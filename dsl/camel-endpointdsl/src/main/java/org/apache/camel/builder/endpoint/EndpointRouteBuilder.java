@@ -30,11 +30,26 @@ import org.apache.camel.util.function.ThrowingConsumer;
  */
 public abstract class EndpointRouteBuilder extends RouteBuilder implements EndpointBuilderFactory {
 
-    public EndpointRouteBuilder() {
+    protected EndpointRouteBuilder() {
     }
 
-    public EndpointRouteBuilder(CamelContext context) {
+    protected EndpointRouteBuilder(CamelContext context) {
         super(context);
+    }
+
+    /**
+     * Returns the entry point for accessing all component header name builders.
+     * <p>
+     * Usage example:
+     *
+     * <pre>
+     * .setHeader(headers().kafka().kafkaKey(), constant("myKey"))
+     * </pre>
+     *
+     * @return the header builders entry point
+     */
+    public static EndpointHeaderBuilders headers() {
+        return new EndpointHeaderBuilders();
     }
 
     /**

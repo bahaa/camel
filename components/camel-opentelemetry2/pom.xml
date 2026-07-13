@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>components</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-opentelemetry2</artifactId>
@@ -35,7 +35,6 @@
         <firstVersion>4.11.0</firstVersion>
         <label>monitoring,microservice</label>
         <title>Opentelemetry2</title>
-        <supportLevel>Preview</supportLevel>
     </properties>
 
     <dependencyManagement>
@@ -56,12 +55,21 @@
             <artifactId>camel-telemetry</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core-model</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-sdk</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.opentelemetry.proto</groupId>
+            <artifactId>opentelemetry-proto</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-spring-junit5</artifactId>
+            <artifactId>camel-test-spring-junit6</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -100,8 +108,8 @@
                     <artifactId>undertow-servlet</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>io.undertow</groupId>
-                    <artifactId>undertow-servlet-jakarta</artifactId>
+                    <groupId>io.undertow.ee</groupId>
+                    <artifactId>undertow-servlet</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>io.undertow</groupId>

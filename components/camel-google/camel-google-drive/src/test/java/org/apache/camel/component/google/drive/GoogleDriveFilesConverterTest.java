@@ -16,14 +16,15 @@
  */
 package org.apache.camel.component.google.drive;
 
+import com.google.api.services.drive.model.File;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.deleteDirectory;
+import static org.apache.camel.test.junit6.TestSupport.deleteDirectory;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GoogleDriveFilesConverterTest extends CamelTestSupport {
@@ -43,7 +44,7 @@ public class GoogleDriveFilesConverterTest extends CamelTestSupport {
         MockEndpoint.assertIsSatisfied(context);
 
         Message result = mock.getExchanges().get(0).getIn();
-        assertTrue(result.getBody() instanceof com.google.api.services.drive.model.File,
+        assertTrue(result.getBody() instanceof File,
                 "We should get google file instance here");
 
     }
@@ -53,7 +54,7 @@ public class GoogleDriveFilesConverterTest extends CamelTestSupport {
         return new RouteBuilder() {
             public void configure() {
 
-                from("file://target/file-test?initialDelay=2000").convertBodyTo(com.google.api.services.drive.model.File.class)
+                from("file://target/file-test?initialDelay=2000").convertBodyTo(File.class)
                         .to("mock:result");
             }
         };

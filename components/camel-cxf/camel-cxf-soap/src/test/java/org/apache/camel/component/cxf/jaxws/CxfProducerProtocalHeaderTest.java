@@ -20,18 +20,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.camel.Exchange;
+import org.apache.camel.Message;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.cxf.common.message.CxfConstants;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class CxfProducerProtocalHeaderTest extends CamelTestSupport {
-    private static int port = AvailablePortFinder.getNextAvailable();
+    @RegisterExtension
+    static AvailablePortFinder.Port port = AvailablePortFinder.find();
     private static final String RESPONSE = "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">"
                                            + "<soap:Body><ns1:echoResponse xmlns:ns1=\"http://jaxws.cxf.component.camel.apache.org/\">"
                                            + "<return xmlns=\"http://jaxws.cxf.component.camel.apache.org/\">echo Hello World!</return>"
@@ -41,7 +44,7 @@ public class CxfProducerProtocalHeaderTest extends CamelTestSupport {
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
-                from("undertow:http://localhost:" + port + "/CxfProducerProtocalHeaderTest/user")
+                from("undertow:http://localhost:" + port.getPort() + "/CxfProducerProtocalHeaderTest/user")
                         .process(new Processor() {
 
                             public void process(Exchange exchange) throws Exception {
@@ -77,10 +80,10 @@ public class CxfProducerProtocalHeaderTest extends CamelTestSupport {
 
     @Test
     public void testSendMessage() {
-        Exchange exchange = sendSimpleMessage("cxf://http://localhost:" + port
+        Exchange exchange = sendSimpleMessage("cxf://http://localhost:" + port.getPort()
                                               + "/CxfProducerProtocalHeaderTest/user"
                                               + "?serviceClass=org.apache.camel.component.cxf.jaxws.HelloService");
-        org.apache.camel.Message out = exchange.getMessage();
+        Message out = exchange.getMessage();
         String result = out.getBody(String.class);
         assertEquals("echo " + "Hello World!", result, "reply body on Camel");
     }

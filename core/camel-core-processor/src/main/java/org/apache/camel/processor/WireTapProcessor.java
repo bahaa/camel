@@ -24,6 +24,7 @@ import org.apache.camel.AsyncCallback;
 import org.apache.camel.AsyncProcessor;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
+import org.apache.camel.EndpointSending;
 import org.apache.camel.Exchange;
 import org.apache.camel.ExchangePattern;
 import org.apache.camel.ExchangePropertyKey;
@@ -38,6 +39,7 @@ import org.apache.camel.spi.IdAware;
 import org.apache.camel.spi.ProcessorExchangeFactory;
 import org.apache.camel.spi.RouteIdAware;
 import org.apache.camel.spi.ShutdownAware;
+import org.apache.camel.spi.StepIdAware;
 import org.apache.camel.support.AsyncProcessorConverterHelper;
 import org.apache.camel.support.service.ServiceHelper;
 import org.apache.camel.util.ObjectHelper;
@@ -48,19 +50,19 @@ import org.slf4j.LoggerFactory;
  * Processor for wire tapping exchanges to an endpoint destination.
  */
 public class WireTapProcessor extends BaseProcessorSupport
-        implements Traceable, ShutdownAware, IdAware, RouteIdAware, CamelContextAware {
+        implements Traceable, ShutdownAware, EndpointSending, IdAware, RouteIdAware, StepIdAware, CamelContextAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(WireTapProcessor.class);
 
     private String id;
     private String routeId;
+    private String stepId;
     private CamelContext camelContext;
     private final SendDynamicProcessor dynamicSendProcessor; // is only used for reporting statistics
     private final String uri;
     private final boolean dynamicUri;
     private final Processor processor;
     private final AsyncProcessor asyncProcessor;
-    private final ExchangePattern exchangePattern;
     private final boolean copy;
     private final ExecutorService executorService;
     private final boolean shutdownExecutorService;
@@ -70,13 +72,12 @@ public class WireTapProcessor extends BaseProcessorSupport
     private Processor onPrepare;
 
     public WireTapProcessor(SendDynamicProcessor dynamicSendProcessor, Processor processor, String uri,
-                            ExchangePattern exchangePattern, boolean copy,
+                            boolean copy,
                             ExecutorService executorService, boolean shutdownExecutorService, boolean dynamicUri) {
         this.dynamicSendProcessor = dynamicSendProcessor;
         this.uri = uri;
         this.processor = processor;
         this.asyncProcessor = AsyncProcessorConverterHelper.convert(processor);
-        this.exchangePattern = exchangePattern;
         this.copy = copy;
         ObjectHelper.notNull(executorService, "executorService");
         this.executorService = executorService;
@@ -148,6 +149,16 @@ public class WireTapProcessor extends BaseProcessorSupport
     }
 
     @Override
+    public String getStepId() {
+        return stepId;
+    }
+
+    @Override
+    public void setStepId(String stepId) {
+        this.stepId = stepId;
+    }
+
+    @Override
     public CamelContext getCamelContext() {
         return camelContext;
     }
@@ -181,6 +192,7 @@ public class WireTapProcessor extends BaseProcessorSupport
         }
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public boolean process(final Exchange exchange, final AsyncCallback callback) {
         if (!isStarted()) {
@@ -190,7 +202,7 @@ public class WireTapProcessor extends BaseProcessorSupport
         // must configure the wire tap beforehand
         Exchange target;
         try {
-            target = configureExchange(exchange, exchangePattern);
+            target = configureExchange(exchange);
         } catch (Exception e) {
             exchange.setException(e);
             callback.done(true);
@@ -201,6 +213,7 @@ public class WireTapProcessor extends BaseProcessorSupport
         try {
             // create task which has state used during routing
             Runnable task = taskFactory.acquire(target, null);
+            // Deprecated since 4.19.0
             task = ProcessorHelper.prepareMDCParallelTask(camelContext, task);
             executorService.submit(task);
         } catch (Exception e) {
@@ -214,7 +227,7 @@ public class WireTapProcessor extends BaseProcessorSupport
         return true;
     }
 
-    protected Exchange configureExchange(Exchange exchange, ExchangePattern pattern) throws IOException {
+    protected Exchange configureExchange(Exchange exchange) throws IOException {
         Exchange answer;
         if (copy) {
             // use a copy of the original exchange

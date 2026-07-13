@@ -32,9 +32,10 @@ import org.apache.maven.project.MavenProjectHelper;
 import org.codehaus.plexus.build.BuildContext;
 
 /**
- * Generate Model lightweight YAML Writer source code.
+ * Generate YAML Model Writer that builds JsonObject/JsonArray structures for YAML serialization.
  */
-@Mojo(name = "generate-yaml-writer", threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME,
+@Mojo(name = "generate-yaml-writer", threadSafe = true,
+      requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME,
       defaultPhase = LifecyclePhase.PROCESS_CLASSES)
 public class YamlModelWriterGeneratorMojo extends ModelWriterGeneratorMojo {
 
@@ -51,7 +52,8 @@ public class YamlModelWriterGeneratorMojo extends ModelWriterGeneratorMojo {
     @Override
     public void execute(MavenProject project) throws MojoFailureException, MojoExecutionException {
         sourcesOutputDir = new File(project.getBasedir(), "src/generated/java");
-        generateYamlWriter = Boolean.parseBoolean(project.getProperties().getProperty("camel-generate-yaml-writer", "false"));
+        generateYamlWriter
+                = Boolean.parseBoolean(project.getProperties().getProperty("camel-generate-yaml-writer", "false"));
         super.execute(project);
     }
 
@@ -61,8 +63,8 @@ public class YamlModelWriterGeneratorMojo extends ModelWriterGeneratorMojo {
             return;
         }
         Path javaDir = sourcesOutputDir.toPath();
-        String parser = generateWriter();
-        updateResource(javaDir, (getWriterPackage() + ".ModelWriter").replace('.', '/') + ".java", parser);
+        String writer = generateWriter();
+        updateResource(javaDir, (getWriterPackage() + ".YamlModelWriter").replace('.', '/') + ".java", writer);
     }
 
     @Override
@@ -70,4 +72,8 @@ public class YamlModelWriterGeneratorMojo extends ModelWriterGeneratorMojo {
         return WRITER_PACKAGE;
     }
 
+    @Override
+    protected String getTemplateName() {
+        return "velocity/model-yaml-writer.vm";
+    }
 }

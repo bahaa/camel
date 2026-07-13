@@ -18,7 +18,7 @@ package org.apache.camel.component.atom;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -42,7 +42,8 @@ public class AtomEntryPollingConsumerTest extends CamelTestSupport {
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
-                from("atom:file:src/test/data/feed.atom?splitEntries=true&delay=500")
+                // throttled: one entry per poll; repeatCount=7 bounds it to exactly the 7 feed entries
+                from("atom:file:src/test/data/feed.atom?splitEntries=true&delay=100&initialDelay=0&repeatCount=7")
                         .to("mock:result1");
             }
         };

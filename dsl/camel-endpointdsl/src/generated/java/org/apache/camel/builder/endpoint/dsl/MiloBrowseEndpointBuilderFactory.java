@@ -539,6 +539,38 @@ public interface MiloBrowseEndpointBuilderFactory {
             return this;
         }
         /**
+         * Override the server reported endpoint port with the port from the
+         * endpoint URI.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: client
+         * 
+         * @param overridePort the value to set
+         * @return the dsl builder
+         */
+        default MiloBrowseEndpointBuilder overridePort(boolean overridePort) {
+            doSetProperty("overridePort", overridePort);
+            return this;
+        }
+        /**
+         * Override the server reported endpoint port with the port from the
+         * endpoint URI.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: client
+         * 
+         * @param overridePort the value to set
+         * @return the dsl builder
+         */
+        default MiloBrowseEndpointBuilder overridePort(String overridePort) {
+            doSetProperty("overridePort", overridePort);
+            return this;
+        }
+        /**
          * The product URI.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -651,6 +683,38 @@ public interface MiloBrowseEndpointBuilderFactory {
          */
         default MiloBrowseEndpointBuilder sessionTimeout(String sessionTimeout) {
             doSetProperty("sessionTimeout", sessionTimeout);
+            return this;
+        }
+        /**
+         * The password for authentication. Use this instead of embedding
+         * credentials in the endpoint URI when the password contains special
+         * characters (such as {code }, {code /}, {code }, {code &amp;}).
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param password the value to set
+         * @return the dsl builder
+         */
+        default MiloBrowseEndpointBuilder password(String password) {
+            doSetProperty("password", password);
+            return this;
+        }
+        /**
+         * The username for authentication. Use this instead of embedding
+         * credentials in the endpoint URI when the username contains special
+         * characters (such as {code }, {code /}, {code }, {code &amp;}).
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param username the value to set
+         * @return the dsl builder
+         */
+        default MiloBrowseEndpointBuilder username(String username) {
+            doSetProperty("username", username);
             return this;
         }
     }
@@ -780,7 +844,7 @@ public interface MiloBrowseEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final MiloBrowseHeaderNameBuilder INSTANCE = new MiloBrowseHeaderNameBuilder();
+        public static final MiloBrowseHeaderNameBuilder INSTANCE = new MiloBrowseHeaderNameBuilder();
 
         /**
          * The node ids.

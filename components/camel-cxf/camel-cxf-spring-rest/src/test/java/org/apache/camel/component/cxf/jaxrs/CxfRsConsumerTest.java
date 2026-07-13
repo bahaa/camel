@@ -44,7 +44,7 @@ import org.apache.camel.component.cxf.common.message.CxfConstants;
 import org.apache.camel.component.cxf.jaxrs.testbean.Customer;
 import org.apache.camel.component.cxf.jaxrs.testbean.CustomerService;
 import org.apache.camel.spi.Registry;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -57,7 +57,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CxfRsConsumerTest extends CamelTestSupport {
     private static final String PUT_REQUEST = "<Customer><name>Mary</name><id>123</id></Customer>";
@@ -170,36 +170,16 @@ public class CxfRsConsumerTest extends CamelTestSupport {
         URL url;
 
         url = new URL("http://localhost:" + CXT + "/rest/customerservice/customers/789");
-        try {
-            url.openStream();
-            fail("Expect to get exception here");
-        } catch (IOException exception) {
-            // expect the Internal error exception
-        }
+        assertThrows(IOException.class, url::openStream);
 
         url = new URL("http://localhost:" + CXT + "/rest/customerservice/customers/456");
-        try {
-            url.openStream();
-            fail("Expect to get exception here");
-        } catch (FileNotFoundException exception) {
-            // do nothing here
-        }
+        assertThrows(FileNotFoundException.class, url::openStream);
 
         url = new URL("http://localhost:" + CXT + "/rest/customerservice/customers/234");
-        try {
-            url.openStream();
-            fail("Expect to get exception here");
-        } catch (FileNotFoundException exception) {
-            // do nothing here
-        }
+        assertThrows(FileNotFoundException.class, url::openStream);
 
         url = new URL("http://localhost:" + CXT + "/rest/customerservice/customers/256");
-        try {
-            url.openStream();
-            fail("Expect to get exception here");
-        } catch (IOException exception) {
-            // expect the Internal error exception
-        }
+        assertThrows(IOException.class, url::openStream);
 
     }
 

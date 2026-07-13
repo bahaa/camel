@@ -21,10 +21,12 @@ import org.apache.camel.AsyncProducer;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Channel;
 import org.apache.camel.Endpoint;
+import org.apache.camel.NamedNode;
 import org.apache.camel.Predicate;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
 import org.apache.camel.Route;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A factory used internally by Camel to create {@link Processor} and other internal building blocks. This factory is
@@ -32,7 +34,8 @@ import org.apache.camel.Route;
  *
  * Camel end user should NOT use this, but use {@link ProcessorFactory} instead.
  *
- * @see ProcessorFactory
+ * @see   ProcessorFactory
+ * @since 3.7
  */
 public interface InternalProcessorFactory {
 
@@ -43,12 +46,15 @@ public interface InternalProcessorFactory {
 
     InternalProcessor addUnitOfWorkProcessorAdvice(CamelContext camelContext, Processor processor, Route route);
 
+    CamelInternalProcessorAdvice<?> createAggregateBacklogTracerAdvice(CamelContext camelContext, NamedNode definition);
+
     SharedInternalProcessor createSharedCamelInternalProcessor(CamelContext camelContext);
 
     Channel createChannel(CamelContext camelContext);
 
     AsyncProducer createInterceptSendToEndpointProcessor(
-            InterceptSendToEndpoint endpoint, Endpoint delegate, AsyncProducer producer, boolean skip, Predicate onWhen);
+            InterceptSendToEndpoint endpoint, Endpoint delegate, AsyncProducer producer, boolean skip,
+            @Nullable Predicate onWhen);
 
     AsyncProcessor createWrapProcessor(Processor processor, Processor wrapped);
 

@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 
 import org.apache.camel.RoutesBuilder;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -57,11 +57,11 @@ public class GrokPatternsTest extends CamelTestSupport {
                 Arguments.of("%{NUMBER:num}", "number is 123.", test("num", "123")),
                 Arguments.of("%{NUMBER:num:integer}", "number is 123.", test("num", 123)),
                 Arguments.of("%{IP:ip}", "my ip is 192.168.0.1", test("ip", "192.168.0.1")),
-                Arguments.of("%{TIMESTAMP_ISO8601:timestamp}", "This test was created at 2019-05-26T10:54:15Z test plain",
-                        test("timestamp", "2019-05-26T10:54:15Z")),
-                Arguments.of("%{TIMESTAMP_ISO8601:timestamp:date}",
+                Arguments.of("%{TIMESTAMP_ISO8601:log_timestamp}", "This test was created at 2019-05-26T10:54:15Z test plain",
+                        test("log_timestamp", "2019-05-26T10:54:15Z")),
+                Arguments.of("%{TIMESTAMP_ISO8601:log_timestamp:date}",
                         "This test was created at 2019-05-26T10:54:15Z test convert",
-                        test("timestamp", Instant.ofEpochSecond(1558868055))));
+                        test("log_timestamp", Instant.ofEpochSecond(1558868055))));
     }
 
     @Override

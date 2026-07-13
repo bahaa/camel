@@ -19,7 +19,7 @@ package org.apache.camel.component.kamelet;
 import org.apache.camel.RoutesBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 public class KameletLocalBeanGroovyTest extends CamelTestSupport {
@@ -46,9 +46,10 @@ public class KameletLocalBeanGroovyTest extends CamelTestSupport {
             public void configure() {
                 routeTemplate("whereTo")
                         .templateBean("myBar", "groovy",
-                                "def bean = new org.apache.camel.component.kamelet.MyInjectBar()\n"
-                                                         + "bean.bar = 'Gr8t'\n"
-                                                         + "return bean")
+                                """
+                                        def bean = new org.apache.camel.component.kamelet.MyInjectBar()
+                                        bean.bar = 'Gr8t'
+                                        return bean""")
                         .from("kamelet:source")
                         // must use {{myBar}} to refer to the local bean
                         .to("bean:{{myBar}}");

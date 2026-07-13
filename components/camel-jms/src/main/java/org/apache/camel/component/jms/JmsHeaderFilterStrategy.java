@@ -25,8 +25,6 @@ public class JmsHeaderFilterStrategy extends DefaultHeaderFilterStrategy {
     }
 
     public JmsHeaderFilterStrategy(boolean includeAllJMSXProperties) {
-        setOutFilterStartsWith(DefaultHeaderFilterStrategy.CAMEL_FILTER_STARTS_WITH);
-        setInFilterStartsWith(DefaultHeaderFilterStrategy.CAMEL_FILTER_STARTS_WITH);
         if (!includeAllJMSXProperties) {
             initialize();
         }

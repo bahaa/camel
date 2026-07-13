@@ -35,7 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @EnabledIfSystemProperty(named = "performance-tests", matches = ".*")
 public class VertxPlatformHttpLargeMessageStreamingTest {
-
     @Test
     void testStreamingWithLargeRequestAndResponseBody() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -53,7 +52,7 @@ public class VertxPlatformHttpLargeMessageStreamingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             InputStream response = given()
                     .body(new FileInputStream(input.toFile()))

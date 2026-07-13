@@ -25,7 +25,7 @@ import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.utility.DockerImageName;
 
 @InfraService(service = HiveMQInfraService.class,
-              description = "MQTT Platform HiveMQ",
+              description = "HiveMQ is an MQTT-based messaging platform for IoT",
               serviceAlias = "hive-mq",
               serviceImplementationAlias = "sparkplug")
 public class LocalHiveMQSparkplugTCKInfraService extends AbstractLocalHiveMQService<LocalHiveMQSparkplugTCKInfraService> {
@@ -49,11 +49,7 @@ public class LocalHiveMQSparkplugTCKInfraService extends AbstractLocalHiveMQServ
                 super(DockerImageName.parse(newImageName)
                         .asCompatibleSubstituteFor("hivemq/hivemq-ce"));
 
-                if (fixedPort) {
-                    addFixedExposedPort(1883, 1883);
-                } else {
-                    addExposedPort(1883);
-                }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, 1883);
             }
         }
 

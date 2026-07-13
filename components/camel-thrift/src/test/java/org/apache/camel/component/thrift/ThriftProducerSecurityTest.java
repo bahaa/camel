@@ -34,14 +34,11 @@ import org.apache.camel.spi.Registry;
 import org.apache.camel.support.jsse.KeyStoreParameters;
 import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.camel.support.jsse.TrustManagersParameters;
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TSSLTransportFactory;
 import org.apache.thrift.transport.TServerSocket;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,18 +46,18 @@ import org.slf4j.LoggerFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ThriftProducerSecurityTest extends CamelTestSupport {
     private static final Logger LOG = LoggerFactory.getLogger(ThriftProducerSecurityTest.class);
 
-    private static TServerSocket serverTransport;
-    private static TServer server;
+    private TServerSocket serverTransport;
+    private TServer server;
     @SuppressWarnings({ "rawtypes" })
-    private static Calculator.Processor processor;
+    private Calculator.Processor processor;
 
-    private static final int THRIFT_TEST_PORT = AvailablePortFinder.getNextAvailable();
+    private int thriftTestPort;
     private static final int THRIFT_TEST_NUM1 = 12;
     private static final int THRIFT_TEST_NUM2 = 13;
 
@@ -69,31 +66,32 @@ public class ThriftProducerSecurityTest extends CamelTestSupport {
     private static final String SECURITY_STORE_PASSWORD = "camelinaction";
     private static final int THRIFT_CLIENT_TIMEOUT = 2000;
 
-    @BeforeAll
+    @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static void startThriftServer() throws Exception {
+    public void doPreSetup() throws Exception {
         processor = new Calculator.Processor(new CalculatorSyncServerImpl());
 
         TSSLTransportFactory.TSSLTransportParameters sslParams = new TSSLTransportFactory.TSSLTransportParameters();
 
         sslParams.setKeyStore(KEY_STORE_SOURCE, SECURITY_STORE_PASSWORD);
-        serverTransport = TSSLTransportFactory.getServerSocket(THRIFT_TEST_PORT, THRIFT_CLIENT_TIMEOUT,
+        serverTransport = TSSLTransportFactory.getServerSocket(0, THRIFT_CLIENT_TIMEOUT,
                 InetAddress.getByName("localhost"), sslParams);
+        thriftTestPort = serverTransport.getServerSocket().getLocalPort();
         TThreadPoolServer.Args args = new TThreadPoolServer.Args(serverTransport);
         args.processor(processor);
         server = new TThreadPoolServer(args);
 
         Runnable simple = new Runnable() {
             public void run() {
-                LOG.info("Thrift secured server started on port: {}", THRIFT_TEST_PORT);
+                LOG.info("Thrift secured server started on port: {}", thriftTestPort);
                 server.serve();
             }
         };
         new Thread(simple).start();
     }
 
-    @AfterAll
-    public static void stopThriftServer() {
+    @Override
+    protected void cleanupResources() throws Exception {
         if (server != null) {
             server.stop();
             serverTransport.close();
@@ -144,13 +142,10 @@ public class ThriftProducerSecurityTest extends CamelTestSupport {
         requestBody.add(1);
         requestBody.add(new Work(THRIFT_TEST_NUM1, 0, Operation.DIVIDE));
 
-        try {
-            template.requestBody("direct:thrift-secured-calculate", requestBody);
-            fail("Expect the exception here");
-        } catch (Exception ex) {
-            assertTrue(ex instanceof CamelExecutionException, "Expect CamelExecutionException");
-            assertTrue(ex.getCause() instanceof InvalidOperation, "Get an InvalidOperation exception");
-        }
+        Exception ex = assertThrows(Exception.class,
+                () -> template.requestBody("direct:thrift-secured-calculate", requestBody));
+        assertTrue(ex instanceof CamelExecutionException, "Expect CamelExecutionException");
+        assertTrue(ex.getCause() instanceof InvalidOperation, "Get an InvalidOperation exception");
     }
 
     @Test
@@ -204,23 +199,23 @@ public class ThriftProducerSecurityTest extends CamelTestSupport {
             @Override
             public void configure() {
                 from("direct:thrift-secured-calculate")
-                        .to("thrift://localhost:" + THRIFT_TEST_PORT
+                        .to("thrift://localhost:" + thriftTestPort
                             + "/org.apache.camel.component.thrift.generated.Calculator?"
                             + "method=calculate&negotiationType=SSL&sslParameters=#sslParams&synchronous=true");
                 from("direct:thrift-secured-add")
-                        .to("thrift://localhost:" + THRIFT_TEST_PORT
+                        .to("thrift://localhost:" + thriftTestPort
                             + "/org.apache.camel.component.thrift.generated.Calculator?"
                             + "method=add&negotiationType=SSL&sslParameters=#sslParams&synchronous=true");
                 from("direct:thrift-secured-ping")
-                        .to("thrift://localhost:" + THRIFT_TEST_PORT
+                        .to("thrift://localhost:" + thriftTestPort
                             + "/org.apache.camel.component.thrift.generated.Calculator?"
                             + "method=ping&negotiationType=SSL&sslParameters=#sslParams&synchronous=true");
                 from("direct:thrift-secured-zip")
-                        .to("thrift://localhost:" + THRIFT_TEST_PORT
+                        .to("thrift://localhost:" + thriftTestPort
                             + "/org.apache.camel.component.thrift.generated.Calculator?"
                             + "method=zip&negotiationType=SSL&sslParameters=#sslParams&synchronous=true");
                 from("direct:thrift-secured-alltypes")
-                        .to("thrift://localhost:" + THRIFT_TEST_PORT
+                        .to("thrift://localhost:" + thriftTestPort
                             + "/org.apache.camel.component.thrift.generated.Calculator?"
                             + "method=alltypes&negotiationType=SSL&sslParameters=#sslParams&synchronous=true");
             }

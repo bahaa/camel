@@ -23,12 +23,12 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>components</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-opentelemetry</artifactId>
     <packaging>jar</packaging>
-    <name>Camel :: OpenTelemetry</name>
+    <name>Camel :: OpenTelemetry (deprecated)</name>
     <description>Distributed tracing using OpenTelemetry</description>
 
     <properties>
@@ -49,15 +49,23 @@
         <dependencies>
             <dependency>
                 <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>${opentelemetry-version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Required to support certain features still in alpha stage. May not be entirely ready for prod support. -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
                 <artifactId>opentelemetry-bom-alpha</artifactId>
-                <version>1.57.0-alpha</version>
+                <version>${opentelemetry-alpha-version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>io.opentelemetry</groupId>
                 <artifactId>opentelemetry-semconv</artifactId>
-                <version>${opentelemetry-alpha-version}</version>
+                <version>${opentelemetry-semconv-version}</version>
             </dependency>
             <dependency>
                 <groupId>io.opentelemetry.instrumentation</groupId>
@@ -105,7 +113,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-spring-junit5</artifactId>
+            <artifactId>camel-test-spring-junit6</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -152,8 +160,8 @@
                     <artifactId>undertow-servlet</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>io.undertow</groupId>
-                    <artifactId>undertow-servlet-jakarta</artifactId>
+                    <groupId>io.undertow.ee</groupId>
+                    <artifactId>undertow-servlet</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>io.undertow</groupId>

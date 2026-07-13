@@ -27,6 +27,7 @@ import jakarta.xml.bind.annotation.XmlTransient;
 import org.apache.camel.Expression;
 import org.apache.camel.Predicate;
 import org.apache.camel.model.language.ExpressionDefinition;
+import org.apache.camel.spi.Metadata;
 
 /**
  * A base class for nodes which contain an expression and a number of outputs.
@@ -36,29 +37,30 @@ import org.apache.camel.model.language.ExpressionDefinition;
 public abstract class OutputExpressionNode extends ExpressionNode implements OutputNode {
 
     @XmlElementRef
+    @Metadata(description = "The processing steps to execute when the expression matches.")
     private List<ProcessorDefinition<?>> outputs = new ArrayList<>();
 
-    public OutputExpressionNode() {
+    protected OutputExpressionNode() {
     }
 
-    public OutputExpressionNode(OutputExpressionNode source) {
+    protected OutputExpressionNode(OutputExpressionNode source) {
         super(source);
         this.outputs = ProcessorDefinitionHelper.deepCopyDefinitions(source.outputs);
     }
 
-    public OutputExpressionNode(ExpressionNode source) {
+    protected OutputExpressionNode(ExpressionNode source) {
         super(source);
     }
 
-    public OutputExpressionNode(ExpressionDefinition expression) {
+    protected OutputExpressionNode(ExpressionDefinition expression) {
         super(expression);
     }
 
-    public OutputExpressionNode(Expression expression) {
+    protected OutputExpressionNode(Expression expression) {
         super(expression);
     }
 
-    public OutputExpressionNode(Predicate predicate) {
+    protected OutputExpressionNode(Predicate predicate) {
         super(predicate);
     }
 

@@ -56,9 +56,8 @@ import org.apache.hc.core5.http.HttpResponse;
 import org.apache.hc.core5.http.io.HttpRequestHandler;
 import org.apache.hc.core5.http.protocol.HttpContext;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -80,60 +79,71 @@ public class AS2AsyncMDNServerManagerIT extends AbstractAS2ITSupport {
     private static final String MDN_FROM = "as2Test@server.example.com";
     private static final String MDN_SUBJECT_PREFIX = "MDN Response:";
     private static final String MDN_MESSAGE_TEMPLATE = "TBD";
-    private static final String EDI_MESSAGE = "UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'\n"
-                                              + "UNH+00000000000117+INVOIC:D:97B:UN'\n"
-                                              + "BGM+380+342459+9'\n"
-                                              + "DTM+3:20060515:102'\n"
-                                              + "RFF+ON:521052'\n"
-                                              + "NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'\n"
-                                              + "NAD+SE+005435656::16++GENERAL WIDGET COMPANY'\n"
-                                              + "CUX+1:USD'\n"
-                                              + "LIN+1++157870:IN'\n"
-                                              + "IMD+F++:::WIDGET'\n"
-                                              + "QTY+47:1020:EA'\n"
-                                              + "ALI+US'\n"
-                                              + "MOA+203:1202.58'\n"
-                                              + "PRI+INV:1.179'\n"
-                                              + "LIN+2++157871:IN'\n"
-                                              + "IMD+F++:::DIFFERENT WIDGET'\n"
-                                              + "QTY+47:20:EA'\n"
-                                              + "ALI+JP'\n"
-                                              + "MOA+203:410'\n"
-                                              + "PRI+INV:20.5'\n"
-                                              + "UNS+S'\n"
-                                              + "MOA+39:2137.58'\n"
-                                              + "ALC+C+ABG'\n"
-                                              + "MOA+8:525'\n"
-                                              + "UNT+23+00000000000117'\n"
-                                              + "UNZ+1+00000000000778'\n";
+    private static final String EDI_MESSAGE = """
+            UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'
+            UNH+00000000000117+INVOIC:D:97B:UN'
+            BGM+380+342459+9'
+            DTM+3:20060515:102'
+            RFF+ON:521052'
+            NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'
+            NAD+SE+005435656::16++GENERAL WIDGET COMPANY'
+            CUX+1:USD'
+            LIN+1++157870:IN'
+            IMD+F++:::WIDGET'
+            QTY+47:1020:EA'
+            ALI+US'
+            MOA+203:1202.58'
+            PRI+INV:1.179'
+            LIN+2++157871:IN'
+            IMD+F++:::DIFFERENT WIDGET'
+            QTY+47:20:EA'
+            ALI+JP'
+            MOA+203:410'
+            PRI+INV:20.5'
+            UNS+S'
+            MOA+39:2137.58'
+            ALC+C+ABG'
+            MOA+8:525'
+            UNT+23+00000000000117'
+            UNZ+1+00000000000778'
+            """;
 
     private static final String EDI_MESSAGE_CONTENT_TRANSFER_ENCODING = "7bit";
-    private static final int PARTNER_TARGET_PORT = 8889;
+    @RegisterExtension
+    AvailablePortFinder.Port partnerTargetPort = AvailablePortFinder.find();
+    @RegisterExtension
+    AvailablePortFinder.Port receiptServerPort = AvailablePortFinder.find();
+    @RegisterExtension
+    AvailablePortFinder.Port receiptServerPort2 = AvailablePortFinder.find();
+    @RegisterExtension
+    AvailablePortFinder.Port receiptServerPort3 = AvailablePortFinder.find();
+    @RegisterExtension
+    AvailablePortFinder.Port receiptServerPort4 = AvailablePortFinder.find();
 
-    private static final int RECEIPT_SERVER_PORT = AvailablePortFinder.getNextAvailable();
-    private static final int RECEIPT_SERVER_PORT2 = AvailablePortFinder.getNextAvailable();
-    private static final int RECEIPT_SERVER_PORT3 = AvailablePortFinder.getNextAvailable();
-    private static final int RECEIPT_SERVER_PORT4 = AvailablePortFinder.getNextAvailable();
-
-    private static AS2ServerConnection serverConnection;
-    private static RequestHandler requestHandler;
+    private AS2ServerConnection serverConnection;
+    private RequestHandler requestHandler;
     private static final String SIGNED_RECEIPT_MIC_ALGORITHMS = "sha1,md5";
     private static KeyPair serverKP;
     private static X509Certificate serverCert;
     private static KeyPair clientKeyPair;
     private static X509Certificate clientCert;
 
-    @BeforeAll
-    public static void setupTest() throws Exception {
+    @Override
+    public void setupResources() throws Exception {
         setupKeysAndCertificates();
         receiveTestMessages();
     }
 
-    @AfterAll
-    public static void teardownTest() {
+    @Override
+    public void cleanupResources() {
         if (serverConnection != null) {
             serverConnection.close();
         }
+    }
+
+    @Override
+    protected void customizeConfiguration(AS2Configuration configuration) {
+        configuration.setTargetPortNumber(partnerTargetPort.getPort());
     }
 
     // Verify the MDN is receipt returned asynchronously from the server when the request headers includes the
@@ -141,7 +151,7 @@ public class AS2AsyncMDNServerManagerIT extends AbstractAS2ITSupport {
     @Test
     public void deliveryHeaderMultipartReportTest() throws Exception {
         DispositionNotificationMultipartReportEntity reportEntity
-                = executeRequestWithAsyncResponseHeader("direct://SEND", RECEIPT_SERVER_PORT, "mock:as2RcvRcptMsgs");
+                = executeRequestWithAsyncResponseHeader("direct://SEND", receiptServerPort.getPort(), "mock:as2RcvRcptMsgs");
         verifyMultiPartReportParts(reportEntity);
         verifyMultiPartReportEntity(reportEntity);
     }
@@ -161,7 +171,8 @@ public class AS2AsyncMDNServerManagerIT extends AbstractAS2ITSupport {
     @Test
     public void deliveryHeaderMultipartSignedEntityTest() throws Exception {
         MultipartSignedEntity responseSignedEntity
-                = executeRequestWithSignedAsyncResponseHeader("direct://SEND", RECEIPT_SERVER_PORT2, "mock:as2RcvRcptMsgs2");
+                = executeRequestWithSignedAsyncResponseHeader("direct://SEND", receiptServerPort2.getPort(),
+                        "mock:as2RcvRcptMsgs2");
 
         MimeEntity responseSignedDataEntity = responseSignedEntity.getSignedDataEntity();
         assertTrue(responseSignedDataEntity instanceof DispositionNotificationMultipartReportEntity,
@@ -383,27 +394,29 @@ public class AS2AsyncMDNServerManagerIT extends AbstractAS2ITSupport {
                 // with option for asynchronous receipt specified as path-param
                 from("direct://SEND3")
                         .toF("as2://client/send?inBody=ediMessage&httpSocketTimeout=5m&httpConnectionTimeout=5m"
-                             + "&receiptDeliveryOption=%s", "http://localhost:" + RECEIPT_SERVER_PORT3 + "/handle-receipts");
+                             + "&receiptDeliveryOption=%s",
+                                "http://localhost:" + receiptServerPort3.getPort() + "/handle-receipts");
 
                 from("direct://SEND4")
                         .toF("as2://client/send?inBody=ediMessage&httpSocketTimeout=5m&httpConnectionTimeout=5m"
-                             + "&receiptDeliveryOption=%s", "http://localhost:" + RECEIPT_SERVER_PORT4 + "/handle-receipts");
+                             + "&receiptDeliveryOption=%s",
+                                "http://localhost:" + receiptServerPort4.getPort() + "/handle-receipts");
 
                 // asynchronous AS2-MDN (receipt) server instance
                 fromF("as2://receipt/receive?requestUriPattern=/handle-receipts&asyncMdnPortNumber=%s",
-                        RECEIPT_SERVER_PORT)
+                        receiptServerPort.getPort())
                         .to("mock:as2RcvRcptMsgs");
 
                 fromF("as2://receipt/receive?requestUriPattern=/handle-receipts&asyncMdnPortNumber=%s",
-                        RECEIPT_SERVER_PORT2)
+                        receiptServerPort2.getPort())
                         .to("mock:as2RcvRcptMsgs2");
 
                 fromF("as2://receipt/receive?requestUriPattern=/handle-receipts&asyncMdnPortNumber=%s",
-                        RECEIPT_SERVER_PORT3)
+                        receiptServerPort3.getPort())
                         .to("mock:as2RcvRcptMsgs3");
 
                 fromF("as2://receipt/receive?requestUriPattern=/handle-receipts&asyncMdnPortNumber=%s",
-                        RECEIPT_SERVER_PORT4)
+                        receiptServerPort4.getPort())
                         .to("mock:as2RcvRcptMsgs4");
             }
         };
@@ -431,10 +444,10 @@ public class AS2AsyncMDNServerManagerIT extends AbstractAS2ITSupport {
         }
     }
 
-    private static void receiveTestMessages() throws IOException {
+    private void receiveTestMessages() throws IOException {
         serverConnection = new AS2ServerConnection(
                 AS2_VERSION, ORIGIN_SERVER_NAME,
-                SERVER_FQDN, PARTNER_TARGET_PORT, AS2SignatureAlgorithm.SHA256WITHRSA,
+                SERVER_FQDN, partnerTargetPort.getPort(), AS2SignatureAlgorithm.SHA256WITHRSA,
                 new Certificate[] { serverCert }, serverKP.getPrivate(), null,
                 MDN_MESSAGE_TEMPLATE, new Certificate[] { clientCert }, null, null, null, null);
         requestHandler = new RequestHandler();
@@ -446,11 +459,10 @@ public class AS2AsyncMDNServerManagerIT extends AbstractAS2ITSupport {
 
         // set up our certificates
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
-        kpg.initialize(1024, new SecureRandom());
+        kpg.initialize(2048, new SecureRandom());
 
         String issueDN = "O=Punkhorn Software, C=US";
         KeyPair issueKP = kpg.generateKeyPair();
-        X509Certificate issueCert = Utils.makeCertificate(issueKP, issueDN, issueKP, issueDN);
 
         // certificate we sign against
         String signingDN = "CN=William J. Collins, E=punkhornsw@gmail.com, O=Punkhorn Software, C=US";

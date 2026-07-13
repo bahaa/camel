@@ -25,14 +25,14 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.params.Test;
+import org.apache.camel.test.junit6.params.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.camel.test.junit5.TestSupport.deleteDirectory;
+import static org.apache.camel.test.junit6.TestSupport.deleteDirectory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -65,8 +65,6 @@ public class LevelDBAggregateLoadAndRecoverTest extends LevelDBTestSupport {
             headers.put("seq", i);
             LOG.debug("Sending {} with id {}", value, id);
             template.sendBodyAndHeaders("seda:start", value, headers);
-            // simulate a little delay
-            Thread.sleep(5);
         }
 
         LOG.info("Sending all {} message done. Now waiting for aggregation to complete.", SIZE);

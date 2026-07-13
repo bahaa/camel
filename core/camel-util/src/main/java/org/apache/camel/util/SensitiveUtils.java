@@ -46,6 +46,8 @@ public final class SensitiveUtils {
                     "authtoken",
                     "azureclientid",
                     "azureclientsecret",
+                    "basicauthpassword",
+                    "bearertoken",
                     "blobaccesskey",
                     "blobstoragesharedkeycredential",
                     "certresourcepassword",
@@ -56,18 +58,21 @@ public final class SensitiveUtils {
                     "consumerkey",
                     "consumersecret",
                     "emailaddress",
+                    "functionkey",
+                    "hostkey",
                     "httpproxypassword",
                     "kerberosauthticket",
                     "keypassword",
                     "keystorePassword",
                     "keystorepassword",
-                    "login",
+                    "knownhosts",
+                    "knownhostsfile",
+                    "knownhostsuri",
                     "oauthclientid",
                     "oauthclientsecret",
                     "oauthtoken",
                     "oauthtokenurl",
                     "p12filename",
-                    "passcode",
                     "passphrase",
                     "password",
                     "personalaccesstoken",
@@ -87,6 +92,7 @@ public final class SensitiveUtils {
                     "refreshtoken",
                     "sascredential",
                     "sasljaasconfig",
+                    "saslpassword",
                     "sassignature",
                     "secret",
                     "secretkey",
@@ -99,7 +105,9 @@ public final class SensitiveUtils {
                     "sslkeystorepassword",
                     "sslpassword",
                     "ssltruststorepassword",
+                    "storageaccountconnectionstring",
                     "subscribekey",
+                    "subscriptionid",
                     "systemid",
                     "token",
                     "tokencredential",
@@ -135,6 +143,8 @@ public final class SensitiveUtils {
                                                     + "|\\Qauthtoken\\E"
                                                     + "|\\Qazureclientid\\E"
                                                     + "|\\Qazureclientsecret\\E"
+                                                    + "|\\Qbasicauthpassword\\E"
+                                                    + "|\\Qbearertoken\\E"
                                                     + "|\\Qblobaccesskey\\E"
                                                     + "|\\Qblobstoragesharedkeycredential\\E"
                                                     + "|\\Qcertresourcepassword\\E"
@@ -145,18 +155,21 @@ public final class SensitiveUtils {
                                                     + "|\\Qconsumerkey\\E"
                                                     + "|\\Qconsumersecret\\E"
                                                     + "|\\Qemailaddress\\E"
+                                                    + "|\\Qfunctionkey\\E"
+                                                    + "|\\Qhostkey\\E"
                                                     + "|\\Qhttpproxypassword\\E"
                                                     + "|\\Qkerberosauthticket\\E"
                                                     + "|\\Qkeypassword\\E"
                                                     + "|\\QkeystorePassword\\E"
                                                     + "|\\Qkeystorepassword\\E"
-                                                    + "|\\Qlogin\\E"
+                                                    + "|\\Qknownhosts\\E"
+                                                    + "|\\Qknownhostsfile\\E"
+                                                    + "|\\Qknownhostsuri\\E"
                                                     + "|\\Qoauthclientid\\E"
                                                     + "|\\Qoauthclientsecret\\E"
                                                     + "|\\Qoauthtoken\\E"
                                                     + "|\\Qoauthtokenurl\\E"
                                                     + "|\\Qp12filename\\E"
-                                                    + "|\\Qpasscode\\E"
                                                     + "|\\Qpassphrase\\E"
                                                     + "|\\Qpassword\\E"
                                                     + "|\\Qpersonalaccesstoken\\E"
@@ -176,6 +189,7 @@ public final class SensitiveUtils {
                                                     + "|\\Qrefreshtoken\\E"
                                                     + "|\\Qsascredential\\E"
                                                     + "|\\Qsasljaasconfig\\E"
+                                                    + "|\\Qsaslpassword\\E"
                                                     + "|\\Qsassignature\\E"
                                                     + "|\\Qsecret\\E"
                                                     + "|\\Qsecretkey\\E"
@@ -188,7 +202,9 @@ public final class SensitiveUtils {
                                                     + "|\\Qsslkeystorepassword\\E"
                                                     + "|\\Qsslpassword\\E"
                                                     + "|\\Qssltruststorepassword\\E"
+                                                    + "|\\Qstorageaccountconnectionstring\\E"
                                                     + "|\\Qsubscribekey\\E"
+                                                    + "|\\Qsubscriptionid\\E"
                                                     + "|\\Qsystemid\\E"
                                                     + "|\\Qtoken\\E"
                                                     + "|\\Qtokencredential\\E"

@@ -35,7 +35,7 @@ import org.apache.camel.component.cxf.jaxrs.simplebinding.testbean.Customer;
 import org.apache.camel.component.cxf.jaxrs.simplebinding.testbean.CustomerList;
 import org.apache.camel.component.cxf.jaxrs.simplebinding.testbean.Order;
 import org.apache.camel.component.cxf.jaxrs.simplebinding.testbean.Product;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.cxf.message.MessageContentsList;
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -56,7 +56,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for the Simple Binding style of CXF JAX-RS consumers.
@@ -85,7 +84,7 @@ public class CxfRsConsumerSimpleBindingTest extends CamelTestSupport {
         return new RouteBuilder() {
             public void configure() {
                 from(CXF_RS_ENDPOINT_URI)
-                        .recipientList(simple("direct:${header.operationName}"));
+                        .recipientList(simple("direct:${header.CamelCxfOperationName}"));
 
                 from("direct:getCustomer").process(new Processor() {
                     public void process(Exchange exchange) throws Exception {
@@ -99,7 +98,7 @@ public class CxfRsConsumerSimpleBindingTest extends CamelTestSupport {
                         } else if (id == 456) {
                             exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, 404);
                         } else {
-                            fail();
+                            throw new AssertionError("Unexpected customer ID: " + id);
                         }
                     }
                 });

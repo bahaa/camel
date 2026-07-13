@@ -643,13 +643,16 @@ public class RouteCoverageMojo extends AbstractMojo {
         boolean found = false;
         while (!found && it.hasNext()) {
             CoverageData holder = it.next();
-            found = holder.getNode().equals(node.getName());
+            // match by id / line number / and then EIP name
+            found = (holder.getNodeId() != null && holder.getNodeId().equals(node.getNodeId()))
+                    || (holder.getLineNumber() > 0 && holder.getLineNumber() == data.getLineNumber())
+                    || (holder.getNode().equals(node.getName()));
             if (found) {
                 data.setCount(holder.getCount());
             }
         }
 
-        if (node.getOutputs() != null) {
+        if (!node.getOutputs().isEmpty()) {
             level.addAndGet(1);
             for (CamelNodeDetails child : node.getOutputs()) {
                 gatherRouteCoverageSummary(child, it, level, answer);
@@ -744,7 +747,7 @@ public class RouteCoverageMojo extends AbstractMojo {
     private static void createJacocoXmlFile(Document document, File file) throws TransformerException {
         String xmlFilePath = file.toString() + "/xmlJacoco.xml";
         TransformerFactory factory = TransformerFactory.newInstance();
-        factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
         factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
         factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
         Transformer transformer = factory.newTransformer();

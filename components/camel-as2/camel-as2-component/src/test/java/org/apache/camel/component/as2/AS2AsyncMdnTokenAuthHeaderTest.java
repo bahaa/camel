@@ -30,9 +30,8 @@ import org.apache.camel.component.as2.api.AS2SignatureAlgorithm;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.http.common.HttpMessage;
 import org.apache.camel.test.AvailablePortFinder;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -43,43 +42,47 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class AS2AsyncMdnTokenAuthHeaderTest extends AbstractAS2ITSupport {
 
     private static final String MDN_ACCESS_TOKEN = "MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3";
-    private static final int RECEIPT_SERVER_PORT = AvailablePortFinder.getNextAvailable();
-    private static final String EDI_MESSAGE = "UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'\n"
-                                              + "UNH+00000000000117+INVOIC:D:97B:UN'\n"
-                                              + "BGM+380+342459+9'\n"
-                                              + "DTM+3:20060515:102'\n"
-                                              + "RFF+ON:521052'\n"
-                                              + "NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'\n"
-                                              + "NAD+SE+005435656::16++GENERAL WIDGET COMPANY'\n"
-                                              + "CUX+1:USD'\n"
-                                              + "LIN+1++157870:IN'\n"
-                                              + "IMD+F++:::WIDGET'\n"
-                                              + "QTY+47:1020:EA'\n"
-                                              + "ALI+US'\n"
-                                              + "MOA+203:1202.58'\n"
-                                              + "PRI+INV:1.179'\n"
-                                              + "LIN+2++157871:IN'\n"
-                                              + "IMD+F++:::DIFFERENT WIDGET'\n"
-                                              + "QTY+47:20:EA'\n"
-                                              + "ALI+JP'\n"
-                                              + "MOA+203:410'\n"
-                                              + "PRI+INV:20.5'\n"
-                                              + "UNS+S'\n"
-                                              + "MOA+39:2137.58'\n"
-                                              + "ALC+C+ABG'\n"
-                                              + "MOA+8:525'\n"
-                                              + "UNT+23+00000000000117'\n"
-                                              + "UNZ+1+00000000000778'\n";
+    @RegisterExtension
+    AvailablePortFinder.Port receiptServerPort = AvailablePortFinder.find();
+    private static final String EDI_MESSAGE = """
+            UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'
+            UNH+00000000000117+INVOIC:D:97B:UN'
+            BGM+380+342459+9'
+            DTM+3:20060515:102'
+            RFF+ON:521052'
+            NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'
+            NAD+SE+005435656::16++GENERAL WIDGET COMPANY'
+            CUX+1:USD'
+            LIN+1++157870:IN'
+            IMD+F++:::WIDGET'
+            QTY+47:1020:EA'
+            ALI+US'
+            MOA+203:1202.58'
+            PRI+INV:1.179'
+            LIN+2++157871:IN'
+            IMD+F++:::DIFFERENT WIDGET'
+            QTY+47:20:EA'
+            ALI+JP'
+            MOA+203:410'
+            PRI+INV:20.5'
+            UNS+S'
+            MOA+39:2137.58'
+            ALC+C+ABG'
+            MOA+8:525'
+            UNT+23+00000000000117'
+            UNZ+1+00000000000778'
+            """;
 
-    private static AS2ServerConnection serverConnection;
+    private AS2ServerConnection serverConnection;
+    private int targetPort;
 
-    @BeforeAll
-    public static void setupTest() throws Exception {
+    @Override
+    public void setupResources() throws Exception {
         receiveTestMessages();
     }
 
-    @AfterAll
-    public static void tearDownTest() {
+    @Override
+    public void cleanupResources() {
         if (serverConnection != null) {
             serverConnection.close();
         }
@@ -88,7 +91,7 @@ public class AS2AsyncMdnTokenAuthHeaderTest extends AbstractAS2ITSupport {
     @Test
     public void asyncMdnHasTokenAuthHeader() throws Exception {
         requestBodyAndHeaders("direct://SEND", EDI_MESSAGE,
-                getAS2Headers("http://localhost:" + RECEIPT_SERVER_PORT + "/handle-receipts"));
+                getAS2Headers("http://localhost:" + receiptServerPort.getPort() + "/handle-receipts"));
 
         MockEndpoint mockEndpoint = getMockEndpoint("mock:as2RcvRcptMsgs");
         mockEndpoint.expectedMinimumMessageCount(1);
@@ -125,21 +128,27 @@ public class AS2AsyncMdnTokenAuthHeaderTest extends AbstractAS2ITSupport {
                 from("direct://SEND")
                         .to("as2://client/send?inBody=ediMessage&httpSocketTimeout=5m&httpConnectionTimeout=5m");
 
-                from("jetty:http://localhost:" + RECEIPT_SERVER_PORT + "/handle-receipts").process(proc)
+                from("jetty:http://localhost:" + receiptServerPort.getPort() + "/handle-receipts").process(proc)
                         .to("mock:as2RcvRcptMsgs");
             }
         };
     }
 
+    @Override
+    protected void customizeConfiguration(AS2Configuration configuration) {
+        configuration.setTargetPortNumber(targetPort);
+    }
+
     // AS2 server adds Authorization header to MDN returned asynchronously
-    private static void receiveTestMessages() throws IOException {
+    private void receiveTestMessages() throws IOException {
         serverConnection = new AS2ServerConnection(
                 "1.1", "AS2ClientManagerIntegrationTest Server",
-                "server.example.com", 8889, AS2SignatureAlgorithm.SHA256WITHRSA,
+                "server.example.com", 0, AS2SignatureAlgorithm.SHA256WITHRSA,
                 null, null, null,
                 "TBD", null, null,
                 // server authorization config
                 null, null, MDN_ACCESS_TOKEN);
+        targetPort = serverConnection.getLocalPort();
         serverConnection.listen("/", new AS2AsyncMDNServerManagerIT.RequestHandler());
     }
 }

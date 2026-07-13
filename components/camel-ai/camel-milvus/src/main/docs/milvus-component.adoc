@@ -9,13 +9,12 @@
 :component-header: Only producer is supported
 //Manually maintained attributes
 :group: AI
-:camel-spring-boot-name: milvus
 
 *Since Camel {since}*
 
 *{component-header}*
 
-The Milvus Component provides support for interacting with the https://https://milvus.io/[Milvus Vector Database].
+The Milvus Component provides support for interacting with the https://milvus.io/[Milvus Vector Database].
 
 == URI format
 
@@ -85,7 +84,7 @@ from("direct:in")
 
 === Points Examples
 
-==== Upsert
+==== Insert
 
 In the route below we use the milvus component to perform insert on points in the collection named _test_:
 
@@ -214,4 +213,3 @@ The transformer only supports insert/upsert objects, so the only operation you c
 otherwise the transformer will fail with an error log.
 
 
-include::spring-boot:partial$starter.adoc[]

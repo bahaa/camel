@@ -1980,6 +1980,7 @@ public interface Olingo2EndpointBuilderFactory {
          * 
          * @return the dsl builder for the headers' name.
          */
+        @Deprecated
         default Olingo2HeaderNameBuilder olingo2() {
             return Olingo2HeaderNameBuilder.INSTANCE;
         }
@@ -2003,6 +2004,7 @@ public interface Olingo2EndpointBuilderFactory {
          * @param path apiName/methodName
          * @return the dsl builder
          */
+        @Deprecated
         default Olingo2EndpointBuilder olingo2(String path) {
             return Olingo2EndpointBuilderFactory.endpointBuilder("olingo2", path);
         }
@@ -2028,6 +2030,7 @@ public interface Olingo2EndpointBuilderFactory {
          * @param path apiName/methodName
          * @return the dsl builder
          */
+        @Deprecated
         default Olingo2EndpointBuilder olingo2(String componentName, String path) {
             return Olingo2EndpointBuilderFactory.endpointBuilder(componentName, path);
         }
@@ -2041,7 +2044,7 @@ public interface Olingo2EndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final Olingo2HeaderNameBuilder INSTANCE = new Olingo2HeaderNameBuilder();
+        public static final Olingo2HeaderNameBuilder INSTANCE = new Olingo2HeaderNameBuilder();
 
         /**
          * The response Http headers.

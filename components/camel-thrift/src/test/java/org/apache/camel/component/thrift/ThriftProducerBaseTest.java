@@ -18,45 +18,43 @@ package org.apache.camel.component.thrift;
 
 import org.apache.camel.component.thrift.generated.Calculator;
 import org.apache.camel.component.thrift.impl.CalculatorSyncServerImpl;
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.THsHaServer.Args;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.transport.TNonblockingServerSocket;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class ThriftProducerBaseTest extends CamelTestSupport {
-    protected static final int THRIFT_TEST_PORT = AvailablePortFinder.getNextAvailable();
+    protected int thriftTestPort;
     protected static final int THRIFT_TEST_NUM1 = 12;
     protected static final int THRIFT_TEST_NUM2 = 13;
     @SuppressWarnings({ "rawtypes" })
     protected static Calculator.Processor processor;
 
     private static final Logger LOG = LoggerFactory.getLogger(ThriftProducerBaseTest.class);
-    private static TNonblockingServerSocket serverTransport;
-    private static TServer server;
+    private TNonblockingServerSocket serverTransport;
+    private TServer server;
 
-    @BeforeAll
+    @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static void startThriftServer() throws Exception {
+    public void doPreSetup() throws Exception {
         processor = new Calculator.Processor(new CalculatorSyncServerImpl());
-        serverTransport = new TNonblockingServerSocket(THRIFT_TEST_PORT);
+        serverTransport = new TNonblockingServerSocket(0);
+        thriftTestPort = serverTransport.getPort();
         server = new THsHaServer(new Args(serverTransport).processor(processor));
         Runnable simple = new Runnable() {
             public void run() {
-                LOG.info("Thrift server started on port: {}", THRIFT_TEST_PORT);
+                LOG.info("Thrift server started on port: {}", thriftTestPort);
                 server.serve();
             }
         };
         new Thread(simple).start();
     }
 
-    @AfterAll
-    public static void stopThriftServer() {
+    @Override
+    protected void cleanupResources() throws Exception {
         if (server != null) {
             server.stop();
             serverTransport.close();

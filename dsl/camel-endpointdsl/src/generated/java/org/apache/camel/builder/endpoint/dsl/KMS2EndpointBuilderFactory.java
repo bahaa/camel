@@ -589,7 +589,7 @@ public interface KMS2EndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final KMS2HeaderNameBuilder INSTANCE = new KMS2HeaderNameBuilder();
+        public static final KMS2HeaderNameBuilder INSTANCE = new KMS2HeaderNameBuilder();
 
         /**
          * The operation we want to perform.
@@ -651,6 +651,66 @@ public interface KMS2EndpointBuilderFactory {
          */
         public String awsKMSPendingWindowInDays() {
             return "CamelAwsKMSPendingWindowInDays";
+        }
+        /**
+         * The marker for the next set of results.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: listKeys
+         * 
+         * @return the name of the header {@code AwsKMSMarker}.
+         */
+        public String awsKMSMarker() {
+            return "CamelAwsKMSMarker";
+        }
+        /**
+         * Whether the response has more results (is truncated).
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: listKeys
+         * 
+         * @return the name of the header {@code AwsKMSTruncated}.
+         */
+        public String awsKMSTruncated() {
+            return "CamelAwsKMSTruncated";
+        }
+        /**
+         * The Amazon Resource Name (ARN) of the key.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: createKey describeKey
+         * 
+         * @return the name of the header {@code AwsKMSKeyArn}.
+         */
+        public String awsKMSKeyArn() {
+            return "CamelAwsKMSKeyArn";
+        }
+        /**
+         * The state of the key.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: createKey describeKey
+         * 
+         * @return the name of the header {@code AwsKMSKeyState}.
+         */
+        public String awsKMSKeyState() {
+            return "CamelAwsKMSKeyState";
+        }
+        /**
+         * The date and time after which AWS KMS deletes the key.
+         * 
+         * The option is a: {@code java.time.Instant} type.
+         * 
+         * Group: scheduleKeyDeletion
+         * 
+         * @return the name of the header {@code AwsKMSDeletionDate}.
+         */
+        public String awsKMSDeletionDate() {
+            return "CamelAwsKMSDeletionDate";
         }
     }
     static KMS2EndpointBuilder endpointBuilder(String componentName, String path) {

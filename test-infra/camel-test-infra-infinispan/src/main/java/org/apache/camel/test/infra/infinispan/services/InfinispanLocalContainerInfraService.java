@@ -29,10 +29,11 @@ import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.output.OutputFrame;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 @InfraService(service = InfinispanInfraService.class,
-              description = "Distributed Database For High‑Performance Applications With In‑Memory Speed",
+              description = "Infinispan is a distributed in-memory key/value data store",
               serviceAlias = { "infinispan" })
 public class InfinispanLocalContainerInfraService implements InfinispanInfraService, ContainerService<GenericContainer<?>> {
     public static final String CONTAINER_NAME = "infinispan";
@@ -81,11 +82,14 @@ public class InfinispanLocalContainerInfraService implements InfinispanInfraServ
 
                 if (isNetworkHost) {
                     withNetworkMode("host");
-                } else if (fixedPort) {
-                    addFixedExposedPort(InfinispanProperties.DEFAULT_SERVICE_PORT, InfinispanProperties.DEFAULT_SERVICE_PORT);
                 } else {
-                    withExposedPorts(InfinispanProperties.DEFAULT_SERVICE_PORT)
-                            .waitingFor(Wait.forListeningPort());
+                    ContainerEnvironmentUtil.configurePort(this, fixedPort, InfinispanProperties.DEFAULT_SERVICE_PORT);
+                    if (!fixedPort) {
+                        waitingFor(new HttpWaitStrategy()
+                                .forPath("/rest/v2/cache-managers/default/health/status")
+                                .forPort(InfinispanProperties.DEFAULT_SERVICE_PORT)
+                                .forResponsePredicate("HEALTHY"::equals));
+                    }
                 }
             }
         }

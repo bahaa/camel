@@ -21,11 +21,14 @@ public class DoclingEndpointUriFactory extends org.apache.camel.support.componen
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(28);
+        Set<String> props = new HashSet<>(52);
+        props.add("abortOnError");
         props.add("apiKeyHeader");
         props.add("asyncPollInterval");
+        props.add("asyncTaskTtl");
         props.add("asyncTimeout");
         props.add("authenticationScheme");
         props.add("authenticationToken");
@@ -33,22 +36,44 @@ public class DoclingEndpointUriFactory extends org.apache.camel.support.componen
         props.add("batchParallelism");
         props.add("batchSize");
         props.add("batchTimeout");
+        props.add("chunkingIncludeRawText");
+        props.add("chunkingMaxTokens");
+        props.add("chunkingMergePeers");
+        props.add("chunkingTokenizer");
+        props.add("chunkingUseMarkdownTables");
         props.add("contentInBody");
+        props.add("doCodeEnrichment");
+        props.add("doFormulaEnrichment");
+        props.add("doOcr");
+        props.add("doPictureClassification");
+        props.add("doPictureDescription");
+        props.add("doTableStructure");
         props.add("doclingCommand");
         props.add("doclingServeUrl");
+        props.add("documentTimeout");
         props.add("enableOCR");
-        props.add("extractAllMetadata");
+        props.add("forceOcr");
+        props.add("imageExportMode");
+        props.add("imagesScale");
+        props.add("includeImages");
         props.add("includeLayoutInfo");
         props.add("includeMetadataInHeaders");
         props.add("includeRawMetadata");
         props.add("lazyStartProducer");
         props.add("maxFileSize");
+        props.add("mdPageBreakPlaceholder");
+        props.add("oauthProfile");
+        props.add("ocrEngine");
         props.add("ocrLanguage");
         props.add("operation");
         props.add("operationId");
         props.add("outputFormat");
+        props.add("pdfBackend");
+        props.add("pipeline");
         props.add("processTimeout");
         props.add("splitBatchResults");
+        props.add("tableCellMatching");
+        props.add("tableMode");
         props.add("useAsyncMode");
         props.add("useDoclingServe");
         props.add("workingDirectory");
@@ -56,6 +81,7 @@ public class DoclingEndpointUriFactory extends org.apache.camel.support.componen
         Set<String> secretProps = new HashSet<>(1);
         secretProps.add("authenticationToken");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
@@ -84,6 +110,11 @@ public class DoclingEndpointUriFactory extends org.apache.camel.support.componen
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

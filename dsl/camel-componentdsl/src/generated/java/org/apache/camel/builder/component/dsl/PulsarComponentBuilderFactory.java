@@ -287,6 +287,27 @@ public interface PulsarComponentBuilderFactory {
     
         
         /**
+         * When enabled, allows each individual message in a batch to be
+         * acknowledged independently. By default Pulsar redelivers the entire
+         * batch when any single message in the batch is not acknowledged. This
+         * option also requires the Pulsar broker to be configured with
+         * acknowledgmentAtBatchIndexLevelEnabled=true.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param enableBatchIndexAcknowledgment the value to set
+         * @return the dsl builder
+         */
+        default PulsarComponentBuilder enableBatchIndexAcknowledgment(boolean enableBatchIndexAcknowledgment) {
+            doSetProperty("enableBatchIndexAcknowledgment", enableBatchIndexAcknowledgment);
+            return this;
+        }
+    
+        
+        /**
          * To enable retry letter topic mode. The default retry letter topic
          * uses this format: topicname-subscriptionname-RETRY.
          * 
@@ -470,6 +491,26 @@ public interface PulsarComponentBuilderFactory {
          */
         default PulsarComponentBuilder subscriptionInitialPosition(org.apache.camel.component.pulsar.utils.consumers.SubscriptionInitialPosition subscriptionInitialPosition) {
             doSetProperty("subscriptionInitialPosition", subscriptionInitialPosition);
+            return this;
+        }
+    
+        
+        /**
+         * Determines the subscription mode for the consumer. Durable
+         * subscriptions persist the cursor position if the consumer disconnects
+         * while non-durable subscriptions do not.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.apache.camel.component.pulsar.utils.consumers.SubscriptionMode&lt;/code&gt; type.
+         * 
+         * Default: DURABLE
+         * Group: consumer
+         * 
+         * @param subscriptionMode the value to set
+         * @return the dsl builder
+         */
+        default PulsarComponentBuilder subscriptionMode(org.apache.camel.component.pulsar.utils.consumers.SubscriptionMode subscriptionMode) {
+            doSetProperty("subscriptionMode", subscriptionMode);
             return this;
         }
     
@@ -946,6 +987,7 @@ public interface PulsarComponentBuilderFactory {
             case "consumerNamePrefix": getOrCreateConfiguration((PulsarComponent) component).setConsumerNamePrefix((java.lang.String) value); return true;
             case "consumerQueueSize": getOrCreateConfiguration((PulsarComponent) component).setConsumerQueueSize((int) value); return true;
             case "deadLetterTopic": getOrCreateConfiguration((PulsarComponent) component).setDeadLetterTopic((java.lang.String) value); return true;
+            case "enableBatchIndexAcknowledgment": getOrCreateConfiguration((PulsarComponent) component).setEnableBatchIndexAcknowledgment((boolean) value); return true;
             case "enableRetry": getOrCreateConfiguration((PulsarComponent) component).setEnableRetry((boolean) value); return true;
             case "keySharedPolicy": getOrCreateConfiguration((PulsarComponent) component).setKeySharedPolicy((java.lang.String) value); return true;
             case "maxRedeliverCount": getOrCreateConfiguration((PulsarComponent) component).setMaxRedeliverCount((java.lang.Integer) value); return true;
@@ -957,6 +999,7 @@ public interface PulsarComponentBuilderFactory {
             case "readCompacted": getOrCreateConfiguration((PulsarComponent) component).setReadCompacted((boolean) value); return true;
             case "retryLetterTopic": getOrCreateConfiguration((PulsarComponent) component).setRetryLetterTopic((java.lang.String) value); return true;
             case "subscriptionInitialPosition": getOrCreateConfiguration((PulsarComponent) component).setSubscriptionInitialPosition((org.apache.camel.component.pulsar.utils.consumers.SubscriptionInitialPosition) value); return true;
+            case "subscriptionMode": getOrCreateConfiguration((PulsarComponent) component).setSubscriptionMode((org.apache.camel.component.pulsar.utils.consumers.SubscriptionMode) value); return true;
             case "subscriptionName": getOrCreateConfiguration((PulsarComponent) component).setSubscriptionName((java.lang.String) value); return true;
             case "subscriptionTopicsMode": getOrCreateConfiguration((PulsarComponent) component).setSubscriptionTopicsMode((org.apache.pulsar.client.api.RegexSubscriptionMode) value); return true;
             case "subscriptionType": getOrCreateConfiguration((PulsarComponent) component).setSubscriptionType((org.apache.camel.component.pulsar.utils.consumers.SubscriptionType) value); return true;

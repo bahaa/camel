@@ -16,12 +16,16 @@
  */
 package org.apache.camel.component.pqc;
 
+import java.time.Duration;
 import java.util.Map;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Endpoint;
 import org.apache.camel.component.pqc.crypto.*;
+import org.apache.camel.component.pqc.crypto.hybrid.*;
 import org.apache.camel.component.pqc.crypto.kem.*;
+import org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager;
+import org.apache.camel.component.pqc.lifecycle.KeyRotationScheduler;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.Component;
 import org.apache.camel.support.HealthCheckComponent;
@@ -35,6 +39,24 @@ public class PQCComponent extends HealthCheckComponent {
 
     @Metadata
     private PQCConfiguration configuration = new PQCConfiguration();
+    @Metadata(label = "advanced", defaultValue = "false",
+              description = "Whether to start an automated background key rotation scheduler for this component."
+                            + " Requires keyLifecycleManager to be set. The scheduler periodically rotates keys that"
+                            + " exceed the configured age and/or usage policy.")
+    private boolean keyRotationSchedulerEnabled;
+    @Metadata(label = "advanced", defaultValue = "3600000", javaType = "java.time.Duration",
+              description = "Interval between key rotation checks when the scheduler is enabled.")
+    private long keyRotationCheckInterval = 3600000L;
+    @Metadata(label = "advanced", javaType = "java.time.Duration",
+              description = "When the scheduler is enabled, rotate keys older than this age. If not set, age is not used"
+                            + " as a rotation signal.")
+    private long keyRotationMaxAge;
+    @Metadata(label = "advanced", defaultValue = "0",
+              description = "When the scheduler is enabled, rotate keys whose recorded usage count reaches this value. 0"
+                            + " disables usage-based rotation.")
+    private long keyRotationMaxUsage;
+
+    private KeyRotationScheduler keyRotationScheduler;
 
     public PQCComponent() {
         this(null);
@@ -147,7 +169,141 @@ public class PQCComponent extends HealthCheckComponent {
             }
         }
 
+        // Auto-configure hybrid signature materials
+        configureHybridSignatureMaterial(configuration);
+
+        // Auto-configure hybrid KEM materials
+        configureHybridKEMMaterial(configuration);
+
         return endpoint;
+    }
+
+    /**
+     * Auto-configures hybrid signature materials based on classical and PQC algorithm settings.
+     */
+    private void configureHybridSignatureMaterial(PQCConfiguration configuration) {
+        // Only configure if hybrid signature operations and classical algorithm is specified
+        if (configuration.getOperation() != PQCOperations.hybridSign
+                && configuration.getOperation() != PQCOperations.hybridVerify) {
+            return;
+        }
+
+        // Configure PQC signature material if not already set
+        if (ObjectHelper.isEmpty(configuration.getSigner()) && ObjectHelper.isEmpty(configuration.getKeyPair())) {
+            if (ObjectHelper.isNotEmpty(configuration.getSignatureAlgorithm())) {
+                switch (configuration.getSignatureAlgorithm()) {
+                    case "MLDSA":
+                        configuration.setSigner(PQCDefaultMLDSAMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultMLDSAMaterial.keyPair);
+                        break;
+                    case "SLHDSA":
+                        configuration.setSigner(PQCDefaultSLHDSAMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultSLHDSAMaterial.keyPair);
+                        break;
+                    case "DILITHIUM":
+                        configuration.setSigner(PQCDefaultDILITHIUMMaterial.signer);
+                        configuration.setKeyPair(PQCDefaultDILITHIUMMaterial.keyPair);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        // Configure classical signature material if not already set
+        if (ObjectHelper.isEmpty(configuration.getClassicalSigner())
+                && ObjectHelper.isEmpty(configuration.getClassicalKeyPair())) {
+            if (ObjectHelper.isNotEmpty(configuration.getClassicalSignatureAlgorithm())) {
+                String classicalAlg = configuration.getClassicalSignatureAlgorithm();
+                String pqcAlg = configuration.getSignatureAlgorithm();
+
+                // Use pre-built hybrid materials for common combinations
+                if ("ECDSA_P256".equals(classicalAlg) && "MLDSA".equals(pqcAlg)) {
+                    configuration.setClassicalSigner(PQCDefaultECDSAMLDSAMaterial.classicalSigner);
+                    configuration.setClassicalKeyPair(PQCDefaultECDSAMLDSAMaterial.classicalKeyPair);
+                    configuration.setSigner(PQCDefaultECDSAMLDSAMaterial.pqcSigner);
+                    configuration.setKeyPair(PQCDefaultECDSAMLDSAMaterial.pqcKeyPair);
+                } else if ("ED25519".equals(classicalAlg) && "MLDSA".equals(pqcAlg)) {
+                    configuration.setClassicalSigner(PQCDefaultEd25519MLDSAMaterial.classicalSigner);
+                    configuration.setClassicalKeyPair(PQCDefaultEd25519MLDSAMaterial.classicalKeyPair);
+                    configuration.setSigner(PQCDefaultEd25519MLDSAMaterial.pqcSigner);
+                    configuration.setKeyPair(PQCDefaultEd25519MLDSAMaterial.pqcKeyPair);
+                }
+            }
+        }
+    }
+
+    /**
+     * Auto-configures hybrid KEM materials based on classical and PQC algorithm settings.
+     */
+    private void configureHybridKEMMaterial(PQCConfiguration configuration) {
+        // Only configure if hybrid KEM operations and classical algorithm is specified
+        if (configuration.getOperation() != PQCOperations.hybridGenerateSecretKeyEncapsulation
+                && configuration.getOperation() != PQCOperations.hybridExtractSecretKeyEncapsulation
+                && configuration.getOperation() != PQCOperations.hybridExtractSecretKeyFromEncapsulation) {
+            return;
+        }
+
+        // Configure PQC KEM material if not already set
+        if (ObjectHelper.isEmpty(configuration.getKeyGenerator()) && ObjectHelper.isEmpty(configuration.getKeyPair())) {
+            if (ObjectHelper.isNotEmpty(configuration.getKeyEncapsulationAlgorithm())) {
+                switch (configuration.getKeyEncapsulationAlgorithm()) {
+                    case "MLKEM":
+                        configuration.setKeyGenerator(PQCDefaultMLKEMMaterial.keyGenerator);
+                        configuration.setKeyPair(PQCDefaultMLKEMMaterial.keyPair);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        // Configure classical KEM material if not already set
+        if (ObjectHelper.isEmpty(configuration.getClassicalKeyAgreement())
+                && ObjectHelper.isEmpty(configuration.getClassicalKeyPair())) {
+            if (ObjectHelper.isNotEmpty(configuration.getClassicalKEMAlgorithm())) {
+                String classicalAlg = configuration.getClassicalKEMAlgorithm();
+                String pqcAlg = configuration.getKeyEncapsulationAlgorithm();
+
+                // Use pre-built hybrid materials for common combinations
+                if ("X25519".equals(classicalAlg) && "MLKEM".equals(pqcAlg)) {
+                    configuration.setClassicalKeyAgreement(PQCDefaultX25519MLKEMMaterial.classicalKeyAgreement);
+                    configuration.setClassicalKeyPair(PQCDefaultX25519MLKEMMaterial.classicalKeyPair);
+                    configuration.setKeyGenerator(PQCDefaultX25519MLKEMMaterial.pqcKeyGenerator);
+                    configuration.setKeyPair(PQCDefaultX25519MLKEMMaterial.pqcKeyPair);
+                } else if ("ECDH_P256".equals(classicalAlg) && "MLKEM".equals(pqcAlg)) {
+                    configuration.setClassicalKeyAgreement(PQCDefaultECDHMLKEMMaterial.classicalKeyAgreement);
+                    configuration.setClassicalKeyPair(PQCDefaultECDHMLKEMMaterial.classicalKeyPair);
+                    configuration.setKeyGenerator(PQCDefaultECDHMLKEMMaterial.pqcKeyGenerator);
+                    configuration.setKeyPair(PQCDefaultECDHMLKEMMaterial.pqcKeyPair);
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void doStart() throws Exception {
+        super.doStart();
+        if (keyRotationSchedulerEnabled) {
+            KeyLifecycleManager manager = configuration != null ? configuration.getKeyLifecycleManager() : null;
+            ObjectHelper.notNull(manager,
+                    "keyLifecycleManager (required when keyRotationSchedulerEnabled=true)");
+            keyRotationScheduler = new KeyRotationScheduler(manager)
+                    .setCheckInterval(Duration.ofMillis(keyRotationCheckInterval))
+                    .setMaxKeyAge(keyRotationMaxAge > 0 ? Duration.ofMillis(keyRotationMaxAge) : null)
+                    .setMaxKeyUsage(keyRotationMaxUsage);
+            keyRotationScheduler.setCamelContext(getCamelContext());
+            keyRotationScheduler.start();
+        }
+    }
+
+    @Override
+    protected void doStop() throws Exception {
+        if (keyRotationScheduler != null) {
+            keyRotationScheduler.stop();
+            keyRotationScheduler = null;
+        }
+        super.doStop();
     }
 
     public PQCConfiguration getConfiguration() {
@@ -159,5 +315,58 @@ public class PQCComponent extends HealthCheckComponent {
      */
     public void setConfiguration(PQCConfiguration configuration) {
         this.configuration = configuration;
+    }
+
+    public boolean isKeyRotationSchedulerEnabled() {
+        return keyRotationSchedulerEnabled;
+    }
+
+    /**
+     * Whether to start an automated background key rotation scheduler for this component. Requires keyLifecycleManager
+     * to be set. The scheduler periodically rotates keys that exceed the configured age and/or usage policy.
+     */
+    public void setKeyRotationSchedulerEnabled(boolean keyRotationSchedulerEnabled) {
+        this.keyRotationSchedulerEnabled = keyRotationSchedulerEnabled;
+    }
+
+    public long getKeyRotationCheckInterval() {
+        return keyRotationCheckInterval;
+    }
+
+    /**
+     * Interval between key rotation checks when the scheduler is enabled.
+     */
+    public void setKeyRotationCheckInterval(long keyRotationCheckInterval) {
+        this.keyRotationCheckInterval = keyRotationCheckInterval;
+    }
+
+    public long getKeyRotationMaxAge() {
+        return keyRotationMaxAge;
+    }
+
+    /**
+     * When the scheduler is enabled, rotate keys older than this age. If not set, age is not used as a rotation signal.
+     */
+    public void setKeyRotationMaxAge(long keyRotationMaxAge) {
+        this.keyRotationMaxAge = keyRotationMaxAge;
+    }
+
+    public long getKeyRotationMaxUsage() {
+        return keyRotationMaxUsage;
+    }
+
+    /**
+     * When the scheduler is enabled, rotate keys whose recorded usage count reaches this value. 0 disables usage-based
+     * rotation.
+     */
+    public void setKeyRotationMaxUsage(long keyRotationMaxUsage) {
+        this.keyRotationMaxUsage = keyRotationMaxUsage;
+    }
+
+    /**
+     * The automated key rotation scheduler created when keyRotationSchedulerEnabled is true, or null.
+     */
+    public KeyRotationScheduler getKeyRotationScheduler() {
+        return keyRotationScheduler;
     }
 }

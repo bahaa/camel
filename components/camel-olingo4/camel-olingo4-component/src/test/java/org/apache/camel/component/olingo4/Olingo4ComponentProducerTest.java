@@ -42,8 +42,8 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
-import static org.apache.camel.test.junit5.TestSupport.assertStringContains;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertStringContains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -56,11 +56,19 @@ public class Olingo4ComponentProducerTest extends AbstractOlingo4WireMockTestSup
 
     private static final Logger LOG = LoggerFactory.getLogger(Olingo4ComponentProducerTest.class);
 
-    private static final String TEST_CREATE_JSON = "{\n" + "  \"UserName\": \"lewisblack\",\n" + "  \"FirstName\": \"Lewis\",\n"
-                                                   + "  \"LastName\": \"Black\"\n" + "}";
-    private static final String TEST_UPDATE_JSON
-            = "{\n" + "  \"UserName\": \"lewisblack\",\n" + "  \"FirstName\": \"Lewis\",\n" + "  \"MiddleName\": \"Black\",\n"
-              + "  \"LastName\": \"Black\"\n" + "}";
+    private static final String TEST_CREATE_JSON = """
+            {
+              "UserName": "lewisblack",
+              "FirstName": "Lewis",
+              "LastName": "Black"
+            }""";
+    private static final String TEST_UPDATE_JSON = """
+            {
+              "UserName": "lewisblack",
+              "FirstName": "Lewis",
+              "MiddleName": "Black",
+              "LastName": "Black"
+            }""";
 
     @Override
     protected CamelContext createCamelContext() throws Exception {

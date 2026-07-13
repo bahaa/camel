@@ -43,4 +43,16 @@ XML::
   <to uri="jms:queue:foo"/>
 </route>
 ----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: file:foo
+      steps:
+        - to:
+            uri: jms:queue:foo
+----
 ====

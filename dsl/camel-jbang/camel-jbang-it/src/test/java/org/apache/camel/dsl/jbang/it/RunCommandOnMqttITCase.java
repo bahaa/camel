@@ -24,17 +24,21 @@ import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.infra.mosquitto.services.MosquittoLocalContainerService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.testcontainers.containers.GenericContainer;
 
+@Tag("container-only")
 public class RunCommandOnMqttITCase extends JBangTestSupport {
 
-    private static int mqttPort = AvailablePortFinder.getNextAvailable();
+    @RegisterExtension
+    static AvailablePortFinder.Port mqttPort = AvailablePortFinder.find();
     private static MosquittoLocalContainerService service;
 
     @BeforeAll
     public static void init() {
-        service = new MosquittoLocalContainerService(mqttPort);
+        service = new MosquittoLocalContainerService(mqttPort.getPort());
         service.initialize();
     }
 
@@ -48,22 +52,22 @@ public class RunCommandOnMqttITCase extends JBangTestSupport {
     public void sendMessageWithoutEndpoint() throws IOException {
         copyResourceInDataFolder(TestResources.MQQT_CONSUMER);
         final String ipAddr = getIpAddr(service.getContainer());
-        final String pid = executeBackground(String.format("run --property=brokerUrl=%s %s/%s",
+        final String process = executeBackground(String.format("run --property=brokerUrl=%s %s/%s",
                 "tcp://" + ipAddr + ":1883",
                 mountPoint(), TestResources.MQQT_CONSUMER.getName()));
         checkLogContains("Started route1 (kamelet:mqtt5-source)");
         final String payloadFile = "payload.json";
         newFileInDataFolder(payloadFile, "{\"value\": 21}");
-        sendCmd(String.format("%s/%s", mountPoint(), payloadFile), pid);
+        sendCmd(String.format("%s/%s", mountPoint(), payloadFile), process);
         checkLogContains("The temperature is 21");
     }
 
     @Test
     public void testStub() throws IOException {
         copyResourceInDataFolder(TestResources.STUB_ROUTE);
-        final String pid = executeBackground(String.format("run %s/%s --stub=jms",
+        final String process = executeBackground(String.format("run %s/%s --stub=jms",
                 mountPoint(), TestResources.STUB_ROUTE.getName()));
-        checkCommandOutputs("cmd send --body='Hello camel from stubbed jms' " + pid, "Sent (success)");
+        checkCommandOutputs("cmd send --body='Hello camel from stubbed jms' " + process, "Sent (success)");
         checkCommandOutputs("cmd stub --browse", "Hello camel from stubbed jms", ASSERTION_WAIT_SECONDS);
     }
 

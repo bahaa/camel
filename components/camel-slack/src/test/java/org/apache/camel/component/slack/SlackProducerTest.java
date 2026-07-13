@@ -26,12 +26,14 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.direct.DirectEndpoint;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class SlackProducerTest extends CamelTestSupport {
 
-    protected static final int UNDERTOW_PORT = AvailablePortFinder.getNextAvailable();
+    @RegisterExtension
+    static AvailablePortFinder.Port UNDERTOW_PORT = AvailablePortFinder.find();
 
     @EndpointInject("mock:errors")
     MockEndpoint errors;
@@ -72,13 +74,14 @@ public class SlackProducerTest extends CamelTestSupport {
             @Override
             public void configure() {
                 SlackComponent slack = new SlackComponent();
-                slack.setWebhookUrl("http://localhost:" + UNDERTOW_PORT + "/slack/webhook");
+                slack.setWebhookUrl("http://localhost:" + UNDERTOW_PORT.getPort() + "/slack/webhook");
                 context.addComponent("slack", slack);
 
                 onException(Exception.class).handled(true).to(errors);
 
                 final String slackUser = System.getProperty("SLACK_USER", "CamelTest");
-                from("undertow:http://localhost:" + UNDERTOW_PORT + "/slack/webhook").setBody(constant("{\"ok\": true}"));
+                from("undertow:http://localhost:" + UNDERTOW_PORT.getPort() + "/slack/webhook")
+                        .setBody(constant("{\"ok\": true}"));
 
                 from(test).to(String.format("slack:#general?iconEmoji=:camel:&username=%s", slackUser));
             }

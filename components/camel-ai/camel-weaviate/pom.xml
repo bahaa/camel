@@ -23,7 +23,7 @@
     <parent>
         <artifactId>camel-ai-parent</artifactId>
         <groupId>org.apache.camel</groupId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-weaviate</artifactId>
@@ -35,7 +35,7 @@
         <camel.surefire.parallel>true</camel.surefire.parallel>
         <camel.surefire.parallel.factor>4</camel.surefire.parallel.factor>
 
-        <!-- Milvus is not available on these platforms -->
+        <!-- Weaviate is not available on these platforms -->
         <skipITs.s390x>true</skipITs.s390x>
         <skipTests.s390x>true</skipTests.s390x>
     </properties>
@@ -54,7 +54,7 @@
 
         <dependency>
             <groupId>io.weaviate</groupId>
-            <artifactId>client</artifactId>
+            <artifactId>client6</artifactId>
             <version>${weaviate-client-version}</version>
         </dependency>
 
@@ -63,14 +63,13 @@
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-test-infra-weaviate</artifactId>
             <version>${project.version}</version>
-            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
 
         <!-- test dependencies -->
         <dependency>
             <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-junit5</artifactId>
+            <artifactId>camel-test-junit6</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

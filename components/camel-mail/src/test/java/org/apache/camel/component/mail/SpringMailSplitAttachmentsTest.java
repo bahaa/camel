@@ -30,7 +30,7 @@ import org.apache.camel.attachment.AttachmentMessage;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Spring XML version of {@link MailSplitAttachmentsTest}
  */
 public class SpringMailSplitAttachmentsTest extends CamelSpringTestSupport {
-    private static final MailboxUser james = Mailbox.getOrCreateUser("james", "secret");
+    private static final MailboxUser james = Mailbox.getOrCreateUser("SpringMailSplitAttachmentsTest-james", "secret");
 
     private Endpoint endpoint;
     private Exchange exchange;

@@ -18,7 +18,7 @@ package org.apache.camel.routepolicy.quartz;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -38,7 +38,7 @@ public class RouteAutoStopFalseCronScheduledPolicyTest extends CamelTestSupport 
         context.addRoutes(new RouteBuilder() {
             @Override
             public void configure() {
-                from("seda:foo").routeId("foo").noAutoStartup()
+                from("seda:foo").routeId("foo").autoStartup(false)
                         .routePolicy(policy)
                         .to("mock:foo");
             }

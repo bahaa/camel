@@ -38,13 +38,12 @@ public final class LoggerHelper {
      */
     public static String getLineNumberLoggerName(Object node) {
         String name = null;
-        if (node instanceof LineNumberAware) {
+        if (node instanceof LineNumberAware lineNumberAware) {
             if (node instanceof NamedRoute namedRoute) {
                 // we want the input from a route as it has the source location / line number
-                node = namedRoute.getInput();
+                lineNumberAware = (LineNumberAware) namedRoute.getInput();
             }
 
-            final LineNumberAware lineNumberAware = (LineNumberAware) node;
             String loc = lineNumberAware.getLocation();
             int line = lineNumberAware.getLineNumber();
             if (loc != null) {
@@ -73,13 +72,12 @@ public final class LoggerHelper {
 
     public static String getSourceLocation(Object node) {
         String name = null;
-        if (node instanceof LineNumberAware) {
+        if (node instanceof LineNumberAware lineNumberAware) {
             if (node instanceof NamedRoute namedRoute) {
                 // we want the input from a route as it has the source location / line number
-                node = namedRoute.getInput();
+                lineNumberAware = (LineNumberAware) namedRoute.getInput();
             }
 
-            final LineNumberAware lineNumberAware = (LineNumberAware) node;
             String loc = lineNumberAware.getLocation();
             int line = lineNumberAware.getLineNumber();
             if (loc != null) {
@@ -95,13 +93,12 @@ public final class LoggerHelper {
 
     public static String getSourceLocationOnly(Object node) {
         String name = null;
-        if (node instanceof LineNumberAware) {
+        if (node instanceof LineNumberAware lineNumberAware) {
             if (node instanceof NamedRoute namedRoute) {
                 // we want the input from a route as it has the source location / line number
-                node = namedRoute.getInput();
+                lineNumberAware = (LineNumberAware) namedRoute.getInput();
             }
 
-            final LineNumberAware lineNumberAware = (LineNumberAware) node;
             String loc = lineNumberAware.getLocation();
             if (loc != null) {
                 // is it a class or file?
@@ -126,7 +123,24 @@ public final class LoggerHelper {
     }
 
     public static String sourceNameOnly(String location) {
-        return stripScheme(stripSourceLocationLineNumber(location));
+        int cnt = StringHelper.countChar(location, ':');
+        if (cnt <= 1) {
+            // include pseudo scheme due to extract methods rely on scheme included
+            location = "file:" + location;
+        }
+        Integer line = extractSourceLocationLineNumber(location);
+        if (line != null) {
+            // remove line number
+            location = extractSourceLocationNoLineNumber(location);
+            // strip scheme so its only the name
+            if (location.contains(":")) {
+                location = stripScheme(location);
+            }
+            return location;
+        } else {
+            // no line number so strip scheme
+            return stripScheme(location);
+        }
     }
 
     public static Integer extractSourceLocationLineNumber(String location) {
@@ -144,6 +158,15 @@ public final class LoggerHelper {
             }
         }
         return null;
+    }
+
+    public static String extractSourceLocationNoLineNumber(String location) {
+        Integer line = extractSourceLocationLineNumber(location);
+        if (line != null) {
+            int pos = location.lastIndexOf(':');
+            return location.substring(0, pos);
+        }
+        return location;
     }
 
 }

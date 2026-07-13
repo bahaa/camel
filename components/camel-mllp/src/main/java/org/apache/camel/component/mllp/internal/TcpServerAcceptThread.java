@@ -45,6 +45,10 @@ public class TcpServerAcceptThread extends Thread {
         this.serverSocket = serverSocket;
     }
 
+    public int getLocalPort() {
+        return serverSocket != null && serverSocket.isBound() ? serverSocket.getLocalPort() : -1;
+    }
+
     /**
      * Derive a thread name from the class name, the component URI and the connection information.
      * <p/>
@@ -72,6 +76,8 @@ public class TcpServerAcceptThread extends Thread {
      * is a load-balancer probe. The test is done before the ConsumerClientSocketThread is created to avoid creating a
      * large number of short lived threads, which is what can occur if the load balancer polling interval is very short.
      */
+    @SuppressWarnings("deprecation")
+    // MDC deprecated since 4.19.0, use camel-mdc instead
     @Override
     public void run() {
         running = true;

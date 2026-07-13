@@ -28,13 +28,13 @@ import org.apache.camel.Produce;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.dataformat.soap.name.ElementNameStrategy;
 import org.apache.camel.dataformat.soap.name.ServiceInterfaceStrategy;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ContextConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Checks for interoperability between a CXF server that is attached using the Camel transport for CXF and a dynamic
@@ -61,13 +61,11 @@ public class SoapCxfServerTest extends RouteBuilder {
     public void testFault() {
         GetCustomersByName request = new GetCustomersByName();
         request.setName("none");
-        try {
-            customerServiceProxy.getCustomersByName(request);
-            fail("NoSuchCustomerException expected");
-        } catch (NoSuchCustomerException e) {
-            NoSuchCustomer info = e.getFaultInfo();
-            assertEquals("none", info.getCustomerId());
-        }
+        NoSuchCustomerException e = assertThrows(NoSuchCustomerException.class,
+                () -> customerServiceProxy.getCustomersByName(request),
+                "NoSuchCustomerException expected");
+        NoSuchCustomer info = e.getFaultInfo();
+        assertEquals("none", info.getCustomerId());
     }
 
     @Override

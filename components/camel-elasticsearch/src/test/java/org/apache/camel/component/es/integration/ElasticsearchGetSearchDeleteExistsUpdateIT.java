@@ -276,7 +276,7 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         Map<String, String> map2 = Map.of("testSearchWithMapQuery2", "bar");
         Map<String, Object> headers = new HashMap<>();
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Bulk);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
         template.requestBodyAndHeaders("direct:start", List.of(map1, map2), headers, String.class);
 
         // No match
@@ -315,13 +315,15 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         Map<String, String> map2 = Map.of("testSearchWithStringQuery2", "bar");
         Map<String, Object> headers = new HashMap<>();
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Bulk);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
         template.requestBodyAndHeaders("direct:start", List.of(map1, map2), headers, String.class);
 
         // No match
-        String query = "{\n"
-                       + "    \"query\" : { \"match\" : { \"testSearchWithStringQuery1\" : \"bar\" }}\n"
-                       + "}\n";
+        String query = """
+                {
+                    "query" : { "match" : { "testSearchWithStringQuery1" : "bar" }}
+                }
+                """;
 
         HitsMetadata<?> response = template.requestBody("direct:search", query, HitsMetadata.class);
         assertNotNull(response, "response should not be null");
@@ -329,9 +331,11 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         assertEquals(0, response.total().value(), "response hits should be == 0");
 
         // Match
-        String q = "{\n"
-                   + "    \"query\" : { \"match\" : { \"testSearchWithStringQuery1\" : \"foo\" }}\n"
-                   + "}\n";
+        String q = """
+                {
+                    "query" : { "match" : { "testSearchWithStringQuery1" : "foo" }}
+                }
+                """;
         // the result may see stale data so use Awaitility
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
             HitsMetadata<?> resp = template.requestBody("direct:search", q, HitsMetadata.class);
@@ -354,7 +358,7 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         Map<String, String> map2 = Map.of("testSearchWithBuilder2", "bar");
         Map<String, Object> headers = new HashMap<>();
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Bulk);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
         template.requestBodyAndHeaders("direct:start", List.of(map1, map2), headers,
                 String.class);
 
@@ -405,7 +409,7 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         product2.setName("Guinness book of records 2010");
         Map<String, Object> headers = new HashMap<>();
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Bulk);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
         template.requestBodyAndHeaders("direct:start", List.of(product1, product2), headers, String.class);
 
         // No match
@@ -446,7 +450,7 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         // the result may see stale data so use Awaitility
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
             //now, verify GET succeeded
-            MsearchRequest.Builder builder = new MsearchRequest.Builder().index("twitter").searches(
+            MsearchRequest.Builder builder = new MsearchRequest.Builder().index("get-search").searches(
                     new RequestItem.Builder().header(new MultisearchHeader.Builder().build())
                             .body(new SearchRequestBody.Builder().query(b -> b.matchAll(x -> x)).build()).build(),
                     new RequestItem.Builder().header(new MultisearchHeader.Builder().build())
@@ -558,7 +562,7 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         Map<String, String> map = createIndexedData();
         Map<String, Object> headers = new HashMap<>();
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Index);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
 
         String indexId = template.requestBodyAndHeaders("direct:start", map, headers, String.class);
 
@@ -575,13 +579,13 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         Map<String, String> map = createIndexedData();
         Map<String, Object> headers = new HashMap<>();
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Index);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
 
         template.requestBodyAndHeaders("direct:start", map, headers, String.class);
 
         //now, verify GET
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Exists);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
         Boolean exists = template.requestBodyAndHeaders("direct:exists", "", headers, Boolean.class);
         assertNotNull(exists, "response should not be null");
         assertTrue(exists, "Index should exists");
@@ -603,7 +607,7 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         Map<String, String> map = createIndexedData();
         Map<String, Object> headers = new HashMap<>();
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Index);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
 
         String indexId = template.requestBodyAndHeaders("direct:start", map, headers, String.class);
 
@@ -631,7 +635,7 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         Map<String, String> map = createIndexedData();
         Map<String, Object> headers = new HashMap<>();
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Index);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
         headers.put(ElasticsearchConstants.PARAM_INDEX_ID, "123");
 
         String indexId = template.requestBodyAndHeaders("direct:start", map, headers, String.class);
@@ -650,7 +654,7 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
         Map<String, String> map = createIndexedData();
         Map<String, Object> headers = new HashMap<>();
         headers.put(ElasticsearchConstants.PARAM_OPERATION, ElasticsearchOperation.Index);
-        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "twitter");
+        headers.put(ElasticsearchConstants.PARAM_INDEX_NAME, "get-search");
         headers.put(ElasticsearchConstants.PARAM_INDEX_ID, "123");
 
         String indexId = template.requestBodyAndHeaders("direct:start", map, headers, String.class);
@@ -933,24 +937,24 @@ class ElasticsearchGetSearchDeleteExistsUpdateIT extends ElasticsearchTestSuppor
                 from("direct:start")
                         .to("elasticsearch://elasticsearch?operation=Index");
                 from("direct:index")
-                        .to("elasticsearch://elasticsearch?operation=Index&indexName=twitter");
+                        .to("elasticsearch://elasticsearch?operation=Index&indexName=get-search");
                 from("direct:index-product")
-                        .toF("elasticsearch://elasticsearch?operation=Index&indexName=twitter&documentClass=%s",
+                        .toF("elasticsearch://elasticsearch?operation=Index&indexName=get-search&documentClass=%s",
                                 Product.class.getName());
                 from("direct:get")
-                        .to("elasticsearch://elasticsearch?operation=GetById&indexName=twitter");
+                        .to("elasticsearch://elasticsearch?operation=GetById&indexName=get-search");
                 from("direct:multiget")
-                        .to("elasticsearch://elasticsearch?operation=MultiGet&indexName=twitter");
+                        .to("elasticsearch://elasticsearch?operation=MultiGet&indexName=get-search");
                 from("direct:delete")
-                        .to("elasticsearch://elasticsearch?operation=Delete&indexName=twitter");
+                        .to("elasticsearch://elasticsearch?operation=Delete&indexName=get-search");
                 from("direct:search")
-                        .to("elasticsearch://elasticsearch?operation=Search&indexName=twitter");
+                        .to("elasticsearch://elasticsearch?operation=Search&indexName=get-search");
                 from("direct:search-1")
                         .to("elasticsearch://elasticsearch?operation=Search");
                 from("direct:multiSearch")
                         .to("elasticsearch://elasticsearch?operation=MultiSearch");
                 from("direct:update")
-                        .to("elasticsearch://elasticsearch?operation=Update&indexName=twitter");
+                        .to("elasticsearch://elasticsearch?operation=Update&indexName=get-search");
                 from("direct:exists")
                         .to("elasticsearch://elasticsearch?operation=Exists");
             }

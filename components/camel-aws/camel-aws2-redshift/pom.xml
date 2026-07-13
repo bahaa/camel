@@ -25,7 +25,7 @@
         <groupId>org.apache.camel</groupId>
         <relativePath>../../pom.xml</relativePath>
         <artifactId>components</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-aws2-redshift</artifactId>
@@ -36,6 +36,7 @@
 
     <properties>
         <camel.surefire.forkTimeout>1200</camel.surefire.forkTimeout>
+        <camel.surefire.fork.additional-vmargs>-Xmx2G</camel.surefire.fork.additional-vmargs>
     </properties>
 
     <dependencies>
@@ -70,20 +71,8 @@
         <!-- for testing -->
         <dependency>
             <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-spring-junit5</artifactId>
+            <artifactId>camel-test-spring-junit6</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <argLine>${camel.surefire.fork.vmargs} -Xmx2G</argLine>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>

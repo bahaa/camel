@@ -21,9 +21,10 @@ public class GitEndpointUriFactory extends org.apache.camel.support.component.En
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(32);
+        Set<String> props = new HashSet<>(33);
         props.add("allowEmpty");
         props.add("backoffErrorThreshold");
         props.add("backoffIdleThreshold");
@@ -31,6 +32,7 @@ public class GitEndpointUriFactory extends org.apache.camel.support.component.En
         props.add("branchName");
         props.add("bridgeErrorHandler");
         props.add("delay");
+        props.add("depth");
         props.add("exceptionHandler");
         props.add("exchangePattern");
         props.add("gitConfigFile");
@@ -61,6 +63,7 @@ public class GitEndpointUriFactory extends org.apache.camel.support.component.En
         secretProps.add("password");
         secretProps.add("username");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         Map<String, String> prefixes = new HashMap<>(1);
         prefixes.put("schedulerProperties", "scheduler.");
         MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
@@ -91,6 +94,11 @@ public class GitEndpointUriFactory extends org.apache.camel.support.component.En
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

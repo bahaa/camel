@@ -21,9 +21,10 @@ public class BlobEndpointUriFactory extends org.apache.camel.support.component.E
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(57);
+        Set<String> props = new HashSet<>(68);
         props.add("accessKey");
         props.add("accountName");
         props.add("azureClientId");
@@ -38,6 +39,7 @@ public class BlobEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("blobServiceClient");
         props.add("blobType");
         props.add("blockListType");
+        props.add("blockSize");
         props.add("bridgeErrorHandler");
         props.add("changeFeedContext");
         props.add("changeFeedEndTime");
@@ -52,6 +54,10 @@ public class BlobEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("credentials");
         props.add("dataCount");
         props.add("delay");
+        props.add("deleteAfterRead");
+        props.add("destinationBlobPrefix");
+        props.add("destinationBlobSuffix");
+        props.add("destinationContainer");
         props.add("downloadLinkExpiration");
         props.add("exceptionHandler");
         props.add("exchangePattern");
@@ -61,13 +67,17 @@ public class BlobEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("lazyStartProducer");
         props.add("leaseBlob");
         props.add("leaseDurationInSeconds");
+        props.add("maxConcurrency");
         props.add("maxResultsPerPage");
         props.add("maxRetryRequests");
+        props.add("maxSingleUploadSize");
+        props.add("moveAfterRead");
         props.add("operation");
         props.add("pageBlobSize");
         props.add("pollStrategy");
         props.add("prefix");
         props.add("regex");
+        props.add("removePrefixOnMove");
         props.add("repeatCount");
         props.add("runLoggingLevel");
         props.add("sasToken");
@@ -76,11 +86,13 @@ public class BlobEndpointUriFactory extends org.apache.camel.support.component.E
         props.add("schedulerProperties");
         props.add("sendEmptyMessageWhenIdle");
         props.add("serviceClient");
+        props.add("snapshotId");
         props.add("sourceBlobAccessKey");
         props.add("startScheduler");
         props.add("timeUnit");
         props.add("timeout");
         props.add("useFixedDelay");
+        props.add("versionId");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         Set<String> secretProps = new HashSet<>(4);
         secretProps.add("accessKey");
@@ -88,6 +100,7 @@ public class BlobEndpointUriFactory extends org.apache.camel.support.component.E
         secretProps.add("azureClientSecret");
         secretProps.add("sourceBlobAccessKey");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         Map<String, String> prefixes = new HashMap<>(1);
         prefixes.put("schedulerProperties", "scheduler.");
         MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
@@ -119,6 +132,11 @@ public class BlobEndpointUriFactory extends org.apache.camel.support.component.E
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

@@ -41,7 +41,7 @@ public final class DependencyDownloaderComponentResolver extends DefaultComponen
     };
 
     private static final String[] ACCEPTED_TRANSFORM_NAMES = {
-            "stub", "direct", "kamelet", "log", "seda"
+            "stub", "direct", "log", "seda"
     };
 
     private final CamelCatalog catalog = new DefaultCamelCatalog();
@@ -74,8 +74,7 @@ public final class DependencyDownloaderComponentResolver extends DefaultComponen
         } else {
             answer = super.resolveComponent("stub", context);
         }
-        if ((silent || transform || stubPattern != null) && answer instanceof StubComponent) {
-            StubComponent sc = (StubComponent) answer;
+        if ((silent || transform || stubPattern != null) && answer instanceof StubComponent sc) {
             // enable shadow mode on stub component
             sc.setShadow(true);
             sc.setShadowPattern(stubPattern);
@@ -107,6 +106,12 @@ public final class DependencyDownloaderComponentResolver extends DefaultComponen
             ComponentModel quartz = catalog.componentModel("quartz");
             if (quartz != null) {
                 downloadLoader(quartz.getGroupId(), quartz.getArtifactId(), quartz.getVersion());
+            }
+        }
+        if ("jpa".equals(name)) {
+            // include hibernate as JPA provider
+            if (!downloader.alreadyOnClasspath("org.hibernate.orm", "hibernate-core", null)) {
+                downloader.downloadDependency("org.hibernate.orm", "hibernate-core", "${hibernate-version}");
             }
         }
         if ("activemq".equals(name) || "activemq6".equals(name)) {
@@ -144,6 +149,12 @@ public final class DependencyDownloaderComponentResolver extends DefaultComponen
         // we are stubbing but need to accept the following
         if (Arrays.asList(ACCEPTED_STUB_NAMES).contains(name)) {
             return true;
+        }
+
+        // stub only remote components (resolved via catalog)
+        if ("component:remote".equals(stubPattern)) {
+            ComponentModel model = catalog.componentModel(name);
+            return model == null || !model.isRemote();
         }
 
         boolean stubbed = false;

@@ -811,6 +811,38 @@ public interface GitEndpointBuilderFactory {
             return this;
         }
         /**
+         * Clone depth for shallow clones. Must be a positive integer. A value
+         * of 1 fetches only the latest commit. When set to 0 or not specified,
+         * a full clone is performed.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param depth the value to set
+         * @return the dsl builder
+         */
+        default GitEndpointProducerBuilder depth(int depth) {
+            doSetProperty("depth", depth);
+            return this;
+        }
+        /**
+         * Clone depth for shallow clones. Must be a positive integer. A value
+         * of 1 fetches only the latest commit. When set to 0 or not specified,
+         * a full clone is performed.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param depth the value to set
+         * @return the dsl builder
+         */
+        default GitEndpointProducerBuilder depth(String depth) {
+            doSetProperty("depth", depth);
+            return this;
+        }
+        /**
          * The operation to do on the repository.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -1101,7 +1133,7 @@ public interface GitEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final GitHeaderNameBuilder INSTANCE = new GitHeaderNameBuilder();
+        public static final GitHeaderNameBuilder INSTANCE = new GitHeaderNameBuilder();
 
         /**
          * The operation to do on a repository, if not specified as endpoint

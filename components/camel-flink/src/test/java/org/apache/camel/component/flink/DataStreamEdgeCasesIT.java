@@ -16,10 +16,12 @@
  */
 package org.apache.camel.component.flink;
 
+import java.util.Collections;
+
 import org.apache.camel.BindToRegistry;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -113,7 +115,7 @@ public class DataStreamEdgeCasesIT extends CamelTestSupport {
     public void testEmptyListPayload() {
         template.sendBodyAndHeader(
                 "direct:withDataStream",
-                java.util.Collections.emptyList(),
+                Collections.emptyList(),
                 FlinkConstants.FLINK_DATASTREAM_CALLBACK_HEADER,
                 new VoidDataStreamCallback() {
                     @Override

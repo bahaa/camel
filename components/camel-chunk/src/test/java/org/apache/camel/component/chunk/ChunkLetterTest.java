@@ -20,7 +20,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -44,8 +44,14 @@ public class ChunkLetterTest extends CamelTestSupport {
     void testChunkLetter() throws Exception {
         MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedMessageCount(1);
-        mock.expectedBodiesReceived("Dear Ibsen, Claus\n\nThanks for the order of Camel in Action."
-                                    + "\n\nRegards Camel Riders Bookstore\nPS: Next beer is on me, James\n");
+        mock.expectedBodiesReceived("""
+                Dear Ibsen, Claus
+
+                Thanks for the order of Camel in Action.
+
+                Regards Camel Riders Bookstore
+                PS: Next beer is on me, James
+                """);
 
         template.send("direct:a", createLetter());
 

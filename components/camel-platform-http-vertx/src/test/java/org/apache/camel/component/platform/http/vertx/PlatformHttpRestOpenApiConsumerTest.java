@@ -19,16 +19,14 @@ package org.apache.camel.component.platform.http.vertx;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.equalToCompressingWhiteSpace;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class PlatformHttpRestOpenApiConsumerTest {
-
     @Test
     public void testRestOpenApi() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -45,7 +43,7 @@ public class PlatformHttpRestOpenApiConsumerTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             MockEndpoint mock = context.getEndpoint("mock:result", MockEndpoint.class);
             mock.expectedMessageCount(1);
@@ -82,7 +80,7 @@ public class PlatformHttpRestOpenApiConsumerTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -111,7 +109,7 @@ public class PlatformHttpRestOpenApiConsumerTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -148,12 +146,9 @@ public class PlatformHttpRestOpenApiConsumerTest {
                 }
             });
 
-            context.start();
-            fail();
-        } catch (Exception e) {
-            Assertions.assertTrue(
-                    e.getCause().getMessage()
-                            .startsWith("OpenAPI specification has 18 unmapped operations to corresponding routes"));
+            assertThrows(Exception.class, () -> {
+                VertxPlatformHttpEngineTest.startCamelContext(context);
+            }, "OpenAPI specification has 18 unmapped operations to corresponding routes");
         } finally {
             context.stop();
         }
@@ -175,7 +170,7 @@ public class PlatformHttpRestOpenApiConsumerTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -203,7 +198,7 @@ public class PlatformHttpRestOpenApiConsumerTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -231,10 +226,11 @@ public class PlatformHttpRestOpenApiConsumerTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
+                    .contentType("application/json")
                     .put("/api/v3/pet")
                     .then()
                     .statusCode(400); // no request body
@@ -256,7 +252,7 @@ public class PlatformHttpRestOpenApiConsumerTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()

@@ -20,14 +20,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class SqlProducerNamedParameterNotExistTest extends CamelTestSupport {
 
@@ -56,22 +56,16 @@ public class SqlProducerNamedParameterNotExistTest extends CamelTestSupport {
         Map<String, Object> map = new HashMap<>();
         map.put("foo", "ASF");
 
-        try {
-            template.sendBody("direct:start", map);
-            fail("Should have thrown exception");
-        } catch (Exception e) {
-            assertTrue(e.getCause().getMessage().startsWith("Cannot find key [lic]"));
-        }
+        Exception e = assertThrows(Exception.class,
+                () -> template.sendBody("direct:start", map));
+        assertTrue(e.getCause().getMessage().startsWith("Cannot find key [lic]"));
     }
 
     @Test
     public void testNamedParameterNotExistFromHeader() {
-        try {
-            template.sendBodyAndHeader("direct:start", "This is a dummy body", "foo", "ASF");
-            fail("Should have thrown exception");
-        } catch (Exception e) {
-            assertTrue(e.getCause().getMessage().startsWith("Cannot find key [lic]"));
-        }
+        Exception e = assertThrows(Exception.class,
+                () -> template.sendBodyAndHeader("direct:start", "This is a dummy body", "foo", "ASF"));
+        assertTrue(e.getCause().getMessage().startsWith("Cannot find key [lic]"));
     }
 
     @Override

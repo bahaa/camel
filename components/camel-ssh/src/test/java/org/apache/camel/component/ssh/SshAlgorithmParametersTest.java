@@ -21,8 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.camel.spi.Registry;
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.sshd.client.ClientBuilder;
 import org.apache.sshd.client.SshClient;
@@ -42,16 +41,20 @@ import org.junit.jupiter.api.Test;
 
 public class SshAlgorithmParametersTest extends CamelTestSupport {
 
-    private int port = AvailablePortFinder.getNextAvailable();
+    private final int port = 0;
 
-    private String sshEndpointURI = "ssh://smx:smx@localhost:" + port + "?timeout=3000" +
-                                    "&ciphers=aes192-ctr" +
-                                    "&macs=hmac-sha1-etm@openssh.com,hmac-sha2-256,hmac-sha1" +
-                                    "&kex=ecdh-sha2-nistp521" +
-                                    "&signatures=rsa-sha2-512,ssh-rsa-cert-v01@openssh.com" +
-                                    "&compressions=zlib,none";
+    private String getSshEndpointURI() {
+        return "ssh://smx:smx@localhost:" + port + "?timeout=3000" +
+               "&ciphers=aes192-ctr" +
+               "&macs=hmac-sha1-etm@openssh.com,hmac-sha2-256,hmac-sha1" +
+               "&kex=ecdh-sha2-nistp521" +
+               "&signatures=rsa-sha2-512,ssh-rsa-cert-v01@openssh.com" +
+               "&compressions=zlib,none";
+    }
 
-    private String customClientSshEndpointURI = "ssh://smx:smx@localhost:" + port + "?timeout=3000&clientBuilder=#myClient";
+    private String getCustomClientSshEndpointURI() {
+        return "ssh://smx:smx@localhost:" + port + "?timeout=3000&clientBuilder=#myClient";
+    }
 
     @Override
     protected void bindToRegistry(Registry registry) throws Exception {
@@ -86,7 +89,7 @@ public class SshAlgorithmParametersTest extends CamelTestSupport {
     @Test
     public void producerCiphersParameterTest() throws Exception {
         context.getComponent("ssh", SshComponent.class);
-        SshEndpoint endpoint = context.getEndpoint(sshEndpointURI, SshEndpoint.class);
+        SshEndpoint endpoint = context.getEndpoint(getSshEndpointURI(), SshEndpoint.class);
         SshProducer producer = (SshProducer) endpoint.createProducer();
         producer.start();
         SshClient client = (SshClient) FieldUtils.readField(producer, "client", true);
@@ -96,7 +99,7 @@ public class SshAlgorithmParametersTest extends CamelTestSupport {
     @Test
     public void consumerCiphersParameterTest() throws Exception {
         context.getComponent("ssh", SshComponent.class);
-        SshEndpoint endpoint = context.getEndpoint(sshEndpointURI, SshEndpoint.class);
+        SshEndpoint endpoint = context.getEndpoint(getSshEndpointURI(), SshEndpoint.class);
         SshConsumer consumer = (SshConsumer) endpoint.createConsumer(x -> {
         });
         consumer.start();
@@ -107,7 +110,7 @@ public class SshAlgorithmParametersTest extends CamelTestSupport {
     @Test
     public void consumerCustomClientParameterTest() throws Exception {
         context.getComponent("ssh", SshComponent.class);
-        SshEndpoint endpoint = context.getEndpoint(customClientSshEndpointURI, SshEndpoint.class);
+        SshEndpoint endpoint = context.getEndpoint(getCustomClientSshEndpointURI(), SshEndpoint.class);
         SshConsumer consumer = (SshConsumer) endpoint.createConsumer(x -> {
         });
         consumer.start();
@@ -118,7 +121,7 @@ public class SshAlgorithmParametersTest extends CamelTestSupport {
     @Test
     public void producerCustomClientParameterTest() throws Exception {
         context.getComponent("ssh", SshComponent.class);
-        SshEndpoint endpoint = context.getEndpoint(customClientSshEndpointURI, SshEndpoint.class);
+        SshEndpoint endpoint = context.getEndpoint(getCustomClientSshEndpointURI(), SshEndpoint.class);
         SshProducer producer = (SshProducer) endpoint.createProducer();
         producer.start();
         SshClient client = (SshClient) FieldUtils.readField(producer, "client", true);

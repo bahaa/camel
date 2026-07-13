@@ -29,7 +29,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.bindy.kvp.BindyKeyValuePairDataFormat;
 import org.apache.camel.dataformat.bindy.model.fix.withoutsection.Order;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -96,7 +96,7 @@ public class BindySimpleKeyValuePairWithoutSectionMarshallDslTest {
     public static class ContextConfig extends RouteBuilder {
 
         BindyKeyValuePairDataFormat orderBindyDataFormat
-                = new BindyKeyValuePairDataFormat(org.apache.camel.dataformat.bindy.model.fix.withoutsection.Order.class);
+                = new BindyKeyValuePairDataFormat(Order.class);
 
         @Override
         public void configure() {

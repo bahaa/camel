@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/classes/scan_activity",
+  "title": "ScanActivity",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.ScanActivity",
+  "description": "ScanActivity event class.",
+  "extends": {
+    "$ref": "OcsfEvent.json"
+  },
+  "properties": {
+    "num_folders": {
+      "type": "integer",
+      "title": "Scanned Folders"
+    },
+    "schedule_uid": {
+      "type": "string",
+      "title": "Schedule UID"
+    },
+    "num_trusted_items": {
+      "type": "integer",
+      "title": "Trusted"
+    },
+    "num_detections": {
+      "type": "integer",
+      "title": "Detections"
+    },
+    "num_processes": {
+      "type": "integer",
+      "title": "Scanned Processes"
+    },
+    "num_network_items": {
+      "type": "integer",
+      "title": "Scanned Network Items"
+    },
+    "num_files": {
+      "type": "integer",
+      "title": "Scanned Files"
+    },
+    "command_uid": {
+      "type": "string",
+      "title": "Command UID"
+    },
+    "num_skipped_items": {
+      "type": "integer",
+      "title": "Skipped"
+    },
+    "scan": {
+      "$ref": "Scan.json"
+    },
+    "policy": {
+      "$ref": "Policy.json"
+    },
+    "total": {
+      "type": "integer",
+      "title": "Total"
+    },
+    "num_resolutions": {
+      "type": "integer",
+      "title": "Resolutions"
+    },
+    "raw_data_size": {
+      "type": "integer",
+      "title": "Raw Data Size"
+    },
+    "raw_data_hash": {
+      "$ref": "Fingerprint.json"
+    },
+    "enrichments": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Enrichment.json"
+      }
+    },
+    "num_registry_items": {
+      "type": "integer",
+      "title": "Scanned Registry Items"
+    }
+  }
+}

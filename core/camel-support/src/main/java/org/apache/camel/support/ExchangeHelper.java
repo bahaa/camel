@@ -391,6 +391,9 @@ public final class ExchangeHelper {
         result.setRollbackOnlyLast(source.isRollbackOnlyLast());
         resultExtension.setNotifyEvent(sourceExtension.isNotifyEvent());
         resultExtension.setRedeliveryExhausted(sourceExtension.isRedeliveryExhausted());
+        resultExtension.setRedeliveryCounter(sourceExtension.getRedeliveryCounter());
+        resultExtension.setRedeliveryMaxCounter(sourceExtension.getRedeliveryMaxCounter());
+        resultExtension.setSagaLongRunningAction(sourceExtension.getSagaLongRunningAction());
         resultExtension.setErrorHandlerHandled(sourceExtension.getErrorHandlerHandled());
         resultExtension.setFailureHandled(sourceExtension.isFailureHandled());
 
@@ -893,18 +896,11 @@ public final class ExchangeHelper {
     public static Message getOriginalInMessage(Exchange exchange) {
         Message answer = null;
 
-        // try parent first
-        UnitOfWork uow = exchange.getProperty(ExchangePropertyKey.PARENT_UNIT_OF_WORK, UnitOfWork.class);
+        UnitOfWork uow = exchange.getUnitOfWork();
         if (uow != null) {
             answer = uow.getOriginalInMessage();
         }
-        // fallback to the current exchange
-        if (answer == null) {
-            uow = exchange.getUnitOfWork();
-            if (uow != null) {
-                answer = uow.getOriginalInMessage();
-            }
-        }
+
         return answer;
     }
 

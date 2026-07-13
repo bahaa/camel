@@ -41,7 +41,7 @@ public class AttachFileProducer extends DefaultProducer {
         String issueKey = exchange.getIn().getHeader(ISSUE_KEY, String.class);
         if (issueKey == null) {
             throw new IllegalArgumentException(
-                    "Missing exchange input header named 'IssueKey', it should specify the issue key to attach a file.");
+                    "Missing exchange input header named 'CamelJiraIssueKey', it should specify the issue key to attach a file.");
         }
 
         // check for java.io.File first before using input stream for file content
@@ -49,8 +49,8 @@ public class AttachFileProducer extends DefaultProducer {
         String name = null;
         File file = null;
         Object body = exchange.getIn().getBody();
-        if (body instanceof File) {
-            file = (File) body;
+        if (body instanceof File fileBody) {
+            file = fileBody;
         } else {
             WrappedFile<?> wf = exchange.getIn().getBody(WrappedFile.class);
             if (wf != null && wf.getFile() instanceof File) {

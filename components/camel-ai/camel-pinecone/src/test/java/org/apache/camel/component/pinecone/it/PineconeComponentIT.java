@@ -24,7 +24,7 @@ import io.pinecone.unsigned_indices_model.QueryResponseWithUnsignedIndices;
 import org.apache.camel.Exchange;
 import org.apache.camel.component.pinecone.PineconeVectorDbAction;
 import org.apache.camel.component.pinecone.PineconeVectorDbHeaders;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperties;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -108,7 +108,7 @@ public class PineconeComponentIT extends CamelTestSupport {
 
         assertThat(result).isNotNull();
         assertThat(result.getException()).isNull();
-        assertThat(!result.getMessage().getBody(QueryResponseWithUnsignedIndices.class).getMatchesList().isEmpty());
+        assertThat(result.getMessage().getBody(QueryResponseWithUnsignedIndices.class).getMatchesList()).isNotEmpty();
     }
 
     @Test
@@ -132,7 +132,7 @@ public class PineconeComponentIT extends CamelTestSupport {
 
         assertThat(result).isNotNull();
         assertThat(result.getException()).isNull();
-        assertThat(!result.getMessage().getBody(QueryResponseWithUnsignedIndices.class).getMatchesList().isEmpty());
+        assertThat(result.getMessage().getBody(QueryResponseWithUnsignedIndices.class).getMatchesList()).isNotEmpty();
     }
 
     @Test
@@ -148,7 +148,7 @@ public class PineconeComponentIT extends CamelTestSupport {
 
         assertThat(result).isNotNull();
         assertThat(result.getException()).isNull();
-        assertThat(!result.getMessage().getBody(QueryResponseWithUnsignedIndices.class).getMatchesList().isEmpty());
+        assertThat(result.getMessage().getBody(QueryResponseWithUnsignedIndices.class).getMatchesList()).isNotEmpty();
     }
 
     @Test
@@ -179,7 +179,7 @@ public class PineconeComponentIT extends CamelTestSupport {
 
         assertThat(result).isNotNull();
         assertThat(result.getException()).isNull();
-        assertThat(result.getMessage().getBody(FetchResponse.class).getVectorsCount() != 0);
+        assertThat(result.getMessage().getBody(FetchResponse.class).getVectorsCount()).isNotZero();
     }
 
 }

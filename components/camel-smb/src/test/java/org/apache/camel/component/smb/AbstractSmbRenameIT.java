@@ -16,6 +16,7 @@
  */
 package org.apache.camel.component.smb;
 
+import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -78,7 +79,7 @@ public abstract class AbstractSmbRenameIT extends SmbServerTestSupport {
         MockEndpoint.assertIsSatisfied(context);
 
         // Verify file was moved
-        await().atMost(6, TimeUnit.SECONDS)
+        await().atMost(15, TimeUnit.SECONDS)
                 .untilAsserted(() -> assertEquals("Hello World\n",
                         service.smbFile(getPath() + "/.done/" + getFilename())));
     }
@@ -114,7 +115,7 @@ public abstract class AbstractSmbRenameIT extends SmbServerTestSupport {
 
             // Replicate parent logic to build configuration
             String baseUri = getBaseUri(uri);
-            SmbConfiguration config = new SmbConfiguration(new java.net.URI(baseUri));
+            SmbConfiguration config = new SmbConfiguration(new URI(baseUri));
 
             // Handle backwards compatible path parameter
             String path = getAndRemoveParameter(parameters, "path", String.class);

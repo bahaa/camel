@@ -565,6 +565,27 @@ public interface JettyComponentBuilderFactory {
         }
     
         /**
+         * Sets an ObjectInputFilter pattern (jdk.serialFilter syntax) applied
+         * when deserializing Java objects from requests or responses with
+         * Content-Type application/x-java-serialized-object (only used when
+         * allowJavaSerializedObject or transferException is enabled). When not
+         * set, the JVM-wide jdk.serialFilter is used if present; otherwise a
+         * conservative default filter denying java.net. and otherwise allowing
+         * java., javax. and org.apache.camel. packages is applied.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: security
+         * 
+         * @param deserializationFilter the value to set
+         * @return the dsl builder
+         */
+        default JettyComponentBuilder deserializationFilter(java.lang.String deserializationFilter) {
+            doSetProperty("deserializationFilter", deserializationFilter);
+            return this;
+        }
+    
+        /**
          * Specifies the location of the Java keystore file, which contains the
          * Jetty server's own X.509 certificate in a key entry.
          * 
@@ -602,14 +623,14 @@ public interface JettyComponentBuilderFactory {
          * the same principle as sslSocketConnectors.
          * 
          * The option is a: &lt;code&gt;java.util.Map&amp;lt;java.lang.Integer,
-         * org.eclipse.jetty.server.Connector&amp;gt;&lt;/code&gt; type.
+         * org.eclipse.jetty.server.ServerConnector&amp;gt;&lt;/code&gt; type.
          * 
          * Group: security
          * 
          * @param socketConnectors the value to set
          * @return the dsl builder
          */
-        default JettyComponentBuilder socketConnectors(java.util.Map<java.lang.Integer, org.eclipse.jetty.server.Connector> socketConnectors) {
+        default JettyComponentBuilder socketConnectors(java.util.Map<java.lang.Integer, org.eclipse.jetty.server.ServerConnector> socketConnectors) {
             doSetProperty("socketConnectors", socketConnectors);
             return this;
         }
@@ -684,14 +705,14 @@ public interface JettyComponentBuilderFactory {
          * A map which contains per port number specific SSL connectors.
          * 
          * The option is a: &lt;code&gt;java.util.Map&amp;lt;java.lang.Integer,
-         * org.eclipse.jetty.server.Connector&amp;gt;&lt;/code&gt; type.
+         * org.eclipse.jetty.server.ServerConnector&amp;gt;&lt;/code&gt; type.
          * 
          * Group: security
          * 
          * @param sslSocketConnectors the value to set
          * @return the dsl builder
          */
-        default JettyComponentBuilder sslSocketConnectors(java.util.Map<java.lang.Integer, org.eclipse.jetty.server.Connector> sslSocketConnectors) {
+        default JettyComponentBuilder sslSocketConnectors(java.util.Map<java.lang.Integer, org.eclipse.jetty.server.ServerConnector> sslSocketConnectors) {
             doSetProperty("sslSocketConnectors", sslSocketConnectors);
             return this;
         }
@@ -756,6 +777,7 @@ public interface JettyComponentBuilderFactory {
             case "headerFilterStrategy": ((JettyHttpComponent12) component).setHeaderFilterStrategy((org.apache.camel.spi.HeaderFilterStrategy) value); return true;
             case "proxyHost": ((JettyHttpComponent12) component).setProxyHost((java.lang.String) value); return true;
             case "proxyPort": ((JettyHttpComponent12) component).setProxyPort((java.lang.Integer) value); return true;
+            case "deserializationFilter": ((JettyHttpComponent12) component).setDeserializationFilter((java.lang.String) value); return true;
             case "keystore": ((JettyHttpComponent12) component).setKeystore((java.lang.String) value); return true;
             case "socketConnectorProperties": ((JettyHttpComponent12) component).setSocketConnectorProperties((java.util.Map) value); return true;
             case "socketConnectors": ((JettyHttpComponent12) component).setSocketConnectors((java.util.Map) value); return true;

@@ -40,6 +40,7 @@ import javax.naming.Reference;
 import javax.naming.spi.NamingManager;
 
 import org.apache.camel.util.CastUtils;
+import org.apache.camel.util.ObjectHelper;
 
 /**
  * A default JNDI context
@@ -109,8 +110,8 @@ public class JndiContext implements Context, Serializable {
      * (the names are suitably extended by the segment originally lopped off).
      */
     protected Map<String, Object> internalBind(String name, Object value) throws NamingException {
-        org.apache.camel.util.ObjectHelper.notNullOrEmpty(name, "name");
-        org.apache.camel.util.ObjectHelper.notNull(frozen, "frozen");
+        ObjectHelper.notNullOrEmpty(name, "name");
+        ObjectHelper.notNull(frozen, "frozen");
 
         Map<String, Object> newBindings = new HashMap<>();
         int pos = name.indexOf('/');
@@ -122,7 +123,7 @@ public class JndiContext implements Context, Serializable {
             newBindings.put(name, value);
         } else {
             String segment = name.substring(0, pos);
-            org.apache.camel.util.ObjectHelper.notNullOrEmpty(segment, "segment");
+            ObjectHelper.notNullOrEmpty(segment, "segment");
             Object o = treeBindings.get(segment);
             if (o == null) {
                 o = newContext();
@@ -198,8 +199,7 @@ public class JndiContext implements Context, Serializable {
                     Object value = bindings.get(first);
                     if (value == null) {
                         throw new NameNotFoundException(name);
-                    } else if (value instanceof Context && path.size() > 1) {
-                        Context subContext = (Context) value;
+                    } else if (value instanceof Context subContext && path.size() > 1) {
                         value = subContext.lookup(path.getSuffix(1));
                     }
                     return value;

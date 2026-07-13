@@ -66,9 +66,15 @@ public class OpenSearchLocalContainerInfraService implements OpenSearchInfraServ
 
                 withLogConsumer(new Slf4jLogConsumer(LOG));
 
-                if (fixedPort) {
-                    addFixedExposedPort(OPEN_SEARCH_PORT, OPEN_SEARCH_PORT);
-                }
+                // Disable the observability plugin to avoid startup issues (CAMEL-23502)
+                withEnv("OPENSEARCH_JAVA_OPTS",
+                        "-Dopensearch.cgroups.hierarchy.override=/ -Dopensearch.plugin.disable=opensearch-observability");
+
+                // Disable disk watermarks to prevent "disk usage exceeded flood-stage watermark"
+                // errors when running on CI machines with limited disk space (CAMEL-24018)
+                withEnv("cluster.routing.allocation.disk.threshold_enabled", "false");
+
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, OPEN_SEARCH_PORT);
             }
         }
 

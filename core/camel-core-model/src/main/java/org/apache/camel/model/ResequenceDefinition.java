@@ -39,7 +39,9 @@ import org.apache.camel.util.TimeUtils;
 /**
  * Resequences (re-order) messages based on an expression
  */
-@Metadata(label = "eip,routing")
+@Metadata(label = "eip,flowcontrol,routing",
+          description = "Reorders messages based on a sequence expression,"
+                        + " either in batch mode (collect and sort) or stream mode (continuous reordering with a timeout)")
 @XmlRootElement(name = "resequence")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ResequenceDefinition extends OutputDefinition<ResequenceDefinition> implements HasExpressionType {
@@ -52,9 +54,11 @@ public class ResequenceDefinition extends OutputDefinition<ResequenceDefinition>
     @XmlElements({
             @XmlElement(name = "batchConfig", type = BatchResequencerConfig.class),
             @XmlElement(name = "streamConfig", type = StreamResequencerConfig.class) })
+    @Metadata(description = "Resequencer configuration using either batch or stream mode. Defaults to batch mode.")
     private ResequencerConfig resequencerConfig;
     @XmlElementRef
-    @Metadata(required = true)
+    @Metadata(required = true,
+              description = "Expression to use for re-ordering the messages, such as a header with a sequence number.")
     private ExpressionDefinition expression;
 
     public ResequenceDefinition() {
@@ -118,6 +122,7 @@ public class ResequenceDefinition extends OutputDefinition<ResequenceDefinition>
      */
     public ResequenceDefinition stream(StreamResequencerConfig config) {
         this.streamConfig = config;
+        this.resequencerConfig = config;
         this.batchConfig = null;
         return this;
     }
@@ -130,6 +135,7 @@ public class ResequenceDefinition extends OutputDefinition<ResequenceDefinition>
      */
     public ResequenceDefinition batch(BatchResequencerConfig config) {
         this.batchConfig = config;
+        this.resequencerConfig = config;
         this.streamConfig = null;
         return this;
     }
@@ -322,24 +328,22 @@ public class ResequenceDefinition extends OutputDefinition<ResequenceDefinition>
         return resequencerConfig;
     }
 
-    /**
-     * To configure the resequencer in using either batch or stream configuration. Will by default use batch
-     * configuration.
-     */
     public void setResequencerConfig(ResequencerConfig resequencerConfig) {
         this.resequencerConfig = resequencerConfig;
     }
 
     public BatchResequencerConfig getBatchConfig() {
-        if (batchConfig == null && resequencerConfig != null && resequencerConfig instanceof BatchResequencerConfig) {
-            return (BatchResequencerConfig) resequencerConfig;
+        if (batchConfig == null && resequencerConfig != null
+                && resequencerConfig instanceof BatchResequencerConfig batchresequencerconfig) {
+            return batchresequencerconfig;
         }
         return batchConfig;
     }
 
     public StreamResequencerConfig getStreamConfig() {
-        if (streamConfig == null && resequencerConfig != null && resequencerConfig instanceof StreamResequencerConfig) {
-            return (StreamResequencerConfig) resequencerConfig;
+        if (streamConfig == null && resequencerConfig != null
+                && resequencerConfig instanceof StreamResequencerConfig streamresequencerconfig) {
+            return streamresequencerconfig;
         }
         return streamConfig;
     }
@@ -356,16 +360,10 @@ public class ResequenceDefinition extends OutputDefinition<ResequenceDefinition>
         return expression;
     }
 
-    /**
-     * Expression to use for re-ordering the messages, such as a header with a sequence number
-     */
     public void setExpression(ExpressionDefinition expression) {
         this.expression = expression;
     }
 
-    /**
-     * Expression to use for re-ordering the messages, such as a header with a sequence number
-     */
     public void setExpression(Expression expression) {
         setExpression(new ExpressionDefinition(expression));
     }
@@ -375,9 +373,6 @@ public class ResequenceDefinition extends OutputDefinition<ResequenceDefinition>
         return getExpression();
     }
 
-    /**
-     * Expression to use for re-ordering the messages, such as a header with a sequence number
-     */
     @Override
     public void setExpressionType(ExpressionDefinition expressionType) {
         setExpression(expressionType);

@@ -31,11 +31,13 @@ import org.apache.camel.ExchangePropertyKey;
 import org.apache.camel.Predicate;
 import org.apache.camel.spi.AsPredicate;
 import org.apache.camel.spi.Metadata;
+import org.apache.camel.spi.annotations.DslArg;
 
 /**
  * Catches exceptions as part of a try, catch, finally block
  */
-@Metadata(label = "error")
+@Metadata(label = "error,errorhandling",
+          description = "Catches specific exceptions within a doTry block, allowing fine-grained exception handling within the route")
 @XmlRootElement(name = "doCatch")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class CatchDefinition extends OutputDefinition<CatchDefinition> {
@@ -44,8 +46,11 @@ public class CatchDefinition extends OutputDefinition<CatchDefinition> {
     private List<Class<? extends Throwable>> exceptionClasses;
 
     @XmlElement(name = "exception")
+    @DslArg(renderType = "classList")
+    @Metadata(description = "The exception class names (fully qualified) to catch.")
     private List<String> exceptions = new ArrayList<>();
-    @Metadata(description = "Used for triggering doCatch in specific situations")
+    @Metadata(description = "An additional predicate that must evaluate to true for this doCatch to trigger."
+                            + " Allows fine-grained control over which exceptions are caught based on the exchange state.")
     @XmlElement
     @AsPredicate
     private OnWhenDefinition onWhen;
@@ -75,7 +80,7 @@ public class CatchDefinition extends OutputDefinition<CatchDefinition> {
 
     @Override
     public String toString() {
-        return "DoCatch[ " + getExceptionClasses() + " -> " + getOutputs() + "]";
+        return "DoCatch[" + String.join(",", getExceptions()) + " -> " + getOutputs() + "]";
     }
 
     @Override
@@ -85,7 +90,7 @@ public class CatchDefinition extends OutputDefinition<CatchDefinition> {
 
     @Override
     public String getLabel() {
-        return "doCatch[ " + getExceptionClasses() + "]";
+        return "doCatch[" + String.join(",", getExceptions()) + "]";
     }
 
     @Override

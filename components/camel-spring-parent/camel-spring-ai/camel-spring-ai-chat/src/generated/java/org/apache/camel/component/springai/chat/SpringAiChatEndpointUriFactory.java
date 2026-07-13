@@ -21,9 +21,10 @@ public class SpringAiChatEndpointUriFactory extends org.apache.camel.support.com
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(29);
+        Set<String> props = new HashSet<>(36);
         props.add("advisors");
         props.add("chatClient");
         props.add("chatId");
@@ -35,6 +36,8 @@ public class SpringAiChatEndpointUriFactory extends org.apache.camel.support.com
         props.add("lazyStartProducer");
         props.add("maxFileSize");
         props.add("maxTokens");
+        props.add("mcpServer");
+        props.add("mcpTimeout");
         props.add("outputClass");
         props.add("outputFormat");
         props.add("ragTemplate");
@@ -43,10 +46,15 @@ public class SpringAiChatEndpointUriFactory extends org.apache.camel.support.com
         props.add("safeguardSensitiveWords");
         props.add("similarityThreshold");
         props.add("structuredOutputConverter");
+        props.add("structuredOutputValidation");
+        props.add("structuredOutputValidationMaxAttempts");
         props.add("systemMessage");
         props.add("systemMetadata");
         props.add("tags");
         props.add("temperature");
+        props.add("toolCallbacks");
+        props.add("toolContext");
+        props.add("toolNames");
         props.add("topK");
         props.add("topKSampling");
         props.add("topP");
@@ -55,7 +63,10 @@ public class SpringAiChatEndpointUriFactory extends org.apache.camel.support.com
         props.add("vectorStore");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         SECRET_PROPERTY_NAMES = Collections.emptySet();
-        MULTI_VALUE_PREFIXES = Collections.emptyMap();
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
+        Map<String, String> prefixes = new HashMap<>(1);
+        prefixes.put("mcpServer", "mcpServer.");
+        MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
     }
 
     @Override
@@ -83,6 +94,11 @@ public class SpringAiChatEndpointUriFactory extends org.apache.camel.support.com
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

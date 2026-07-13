@@ -23,13 +23,17 @@ import org.apache.camel.dsl.jbang.it.support.JBangTestSupport;
 import org.assertj.core.api.Assertions;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
+
+@DisabledOnOs(WINDOWS)
 public class JolokiaITCase extends JBangTestSupport {
 
     @Test
     public void testAttachJolokia() throws IOException {
         copyResourceInDataFolder(TestResources.DIR_ROUTE);
-        String processID = executeBackground(String.format("run %s/FromDirectoryRoute.java", mountPoint()));
+        String process = executeBackground(String.format("run %s/FromDirectoryRoute.java", mountPoint()));
         checkLogContains("(FromDirectoryRoute) started");
         execute("jolokia FromDirectoryRoute");
         Assertions.assertThat(execInContainer("curl http://127.0.0.1:8778/jolokia/"))
@@ -37,8 +41,7 @@ public class JolokiaITCase extends JBangTestSupport {
                 .contains("\"agentContext\":\"/jolokia\"");
         Assertions.assertThat(execute("jolokia FromDirectoryRoute --stop"))
                 .as("Jolokia should stop")
-                .contains("Stopped Jolokia for PID " + processID);
-
+                .contains("Stopped Jolokia for PID " + process);
     }
 
     @Test
@@ -46,7 +49,7 @@ public class JolokiaITCase extends JBangTestSupport {
         copyResourceInDataFolder(TestResources.DIR_ROUTE);
         executeBackground(String.format("run %s/FromDirectoryRoute.java", mountPoint()));
         checkLogContains("(FromDirectoryRoute) started");
-        execInContainer("nohup camel hawtio FromDirectoryRoute &");
+        execNohup("hawtio FromDirectoryRoute");
         Awaitility.await()
                 .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofSeconds(1))

@@ -119,22 +119,28 @@ public class MQ2Producer extends DefaultProducer {
     private void listBrokers(MqClient mqClient, Exchange exchange) throws InvalidPayloadException {
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof ListBrokersRequest) {
+            if (payload instanceof ListBrokersRequest listBrokersRequest) {
                 ListBrokersResponse result;
                 try {
-                    result = mqClient.listBrokers((ListBrokersRequest) payload);
+                    result = mqClient.listBrokers(listBrokersRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("List Brokers command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
                 }
                 Message message = getMessageForResponse(exchange);
                 message.setBody(result);
+                message.setHeader(MQ2Constants.NEXT_TOKEN, result.nextToken());
+                message.setHeader(MQ2Constants.IS_TRUNCATED, ObjectHelper.isNotEmpty(result.nextToken()));
             }
         } else {
             ListBrokersRequest.Builder builder = ListBrokersRequest.builder();
-            if (ObjectHelper.isNotEmpty(exchange.getIn().getHeader(MQ2Constants.MAX_RESULTS))) {
-                int maxResults = exchange.getIn().getHeader(MQ2Constants.MAX_RESULTS, Integer.class);
+            Integer maxResults = getOptionalHeader(exchange, MQ2Constants.MAX_RESULTS, Integer.class);
+            if (ObjectHelper.isNotEmpty(maxResults)) {
                 builder.maxResults(maxResults);
+            }
+            String nextToken = getOptionalHeader(exchange, MQ2Constants.NEXT_TOKEN, String.class);
+            if (ObjectHelper.isNotEmpty(nextToken)) {
+                builder.nextToken(nextToken);
             }
             ListBrokersResponse result;
             try {
@@ -145,6 +151,8 @@ public class MQ2Producer extends DefaultProducer {
             }
             Message message = getMessageForResponse(exchange);
             message.setBody(result);
+            message.setHeader(MQ2Constants.NEXT_TOKEN, result.nextToken());
+            message.setHeader(MQ2Constants.IS_TRUNCATED, ObjectHelper.isNotEmpty(result.nextToken()));
         }
     }
 
@@ -159,10 +167,10 @@ public class MQ2Producer extends DefaultProducer {
         List<User> users;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof CreateBrokerRequest) {
+            if (payload instanceof CreateBrokerRequest createBrokerRequest) {
                 CreateBrokerResponse result;
                 try {
-                    result = mqClient.createBroker((CreateBrokerRequest) payload);
+                    result = mqClient.createBroker(createBrokerRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Create Broker command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -223,6 +231,8 @@ public class MQ2Producer extends DefaultProducer {
             }
             Message message = getMessageForResponse(exchange);
             message.setBody(result);
+            message.setHeader(MQ2Constants.BROKER_ID, result.brokerId());
+            message.setHeader(MQ2Constants.BROKER_ARN, result.brokerArn());
         }
     }
 
@@ -230,10 +240,10 @@ public class MQ2Producer extends DefaultProducer {
         String brokerId;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof DeleteBrokerRequest) {
+            if (payload instanceof DeleteBrokerRequest deleteBrokerRequest) {
                 DeleteBrokerResponse result;
                 try {
-                    result = mqClient.deleteBroker((DeleteBrokerRequest) payload);
+                    result = mqClient.deleteBroker(deleteBrokerRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Delete Broker command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -265,10 +275,10 @@ public class MQ2Producer extends DefaultProducer {
         String brokerId;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof RebootBrokerRequest) {
+            if (payload instanceof RebootBrokerRequest rebootBrokerRequest) {
                 RebootBrokerResponse result;
                 try {
-                    result = mqClient.rebootBroker((RebootBrokerRequest) payload);
+                    result = mqClient.rebootBroker(rebootBrokerRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Reboot Broker command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -301,10 +311,10 @@ public class MQ2Producer extends DefaultProducer {
         ConfigurationId configurationId;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof UpdateBrokerRequest) {
+            if (payload instanceof UpdateBrokerRequest updateBrokerRequest) {
                 UpdateBrokerResponse result;
                 try {
-                    result = mqClient.updateBroker((UpdateBrokerRequest) payload);
+                    result = mqClient.updateBroker(updateBrokerRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Update Broker command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -342,10 +352,10 @@ public class MQ2Producer extends DefaultProducer {
         String brokerId;
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof DescribeBrokerRequest) {
+            if (payload instanceof DescribeBrokerRequest describeBrokerRequest) {
                 DescribeBrokerResponse result;
                 try {
-                    result = mqClient.describeBroker((DescribeBrokerRequest) payload);
+                    result = mqClient.describeBroker(describeBrokerRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Reboot Broker command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -365,16 +375,25 @@ public class MQ2Producer extends DefaultProducer {
             try {
                 result = mqClient.describeBroker(builder.build());
             } catch (AwsServiceException ase) {
-                LOG.trace("Reboot Broker command returned the error code {}", ase.awsErrorDetails().errorCode());
+                LOG.trace("Describe Broker command returned the error code {}", ase.awsErrorDetails().errorCode());
                 throw ase;
             }
             Message message = getMessageForResponse(exchange);
             message.setBody(result);
+            message.setHeader(MQ2Constants.BROKER_ARN, result.brokerArn());
+            message.setHeader(MQ2Constants.BROKER_STATE, result.brokerStateAsString());
         }
     }
 
     public static Message getMessageForResponse(final Exchange exchange) {
         return exchange.getMessage();
+    }
+
+    /**
+     * Gets an optional header value.
+     */
+    private <T> T getOptionalHeader(Exchange exchange, String headerName, Class<T> headerType) {
+        return exchange.getIn().getHeader(headerName, headerType);
     }
 
     @Override
@@ -385,7 +404,7 @@ public class MQ2Producer extends DefaultProducer {
                 "producers",
                 WritableHealthCheckRepository.class);
 
-        if (healthCheckRepository != null) {
+        if (ObjectHelper.isNotEmpty(healthCheckRepository)) {
             String id = getEndpoint().getId();
             producerHealthCheck = new MQ2ProducerHealthCheck(getEndpoint(), id);
             producerHealthCheck.setEnabled(getEndpoint().getComponent().isHealthCheckProducerEnabled());
@@ -395,7 +414,7 @@ public class MQ2Producer extends DefaultProducer {
 
     @Override
     protected void doStop() throws Exception {
-        if (healthCheckRepository != null && producerHealthCheck != null) {
+        if (ObjectHelper.isNotEmpty(healthCheckRepository) && ObjectHelper.isNotEmpty(producerHealthCheck)) {
             healthCheckRepository.removeHealthCheck(producerHealthCheck);
             producerHealthCheck = null;
         }

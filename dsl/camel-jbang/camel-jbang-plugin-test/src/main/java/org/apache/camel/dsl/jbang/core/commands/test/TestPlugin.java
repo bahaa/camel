@@ -16,38 +16,48 @@
  */
 package org.apache.camel.dsl.jbang.core.commands.test;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
-import org.apache.camel.RuntimeCamelException;
+import org.apache.camel.catalog.VersionHelper;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
-import org.apache.camel.dsl.jbang.core.commands.ExportHelper;
 import org.apache.camel.dsl.jbang.core.common.CamelJBangPlugin;
 import org.apache.camel.dsl.jbang.core.common.Plugin;
 import org.apache.camel.dsl.jbang.core.common.PluginExporter;
-import org.apache.camel.util.IOHelper;
+import org.apache.camel.dsl.jbang.core.common.Printer;
 import org.citrusframework.CitrusVersion;
-import org.citrusframework.jbang.JBangSettings;
-import org.citrusframework.jbang.JBangSupport;
-import org.citrusframework.jbang.ProcessAndOutput;
+import org.citrusframework.jbang.CitrusJBangMain;
+import org.citrusframework.jbang.commands.Agent;
+import org.citrusframework.jbang.commands.AgentRun;
+import org.citrusframework.jbang.commands.AgentStart;
+import org.citrusframework.jbang.commands.AgentStop;
+import org.citrusframework.jbang.commands.CitrusCommand;
+import org.citrusframework.jbang.commands.Inspect;
+import org.citrusframework.jbang.commands.ListTests;
+import org.citrusframework.jbang.commands.Run;
 import picocli.CommandLine;
 
 @CamelJBangPlugin(name = "camel-jbang-plugin-test", firstVersion = "4.14.0")
 public class TestPlugin implements Plugin {
 
+    public static final String TEST_DIR = "test";
+
     @Override
     public void customize(CommandLine commandLine, CamelJBangMain main) {
-        commandLine.setExecutionStrategy(new CitrusExecutionStrategy(main))
-                .addSubcommand("test", new CommandLine(new TestCommand(main))
-                        .setUnmatchedArgumentsAllowed(true)
-                        .setUnmatchedOptionsAllowedAsOptionParameters(true));
+        CitrusJBangMain citrus = new CitrusJBangMain();
+        citrus.withPrinter(new PipedPrinter(main.getOut()));
+
+        var cmd = new CommandLine(new TestCommand(main))
+                .addSubcommand("init", new CommandLine(new TestInit(citrus)))
+                .addSubcommand("inspect", new CommandLine(new Inspect(citrus)))
+                .addSubcommand("run", new CommandLine(new Run(citrus)))
+                .addSubcommand("ps", new CommandLine(new ListTests(citrus)), "ls")
+                .addSubcommand("agent", new CommandLine(new Agent(citrus))
+                        .addSubcommand("start", new CommandLine(new AgentStart(citrus)))
+                        .addSubcommand("run", new CommandLine(new AgentRun(citrus)))
+                        .addSubcommand("stop", new CommandLine(new AgentStop(citrus))));
+
+        commandLine.addSubcommand("test", cmd)
+                .setExecutionStrategy(new CitrusExecutionStrategy(main));
     }
 
     @Override
@@ -56,106 +66,88 @@ public class TestPlugin implements Plugin {
     }
 
     /**
-     * Command execution strategy delegates to Citrus JBang for subcommands like init or run. Performs special command
-     * preparations and makes sure to run the proper Citrus version for this Camel release.
-     *
-     * @param main Camel JBang main that provides the output printer.
+     * Command execution strategy performs special command preparations and makes sure to set and run the proper Citrus
+     * version for this Camel release.
      */
     private record CitrusExecutionStrategy(CamelJBangMain main) implements CommandLine.IExecutionStrategy {
-
-        public static final String TEST_DIR = "test";
 
         @Override
         public int execute(CommandLine.ParseResult parseResult)
                 throws CommandLine.ExecutionException, CommandLine.ParameterException {
 
-            String command;
-            List<String> args = Collections.emptyList();
-
-            if (parseResult.originalArgs().size() > 2) {
-                command = parseResult.originalArgs().get(1);
-                args = parseResult.originalArgs().subList(2, parseResult.originalArgs().size());
-            } else if (parseResult.originalArgs().size() == 2) {
-                command = parseResult.originalArgs().get(1);
-            } else {
-                // run help command by default
-                command = "--help";
+            if (!parseResult.errors().isEmpty() || !parseResult.unmatched().isEmpty()) {
+                // Something is wrong with the command - do not adjust anything
+                return new CommandLine.RunLast().execute(parseResult);
             }
 
-            JBangSupport citrus = JBangSupport.jbang().app(JBangSettings.getApp())
-                    .withSystemProperty("citrus.jbang.version", CitrusVersion.version());
+            if (isCitrusCommand(parseResult)) {
+                System.setProperty("citrus.jbang.version", CitrusVersion.version());
+                System.setProperty("citrus.camel.jbang.version", new VersionHelper().getVersion());
 
-            // Prepare commands
-            if ("init".equals(command)) {
-                prepareInitCommand(citrus);
-            } else if ("run".equals(command)) {
-                args = prepareRunCommand(citrus, args);
-            }
+                if (!isCamelLauncherRuntime()) {
+                    var tccLoader = Thread.currentThread().getContextClassLoader();
+                    try {
+                        // Update class loader so Citrus is able to resolve resources
+                        ClassLoader cl = TestPlugin.class.getClassLoader();
+                        Thread.currentThread().setContextClassLoader(cl);
 
-            ProcessAndOutput pao = citrus.run(command, args);
-            main.getOut().print(pao.getOutput());
-            return pao.getProcess().exitValue();
-        }
-
-        /**
-         * Prepare init command. Automatically uses test subfolder as a working directory for creating new tests.
-         * Automatically adds a jbang.properties configuration to add required Camel Citrus dependencies.
-         */
-        private void prepareInitCommand(JBangSupport citrus) {
-            Path currentDir = Paths.get(".");
-            Path workingDir;
-            // Automatically set test subfolder as a working directory
-            if (TEST_DIR.equals(currentDir.getFileName().toString())) {
-                // current directory is already the test subfolder
-                workingDir = currentDir;
-            } else if (currentDir.resolve(TEST_DIR).toFile().exists()) {
-                // navigate to existing test subfolder
-                workingDir = currentDir.resolve(TEST_DIR);
-                citrus.workingDir(workingDir);
-            } else if (currentDir.resolve(TEST_DIR).toFile().mkdirs()) {
-                // create test subfolder and navigate to it
-                workingDir = currentDir.resolve(TEST_DIR);
-                citrus.workingDir(workingDir);
-            } else {
-                throw new RuntimeCamelException("Cannot create test working directory in: " + currentDir);
-            }
-
-            // Create jbang properties with default dependencies if not present
-            if (!workingDir.resolve("jbang.properties").toFile().exists()) {
-                Path jbangProperties = workingDir.resolve("jbang.properties");
-                try (InputStream is
-                        = TestPlugin.class.getClassLoader().getResourceAsStream("templates/jbang-properties.tmpl")) {
-                    String context = IOHelper.loadText(is);
-
-                    context = context.replaceAll("\\{\\{ \\.CitrusVersion }}", CitrusVersion.version());
-
-                    ExportHelper.safeCopy(new ByteArrayInputStream(context.getBytes(StandardCharsets.UTF_8)), jbangProperties);
-                } catch (Exception e) {
-                    main.getOut().println("Failed to create jbang.properties for tests in:" + jbangProperties);
-                }
-            }
-        }
-
-        /**
-         * Prepare run command. Automatically navigates to test subfolder if it is present and uses this as a working
-         * directory.
-         */
-        private List<String> prepareRunCommand(JBangSupport citrus, List<String> args) {
-            Path currentDir = Paths.get(".");
-            // automatically navigate to test subfolder for test execution
-            if (currentDir.resolve(TEST_DIR).toFile().exists()) {
-                // set test subfolder as working directory
-                citrus.workingDir(currentDir.resolve(TEST_DIR));
-
-                // remove test folder prefix in test file path if present
-                if (!args.isEmpty() && args.get(0).startsWith(TEST_DIR + "/")) {
-                    List<String> newArgs = new ArrayList<>(args.subList(1, args.size()));
-                    newArgs.add(0, args.get(0).substring((TEST_DIR + "/").length()));
-                    return newArgs;
+                        return new CommandLine.RunLast().execute(parseResult);
+                    } finally {
+                        Thread.currentThread().setContextClassLoader(tccLoader);
+                    }
                 }
             }
 
-            return args;
+            return new CommandLine.RunLast().execute(parseResult);
+        }
+
+        /**
+         * Evaluate if the current runtime is using Camel Launcher. Camel launcher sets a System property marking the
+         * runtime nature. If the System property is not present we can assume that the runtime is something different
+         * e.g. Camel JBang.
+         */
+        private boolean isCamelLauncherRuntime() {
+            return Boolean.parseBoolean(System.getProperty("camel.launcher", "false"));
+        }
+
+        /**
+         * Evaluate command user object and check if this is a Citrus command implementation.
+         */
+        private boolean isCitrusCommand(CommandLine.ParseResult parseResult) {
+            CommandLine.ParseResult subcommand = parseResult;
+            while (subcommand.hasSubcommand()) {
+                subcommand = subcommand.subcommand();
+            }
+
+            Object commandObject = subcommand.commandSpec().userObject();
+            return commandObject instanceof CitrusCommand;
+        }
+    }
+
+    /**
+     * Delegates Citrus printer API methods to Camel printer implementation.
+     *
+     * @param delegate the Camel printer.
+     */
+    private record PipedPrinter(Printer delegate) implements org.citrusframework.jbang.Printer {
+        @Override
+        public void println() {
+            delegate.println();
+        }
+
+        @Override
+        public void println(String line) {
+            delegate.println(line);
+        }
+
+        @Override
+        public void print(String output) {
+            delegate.print(output);
+        }
+
+        @Override
+        public void printf(String format, Object... args) {
+            delegate.printf(format, args);
         }
     }
 }

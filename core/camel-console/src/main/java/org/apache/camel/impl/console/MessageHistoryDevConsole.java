@@ -17,15 +17,14 @@
 package org.apache.camel.impl.console;
 
 import java.io.LineNumberReader;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Route;
 import org.apache.camel.spi.BacklogTracer;
 import org.apache.camel.spi.BacklogTracerEventMessage;
 import org.apache.camel.spi.Configurer;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.Resource;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.console.AbstractDevConsole;
@@ -39,6 +38,8 @@ import org.apache.camel.util.json.Jsoner;
 @Configurer(extended = true)
 public class MessageHistoryDevConsole extends AbstractDevConsole {
 
+    @Metadata(label = "query", description = "Number of source code lines around the location to include",
+              javaType = "java.lang.Integer", defaultValue = "5")
     public static final String CODE_LIMIT = "codeLimit";
 
     public MessageHistoryDevConsole() {
@@ -63,7 +64,7 @@ public class MessageHistoryDevConsole extends AbstractDevConsole {
     protected JsonObject doCallJson(Map<String, Object> options) {
         JsonObject root = new JsonObject();
 
-        String codeLimit = (String) options.getOrDefault(CODE_LIMIT, "5");
+        int codeLimit = optionInt(options, CODE_LIMIT, 5);
 
         BacklogTracer tracer = getCamelContext().getCamelContextExtension().getContextPlugin(BacklogTracer.class);
         if (tracer != null) {
@@ -74,12 +75,12 @@ public class MessageHistoryDevConsole extends AbstractDevConsole {
                 JsonObject to = (JsonObject) t.asJSon();
 
                 // enrich with source code +/- lines around location
-                int limit = Integer.parseInt(codeLimit);
+                int limit = codeLimit;
                 if (limit > 0) {
                     String rid = to.getString("routeId");
                     String loc = to.getString("location");
                     if (rid != null) {
-                        List<JsonObject> code = enrichSourceCode(rid, loc, limit);
+                        JsonArray code = enrichSourceCode(rid, loc, limit);
                         if (code != null && !code.isEmpty()) {
                             to.put("code", code);
                         }
@@ -95,7 +96,7 @@ public class MessageHistoryDevConsole extends AbstractDevConsole {
         return root;
     }
 
-    private List<JsonObject> enrichSourceCode(String routeId, String location, int lines) {
+    private JsonArray enrichSourceCode(String routeId, String location, int lines) {
         Route route = getCamelContext().getRoute(routeId);
         if (route == null) {
             return null;
@@ -105,7 +106,7 @@ public class MessageHistoryDevConsole extends AbstractDevConsole {
             return null;
         }
 
-        List<JsonObject> code = new ArrayList<>();
+        JsonArray code = new JsonArray();
 
         location = StringHelper.afterLast(location, ":");
         int line = 0;

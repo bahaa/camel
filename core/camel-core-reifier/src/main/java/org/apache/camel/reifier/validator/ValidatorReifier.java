@@ -26,7 +26,6 @@ import org.apache.camel.model.validator.EndpointValidatorDefinition;
 import org.apache.camel.model.validator.PredicateValidatorDefinition;
 import org.apache.camel.model.validator.ValidatorDefinition;
 import org.apache.camel.reifier.AbstractReifier;
-import org.apache.camel.spi.ReifierStrategy;
 import org.apache.camel.spi.Validator;
 
 public abstract class ValidatorReifier<T> extends AbstractReifier {
@@ -37,7 +36,7 @@ public abstract class ValidatorReifier<T> extends AbstractReifier {
 
     protected final T definition;
 
-    public ValidatorReifier(CamelContext camelContext, T definition) {
+    protected ValidatorReifier(CamelContext camelContext, T definition) {
         super(camelContext);
         this.definition = definition;
     }
@@ -45,9 +44,6 @@ public abstract class ValidatorReifier<T> extends AbstractReifier {
     public static void registerReifier(
             Class<?> processorClass,
             BiFunction<CamelContext, ValidatorDefinition, ValidatorReifier<? extends ValidatorDefinition>> creator) {
-        if (VALIDATORS.isEmpty()) {
-            ReifierStrategy.addReifierClearer(ValidatorReifier::clearReifiers);
-        }
         VALIDATORS.put(processorClass, creator);
     }
 

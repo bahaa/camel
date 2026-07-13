@@ -18,6 +18,7 @@ package org.apache.camel.component.smpp;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import org.apache.camel.Message;
 import org.jsmpp.bean.Alphabet;
@@ -37,7 +38,7 @@ public abstract class SmppSmCommand extends AbstractSmppCommand {
 
     private final Logger logger = LoggerFactory.getLogger(SmppSmCommand.class);
 
-    public SmppSmCommand(SMPPSession session, SmppConfiguration config) {
+    protected SmppSmCommand(SMPPSession session, SmppConfiguration config) {
         super(session, config);
         defaultCharset = Charset.forName(config.getEncoding());
     }
@@ -54,7 +55,7 @@ public abstract class SmppSmCommand extends AbstractSmppCommand {
                 case ALLOW:
                     return segments;
                 case TRUNCATE:
-                    return new byte[][] { java.util.Arrays.copyOfRange(shortMessage, 0, segments[0].length) };
+                    return new byte[][] { Arrays.copyOfRange(shortMessage, 0, segments[0].length) };
                 case REJECT:
                     // FIXME - JSMPP needs to have an enum of the negative response
                     // codes instead of just using them like this

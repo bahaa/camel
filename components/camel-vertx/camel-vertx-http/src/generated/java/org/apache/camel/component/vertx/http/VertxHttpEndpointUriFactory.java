@@ -21,15 +21,17 @@ public class VertxHttpEndpointUriFactory extends org.apache.camel.support.compon
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(27);
+        Set<String> props = new HashSet<>(29);
         props.add("basicAuthPassword");
         props.add("basicAuthUsername");
         props.add("bearerToken");
         props.add("bridgeEndpoint");
         props.add("connectTimeout");
         props.add("cookieStore");
+        props.add("deserializationFilter");
         props.add("headerFilterStrategy");
         props.add("httpMethod");
         props.add("httpUri");
@@ -47,12 +49,18 @@ public class VertxHttpEndpointUriFactory extends org.apache.camel.support.compon
         props.add("sslContextParameters");
         props.add("throwExceptionOnFailure");
         props.add("timeout");
+        props.add("tracingPolicy");
         props.add("transferException");
         props.add("useCompression");
         props.add("vertxHttpBinding");
         props.add("webClientOptions");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
-        SECRET_PROPERTY_NAMES = Collections.emptySet();
+        Set<String> secretProps = new HashSet<>(3);
+        secretProps.add("basicAuthPassword");
+        secretProps.add("bearerToken");
+        secretProps.add("proxyPassword");
+        SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
@@ -81,6 +89,11 @@ public class VertxHttpEndpointUriFactory extends org.apache.camel.support.compon
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

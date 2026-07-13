@@ -16,15 +16,15 @@
  */
 package org.apache.camel.util.concurrent;
 
-import java.util.concurrent.ThreadFactory;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Thread factory which creates threads supporting a naming pattern.
+ * Thread factory which creates threads supporting a naming pattern. On JDK 21+, this factory creates virtual threads
+ * when the System property {@code camel.threads.virtual.enabled} is set to {@code true}. On JDK 17, only platform
+ * threads are available.
  */
-public final class CamelThreadFactory implements ThreadFactory {
+public final class CamelThreadFactory implements ThreadFactoryTypeAware {
     private static final Logger LOG = LoggerFactory.getLogger(CamelThreadFactory.class);
 
     private final String pattern;
@@ -38,8 +38,14 @@ public final class CamelThreadFactory implements ThreadFactory {
     }
 
     @Override
+    public boolean isVirtual() {
+        return false;
+    }
+
+    @Override
     public Thread newThread(Runnable runnable) {
         String threadName = ThreadHelper.resolveThreadName(pattern, name);
+
         Thread answer = new Thread(runnable, threadName);
         answer.setDaemon(daemon);
 

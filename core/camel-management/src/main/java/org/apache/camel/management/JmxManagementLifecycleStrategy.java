@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import javax.management.JMException;
@@ -62,6 +63,7 @@ import org.apache.camel.management.mbean.ManagedDumpRouteStrategy;
 import org.apache.camel.management.mbean.ManagedEndpoint;
 import org.apache.camel.management.mbean.ManagedEndpointRegistry;
 import org.apache.camel.management.mbean.ManagedEndpointServiceRegistry;
+import org.apache.camel.management.mbean.ManagedErrorRegistry;
 import org.apache.camel.management.mbean.ManagedExchangeFactoryManager;
 import org.apache.camel.management.mbean.ManagedInflightRepository;
 import org.apache.camel.management.mbean.ManagedProducerCache;
@@ -71,6 +73,7 @@ import org.apache.camel.management.mbean.ManagedRouteGroup;
 import org.apache.camel.management.mbean.ManagedRuntimeEndpointRegistry;
 import org.apache.camel.management.mbean.ManagedService;
 import org.apache.camel.management.mbean.ManagedShutdownStrategy;
+import org.apache.camel.management.mbean.ManagedSimpleFunctionRepository;
 import org.apache.camel.management.mbean.ManagedStreamCachingStrategy;
 import org.apache.camel.management.mbean.ManagedTaskManagerRegistry;
 import org.apache.camel.management.mbean.ManagedThrottlingExceptionRoutePolicy;
@@ -95,6 +98,7 @@ import org.apache.camel.spi.DataFormat;
 import org.apache.camel.spi.DumpRoutesStrategy;
 import org.apache.camel.spi.EndpointRegistry;
 import org.apache.camel.spi.EndpointServiceRegistry;
+import org.apache.camel.spi.ErrorRegistry;
 import org.apache.camel.spi.EventNotifier;
 import org.apache.camel.spi.ExchangeFactoryManager;
 import org.apache.camel.spi.InflightRepository;
@@ -109,6 +113,7 @@ import org.apache.camel.spi.ProducerCache;
 import org.apache.camel.spi.RestRegistry;
 import org.apache.camel.spi.RuntimeEndpointRegistry;
 import org.apache.camel.spi.ShutdownStrategy;
+import org.apache.camel.spi.SimpleFunctionRegistry;
 import org.apache.camel.spi.StreamCachingStrategy;
 import org.apache.camel.spi.Tracer;
 import org.apache.camel.spi.TransformerRegistry;
@@ -147,7 +152,7 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
     private final Set<String> knowRouteIds = new HashSet<>();
     private final Map<BacklogTracer, ManagedBacklogTracer> managedBacklogTracers = new HashMap<>();
     private final Map<DefaultBacklogDebugger, ManagedBacklogDebugger> managedBacklogDebuggers = new HashMap<>();
-    private final Map<ThreadPoolExecutor, Object> managedThreadPools = new HashMap<>();
+    private final Map<Object, Object> managedThreadPools = new HashMap<>();
 
     public JmxManagementLifecycleStrategy() {
     }
@@ -580,6 +585,8 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
             answer = new ManagedEndpointServiceRegistry(context, endpointServiceRegistry);
         } else if (service instanceof InflightRepository inflightRepository) {
             answer = new ManagedInflightRepository(context, inflightRepository);
+        } else if (service instanceof ErrorRegistry errorRegistry) {
+            answer = new ManagedErrorRegistry(context, errorRegistry);
         } else if (service instanceof AsyncProcessorAwaitManager asyncProcessorAwaitManager) {
             answer = new ManagedAsyncProcessorAwaitManager(context, asyncProcessorAwaitManager);
         } else if (service instanceof RuntimeEndpointRegistry runtimeEndpointRegistry) {
@@ -600,6 +607,8 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
             answer = new ManagedTaskManagerRegistry(camelContext, registry);
         } else if (service instanceof CamelClusterService camelClusterService) {
             answer = getManagementObjectStrategy().getManagedObjectForClusterService(context, camelClusterService);
+        } else if (service instanceof SimpleFunctionRegistry registry) {
+            answer = new ManagedSimpleFunctionRepository(context, registry);
         } else if (service != null) {
             // fallback as generic service
             answer = getManagementObjectStrategy().getManagedObjectForService(context, service);
@@ -800,6 +809,62 @@ public class JmxManagementLifecycleStrategy extends ServiceSupport implements Li
             // skip unmanaged routes
             if (!getManagementStrategy().isManaged(mtp)) {
                 LOG.trace("The thread pool is not managed: {}", threadPool);
+                return;
+            }
+
+            try {
+                unmanageObject(mtp);
+            } catch (Exception e) {
+                LOG.warn("Could not unregister ThreadPool MBean", e);
+            }
+        }
+    }
+
+    @Override
+    public void onThreadPoolAdd(
+            CamelContext camelContext, ExecutorService executorService, String id,
+            String sourceId, String routeId, String threadPoolProfileId) {
+
+        if (!initialized) {
+            preServices
+                    .add(lf -> lf.onThreadPoolAdd(camelContext, executorService, id, sourceId, routeId,
+                            threadPoolProfileId));
+            return;
+        }
+
+        if (!shouldRegister(executorService, null)) {
+            return;
+        }
+
+        Object mtp = getManagementObjectStrategy().getManagedObjectForThreadPool(camelContext, executorService, id, sourceId,
+                routeId, threadPoolProfileId);
+        if (mtp == null) {
+            return;
+        }
+
+        if (getManagementStrategy().isManaged(mtp)) {
+            LOG.trace("The executor service is already managed: {}", executorService);
+            return;
+        }
+
+        try {
+            manageObject(mtp);
+            managedThreadPools.put(executorService, mtp);
+        } catch (Exception e) {
+            LOG.warn("Could not register executor service: {} as ThreadPool MBean.", executorService, e);
+        }
+    }
+
+    @Override
+    public void onThreadPoolRemove(CamelContext camelContext, ExecutorService executorService) {
+        if (!initialized) {
+            return;
+        }
+
+        Object mtp = managedThreadPools.remove(executorService);
+        if (mtp != null) {
+            if (!getManagementStrategy().isManaged(mtp)) {
+                LOG.trace("The executor service is not managed: {}", executorService);
                 return;
             }
 

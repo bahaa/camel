@@ -20,8 +20,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.itest.utils.extensions.FtpServiceExtension;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
-import org.junit.jupiter.api.BeforeAll;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -29,12 +28,9 @@ public class FtpAndHttpRecipientListInterceptSendToEndpointIssueTest extends Cam
     @RegisterExtension
     public static FtpServiceExtension ftpServiceExtension = new FtpServiceExtension();
 
-    protected static int httpPort;
-
-    @BeforeAll
-    public static void initPort() throws Exception {
-        httpPort = AvailablePortFinder.getNextAvailable();
-    }
+    @RegisterExtension
+    static AvailablePortFinder.Port httpPortFinder = AvailablePortFinder.find();
+    protected static int httpPort = httpPortFinder.getPort();
 
     @Test
     void testFtpAndHttpIssue() throws Exception {

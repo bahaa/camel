@@ -16,6 +16,7 @@
  */
 package org.apache.camel.dsl.jbang.core.commands;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.lang.reflect.Field;
@@ -30,6 +31,8 @@ import java.util.stream.Stream;
 
 import org.apache.camel.catalog.CamelCatalog;
 import org.apache.camel.catalog.DefaultCamelCatalog;
+import org.apache.camel.dsl.jbang.core.common.LauncherHelper;
+import org.apache.camel.dsl.jbang.core.common.RuntimeType;
 import org.apache.camel.main.download.MavenDependencyDownloader;
 import org.apache.camel.tooling.maven.MavenArtifact;
 import org.apache.camel.util.FileUtil;
@@ -71,6 +74,26 @@ public final class RunHelper {
             }
         }
         return answer;
+    }
+
+    public static RuntimeType detectRuntimeFromPom(Path pomPath) {
+        try {
+            Model model = loadMavenModel(pomPath);
+            if (model != null && model.getDependencyManagement() != null) {
+                for (Dependency d : model.getDependencyManagement().getDependencies()) {
+                    String a = d.getArtifactId();
+                    if ("camel-spring-boot-bom".equals(a) || "spring-boot-dependencies".equals(a)) {
+                        return RuntimeType.springBoot;
+                    }
+                    if ("quarkus-bom".equals(a) || "quarkus-camel-bom".equals(a)) {
+                        return RuntimeType.quarkus;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return null;
     }
 
     public static List<String> scanMavenDependenciesFromPom(Path pomPath) throws Exception {
@@ -163,7 +186,7 @@ public final class RunHelper {
         return value;
     }
 
-    public static List<String> scanMavenOrGradleProject(Path parentPath) {
+    public static List<String> scanMavenProject(Path parentPath) {
         List<String> answer = new ArrayList<>();
 
         // scan as maven based project
@@ -223,7 +246,7 @@ public final class RunHelper {
 
     // Keep for backward compatibility
     @Deprecated
-    public static String findMavenProperty(java.io.File f, String placeholder, MavenDependencyDownloader downloader) {
+    public static String findMavenProperty(File f, String placeholder, MavenDependencyDownloader downloader) {
         return findMavenProperty(f.toPath(), placeholder, downloader);
     }
 
@@ -305,12 +328,7 @@ public final class RunHelper {
      * Adds camel to the start of the list of commands to make it possible to run camel-jbang using a spawned process
      * (to run in background).
      */
-    public static void addCamelJBangCommand(List<String> cmds) {
-        if (FileUtil.isWindows()) {
-            String jbangDir = System.getenv().getOrDefault("JBANG_DIR", System.getProperty("user.home") + "\\.jbang");
-            cmds.add(0, jbangDir + "\\bin\\camel.cmd");
-        } else {
-            cmds.add(0, "camel");
-        }
+    public static void addCamelCLICommand(List<String> cmds) {
+        cmds.addAll(0, LauncherHelper.getCamelCommand());
     }
 }

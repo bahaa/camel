@@ -28,7 +28,6 @@ import io.fabric8.kubernetes.client.dsl.base.ResourceDefinitionContext;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.util.StringHelper;
-import org.codehaus.plexus.util.ExceptionUtils;
 import picocli.CommandLine;
 
 import static org.apache.camel.dsl.jbang.core.commands.kubernetes.KubernetesHelper.getKubernetesClient;
@@ -44,6 +43,10 @@ public class KubernetesDelete extends KubernetesBaseCommand {
     }
 
     public Integer doCall() throws Exception {
+        if (name == null || name.isBlank()) {
+            printer().printErr("Missing required --name option or integration name");
+            return 1;
+        }
         var client = getKubernetesClient();
         namespace = Optional.ofNullable(namespace).orElse(client.getNamespace());
         namespace = Optional.ofNullable(namespace).orElse("default");
@@ -100,7 +103,11 @@ public class KubernetesDelete extends KubernetesBaseCommand {
             }
         } catch (Exception ex) {
             // there could be various chained exceptions, so we want to get the root cause
-            printer().println("Error trying to delete the app: " + ExceptionUtils.getRootCause(ex));
+            Throwable rootCause = ex;
+            while (rootCause.getCause() != null) {
+                rootCause = rootCause.getCause();
+            }
+            printer().println("Error trying to delete the app: " + rootCause);
             return 1;
         }
         return 0;

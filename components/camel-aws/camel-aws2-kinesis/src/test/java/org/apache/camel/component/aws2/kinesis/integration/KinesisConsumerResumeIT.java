@@ -35,7 +35,7 @@ import org.apache.camel.test.infra.aws.common.services.AWSService;
 import org.apache.camel.test.infra.aws2.clients.AWSSDKClientUtils;
 import org.apache.camel.test.infra.aws2.services.AWSServiceFactory;
 import org.apache.camel.test.infra.common.TestUtils;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.util.ObjectHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +55,6 @@ import software.amazon.awssdk.services.kinesis.model.ShardIteratorType;
 import static org.apache.camel.test.infra.aws2.clients.KinesisUtils.createStream;
 import static org.apache.camel.test.infra.aws2.clients.KinesisUtils.deleteStream;
 import static org.apache.camel.test.infra.aws2.clients.KinesisUtils.putRecords;
-import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -188,11 +187,11 @@ public class KinesisConsumerResumeIT extends CamelTestSupport {
     @DisplayName("Tests that the component can resume messages from AWS Kinesis")
     @Timeout(value = 3, unit = TimeUnit.MINUTES)
     @Test
-    void testProduceMessages() {
+    void testProduceMessages() throws Exception {
         result.expectedMessageCount(expectedCount);
 
-        await().atMost(2, TimeUnit.MINUTES)
-                .untilAsserted(() -> result.assertIsSatisfied());
+        result.setResultWaitTime(120000);
+        result.assertIsSatisfied();
 
         assertEquals(expectedCount, receivedMessages.size());
         for (KinesisData data : receivedMessages) {

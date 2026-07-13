@@ -26,7 +26,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.bindy.model.simple.linkonetomany.Order;
 import org.apache.camel.dataformat.bindy.model.simple.linkonetomany.OrderItem;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
@@ -50,9 +50,11 @@ public class BindyMarshalOneToManyWithHeadersTest {
     @Test
     @DirtiesContext
     public void testMarshallMessage() throws Exception {
-        expected = "orderNumber,customerName,sku,quantity,unitPrice\r\n"
-                   + "11111,Joe Blow,abc,1,3\r\n"
-                   + "11111,Joe Blow,cde,3,2\r\n";
+        expected = """
+                orderNumber,customerName,sku,quantity,unitPrice\r
+                11111,Joe Blow,abc,1,3\r
+                11111,Joe Blow,cde,3,2\r
+                """;
 
         result.expectedBodiesReceived(expected);
 

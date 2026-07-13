@@ -43,8 +43,12 @@ import org.apache.hc.core5.http.message.BasicClassicHttpRequest;
 import org.apache.hc.core5.http.message.BasicClassicHttpResponse;
 import org.apache.hc.core5.http.message.MessageSupport;
 import org.bouncycastle.cms.jcajce.ZlibExpanderProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class HttpMessageUtils {
+
+    private static final Logger LOG = LoggerFactory.getLogger(HttpMessageUtils.class);
 
     private HttpMessageUtils() {
     }
@@ -75,7 +79,7 @@ public final class HttpMessageUtils {
         } else if (message instanceof BasicClassicHttpResponse httpResponse) {
             HttpEntity entity = httpResponse.getEntity();
             if (entity != null && type.isInstance(entity)) {
-                type.cast(entity);
+                return type.cast(entity);
             }
         }
         return null;
@@ -89,7 +93,7 @@ public final class HttpMessageUtils {
         if (header == null) {
             return null;
         }
-        for (HeaderElement headerElement : MessageSupport.parse(header)) {
+        for (HeaderElement headerElement : MessageSupport.parseElements(header)) {
             for (NameValuePair nameValuePair : headerElement.getParameters()) {
                 if (nameValuePair.getName().equalsIgnoreCase(parameterName)) {
                     return nameValuePair.getValue();
@@ -152,10 +156,23 @@ public final class HttpMessageUtils {
                 }
                 break;
             }
-            default:
-                throw new HttpException(
-                        "Failed to extract EDI message: invalid content type '" + contentType.getMimeType()
-                                        + "' for AS2 request message");
+            default: {
+                // Accept non-standard content types (e.g., text/plain, application/octet-stream)
+                // that real-world AS2 partners may use to wrap EDI payloads
+                if (decrpytingAndSigningInfo.getValidateSigningCertificateChain() != null) {
+                    throw new AS2InsufficientSecurityException("Failed to validate the signature");
+                }
+                if (decrpytingAndSigningInfo.getDecryptingPrivateKey() != null) {
+                    throw new AS2InsufficientSecurityException("Expected to be encrypted");
+                }
+                ediEntity = getEntity(message, ApplicationEntity.class);
+                if (ediEntity == null) {
+                    throw new HttpException(
+                            "Failed to extract EDI message: could not parse entity with content type '"
+                                            + contentType.getMimeType() + "'");
+                }
+                break;
+            }
         }
 
         return ediEntity;
@@ -193,6 +210,33 @@ public final class HttpMessageUtils {
         return ediEntity;
     }
 
+    /**
+     * Verifies the signature of an inbound signed entity, or decides how to handle a signed message that cannot be
+     * verified. When a validation chain is configured, the signature is validated and an invalid one is rejected. When
+     * no validation chain is configured, the message cannot be verified: it is rejected when
+     * {@code signatureVerificationRequired} is set, otherwise the unverified payload is delivered after logging a
+     * warning (preserving the previous behaviour).
+     */
+    private static void verifySignedEntity(
+            MultipartSignedEntity multipartSignedEntity, DecrpytingAndSigningInfo decrpytingAndSigningInfo)
+            throws HttpException {
+        Certificate[] validateSigningCertificateChain = decrpytingAndSigningInfo.getValidateSigningCertificateChain();
+        if (validateSigningCertificateChain != null) {
+            if (!SigningUtils.isValid(multipartSignedEntity, validateSigningCertificateChain)) {
+                throw new AS2AuthenticationException("Failed to validate the signature");
+            }
+        } else if (decrpytingAndSigningInfo.isSignatureVerificationRequired()) {
+            throw new AS2InsufficientSecurityException(
+                    "Signature verification is required but no validateSigningCertificateChain is configured"
+                                                       + " to verify the inbound signed AS2 message");
+        } else {
+            LOG.warn("Received a signed AS2 message but no validateSigningCertificateChain is configured;"
+                     + " delivering the payload without verifying its signature."
+                     + " Configure validateSigningCertificateChain to verify the signature,"
+                     + " or set signatureVerificationRequired=true to reject such messages.");
+        }
+    }
+
     private static ApplicationEntity extractMultipartSigned(
             HttpMessage message, DecrpytingAndSigningInfo decrpytingAndSigningInfo)
             throws HttpException {
@@ -203,10 +247,7 @@ public final class HttpMessageUtils {
         Objects.requireNonNull(multipartSignedEntity,
                 "Failed to extract EDI payload: the multipart signed entity is null");
 
-        if (decrpytingAndSigningInfo.getValidateSigningCertificateChain() != null && !SigningUtils
-                .isValid(multipartSignedEntity, decrpytingAndSigningInfo.getValidateSigningCertificateChain())) {
-            throw new AS2AuthenticationException("Failed to validate the signature");
-        }
+        verifySignedEntity(multipartSignedEntity, decrpytingAndSigningInfo);
 
         MimeEntity mimeEntity = multipartSignedEntity.getSignedDataEntity();
         if (mimeEntity instanceof ApplicationEntity) {
@@ -245,10 +286,7 @@ public final class HttpMessageUtils {
             }
             case AS2MimeType.MULTIPART_SIGNED: {
                 MultipartSignedEntity multipartSignedEntity = (MultipartSignedEntity) entity;
-                if (decrpytingAndSigningInfo.getValidateSigningCertificateChain() != null && !SigningUtils
-                        .isValid(multipartSignedEntity, decrpytingAndSigningInfo.getValidateSigningCertificateChain())) {
-                    throw new AS2AuthenticationException("Failed to validate the signature");
-                }
+                verifySignedEntity(multipartSignedEntity, decrpytingAndSigningInfo);
 
                 MimeEntity mimeEntity = multipartSignedEntity.getSignedDataEntity();
                 if (mimeEntity instanceof ApplicationEntity) {
@@ -274,10 +312,20 @@ public final class HttpMessageUtils {
                 ediEntity = extractEdiPayloadFromCompressedEntity(compressedDataEntity, decrpytingAndSigningInfo, false);
                 break;
             }
-            default:
-                throw new HttpException(
-                        "Failed to extract EDI payload: invalid content type '" + contentType.getMimeType()
-                                        + "' for AS2 enveloped entity");
+            default: {
+                // Accept non-standard content types within enveloped entities
+                if (decrpytingAndSigningInfo.getValidateSigningCertificateChain() != null) {
+                    throw new AS2InsufficientSecurityException("Failed to validate the signature");
+                }
+                if (entity instanceof ApplicationEntity) {
+                    ediEntity = (ApplicationEntity) entity;
+                } else {
+                    throw new HttpException(
+                            "Failed to extract EDI payload: invalid content type '" + contentType.getMimeType()
+                                            + "' for AS2 enveloped entity");
+                }
+                break;
+            }
         }
 
         return ediEntity;
@@ -309,10 +357,7 @@ public final class HttpMessageUtils {
             }
             case AS2MimeType.MULTIPART_SIGNED: {
                 MultipartSignedEntity multipartSignedEntity = (MultipartSignedEntity) entity;
-                if (decrpytingAndSigningInfo.getValidateSigningCertificateChain() != null && !SigningUtils
-                        .isValid(multipartSignedEntity, decrpytingAndSigningInfo.getValidateSigningCertificateChain())) {
-                    throw new AS2AuthenticationException("Failed to validate the signature");
-                }
+                verifySignedEntity(multipartSignedEntity, decrpytingAndSigningInfo);
 
                 MimeEntity mimeEntity = multipartSignedEntity.getSignedDataEntity();
                 if (mimeEntity instanceof ApplicationEntity applicationEntity) {
@@ -325,10 +370,20 @@ public final class HttpMessageUtils {
                 }
                 break;
             }
-            default:
-                throw new HttpException(
-                        "Failed to extract EDI payload: invalid content type '" + contentType.getMimeType()
-                                        + "' for AS2 compressed entity");
+            default: {
+                // Accept non-standard content types within compressed entities
+                if (!hasValidSignature && decrpytingAndSigningInfo.getValidateSigningCertificateChain() != null) {
+                    throw new AS2InsufficientSecurityException("Failed to validate the signature");
+                }
+                if (entity instanceof ApplicationEntity) {
+                    ediEntity = (ApplicationEntity) entity;
+                } else {
+                    throw new HttpException(
+                            "Failed to extract EDI payload: invalid content type '" + contentType.getMimeType()
+                                            + "' for AS2 compressed entity");
+                }
+                break;
+            }
         }
 
         return ediEntity;
@@ -337,10 +392,17 @@ public final class HttpMessageUtils {
     public static class DecrpytingAndSigningInfo {
         private final Certificate[] validateSigningCertificateChain;
         private final PrivateKey decryptingPrivateKey;
+        private final boolean signatureVerificationRequired;
 
         public DecrpytingAndSigningInfo(Certificate[] validateSigningCertificateChain, PrivateKey decryptingPrivateKey) {
+            this(validateSigningCertificateChain, decryptingPrivateKey, false);
+        }
+
+        public DecrpytingAndSigningInfo(Certificate[] validateSigningCertificateChain, PrivateKey decryptingPrivateKey,
+                                        boolean signatureVerificationRequired) {
             this.validateSigningCertificateChain = validateSigningCertificateChain;
             this.decryptingPrivateKey = decryptingPrivateKey;
+            this.signatureVerificationRequired = signatureVerificationRequired;
         }
 
         public Certificate[] getValidateSigningCertificateChain() {
@@ -349,6 +411,10 @@ public final class HttpMessageUtils {
 
         public PrivateKey getDecryptingPrivateKey() {
             return decryptingPrivateKey;
+        }
+
+        public boolean isSignatureVerificationRequired() {
+            return signatureVerificationRequired;
         }
 
     }

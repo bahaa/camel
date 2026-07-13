@@ -72,7 +72,7 @@ class KubernetesRunTest extends KubernetesBaseTestSupport {
     @MethodSource("runtimeProvider")
     public void shouldHandleMissingSourceFile(RuntimeType rt) throws Exception {
         KubernetesRun command = createCommand(List.of("mickey-mouse.groovy"),
-                "--disable-auto=true", "--output=yaml", "--runtime=" + rt.runtime(), "--java-version=17");
+                "--disable-auto=true", "--output=yaml", "--runtime=" + rt.runtime(), "--java-version=21");
         int exit = command.doCall();
 
         Assertions.assertEquals(1, exit);
@@ -86,12 +86,12 @@ class KubernetesRunTest extends KubernetesBaseTestSupport {
                 "--gav=examples:route:1.0.0", "--runtime=quarkus", "--name=my-route-props",
                 "--disable-auto=true", "--image-registry=quay.io", "--image-group=camel-test", "--output=yaml",
                 "--property=a=b", "--property=c=d", "--property=src/test/resources/my-route-props1.properties",
-                "--property=file:src/test/resources/my-route-props2.properties", "--java-version=17");
+                "--property=file:src/test/resources/my-route-props2.properties", "--java-version=21");
         int exit = command.doCall();
         Assertions.assertEquals(0, exit);
 
         Properties materializedProps = new Properties();
-        String propsFilepath = ".camel-jbang-run/my-route-props/src/main/resources/application.properties";
+        String propsFilepath = runPlatformDir + "/my-route-props/src/main/resources/application.properties";
         try (FileInputStream input = new FileInputStream(new File(propsFilepath))) {
             materializedProps.load(input);
         }
@@ -108,7 +108,7 @@ class KubernetesRunTest extends KubernetesBaseTestSupport {
         KubernetesRun command = createCommand(List.of("classpath:route.yaml"),
                 "--disable-auto=true", "--image-registry=quay.io", "--image-group=camel-test", "--output=yaml",
                 "--trait", "container.image-pull-policy=IfNotPresent",
-                "--runtime=" + rt.runtime(), "--java-version=17");
+                "--runtime=" + rt.runtime(), "--java-version=21");
         int exit = command.doCall();
 
         Assertions.assertEquals(0, exit);
@@ -133,6 +133,7 @@ class KubernetesRunTest extends KubernetesBaseTestSupport {
         Assertions.assertEquals("route", matchLabels.get(BaseTrait.KUBERNETES_LABEL_NAME));
         Assertions.assertEquals("quay.io/camel-test/route:1.0-SNAPSHOT", containers.get(0).getImage());
         Assertions.assertEquals("IfNotPresent", containers.get(0).getImagePullPolicy());
+        Assertions.assertEquals("route", labels.get("camel.apache.org/app"));
 
         // verify the container health probes path to /observe accordingly to the camel-observability-services
         if (RuntimeType.quarkus == RuntimeType.fromValue(rt.runtime())) {
@@ -156,7 +157,7 @@ class KubernetesRunTest extends KubernetesBaseTestSupport {
     public void shouldGenerateKubernetesCronjobManifest(RuntimeType rt) throws Exception {
         KubernetesRun command = createCommand(List.of("classpath:route.yaml"),
                 "--disable-auto=true", "--image-registry=quay.io", "--image-group=camel-test", "--output=yaml",
-                "--service-account=my-svc-account", "--runtime=" + rt.runtime(), "--java-version=17");
+                "--service-account=my-svc-account", "--runtime=" + rt.runtime(), "--java-version=21");
         command.traits = new String[] {
                 "cronjob.enabled=true",
                 "cronjob.schedule=\"0 22 * * 1-5\"",
@@ -195,7 +196,7 @@ class KubernetesRunTest extends KubernetesBaseTestSupport {
     @MethodSource("runtimeProvider")
     public void shouldHandleUnsupportedOutputFormat(RuntimeType rt) throws Exception {
         KubernetesRun command = createCommand(List.of("classpath:route.yaml"),
-                "--disable-auto=true", "--output=wrong", "--runtime=" + rt.runtime(), "--java-version=17");
+                "--disable-auto=true", "--output=wrong", "--runtime=" + rt.runtime(), "--java-version=21");
 
         Assertions.assertEquals(1, command.doCall());
         Assertions.assertTrue(printer.getOutput().endsWith("ERROR: Unsupported output format 'wrong' (supported: yaml, json)"));
@@ -207,7 +208,7 @@ class KubernetesRunTest extends KubernetesBaseTestSupport {
         KubernetesRun command = createCommand(List.of("classpath:route.yaml"),
                 "--disable-auto=true", "--image-registry=quay.io", "--image-group=camel-test", "--output=yaml",
                 "--namespace", "custom",
-                "--runtime=" + rt.runtime(), "--java-version=17");
+                "--runtime=" + rt.runtime(), "--java-version=21");
         int exit = command.doCall();
 
         Assertions.assertEquals(0, exit);
@@ -232,13 +233,19 @@ class KubernetesRunTest extends KubernetesBaseTestSupport {
         Assertions.assertEquals("route", labels.get(BaseTrait.KUBERNETES_LABEL_NAME));
         Assertions.assertEquals("route", matchLabels.get(BaseTrait.KUBERNETES_LABEL_NAME));
         Assertions.assertEquals("quay.io/camel-test/route:1.0-SNAPSHOT", containers.get(0).getImage());
+        Assertions.assertEquals("route", labels.get("camel.apache.org/app"));
     }
 
     private KubernetesRun createCommand(List<String> files, String... args) {
         var argsArr = Optional.ofNullable(args).orElse(new String[0]);
         var argsLst = new ArrayList<>(Arrays.asList(argsArr));
         var jbangMain = new CamelJBangMain().withPrinter(printer);
-        KubernetesRun command = new KubernetesRun(jbangMain, files);
+        KubernetesRun command = new KubernetesRun(jbangMain, files) {
+            @Override
+            String getRunPlatformDir() {
+                return runPlatformDir;
+            }
+        };
         CommandLine.populateCommand(command, argsLst.toArray(new String[0]));
         command.imageBuild = false;
         command.imagePush = false;

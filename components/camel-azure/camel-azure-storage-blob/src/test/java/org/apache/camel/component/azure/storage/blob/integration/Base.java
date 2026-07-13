@@ -24,7 +24,7 @@ import org.apache.camel.test.infra.azure.common.AzureConfigs;
 import org.apache.camel.test.infra.azure.common.services.AzureService;
 import org.apache.camel.test.infra.azure.storage.blob.clients.AzureStorageBlobClientUtils;
 import org.apache.camel.test.infra.azure.storage.blob.services.AzureStorageBlobServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -74,7 +74,7 @@ public class Base extends CamelTestSupport {
 
     @BeforeAll
     public void initProperties() {
-        containerName = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+        containerName = RandomStringUtils.secure().nextAlphabetic(5).toLowerCase();
 
         configuration = new BlobConfiguration();
         configuration.setCredentialType(SHARED_KEY_CREDENTIAL);

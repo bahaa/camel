@@ -40,7 +40,7 @@ import org.apache.camel.component.langchain4j.embeddingstore.LangChain4jEmbeddin
 import org.apache.camel.component.langchain4j.embeddingstore.LangChain4jEmbeddingStoreHeaders;
 import org.apache.camel.test.infra.qdrant.services.QdrantService;
 import org.apache.camel.test.infra.qdrant.services.QdrantServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -142,6 +142,49 @@ public class LangChain4jEmbeddingStoreComponentQdrantTargetIT extends CamelTestS
 
     @Test
     @Order(3)
+    public void searchWithEndpointProperties() {
+        EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
+
+        TextSegment segment1 = TextSegment.from("I like football.");
+        Embedding embedding = embeddingModel.embed(segment1).content();
+
+        // Test using action as endpoint property (no header needed)
+        Exchange result = fluentTemplate.to("direct:searchWithEndpointProperties")
+                .withHeader(LangChain4jEmbeddingsHeaders.EMBEDDING, embedding)
+                .request(Exchange.class);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getException()).isNull();
+
+        List<EmbeddingMatch<TextSegment>> embeddingMatches = (List) result.getIn().getBody();
+        assertThat(embeddingMatches).isNotNull();
+        assertTrue(embeddingMatches.size() > 0);
+    }
+
+    @Test
+    @Order(4)
+    public void searchWithReturnTextContent() {
+        EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
+
+        TextSegment segment1 = TextSegment.from("I like football.");
+        Embedding embedding = embeddingModel.embed(segment1).content();
+
+        // Test using returnTextContent option
+        Exchange result = fluentTemplate.to("direct:searchWithReturnTextContent")
+                .withHeader(LangChain4jEmbeddingsHeaders.EMBEDDING, embedding)
+                .request(Exchange.class);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getException()).isNull();
+
+        List<String> textResults = (List<String>) result.getIn().getBody();
+        assertThat(textResults).isNotNull();
+        assertTrue(textResults.size() > 0);
+        assertThat(textResults.get(0)).isEqualTo("I like football.");
+    }
+
+    @Test
+    @Order(5)
     public void remove() {
         Exchange result = fluentTemplate.to("direct:remove")
                 .withHeader(LangChain4jEmbeddingStoreHeaders.ACTION, LangChain4jEmbeddingStoreAction.REMOVE)
@@ -170,6 +213,14 @@ public class LangChain4jEmbeddingStoreComponentQdrantTargetIT extends CamelTestS
                         .to("langchain4j-embeddingstore:test")
                         .setHeader(LangChain4jEmbeddingStoreHeaders.ACTION, constant(LangChain4jEmbeddingStoreAction.REMOVE))
                         .to(QDRANT_URI);
+
+                // Route using action as endpoint property
+                from("direct:searchWithEndpointProperties")
+                        .to(QDRANT_URI + "?action=SEARCH&maxResults=3");
+
+                // Route using returnTextContent option
+                from("direct:searchWithReturnTextContent")
+                        .to(QDRANT_URI + "?action=SEARCH&maxResults=5&returnTextContent=true");
             }
         };
     }

@@ -22,7 +22,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,7 +52,8 @@ public class AdditionalMailPropertiesTest extends CamelTestSupport {
 
         MockEndpoint mock = getMockEndpoint("mock:result");
 
-        template.sendBodyAndHeader(user.uriPrefix(Protocol.smtp), "Hello james how are you?\r\n", "subject", "Hello");
+        template.sendBodyAndHeader(user.uriPrefix(Protocol.smtp) + "&useHeaderSubject=true", "Hello james how are you?\r\n",
+                "subject", "Hello");
 
         mock.expectedBodiesReceived("Hello james how are you?\r\n");
         mock.expectedHeaderReceived("subject", "Hello");

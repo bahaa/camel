@@ -20,9 +20,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.commands.CommandHelper;
+import org.apache.camel.dsl.jbang.core.common.EnvironmentHelper;
 import org.apache.camel.util.StopWatch;
-import org.fusesource.jansi.Ansi;
-import org.fusesource.jansi.AnsiConsole;
+import org.jline.jansi.Ansi;
+import org.jline.jansi.AnsiConsole;
+import org.jline.terminal.Terminal;
 import picocli.CommandLine;
 
 /**
@@ -34,9 +36,13 @@ abstract class ProcessWatchCommand extends ProcessBaseCommand {
                         description = "Execute periodically and showing output fullscreen")
     boolean watch;
 
+    @CommandLine.Option(names = { "--json" },
+                        description = "Output in JSON Format")
+    boolean jsonOutput;
+
     private CommandHelper.ReadConsoleTask waitUserTask;
 
-    public ProcessWatchCommand(CamelJBangMain main) {
+    protected ProcessWatchCommand(CamelJBangMain main) {
         super(main);
     }
 
@@ -44,7 +50,10 @@ abstract class ProcessWatchCommand extends ProcessBaseCommand {
     public Integer doCall() throws Exception {
         int exit;
         final AtomicBoolean running = new AtomicBoolean(true);
-        if (watch) {
+        if (watch && EnvironmentHelper.isEmbedded()) {
+            printer().println("Tip: use the TUI tabs for live monitoring");
+            exit = doProcessWatchCall();
+        } else if (watch) {
             Thread t = new Thread(() -> {
                 waitUserTask = new CommandHelper.ReadConsoleTask(() -> running.set(false));
                 waitUserTask.run();
@@ -76,7 +85,13 @@ abstract class ProcessWatchCommand extends ProcessBaseCommand {
     }
 
     protected void clearScreen() {
-        AnsiConsole.out().print(Ansi.ansi().eraseScreen().cursor(1, 1));
+        Terminal t = EnvironmentHelper.getActiveTerminal();
+        if (t != null) {
+            t.writer().print("\033[2J\033[H");
+            t.writer().flush();
+        } else {
+            AnsiConsole.out().print(Ansi.ansi().eraseScreen().cursor(1, 1));
+        }
     }
 
     protected abstract Integer doProcessWatchCall() throws Exception;

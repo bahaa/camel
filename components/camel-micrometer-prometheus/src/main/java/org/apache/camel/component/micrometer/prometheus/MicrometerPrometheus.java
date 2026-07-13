@@ -33,7 +33,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.impl.BlockingHandlerDecorator;
 import org.apache.camel.CamelContext;
 import org.apache.camel.StaticService;
 import org.apache.camel.api.management.ManagedResource;
@@ -104,10 +103,16 @@ public class MicrometerPrometheus extends ServiceSupport implements CamelMetrics
     private boolean clearOnReload = true;
     @Metadata(defaultValue = "false")
     private boolean skipCamelInfo = false;
+    @Metadata(defaultValue = "false")
+    private boolean logMetricsOnShutdown = false;
+    @Metadata(defaultValue = "json", enums = "json,prometheus")
+    private String logMetricsOnShutdownFormat = "json";
     @Metadata(defaultValue = "0.0.4", enums = "0.0.4,1.0.0")
     private String textFormatVersion = "0.0.4";
     @Metadata
     private String binders;
+    @Metadata
+    private String logMetricsOnShutdownFilters;
     @Metadata(defaultValue = "/observe/metrics")
     private String path = "/observe/metrics";
 
@@ -222,7 +227,7 @@ public class MicrometerPrometheus extends ServiceSupport implements CamelMetrics
     }
 
     /**
-     * Clear the captured metrics data when Camel is reloading routes such as when using Camel JBang.
+     * Clear the captured metrics data when Camel is reloading routes such as when using Camel CLI.
      */
     public void setClearOnReload(boolean clearOnReload) {
         this.clearOnReload = clearOnReload;
@@ -237,6 +242,17 @@ public class MicrometerPrometheus extends ServiceSupport implements CamelMetrics
      */
     public void setSkipCamelInfo(boolean skipCamelInfo) {
         this.skipCamelInfo = skipCamelInfo;
+    }
+
+    public boolean isLogMetricsOnShutdown() {
+        return logMetricsOnShutdown;
+    }
+
+    /**
+     * Log metrics when application is shutting down. (default, `false`).
+     */
+    public void setLogMetricsOnShutdown(boolean logMetricsOnShutdown) {
+        this.logMetricsOnShutdown = logMetricsOnShutdown;
     }
 
     public String getTextFormatVersion() {
@@ -278,6 +294,30 @@ public class MicrometerPrometheus extends ServiceSupport implements CamelMetrics
      */
     public void setBinders(String binders) {
         this.binders = binders;
+    }
+
+    public String getLogMetricsOnShutdownFilters() {
+        return logMetricsOnShutdownFilters;
+    }
+
+    /**
+     * List of metrics (comma separated) to log when application is shutting down. You can use `*` character to log any
+     * metrics containing the wildcard, for example `camel.exchanges.*` (default to all metrics available).
+     */
+    public void setLogMetricsOnShutdownFilters(String logMetricsOnShutdownFilters) {
+        this.logMetricsOnShutdownFilters = logMetricsOnShutdownFilters;
+    }
+
+    public String getLogMetricsOnShutdownFormat() {
+        return logMetricsOnShutdownFormat;
+    }
+
+    /**
+     * Format of metrics to log when application is shutting down. Either `json` (default) or `prometheus` format
+     * accepted.
+     */
+    public void setLogMetricsOnShutdownFormat(String logMetricsOnShutdownFormat) {
+        this.logMetricsOnShutdownFormat = logMetricsOnShutdownFormat;
     }
 
     @Override
@@ -331,6 +371,15 @@ public class MicrometerPrometheus extends ServiceSupport implements CamelMetrics
         if (isEnableExchangeEventNotifier()) {
             MicrometerExchangeEventNotifier notifier = new MicrometerExchangeEventNotifier();
             notifier.setSkipCamelInfo(isSkipCamelInfo());
+            // We delegate the print to the notifier only when the format
+            // configuration is json. If prometheus, we must take care in this component instead
+            if (getLogMetricsOnShutdownFormat().equals("json")) {
+                notifier.setLogMetricsOnShutdown(isLogMetricsOnShutdown());
+                if (getLogMetricsOnShutdownFilters() != null) {
+                    String[] meterFilters = getLogMetricsOnShutdownFilters().split(",");
+                    notifier.setLogMetricsOnShutdownFilters(meterFilters);
+                }
+            }
             notifier.setBaseEndpointURI(isBaseEndpointURIExchangeEventNotifier());
             if ("legacy".equalsIgnoreCase(namingStrategy)) {
                 notifier.setNamingStrategy(
@@ -451,6 +500,44 @@ public class MicrometerPrometheus extends ServiceSupport implements CamelMetrics
     }
 
     @Override
+    protected void doStop() {
+        // NOTE: this components only takes care to trace when we set the "prometheus" format
+        if (logMetricsOnShutdown && logMetricsOnShutdownFormat.equals("prometheus")) {
+            LOG.warn("Micrometer service is stopping, here a list of metrics collected so far.");
+            // Default: all metrics
+            logMetricsOnShutdown(
+                    logMetricsOnShutdownFilters == null ? new String[] { "*" } : logMetricsOnShutdownFilters.split(","));
+        }
+    }
+
+    void logMetricsOnShutdown(String... filters) {
+        String[] scrapes = meterRegistry.scrape().split("\n");
+        for (String s : scrapes) {
+            if (matchesFilter(s, filters)) {
+                // we include a start and end tag to make sure the
+                // scraper can more easily identify the metric content.
+                LOG.info("#METRIC-START#" + s + "#METRIC-END#");
+            }
+        }
+    }
+
+    static boolean matchesFilter(String line, String... filters) {
+        for (String filter : filters) {
+            // Prometheus format does not use . but _ instead
+            filter = filter.replaceAll("\\.", "_");
+
+            if (filter.contains("*")) {
+                if (line.contains(filter.replace("*", ""))) {
+                    return true;
+                }
+            } else if (line.contains(filter)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
     protected void doShutdown() throws Exception {
         super.doShutdown();
 
@@ -487,7 +574,7 @@ public class MicrometerPrometheus extends ServiceSupport implements CamelMetrics
         };
 
         // use blocking handler as the task can take longer time to complete
-        metrics.handler(new BlockingHandlerDecorator(handler, true));
+        metrics.blockingHandler(handler);
 
         platformHttpComponent.addHttpManagementEndpoint(path, "GET",
                 null, format, null);

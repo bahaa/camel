@@ -21,9 +21,10 @@ public class CouchbaseEndpointUriFactory extends org.apache.camel.support.compon
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(49);
+        Set<String> props = new HashSet<>(52);
         props.add("additionalHosts");
         props.add("autoStartIdForInserts");
         props.add("backoffErrorThreshold");
@@ -33,6 +34,7 @@ public class CouchbaseEndpointUriFactory extends org.apache.camel.support.compon
         props.add("bucket");
         props.add("collection");
         props.add("connectTimeout");
+        props.add("connectionString");
         props.add("consumerProcessedStrategy");
         props.add("consumerRetryPause");
         props.add("delay");
@@ -69,8 +71,10 @@ public class CouchbaseEndpointUriFactory extends org.apache.camel.support.compon
         props.add("skip");
         props.add("startScheduler");
         props.add("startingIdForInsertsFrom");
+        props.add("statement");
         props.add("timeUnit");
         props.add("useFixedDelay");
+        props.add("useView");
         props.add("username");
         props.add("viewName");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
@@ -78,6 +82,9 @@ public class CouchbaseEndpointUriFactory extends org.apache.camel.support.compon
         secretProps.add("password");
         secretProps.add("username");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
+        Set<String> identityProps = new HashSet<>(1);
+        identityProps.add("bucket");
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.unmodifiableSet(identityProps);
         Map<String, String> prefixes = new HashMap<>(1);
         prefixes.put("schedulerProperties", "scheduler.");
         MULTI_VALUE_PREFIXES = Collections.unmodifiableMap(prefixes);
@@ -110,6 +117,11 @@ public class CouchbaseEndpointUriFactory extends org.apache.camel.support.compon
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

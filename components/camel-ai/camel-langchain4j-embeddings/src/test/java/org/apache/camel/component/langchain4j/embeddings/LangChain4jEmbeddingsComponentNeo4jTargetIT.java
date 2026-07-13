@@ -33,7 +33,7 @@ import org.apache.camel.component.neo4j.Neo4jHeaders;
 import org.apache.camel.spi.DataType;
 import org.apache.camel.test.infra.neo4j.services.Neo4jService;
 import org.apache.camel.test.infra.neo4j.services.Neo4jServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -165,7 +165,7 @@ public class LangChain4jEmbeddingsComponentNeo4jTargetIT extends CamelTestSuppor
                         .setHeader(Neo4jHeaders.OPERATION).constant(Neo4Operation.CREATE_VECTOR)
                         .setHeader(Neo4jHeaders.VECTOR_ID).constant("1")
                         .setHeader(Neo4jHeaders.LABEL).constant("Test")
-                        .transformDataType(new org.apache.camel.spi.DataType("neo4j:embeddings"))
+                        .transformDataType(new DataType("neo4j:embeddings"))
                         .to(NEO4J_URI);
 
                 from("direct:search")

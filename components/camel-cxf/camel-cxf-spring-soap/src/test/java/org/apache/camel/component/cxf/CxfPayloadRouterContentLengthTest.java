@@ -25,7 +25,7 @@ import io.undertow.util.HttpString;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.cxf.common.CXFTestSupport;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.apache.camel.util.IOHelper;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -36,6 +36,7 @@ import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.AbstractApplicationContext;
@@ -69,12 +70,13 @@ public class CxfPayloadRouterContentLengthTest extends CamelSpringTestSupport {
                                                   + "</s:Body></s:Envelope>";
 
     // The Camel-Test with CXF will re-use undertow instances, so the ports1 to 6 are already blocked
-    private static final int UNDERTOW_PORT = AvailablePortFinder.getNextAvailable();
+    @RegisterExtension
+    static AvailablePortFinder.Port UNDERTOW_PORT = AvailablePortFinder.find();
 
     private Undertow server;
 
     static {
-        System.setProperty("CXFTestSupport.undertowPort", Integer.toString(UNDERTOW_PORT));
+        System.setProperty("CXFTestSupport.undertowPort", Integer.toString(UNDERTOW_PORT.getPort()));
     }
 
     @Override
@@ -84,9 +86,9 @@ public class CxfPayloadRouterContentLengthTest extends CamelSpringTestSupport {
          * the response. The response must contain only a Content-Type and a
          * Content-Length but no other header
          */
-        LOG.info("Starting undertow server at port {}", UNDERTOW_PORT);
+        LOG.info("Starting undertow server at port {}", UNDERTOW_PORT.getPort());
         server = Undertow.builder()
-                .addHttpListener(UNDERTOW_PORT, "localhost")
+                .addHttpListener(UNDERTOW_PORT.getPort(), "localhost")
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange httpServerExchange) throws Exception {

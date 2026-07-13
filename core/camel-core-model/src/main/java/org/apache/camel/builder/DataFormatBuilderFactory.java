@@ -32,6 +32,7 @@ import org.apache.camel.model.dataformat.FhirXmlDataFormat;
 import org.apache.camel.model.dataformat.FlatpackDataFormat;
 import org.apache.camel.model.dataformat.ForyDataFormat;
 import org.apache.camel.model.dataformat.GrokDataFormat;
+import org.apache.camel.model.dataformat.GroovyJSonDataFormat;
 import org.apache.camel.model.dataformat.GroovyXmlDataFormat;
 import org.apache.camel.model.dataformat.GzipDeflaterDataFormat;
 import org.apache.camel.model.dataformat.HL7DataFormat;
@@ -43,7 +44,9 @@ import org.apache.camel.model.dataformat.JsonApiDataFormat;
 import org.apache.camel.model.dataformat.JsonDataFormat;
 import org.apache.camel.model.dataformat.LZFDataFormat;
 import org.apache.camel.model.dataformat.MimeMultipartDataFormat;
+import org.apache.camel.model.dataformat.OcsfDataFormat;
 import org.apache.camel.model.dataformat.PGPDataFormat;
+import org.apache.camel.model.dataformat.PQCDataFormat;
 import org.apache.camel.model.dataformat.ParquetAvroDataFormat;
 import org.apache.camel.model.dataformat.ProtobufDataFormat;
 import org.apache.camel.model.dataformat.RssDataFormat;
@@ -180,6 +183,13 @@ public final class DataFormatBuilderFactory {
     }
 
     /**
+     * Uses the Groovy JSon format
+     */
+    public GroovyJSonDataFormat.Builder groovyJson() {
+        return new GroovyJSonDataFormat.Builder();
+    }
+
+    /**
      * Uses the Groovy XML format
      */
     public GroovyXmlDataFormat.Builder groovyXml() {
@@ -257,6 +267,13 @@ public final class DataFormatBuilderFactory {
     }
 
     /**
+     * Uses the OCSF (Open Cybersecurity Schema Framework) data format
+     */
+    public OcsfDataFormat.Builder ocsf() {
+        return new OcsfDataFormat.Builder();
+    }
+
+    /**
      * Uses the protobuf data format
      */
     public ParquetAvroDataFormat.Builder parquetAvro() {
@@ -268,6 +285,13 @@ public final class DataFormatBuilderFactory {
      */
     public PGPDataFormat.Builder pgp() {
         return new PGPDataFormat.Builder();
+    }
+
+    /**
+     * Uses the PQC (Post-Quantum Cryptography) data format
+     */
+    public PQCDataFormat.Builder pqc() {
+        return new PQCDataFormat.Builder();
     }
 
     /**

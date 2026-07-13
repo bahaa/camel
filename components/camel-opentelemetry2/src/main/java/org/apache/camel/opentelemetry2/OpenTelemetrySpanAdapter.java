@@ -23,7 +23,6 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.context.Scope;
 import org.apache.camel.telemetry.TagConstants;
 
 public class OpenTelemetrySpanAdapter implements org.apache.camel.telemetry.Span {
@@ -32,7 +31,6 @@ public class OpenTelemetrySpanAdapter implements org.apache.camel.telemetry.Span
 
     private final Span otelSpan;
     private final Baggage baggage;
-    private Scope scope;
 
     protected OpenTelemetrySpanAdapter(Span otelSpan, Baggage baggage) {
         this.otelSpan = otelSpan;
@@ -44,7 +42,8 @@ public class OpenTelemetrySpanAdapter implements org.apache.camel.telemetry.Span
     }
 
     protected void makeCurrent() {
-        this.scope = this.otelSpan.makeCurrent();
+        // NOTE: we had changed the implementation not to depend
+        // any longer by thread scopes.
     }
 
     protected void end() {
@@ -52,9 +51,8 @@ public class OpenTelemetrySpanAdapter implements org.apache.camel.telemetry.Span
     }
 
     protected void close() {
-        if (scope != null) {
-            this.scope.close();
-        }
+        // NOTE: we had changed the implementation not to depend
+        // any longer by thread scopes
     }
 
     protected Baggage getBaggage() {
@@ -107,8 +105,8 @@ public class OpenTelemetrySpanAdapter implements org.apache.camel.telemetry.Span
                 attributesBuilder.put(key, ((Number) value).longValue());
             } else if (value instanceof Float || value instanceof Double) {
                 attributesBuilder.put(key, ((Number) value).doubleValue());
-            } else if (value instanceof Boolean) {
-                attributesBuilder.put(key, (Boolean) value);
+            } else if (value instanceof Boolean b) {
+                attributesBuilder.put(key, b);
             } else {
                 attributesBuilder.put(key, value.toString());
             }

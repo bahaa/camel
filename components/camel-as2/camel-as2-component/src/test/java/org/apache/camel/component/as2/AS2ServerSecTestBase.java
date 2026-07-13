@@ -57,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class AS2ServerSecTestBase extends AbstractAS2ITSupport {
 
     protected static final String TARGET_HOST = "localhost";
-    protected static final int TARGET_PORT = 8889;
+    protected int targetPort;
     protected static final Duration HTTP_SOCKET_TIMEOUT = Duration.ofSeconds(5);
     protected static final Duration HTTP_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
     protected static final Integer HTTP_CONNECTION_POOL_SIZE = 5;
@@ -71,32 +71,33 @@ public class AS2ServerSecTestBase extends AbstractAS2ITSupport {
     protected static final String CLIENT_FQDN = "example.org";
     protected static final String DISPOSITION_NOTIFICATION_TO = "mrAS@example.org";
     protected static final String SIGNED_RECEIPT_MIC_ALGORITHMS = "sha1,md5";
-    protected static final String EDI_MESSAGE = "UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'\n"
-                                                + "UNH+00000000000117+INVOIC:D:97B:UN'\n"
-                                                + "BGM+380+342459+9'\n"
-                                                + "DTM+3:20060515:102'\n"
-                                                + "RFF+ON:521052'\n"
-                                                + "NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'\n"
-                                                + "NAD+SE+005435656::16++GENERAL WIDGET COMPANY'\n"
-                                                + "CUX+1:USD'\n"
-                                                + "LIN+1++157870:IN'\n"
-                                                + "IMD+F++:::WIDGET'\n"
-                                                + "QTY+47:1020:EA'\n"
-                                                + "ALI+US'\n"
-                                                + "MOA+203:1202.58'\n"
-                                                + "PRI+INV:1.179'\n"
-                                                + "LIN+2++157871:IN'\n"
-                                                + "IMD+F++:::DIFFERENT WIDGET'\n"
-                                                + "QTY+47:20:EA'\n"
-                                                + "ALI+JP'\n"
-                                                + "MOA+203:410'\n"
-                                                + "PRI+INV:20.5'\n"
-                                                + "UNS+S'\n"
-                                                + "MOA+39:2137.58'\n"
-                                                + "ALC+C+ABG'\n"
-                                                + "MOA+8:525'\n"
-                                                + "UNT+23+00000000000117'\n"
-                                                + "UNZ+1+00000000000778'";
+    protected static final String EDI_MESSAGE = """
+            UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'
+            UNH+00000000000117+INVOIC:D:97B:UN'
+            BGM+380+342459+9'
+            DTM+3:20060515:102'
+            RFF+ON:521052'
+            NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'
+            NAD+SE+005435656::16++GENERAL WIDGET COMPANY'
+            CUX+1:USD'
+            LIN+1++157870:IN'
+            IMD+F++:::WIDGET'
+            QTY+47:1020:EA'
+            ALI+US'
+            MOA+203:1202.58'
+            PRI+INV:1.179'
+            LIN+2++157871:IN'
+            IMD+F++:::DIFFERENT WIDGET'
+            QTY+47:20:EA'
+            ALI+JP'
+            MOA+203:410'
+            PRI+INV:20.5'
+            UNS+S'
+            MOA+39:2137.58'
+            ALC+C+ABG'
+            MOA+8:525'
+            UNT+23+00000000000117'
+            UNZ+1+00000000000778'""";
     protected static KeyPair issueKP;
     protected static KeyPair signingKP;
     protected static X509Certificate signingCert;
@@ -106,6 +107,22 @@ public class AS2ServerSecTestBase extends AbstractAS2ITSupport {
     public static void setup() throws Exception {
         Security.addProvider(new BouncyCastleProvider());
         setupKeysAndCertificates();
+    }
+
+    @Override
+    protected void customizeConfiguration(AS2Configuration configuration) {
+        configuration.setServerPortNumber(0);
+    }
+
+    @Override
+    protected void doPostSetup() throws Exception {
+        super.doPostSetup();
+        for (var e : context.getEndpoints()) {
+            if (e instanceof AS2Endpoint as2e && as2e.getAS2ServerConnection() != null) {
+                targetPort = as2e.getAS2ServerConnection().getLocalPort();
+                break;
+            }
+        }
     }
 
     @Override
@@ -120,7 +137,7 @@ public class AS2ServerSecTestBase extends AbstractAS2ITSupport {
     }
 
     protected void verifyOkResponse(HttpCoreContext context) {
-        HttpResponse response = context.getAttribute(AS2ClientManager.HTTP_RESPONSE, HttpResponse.class);
+        HttpResponse response = context.getResponse();
         assertEquals(200, response.getCode());
     }
 
@@ -145,7 +162,7 @@ public class AS2ServerSecTestBase extends AbstractAS2ITSupport {
     protected void verifyMic(
             AS2MessageDispositionNotificationEntity messageDispositionNotificationEntity, HttpCoreContext context)
             throws HttpException {
-        HttpRequest request = context.getAttribute(AS2ClientManager.HTTP_REQUEST, HttpRequest.class);
+        HttpRequest request = context.getRequest();
         MicUtils.ReceivedContentMic computedContentMic = createReceivedContentMic(request);
         MicUtils.ReceivedContentMic receivedContentMic = messageDispositionNotificationEntity.getReceivedContentMic();
 
@@ -157,7 +174,7 @@ public class AS2ServerSecTestBase extends AbstractAS2ITSupport {
     }
 
     protected AS2MessageDispositionNotificationEntity getAs2MdnEntity(HttpCoreContext context) {
-        HttpResponse response = context.getAttribute(AS2ClientManager.HTTP_RESPONSE, HttpResponse.class);
+        HttpResponse response = context.getResponse();
 
         assert (response instanceof ClassicHttpResponse);
         ClassicHttpResponse classicHttpResponse = (ClassicHttpResponse) response;
@@ -184,10 +201,9 @@ public class AS2ServerSecTestBase extends AbstractAS2ITSupport {
     private HttpCoreContext generateInvalidCrypto(TriFunction<Certificate, KeyPair, Certificate, HttpCoreContext> fn)
             throws Exception {
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
-        kpg.initialize(1024, new SecureRandom());
+        kpg.initialize(2048, new SecureRandom());
         String invalidIssueDN = "O=Hackers Unlimited Ltd., C=US";
         var invalidIssueKP = kpg.generateKeyPair();
-        var invalidissueCert = Utils.makeCertificate(invalidIssueKP, invalidIssueDN, invalidIssueKP, invalidIssueDN);
 
         String invalidDN = "CN=John Doe, E=j.doe@sharklasers.com, O=Self Signed, C=US";
         var invalidKP = kpg.generateKeyPair();
@@ -225,7 +241,7 @@ public class AS2ServerSecTestBase extends AbstractAS2ITSupport {
     protected AS2ClientManager clientConnection() throws IOException {
         AS2ClientConnection clientConnection
                 = new AS2ClientConnection(
-                        AS2_VERSION, USER_AGENT, CLIENT_FQDN, TARGET_HOST, TARGET_PORT, HTTP_SOCKET_TIMEOUT,
+                        AS2_VERSION, USER_AGENT, CLIENT_FQDN, TARGET_HOST, targetPort, HTTP_SOCKET_TIMEOUT,
                         HTTP_CONNECTION_TIMEOUT, HTTP_CONNECTION_POOL_SIZE, HTTP_CONNECTION_POOL_TTL, null,
                         null);
         return new AS2ClientManager(clientConnection);
@@ -234,7 +250,7 @@ public class AS2ServerSecTestBase extends AbstractAS2ITSupport {
     protected static void setupKeysAndCertificates() throws Exception {
         // set up our certificates
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
-        kpg.initialize(1024, new SecureRandom());
+        kpg.initialize(2048, new SecureRandom());
 
         String issueDN = "O=Punkhorn Software, C=US";
         issueKP = kpg.generateKeyPair();

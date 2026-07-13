@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/objects/account",
+  "title": "Account",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.Account",
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "type": {
+      "type": "string",
+      "title": "Type"
+    },
+    "uid": {
+      "type": "string",
+      "title": "Unique ID"
+    },
+    "labels": {
+      "type": "array",
+      "title": "Labels",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "title": "Tags",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "type_id": {
+      "type": "integer",
+      "title": "Type ID"
+    },
+    "is_disabled": {
+      "type": "boolean",
+      "title": "Disabled"
+    },
+    "is_locked": {
+      "type": "boolean",
+      "title": "Locked"
+    },
+    "is_on_premises_sync_enabled": {
+      "type": "boolean",
+      "title": "On-Premises Sync Enabled"
+    }
+  },
+  "description": "The Account object."
+}

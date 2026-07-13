@@ -26,13 +26,13 @@ import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.Record;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * A set of test cases to make DNS lookups.
@@ -58,24 +58,20 @@ public class DnsLookupEndpointTest extends CamelTestSupport {
     @Test
     void testDNSWithNoHeaders() throws Exception {
         resultEndpoint.expectedMessageCount(0);
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             template.sendBody("hello");
-            fail("Should have thrown exception");
-        } catch (Exception t) {
-            assertTrue(t.getCause() instanceof IllegalArgumentException);
-        }
+        });
+        assertTrue(e.getCause() instanceof IllegalArgumentException);
         resultEndpoint.assertIsSatisfied();
     }
 
     @Test
     void testDNSWithEmptyNameHeader() throws Exception {
         resultEndpoint.expectedMessageCount(0);
-        try {
-            template.sendBodyAndHeader("hello", "dns.name", "");
-            fail("Should have thrown exception");
-        } catch (Exception t) {
-            assertTrue(t.getCause() instanceof IllegalArgumentException, t.toString());
-        }
+        Exception e = assertThrows(Exception.class, () -> {
+            template.sendBodyAndHeader("hello", DnsConstants.DNS_NAME, "");
+        });
+        assertTrue(e.getCause() instanceof IllegalArgumentException, e.toString());
         resultEndpoint.assertIsSatisfied();
     }
 
@@ -90,7 +86,7 @@ public class DnsLookupEndpointTest extends CamelTestSupport {
             }
         });
         Map<String, Object> headers = new HashMap<>();
-        headers.put("dns.name", "www.example.com");
+        headers.put(DnsConstants.DNS_NAME, "www.example.com");
         template.sendBodyAndHeaders("hello", headers);
         resultEndpoint.assertIsSatisfied();
     }
@@ -106,8 +102,8 @@ public class DnsLookupEndpointTest extends CamelTestSupport {
             }
         });
         Map<String, Object> headers = new HashMap<>();
-        headers.put("dns.name", "www.example.com");
-        headers.put("dns.type", "A");
+        headers.put(DnsConstants.DNS_NAME, "www.example.com");
+        headers.put(DnsConstants.DNS_TYPE, "A");
         template.sendBodyAndHeaders("hello", headers);
         resultEndpoint.assertIsSatisfied();
     }

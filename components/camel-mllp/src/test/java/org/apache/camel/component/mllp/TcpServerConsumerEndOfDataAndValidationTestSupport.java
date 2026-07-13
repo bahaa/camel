@@ -30,7 +30,7 @@ import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.junit.rule.mllp.MllpClientResource;
 import org.apache.camel.test.junit.rule.mllp.MllpJUnitResourceException;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.test.mllp.Hl7TestMessageGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -54,6 +54,9 @@ public abstract class TcpServerConsumerEndOfDataAndValidationTestSupport extends
     Logger log = LoggerFactory.getLogger(TcpServerConsumerEndOfDataAndValidationTestSupport.class);
 
     @RegisterExtension
+    AvailablePortFinder.Port mllpClientPort = AvailablePortFinder.find();
+
+    @RegisterExtension
     MllpClientResource mllpClient = new MllpClientResource();
 
     @EndpointInject("mock://complete")
@@ -69,6 +72,7 @@ public abstract class TcpServerConsumerEndOfDataAndValidationTestSupport extends
     int expectedFailedCount;
     int expectedInvalidCount;
 
+    @SuppressWarnings("deprecation")
     @Override
     protected CamelContext createCamelContext() throws Exception {
         DefaultCamelContext context = (DefaultCamelContext) super.createCamelContext();
@@ -82,7 +86,7 @@ public abstract class TcpServerConsumerEndOfDataAndValidationTestSupport extends
     protected RouteBuilder createRouteBuilder() {
 
         mllpClient.setMllpHost("localhost");
-        mllpClient.setMllpPort(AvailablePortFinder.getNextAvailable());
+        mllpClient.setMllpPort(mllpClientPort.getPort());
 
         return new RouteBuilder() {
             @Override

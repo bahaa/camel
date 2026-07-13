@@ -19,8 +19,8 @@ package org.apache.camel.component.vertx.websocket;
 import java.net.URI;
 
 import io.vertx.core.MultiMap;
-import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.http.WebSocketClientOptions;
 import io.vertx.core.http.WebSocketConnectOptions;
 import org.apache.camel.BindToRegistry;
 import org.apache.camel.RoutesBuilder;
@@ -28,6 +28,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.AvailablePortFinder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.apache.camel.component.vertx.websocket.VertxWebsocketConstants.ORIGIN_HTTP_HEADER_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,18 +39,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class VertxWebsocketEndpointConfigurationTest extends VertxWebSocketTestSupport {
 
-    private static final int PORT = AvailablePortFinder.getNextAvailable();
+    @RegisterExtension
+    static AvailablePortFinder.Port PORT = AvailablePortFinder.find();
 
     @BindToRegistry("clientOptions")
-    HttpClientOptions clientOptions = new HttpClientOptions();
+    WebSocketClientOptions clientOptions = new WebSocketClientOptions();
 
     @BindToRegistry("serverOptions")
     HttpServerOptions serverOptions = new HttpServerOptions();
 
     @Test
-    public void testHttpClientOptions() {
+    public void testWebSocketClientOptions() {
         VertxWebsocketEndpoint endpoint = context
-                .getEndpoint("vertx-websocket:localhost:" + PORT + "/options/client?clientOptions=#clientOptions",
+                .getEndpoint("vertx-websocket:localhost:" + PORT.getPort() + "/options/client?clientOptions=#clientOptions",
                         VertxWebsocketEndpoint.class);
 
         assertSame(clientOptions, endpoint.getConfiguration().getClientOptions());
@@ -58,7 +60,7 @@ public class VertxWebsocketEndpointConfigurationTest extends VertxWebSocketTestS
     @Test
     public void testHttpServerOptions() {
         VertxWebsocketEndpoint endpoint = context
-                .getEndpoint("vertx-websocket:localhost:" + PORT + "/options/server?serverOptions=#serverOptions",
+                .getEndpoint("vertx-websocket:localhost:" + PORT.getPort() + "/options/server?serverOptions=#serverOptions",
                         VertxWebsocketEndpoint.class);
 
         assertSame(serverOptions, endpoint.getConfiguration().getServerOptions());
@@ -77,7 +79,7 @@ public class VertxWebsocketEndpointConfigurationTest extends VertxWebSocketTestS
     @Test
     void testAllowOriginHeader() {
         VertxWebsocketEndpoint endpoint = context.getEndpoint("vertx-websocket:localhost/test", VertxWebsocketEndpoint.class);
-        WebSocketConnectOptions connectOptions = endpoint.getWebSocketConnectOptions(new HttpClientOptions());
+        WebSocketConnectOptions connectOptions = endpoint.getWebSocketConnectOptions(new WebSocketClientOptions());
         assertTrue(connectOptions.getAllowOriginHeader());
     }
 
@@ -85,7 +87,7 @@ public class VertxWebsocketEndpointConfigurationTest extends VertxWebSocketTestS
     void testDisallowOriginHeader() {
         VertxWebsocketEndpoint endpoint
                 = context.getEndpoint("vertx-websocket:localhost/test?allowOriginHeader=false", VertxWebsocketEndpoint.class);
-        WebSocketConnectOptions connectOptions = endpoint.getWebSocketConnectOptions(new HttpClientOptions());
+        WebSocketConnectOptions connectOptions = endpoint.getWebSocketConnectOptions(new WebSocketClientOptions());
         assertFalse(connectOptions.getAllowOriginHeader());
     }
 
@@ -96,7 +98,7 @@ public class VertxWebsocketEndpointConfigurationTest extends VertxWebSocketTestS
         VertxWebsocketEndpoint endpoint = context.getEndpoint("vertx-websocket:localhost/test?originHeaderUrl=" + originUrl,
                 VertxWebsocketEndpoint.class);
 
-        WebSocketConnectOptions connectOptions = endpoint.getWebSocketConnectOptions(new HttpClientOptions());
+        WebSocketConnectOptions connectOptions = endpoint.getWebSocketConnectOptions(new WebSocketClientOptions());
         MultiMap headers = connectOptions.getHeaders();
         String originHeaderValue = headers.get(ORIGIN_HTTP_HEADER_NAME);
         assertNotNull(headers);

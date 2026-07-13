@@ -187,6 +187,50 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
+         * Used for jailing (restricting) writing files to the starting
+         * directory (and sub) only. This is enabled by default to not allow
+         * Camel to write files to outside directories (to be more secured out
+         * of the box). You can turn this off to allow writing files to
+         * directories outside the starting directory, such as parent or root
+         * folders. For consumers that use a localWorkDirectory, this also
+         * restricts the downloaded files to stay within the configured
+         * localWorkDirectory.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: common
+         * 
+         * @param jailStartingDirectory the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointConsumerBuilder jailStartingDirectory(boolean jailStartingDirectory) {
+            doSetProperty("jailStartingDirectory", jailStartingDirectory);
+            return this;
+        }
+        /**
+         * Used for jailing (restricting) writing files to the starting
+         * directory (and sub) only. This is enabled by default to not allow
+         * Camel to write files to outside directories (to be more secured out
+         * of the box). You can turn this off to allow writing files to
+         * directories outside the starting directory, such as parent or root
+         * folders. For consumers that use a localWorkDirectory, this also
+         * restricts the downloaded files to stay within the configured
+         * localWorkDirectory.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: common
+         * 
+         * @param jailStartingDirectory the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointConsumerBuilder jailStartingDirectory(String jailStartingDirectory) {
+            doSetProperty("jailStartingDirectory", jailStartingDirectory);
+            return this;
+        }
+        /**
          * The logging level to use for JSCH activity logging. As JSCH is
          * verbose at by default at INFO level the threshold is WARN by default.
          * 
@@ -390,31 +434,15 @@ public interface SftpEndpointBuilderFactory {
          * system. You may want to do this in case you need to operate on the
          * files in a sorted order. The pre-sort is executed before the consumer
          * starts to filter, and accept files to process by Camel. This option
-         * is default=false meaning disabled.
+         * is default=false meaning disabled. The following values are
+         * supported: name (sort by file name), modified (sort by last-modified
+         * timestamp), size (sort by file size). To sort in descending (reverse)
+         * order, prefix the value with a minus sign (e.g., -modified to sort
+         * newest first). The value true is an alias for name (backward
+         * compatible).
          * 
-         * The option is a: <code>boolean</code> type.
+         * The option is a: <code>java.lang.String</code> type.
          * 
-         * Default: false
-         * Group: consumer
-         * 
-         * @param preSort the value to set
-         * @return the dsl builder
-         */
-        default SftpEndpointConsumerBuilder preSort(boolean preSort) {
-            doSetProperty("preSort", preSort);
-            return this;
-        }
-        /**
-         * When pre-sort is enabled then the consumer will sort the file and
-         * directory names during polling, that was retrieved from the file
-         * system. You may want to do this in case you need to operate on the
-         * files in a sorted order. The pre-sort is executed before the consumer
-         * starts to filter, and accept files to process by Camel. This option
-         * is default=false meaning disabled.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: false
          * Group: consumer
          * 
          * @param preSort the value to set
@@ -2126,6 +2154,85 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
+         * Set a comma separated list of CA signature algorithms accepted for
+         * host certificate verification. If not specified the default list from
+         * JSch will be used (matches OpenSSH 8.2 defaults).
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param caSignatureAlgorithms the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointConsumerBuilder caSignatureAlgorithms(String caSignatureAlgorithms) {
+            doSetProperty("caSignatureAlgorithms", caSignatureAlgorithms);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate as a byte array for certificate-based
+         * authentication.
+         * 
+         * The option is a: <code>byte[]</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certBytes the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointConsumerBuilder certBytes(byte[] certBytes) {
+            doSetProperty("certBytes", certBytes);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate as a byte array for certificate-based
+         * authentication.
+         * 
+         * The option will be converted to a <code>byte[]</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certBytes the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointConsumerBuilder certBytes(String certBytes) {
+            doSetProperty("certBytes", certBytes);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate file path for certificate-based
+         * authentication.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certFile the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointConsumerBuilder certFile(String certFile) {
+            doSetProperty("certFile", certFile);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate (loaded from classpath by default) for
+         * certificate-based authentication.
+         * 
+         * This option can also be loaded from an existing file, by prefixing
+         * with file: or classpath: followed by the location of the file.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certUri the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointConsumerBuilder certUri(String certUri) {
+            doSetProperty("certUri", certUri);
+            return this;
+        }
+        /**
          * Set a comma separated list of ciphers that will be used in order of
          * preference. Possible cipher names are defined by JCraft JSCH. Some
          * examples include:
@@ -2269,8 +2376,8 @@ public interface SftpEndpointBuilderFactory {
         }
         /**
          * Set the preferred authentications which SFTP endpoint will used. Some
-         * example include:password,publickey. If not specified the default list
-         * from JSCH will be used.
+         * example include: password,publickey. If not specified the default
+         * list will be used.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -2362,9 +2469,8 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Set a comma separated list of public key accepted algorithms. Some
-         * examples include:
-         * ssh-dss,ssh-rsa,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521. If not specified the default list from JSCH will be used.
+         * Set a comma separated list of public key accepted algorithms. If not
+         * specified the default list will be used.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -2394,7 +2500,10 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Sets whether to use strict host key checking.
+         * Sets whether to use strict host key checking. Setting this to 'no'
+         * (the default) disables host key verification and makes SFTP
+         * connections vulnerable to man-in-the-middle attacks. Use 'yes' in
+         * production environments.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -3140,9 +3249,7 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * To use compression. Specify a level from 1 to 10. Important: You must
-         * manually add the needed JSCH zlib JAR to the classpath for
-         * compression support.
+         * To use compression. Specify a level from 1 to 10.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -3156,9 +3263,7 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * To use compression. Specify a level from 1 to 10. Important: You must
-         * manually add the needed JSCH zlib JAR to the classpath for
-         * compression support.
+         * To use compression. Specify a level from 1 to 10.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -3714,6 +3819,50 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
+         * Used for jailing (restricting) writing files to the starting
+         * directory (and sub) only. This is enabled by default to not allow
+         * Camel to write files to outside directories (to be more secured out
+         * of the box). You can turn this off to allow writing files to
+         * directories outside the starting directory, such as parent or root
+         * folders. For consumers that use a localWorkDirectory, this also
+         * restricts the downloaded files to stay within the configured
+         * localWorkDirectory.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: common
+         * 
+         * @param jailStartingDirectory the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointProducerBuilder jailStartingDirectory(boolean jailStartingDirectory) {
+            doSetProperty("jailStartingDirectory", jailStartingDirectory);
+            return this;
+        }
+        /**
+         * Used for jailing (restricting) writing files to the starting
+         * directory (and sub) only. This is enabled by default to not allow
+         * Camel to write files to outside directories (to be more secured out
+         * of the box). You can turn this off to allow writing files to
+         * directories outside the starting directory, such as parent or root
+         * folders. For consumers that use a localWorkDirectory, this also
+         * restricts the downloaded files to stay within the configured
+         * localWorkDirectory.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: common
+         * 
+         * @param jailStartingDirectory the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointProducerBuilder jailStartingDirectory(String jailStartingDirectory) {
+            doSetProperty("jailStartingDirectory", jailStartingDirectory);
+            return this;
+        }
+        /**
          * The logging level to use for JSCH activity logging. As JSCH is
          * verbose at by default at INFO level the threshold is WARN by default.
          * 
@@ -3813,11 +3962,9 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * If provided, then Camel will write a checksum file when the original
-         * file has been written. The checksum file will contain the checksum
-         * created with the provided algorithm for the original file. The
-         * checksum file will always be written in the same folder as the
-         * original file.
+         * If provided, then Camel will calculate a checksum from the file that
+         * has been written, and store the result in the CamelFileChecksum
+         * header.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -3828,6 +3975,42 @@ public interface SftpEndpointBuilderFactory {
          */
         default SftpEndpointProducerBuilder checksumFileAlgorithm(String checksumFileAlgorithm) {
             doSetProperty("checksumFileAlgorithm", checksumFileAlgorithm);
+            return this;
+        }
+        /**
+         * If checksumFileAlgorithm has been configured then this option
+         * controls whether to write a checksum file as well or not. The
+         * checksum file will always be written in the same folder as the
+         * original file.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: producer
+         * 
+         * @param checksumWriteFile the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointProducerBuilder checksumWriteFile(boolean checksumWriteFile) {
+            doSetProperty("checksumWriteFile", checksumWriteFile);
+            return this;
+        }
+        /**
+         * If checksumFileAlgorithm has been configured then this option
+         * controls whether to write a checksum file as well or not. The
+         * checksum file will always be written in the same folder as the
+         * original file.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: producer
+         * 
+         * @param checksumWriteFile the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointProducerBuilder checksumWriteFile(String checksumWriteFile) {
+            doSetProperty("checksumWriteFile", checksumWriteFile);
             return this;
         }
         /**
@@ -3931,46 +4114,6 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Used for jailing (restricting) writing files to the starting
-         * directory (and sub) only. This is enabled by default to not allow
-         * Camel to write files to outside directories (to be more secured out
-         * of the box). You can turn this off to allow writing files to
-         * directories outside the starting directory, such as parent or root
-         * folders.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: true
-         * Group: producer
-         * 
-         * @param jailStartingDirectory the value to set
-         * @return the dsl builder
-         */
-        default SftpEndpointProducerBuilder jailStartingDirectory(boolean jailStartingDirectory) {
-            doSetProperty("jailStartingDirectory", jailStartingDirectory);
-            return this;
-        }
-        /**
-         * Used for jailing (restricting) writing files to the starting
-         * directory (and sub) only. This is enabled by default to not allow
-         * Camel to write files to outside directories (to be more secured out
-         * of the box). You can turn this off to allow writing files to
-         * directories outside the starting directory, such as parent or root
-         * folders.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: true
-         * Group: producer
-         * 
-         * @param jailStartingDirectory the value to set
-         * @return the dsl builder
-         */
-        default SftpEndpointProducerBuilder jailStartingDirectory(String jailStartingDirectory) {
-            doSetProperty("jailStartingDirectory", jailStartingDirectory);
-            return this;
-        }
-        /**
          * Expression (such as File Language) used to compute file name to use
          * when fileExist=Move is configured. To move files into a backup
          * subdirectory just enter backup. This option only supports the
@@ -4061,6 +4204,85 @@ public interface SftpEndpointBuilderFactory {
          */
         default SftpEndpointProducerBuilder autoCreateKnownHostsFile(String autoCreateKnownHostsFile) {
             doSetProperty("autoCreateKnownHostsFile", autoCreateKnownHostsFile);
+            return this;
+        }
+        /**
+         * Set a comma separated list of CA signature algorithms accepted for
+         * host certificate verification. If not specified the default list from
+         * JSch will be used (matches OpenSSH 8.2 defaults).
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param caSignatureAlgorithms the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointProducerBuilder caSignatureAlgorithms(String caSignatureAlgorithms) {
+            doSetProperty("caSignatureAlgorithms", caSignatureAlgorithms);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate as a byte array for certificate-based
+         * authentication.
+         * 
+         * The option is a: <code>byte[]</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certBytes the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointProducerBuilder certBytes(byte[] certBytes) {
+            doSetProperty("certBytes", certBytes);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate as a byte array for certificate-based
+         * authentication.
+         * 
+         * The option will be converted to a <code>byte[]</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certBytes the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointProducerBuilder certBytes(String certBytes) {
+            doSetProperty("certBytes", certBytes);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate file path for certificate-based
+         * authentication.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certFile the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointProducerBuilder certFile(String certFile) {
+            doSetProperty("certFile", certFile);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate (loaded from classpath by default) for
+         * certificate-based authentication.
+         * 
+         * This option can also be loaded from an existing file, by prefixing
+         * with file: or classpath: followed by the location of the file.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certUri the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointProducerBuilder certUri(String certUri) {
+            doSetProperty("certUri", certUri);
             return this;
         }
         /**
@@ -4207,8 +4429,8 @@ public interface SftpEndpointBuilderFactory {
         }
         /**
          * Set the preferred authentications which SFTP endpoint will used. Some
-         * example include:password,publickey. If not specified the default list
-         * from JSCH will be used.
+         * example include: password,publickey. If not specified the default
+         * list will be used.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -4300,9 +4522,8 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Set a comma separated list of public key accepted algorithms. Some
-         * examples include:
-         * ssh-dss,ssh-rsa,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521. If not specified the default list from JSCH will be used.
+         * Set a comma separated list of public key accepted algorithms. If not
+         * specified the default list will be used.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -4332,7 +4553,10 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Sets whether to use strict host key checking.
+         * Sets whether to use strict host key checking. Setting this to 'no'
+         * (the default) disables host key verification and makes SFTP
+         * connections vulnerable to man-in-the-middle attacks. Use 'yes' in
+         * production environments.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -4881,9 +5105,7 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * To use compression. Specify a level from 1 to 10. Important: You must
-         * manually add the needed JSCH zlib JAR to the classpath for
-         * compression support.
+         * To use compression. Specify a level from 1 to 10.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -4897,9 +5119,7 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * To use compression. Specify a level from 1 to 10. Important: You must
-         * manually add the needed JSCH zlib JAR to the classpath for
-         * compression support.
+         * To use compression. Specify a level from 1 to 10.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -5456,6 +5676,50 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
+         * Used for jailing (restricting) writing files to the starting
+         * directory (and sub) only. This is enabled by default to not allow
+         * Camel to write files to outside directories (to be more secured out
+         * of the box). You can turn this off to allow writing files to
+         * directories outside the starting directory, such as parent or root
+         * folders. For consumers that use a localWorkDirectory, this also
+         * restricts the downloaded files to stay within the configured
+         * localWorkDirectory.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: common
+         * 
+         * @param jailStartingDirectory the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointBuilder jailStartingDirectory(boolean jailStartingDirectory) {
+            doSetProperty("jailStartingDirectory", jailStartingDirectory);
+            return this;
+        }
+        /**
+         * Used for jailing (restricting) writing files to the starting
+         * directory (and sub) only. This is enabled by default to not allow
+         * Camel to write files to outside directories (to be more secured out
+         * of the box). You can turn this off to allow writing files to
+         * directories outside the starting directory, such as parent or root
+         * folders. For consumers that use a localWorkDirectory, this also
+         * restricts the downloaded files to stay within the configured
+         * localWorkDirectory.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: common
+         * 
+         * @param jailStartingDirectory the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointBuilder jailStartingDirectory(String jailStartingDirectory) {
+            doSetProperty("jailStartingDirectory", jailStartingDirectory);
+            return this;
+        }
+        /**
          * The logging level to use for JSCH activity logging. As JSCH is
          * verbose at by default at INFO level the threshold is WARN by default.
          * 
@@ -5586,6 +5850,85 @@ public interface SftpEndpointBuilderFactory {
          */
         default SftpEndpointBuilder autoCreateKnownHostsFile(String autoCreateKnownHostsFile) {
             doSetProperty("autoCreateKnownHostsFile", autoCreateKnownHostsFile);
+            return this;
+        }
+        /**
+         * Set a comma separated list of CA signature algorithms accepted for
+         * host certificate verification. If not specified the default list from
+         * JSch will be used (matches OpenSSH 8.2 defaults).
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param caSignatureAlgorithms the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointBuilder caSignatureAlgorithms(String caSignatureAlgorithms) {
+            doSetProperty("caSignatureAlgorithms", caSignatureAlgorithms);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate as a byte array for certificate-based
+         * authentication.
+         * 
+         * The option is a: <code>byte[]</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certBytes the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointBuilder certBytes(byte[] certBytes) {
+            doSetProperty("certBytes", certBytes);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate as a byte array for certificate-based
+         * authentication.
+         * 
+         * The option will be converted to a <code>byte[]</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certBytes the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointBuilder certBytes(String certBytes) {
+            doSetProperty("certBytes", certBytes);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate file path for certificate-based
+         * authentication.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certFile the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointBuilder certFile(String certFile) {
+            doSetProperty("certFile", certFile);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate (loaded from classpath by default) for
+         * certificate-based authentication.
+         * 
+         * This option can also be loaded from an existing file, by prefixing
+         * with file: or classpath: followed by the location of the file.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certUri the value to set
+         * @return the dsl builder
+         */
+        default SftpEndpointBuilder certUri(String certUri) {
+            doSetProperty("certUri", certUri);
             return this;
         }
         /**
@@ -5732,8 +6075,8 @@ public interface SftpEndpointBuilderFactory {
         }
         /**
          * Set the preferred authentications which SFTP endpoint will used. Some
-         * example include:password,publickey. If not specified the default list
-         * from JSCH will be used.
+         * example include: password,publickey. If not specified the default
+         * list will be used.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -5825,9 +6168,8 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Set a comma separated list of public key accepted algorithms. Some
-         * examples include:
-         * ssh-dss,ssh-rsa,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521. If not specified the default list from JSCH will be used.
+         * Set a comma separated list of public key accepted algorithms. If not
+         * specified the default list will be used.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -5857,7 +6199,10 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Sets whether to use strict host key checking.
+         * Sets whether to use strict host key checking. Setting this to 'no'
+         * (the default) disables host key verification and makes SFTP
+         * connections vulnerable to man-in-the-middle attacks. Use 'yes' in
+         * production environments.
          * 
          * The option is a: <code>java.lang.String</code> type.
          * 
@@ -6091,9 +6436,7 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * To use compression. Specify a level from 1 to 10. Important: You must
-         * manually add the needed JSCH zlib JAR to the classpath for
-         * compression support.
+         * To use compression. Specify a level from 1 to 10.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -6107,9 +6450,7 @@ public interface SftpEndpointBuilderFactory {
             return this;
         }
         /**
-         * To use compression. Specify a level from 1 to 10. Important: You must
-         * manually add the needed JSCH zlib JAR to the classpath for
-         * compression support.
+         * To use compression. Specify a level from 1 to 10.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -6587,7 +6928,7 @@ public interface SftpEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final SftpHeaderNameBuilder INSTANCE = new SftpHeaderNameBuilder();
+        public static final SftpHeaderNameBuilder INSTANCE = new SftpHeaderNameBuilder();
 
         /**
          * A long value containing the file size.

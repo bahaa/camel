@@ -16,6 +16,7 @@
  */
 package org.apache.camel.component.langchain4j.agent.api;
 
+import dev.langchain4j.service.Result;
 import dev.langchain4j.service.tool.ToolProvider;
 import org.apache.camel.Exchange;
 import org.apache.camel.InvalidPayloadRuntimeException;
@@ -82,24 +83,28 @@ public interface Agent {
      * request body regardless of how the original message was formatted.
      * </p>
      *
-     * @param  messagePayload                 the message payload from the exchange body; must be either an
-     *                                        {@link AiAgentBody} or a {@link String}
-     * @param  exchange                       the Camel exchange containing headers and context information
-     * @return                                an {@link AiAgentBody} instance ready for agent processing; returns the
-     *                                        original payload if it's already an {@link AiAgentBody}, or creates a new
-     *                                        one from a string payload and relevant headers
-     * @throws InvalidPayloadRuntimeException if the payload is neither an {@link AiAgentBody} nor a {@link String}
-     * @throws Exception                      if any other error occurs during payload processing
+     * @param      messagePayload                 the message payload from the exchange body; must be either an
+     *                                            {@link AiAgentBody} or a {@link String}
+     * @param      exchange                       the Camel exchange containing headers and context information
+     * @return                                    an {@link AiAgentBody} instance ready for agent processing; returns
+     *                                            the original payload if it's already an {@link AiAgentBody}, or
+     *                                            creates a new one from a string payload and relevant headers
+     * @throws     InvalidPayloadRuntimeException if the payload is neither an {@link AiAgentBody} nor a {@link String}
+     * @throws     Exception                      if any other error occurs during payload processing
+     *
+     * @deprecated                                This method is no longer used by {@code LangChain4jAgentProducer}.
+     *                                            Body conversion is now handled via Camel TypeConverters.
      */
+    @Deprecated(since = "4.19.0")
     default AiAgentBody<?> processBody(Object messagePayload, Exchange exchange) throws Exception {
         if (messagePayload instanceof AiAgentBody<?> payload) {
             return payload;
         }
 
-        if (messagePayload instanceof String) {
+        if (messagePayload instanceof String stringPayload) {
             String systemMessage = exchange.getIn().getHeader(SYSTEM_MESSAGE, String.class);
             Object memoryId = exchange.getIn().getHeader(MEMORY_ID);
-            return new AiAgentBody<>((String) messagePayload, systemMessage, memoryId);
+            return new AiAgentBody<>(stringPayload, systemMessage, memoryId);
         }
 
         // Try to convert using TypeConverter (supports WrappedFile, byte[], InputStream, etc.)
@@ -125,10 +130,10 @@ public interface Agent {
      *                          (for stateful agents)
      * @param  toolProvider     the tool provider that enables the agent to execute functions and interact with external
      *                          systems; may be {@code null} if no tools are needed
-     * @return                  the AI agent's response as a string
+     * @return                  the AI agent's response with token usage metadata
      * @throws RuntimeException if the chat interaction fails due to model errors, configuration issues, or tool
      *                          execution failures
      */
-    String chat(AiAgentBody<?> aiAgentBody, ToolProvider toolProvider);
+    Result<String> chat(AiAgentBody<?> aiAgentBody, ToolProvider toolProvider);
 
 }

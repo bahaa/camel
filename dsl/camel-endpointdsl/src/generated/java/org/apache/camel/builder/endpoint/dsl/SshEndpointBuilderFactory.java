@@ -963,6 +963,62 @@ public interface SshEndpointBuilderFactory {
             return this;
         }
         /**
+         * Sets the authentication timeout in milliseconds.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param authTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder authTimeout(long authTimeout) {
+            doSetProperty("authTimeout", authTimeout);
+            return this;
+        }
+        /**
+         * Sets the authentication timeout in milliseconds.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param authTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder authTimeout(String authTimeout) {
+            doSetProperty("authTimeout", authTimeout);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds for opening a channel.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param channelOpenTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder channelOpenTimeout(long channelOpenTimeout) {
+            doSetProperty("channelOpenTimeout", channelOpenTimeout);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds for opening a channel.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param channelOpenTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder channelOpenTimeout(String channelOpenTimeout) {
+            doSetProperty("channelOpenTimeout", channelOpenTimeout);
+            return this;
+        }
+        /**
          * Sets the channel type to pass to the Channel as part of command
          * execution. Defaults to exec.
          * 
@@ -1022,6 +1078,128 @@ public interface SshEndpointBuilderFactory {
          */
         default AdvancedSshEndpointConsumerBuilder compressions(String compressions) {
             doSetProperty("compressions", compressions);
+            return this;
+        }
+        /**
+         * Sets the socket connection timeout in milliseconds.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param connectTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder connectTimeout(long connectTimeout) {
+            doSetProperty("connectTimeout", connectTimeout);
+            return this;
+        }
+        /**
+         * Sets the socket connection timeout in milliseconds.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param connectTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder connectTimeout(String connectTimeout) {
+            doSetProperty("connectTimeout", connectTimeout);
+            return this;
+        }
+        /**
+         * Sets the heartbeat interval in milliseconds. If positive, the
+         * component will send keep-alive messages to prevent the SSH session
+         * from timing out.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatInterval the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder heartbeatInterval(long heartbeatInterval) {
+            doSetProperty("heartbeatInterval", heartbeatInterval);
+            return this;
+        }
+        /**
+         * Sets the heartbeat interval in milliseconds. If positive, the
+         * component will send keep-alive messages to prevent the SSH session
+         * from timing out.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatInterval the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder heartbeatInterval(String heartbeatInterval) {
+            doSetProperty("heartbeatInterval", heartbeatInterval);
+            return this;
+        }
+        /**
+         * Sets the maximum number of keep-alive messages without reply before
+         * the session is terminated.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatReplyMaxWait the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder heartbeatReplyMaxWait(int heartbeatReplyMaxWait) {
+            doSetProperty("heartbeatReplyMaxWait", heartbeatReplyMaxWait);
+            return this;
+        }
+        /**
+         * Sets the maximum number of keep-alive messages without reply before
+         * the session is terminated.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatReplyMaxWait the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder heartbeatReplyMaxWait(String heartbeatReplyMaxWait) {
+            doSetProperty("heartbeatReplyMaxWait", heartbeatReplyMaxWait);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds to wait before the SSH session is
+         * closed due to inactivity. The default value is 0, which means no idle
+         * timeout is applied.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param idleTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder idleTimeout(long idleTimeout) {
+            doSetProperty("idleTimeout", idleTimeout);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds to wait before the SSH session is
+         * closed due to inactivity. The default value is 0, which means no idle
+         * timeout is applied.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param idleTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointConsumerBuilder idleTimeout(String idleTimeout) {
+            doSetProperty("idleTimeout", idleTimeout);
             return this;
         }
         /**
@@ -1389,6 +1567,62 @@ public interface SshEndpointBuilderFactory {
             return this;
         }
         /**
+         * Sets the authentication timeout in milliseconds.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param authTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder authTimeout(long authTimeout) {
+            doSetProperty("authTimeout", authTimeout);
+            return this;
+        }
+        /**
+         * Sets the authentication timeout in milliseconds.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param authTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder authTimeout(String authTimeout) {
+            doSetProperty("authTimeout", authTimeout);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds for opening a channel.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param channelOpenTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder channelOpenTimeout(long channelOpenTimeout) {
+            doSetProperty("channelOpenTimeout", channelOpenTimeout);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds for opening a channel.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param channelOpenTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder channelOpenTimeout(String channelOpenTimeout) {
+            doSetProperty("channelOpenTimeout", channelOpenTimeout);
+            return this;
+        }
+        /**
          * Sets the channel type to pass to the Channel as part of command
          * execution. Defaults to exec.
          * 
@@ -1448,6 +1682,128 @@ public interface SshEndpointBuilderFactory {
          */
         default AdvancedSshEndpointProducerBuilder compressions(String compressions) {
             doSetProperty("compressions", compressions);
+            return this;
+        }
+        /**
+         * Sets the socket connection timeout in milliseconds.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param connectTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder connectTimeout(long connectTimeout) {
+            doSetProperty("connectTimeout", connectTimeout);
+            return this;
+        }
+        /**
+         * Sets the socket connection timeout in milliseconds.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param connectTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder connectTimeout(String connectTimeout) {
+            doSetProperty("connectTimeout", connectTimeout);
+            return this;
+        }
+        /**
+         * Sets the heartbeat interval in milliseconds. If positive, the
+         * component will send keep-alive messages to prevent the SSH session
+         * from timing out.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatInterval the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder heartbeatInterval(long heartbeatInterval) {
+            doSetProperty("heartbeatInterval", heartbeatInterval);
+            return this;
+        }
+        /**
+         * Sets the heartbeat interval in milliseconds. If positive, the
+         * component will send keep-alive messages to prevent the SSH session
+         * from timing out.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatInterval the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder heartbeatInterval(String heartbeatInterval) {
+            doSetProperty("heartbeatInterval", heartbeatInterval);
+            return this;
+        }
+        /**
+         * Sets the maximum number of keep-alive messages without reply before
+         * the session is terminated.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatReplyMaxWait the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder heartbeatReplyMaxWait(int heartbeatReplyMaxWait) {
+            doSetProperty("heartbeatReplyMaxWait", heartbeatReplyMaxWait);
+            return this;
+        }
+        /**
+         * Sets the maximum number of keep-alive messages without reply before
+         * the session is terminated.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatReplyMaxWait the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder heartbeatReplyMaxWait(String heartbeatReplyMaxWait) {
+            doSetProperty("heartbeatReplyMaxWait", heartbeatReplyMaxWait);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds to wait before the SSH session is
+         * closed due to inactivity. The default value is 0, which means no idle
+         * timeout is applied.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param idleTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder idleTimeout(long idleTimeout) {
+            doSetProperty("idleTimeout", idleTimeout);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds to wait before the SSH session is
+         * closed due to inactivity. The default value is 0, which means no idle
+         * timeout is applied.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param idleTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointProducerBuilder idleTimeout(String idleTimeout) {
+            doSetProperty("idleTimeout", idleTimeout);
             return this;
         }
         /**
@@ -1773,6 +2129,62 @@ public interface SshEndpointBuilderFactory {
         }
 
         /**
+         * Sets the authentication timeout in milliseconds.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param authTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder authTimeout(long authTimeout) {
+            doSetProperty("authTimeout", authTimeout);
+            return this;
+        }
+        /**
+         * Sets the authentication timeout in milliseconds.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param authTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder authTimeout(String authTimeout) {
+            doSetProperty("authTimeout", authTimeout);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds for opening a channel.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param channelOpenTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder channelOpenTimeout(long channelOpenTimeout) {
+            doSetProperty("channelOpenTimeout", channelOpenTimeout);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds for opening a channel.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param channelOpenTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder channelOpenTimeout(String channelOpenTimeout) {
+            doSetProperty("channelOpenTimeout", channelOpenTimeout);
+            return this;
+        }
+        /**
          * Sets the channel type to pass to the Channel as part of command
          * execution. Defaults to exec.
          * 
@@ -1832,6 +2244,128 @@ public interface SshEndpointBuilderFactory {
          */
         default AdvancedSshEndpointBuilder compressions(String compressions) {
             doSetProperty("compressions", compressions);
+            return this;
+        }
+        /**
+         * Sets the socket connection timeout in milliseconds.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param connectTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder connectTimeout(long connectTimeout) {
+            doSetProperty("connectTimeout", connectTimeout);
+            return this;
+        }
+        /**
+         * Sets the socket connection timeout in milliseconds.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param connectTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder connectTimeout(String connectTimeout) {
+            doSetProperty("connectTimeout", connectTimeout);
+            return this;
+        }
+        /**
+         * Sets the heartbeat interval in milliseconds. If positive, the
+         * component will send keep-alive messages to prevent the SSH session
+         * from timing out.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatInterval the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder heartbeatInterval(long heartbeatInterval) {
+            doSetProperty("heartbeatInterval", heartbeatInterval);
+            return this;
+        }
+        /**
+         * Sets the heartbeat interval in milliseconds. If positive, the
+         * component will send keep-alive messages to prevent the SSH session
+         * from timing out.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatInterval the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder heartbeatInterval(String heartbeatInterval) {
+            doSetProperty("heartbeatInterval", heartbeatInterval);
+            return this;
+        }
+        /**
+         * Sets the maximum number of keep-alive messages without reply before
+         * the session is terminated.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatReplyMaxWait the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder heartbeatReplyMaxWait(int heartbeatReplyMaxWait) {
+            doSetProperty("heartbeatReplyMaxWait", heartbeatReplyMaxWait);
+            return this;
+        }
+        /**
+         * Sets the maximum number of keep-alive messages without reply before
+         * the session is terminated.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param heartbeatReplyMaxWait the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder heartbeatReplyMaxWait(String heartbeatReplyMaxWait) {
+            doSetProperty("heartbeatReplyMaxWait", heartbeatReplyMaxWait);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds to wait before the SSH session is
+         * closed due to inactivity. The default value is 0, which means no idle
+         * timeout is applied.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param idleTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder idleTimeout(long idleTimeout) {
+            doSetProperty("idleTimeout", idleTimeout);
+            return this;
+        }
+        /**
+         * Sets the timeout in milliseconds to wait before the SSH session is
+         * closed due to inactivity. The default value is 0, which means no idle
+         * timeout is applied.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param idleTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedSshEndpointBuilder idleTimeout(String idleTimeout) {
+            doSetProperty("idleTimeout", idleTimeout);
             return this;
         }
         /**
@@ -1955,7 +2489,7 @@ public interface SshEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final SshHeaderNameBuilder INSTANCE = new SshHeaderNameBuilder();
+        public static final SshHeaderNameBuilder INSTANCE = new SshHeaderNameBuilder();
 
         /**
          * The user name.

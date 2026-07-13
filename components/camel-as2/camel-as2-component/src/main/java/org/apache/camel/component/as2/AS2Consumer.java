@@ -137,13 +137,14 @@ public class AS2Consumer extends AbstractApiConsumer<AS2ApiName, AS2Configuratio
                     = HttpMessageUtils.extractEdiPayload(request,
                             new HttpMessageUtils.DecrpytingAndSigningInfo(
                                     getEndpoint().getValidateSigningCertificateChain(),
-                                    getEndpoint().getDecryptingPrivateKey()));
+                                    getEndpoint().getDecryptingPrivateKey(),
+                                    getEndpoint().isSignatureVerificationRequired()));
 
             // Set AS2 Interchange property and EDI message into body of input message.
             Exchange exchange = createExchange(false);
 
             try {
-                HttpCoreContext coreContext = HttpCoreContext.adapt(context);
+                HttpCoreContext coreContext = HttpCoreContext.castOrCreate(context);
                 exchange.setProperty(AS2Constants.AS2_INTERCHANGE, coreContext);
                 exchange.getIn().setBody(ediEntity.getEdiMessage());
                 // send message to next processor in the route

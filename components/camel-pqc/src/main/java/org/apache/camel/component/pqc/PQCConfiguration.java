@@ -20,9 +20,11 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.Signature;
 
+import javax.crypto.KeyAgreement;
 import javax.crypto.KeyGenerator;
 
 import org.apache.camel.RuntimeCamelException;
+import org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriParams;
@@ -68,8 +70,57 @@ public class PQCConfiguration implements Cloneable {
     @Metadata(label = "advanced")
     private String keyPairAlias;
     @UriParam
-    @Metadata(label = "advanced", secret = true)
+    @Metadata(label = "advanced", security = "secret")
     private String keyStorePassword;
+
+    // Hybrid cryptography configuration
+    @UriParam(enums = "ECDSA_P256,ECDSA_P384,ECDSA_P521,ED25519,ED448,RSA_2048,RSA_3072,RSA_4096",
+              description = "The classical signature algorithm to use in hybrid operations")
+    @Metadata(label = "advanced")
+    private String classicalSignatureAlgorithm;
+
+    @UriParam(enums = "ECDH_P256,ECDH_P384,ECDH_P521,X25519,X448",
+              description = "The classical key agreement algorithm to use in hybrid KEM operations")
+    @Metadata(label = "advanced")
+    private String classicalKEMAlgorithm;
+
+    @UriParam(description = "The classical KeyPair to be used in hybrid operations")
+    @Metadata(label = "advanced", autowired = true)
+    private KeyPair classicalKeyPair;
+
+    @UriParam(description = "The classical Signature instance to be used in hybrid signature operations")
+    @Metadata(label = "advanced", autowired = true)
+    private Signature classicalSigner;
+
+    @UriParam(description = "The classical KeyAgreement instance to be used in hybrid KEM operations")
+    @Metadata(label = "advanced", autowired = true)
+    private KeyAgreement classicalKeyAgreement;
+
+    @UriParam(defaultValue = "HKDF-SHA256", enums = "HKDF-SHA256,HKDF-SHA384,HKDF-SHA512",
+              description = "The KDF algorithm to use for combining secrets in hybrid KEM operations")
+    @Metadata(label = "advanced")
+    private String hybridKdfAlgorithm = "HKDF-SHA256";
+
+    @UriParam(description = "The KeyLifecycleManager to use for key lifecycle operations such as generation, rotation, import/export, expiration, and revocation")
+    @Metadata(label = "advanced", autowired = true)
+    private KeyLifecycleManager keyLifecycleManager;
+
+    @UriParam(defaultValue = "true",
+              description = "Whether to enforce key status checks before cryptographic operations. "
+                            + "When enabled, REVOKED keys are rejected for all operations, "
+                            + "EXPIRED keys are rejected for signing/encapsulation but allowed for verification/extraction, "
+                            + "and DEPRECATED keys produce a warning but still function. "
+                            + "Requires a KeyLifecycleManager and a CamelPQCKeyId header to be set.")
+    @Metadata(label = "advanced")
+    private boolean strictKeyLifecycle = true;
+
+    @UriParam(defaultValue = "0.1",
+              description = "The warning threshold for stateful key exhaustion as a fraction of total signatures (0.0 to 1.0). "
+                            + "When the remaining signatures for a stateful key (XMSS, XMSSMT, LMS/HSS) drop below this "
+                            + "fraction of the total capacity, a WARN log is emitted. When remaining signatures reach zero, "
+                            + "an exception is thrown to prevent key reuse. Set to 0 to disable warnings.")
+    @Metadata(label = "advanced")
+    private double statefulKeyWarningThreshold = 0.1;
 
     public PQCOperations getOperation() {
         return operation;
@@ -202,6 +253,116 @@ public class PQCConfiguration implements Cloneable {
      */
     public void setKeyPairAlias(String keyPairAlias) {
         this.keyPairAlias = keyPairAlias;
+    }
+
+    public String getClassicalSignatureAlgorithm() {
+        return classicalSignatureAlgorithm;
+    }
+
+    /**
+     * The classical signature algorithm to use in hybrid operations
+     */
+    public void setClassicalSignatureAlgorithm(String classicalSignatureAlgorithm) {
+        this.classicalSignatureAlgorithm = classicalSignatureAlgorithm;
+    }
+
+    public String getClassicalKEMAlgorithm() {
+        return classicalKEMAlgorithm;
+    }
+
+    /**
+     * The classical key agreement algorithm to use in hybrid KEM operations
+     */
+    public void setClassicalKEMAlgorithm(String classicalKEMAlgorithm) {
+        this.classicalKEMAlgorithm = classicalKEMAlgorithm;
+    }
+
+    public KeyPair getClassicalKeyPair() {
+        return classicalKeyPair;
+    }
+
+    /**
+     * The classical KeyPair to be used in hybrid operations
+     */
+    public void setClassicalKeyPair(KeyPair classicalKeyPair) {
+        this.classicalKeyPair = classicalKeyPair;
+    }
+
+    public Signature getClassicalSigner() {
+        return classicalSigner;
+    }
+
+    /**
+     * The classical Signature instance to be used in hybrid signature operations
+     */
+    public void setClassicalSigner(Signature classicalSigner) {
+        this.classicalSigner = classicalSigner;
+    }
+
+    public KeyAgreement getClassicalKeyAgreement() {
+        return classicalKeyAgreement;
+    }
+
+    /**
+     * The classical KeyAgreement instance to be used in hybrid KEM operations
+     */
+    public void setClassicalKeyAgreement(KeyAgreement classicalKeyAgreement) {
+        this.classicalKeyAgreement = classicalKeyAgreement;
+    }
+
+    public String getHybridKdfAlgorithm() {
+        return hybridKdfAlgorithm;
+    }
+
+    /**
+     * The KDF algorithm to use for combining secrets in hybrid KEM operations
+     */
+    public void setHybridKdfAlgorithm(String hybridKdfAlgorithm) {
+        this.hybridKdfAlgorithm = hybridKdfAlgorithm;
+    }
+
+    public KeyLifecycleManager getKeyLifecycleManager() {
+        return keyLifecycleManager;
+    }
+
+    /**
+     * The KeyLifecycleManager to use for key lifecycle operations such as generation, rotation, import/export,
+     * expiration, and revocation
+     */
+    public void setKeyLifecycleManager(KeyLifecycleManager keyLifecycleManager) {
+        this.keyLifecycleManager = keyLifecycleManager;
+    }
+
+    public boolean isStrictKeyLifecycle() {
+        return strictKeyLifecycle;
+    }
+
+    /**
+     * Whether to enforce key status checks before cryptographic operations. When enabled, REVOKED keys are rejected for
+     * all operations, EXPIRED keys are rejected for signing/encapsulation but allowed for verification/extraction, and
+     * DEPRECATED keys produce a warning but still function. Requires a KeyLifecycleManager and a CamelPQCKeyId header
+     * to be set.
+     */
+    public void setStrictKeyLifecycle(boolean strictKeyLifecycle) {
+        this.strictKeyLifecycle = strictKeyLifecycle;
+    }
+
+    public double getStatefulKeyWarningThreshold() {
+        return statefulKeyWarningThreshold;
+    }
+
+    /**
+     * The warning threshold for stateful key exhaustion as a fraction of total signatures (0.0 to 1.0). When the
+     * remaining signatures for a stateful key (XMSS, XMSSMT, LMS/HSS) drop below this fraction of the total capacity, a
+     * WARN log is emitted. When remaining signatures reach zero, an exception is thrown to prevent key reuse. Set to 0
+     * to disable warnings.
+     */
+    public void setStatefulKeyWarningThreshold(double statefulKeyWarningThreshold) {
+        if (statefulKeyWarningThreshold < 0.0 || statefulKeyWarningThreshold > 1.0) {
+            throw new IllegalArgumentException(
+                    "statefulKeyWarningThreshold must be between 0.0 and 1.0, but was: " + statefulKeyWarningThreshold);
+        }
+        this.statefulKeyWarningThreshold = statefulKeyWarningThreshold;
     }
 
     // *************************************************

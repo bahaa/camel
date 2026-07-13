@@ -16,9 +16,11 @@
  */
 package org.apache.camel.component.neo4j;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -55,6 +57,10 @@ public class Neo4jProducer extends DefaultProducer {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> MAP_TYPE_REF = new TypeReference<>() {
     };
+
+    // Only property values are passed as bound parameters; the property name is spliced into the
+    // Cypher query text, so it must be restricted to a safe identifier pattern.
+    private static final Pattern VALID_PROPERTY_NAME = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
 
     private Driver driver;
 
@@ -114,10 +120,10 @@ public class Neo4jProducer extends DefaultProducer {
         var query = String.format("CREATE (%s:%s $props)", alias, label);
         Map<String, Object> properties;
 
-        if (body instanceof String) {
+        if (body instanceof String bodyString) {
             try {
                 // Convert JSON string to Map for parameterized query
-                Map<String, Object> bodyMap = OBJECT_MAPPER.readValue((String) body, MAP_TYPE_REF);
+                Map<String, Object> bodyMap = OBJECT_MAPPER.readValue(bodyString, MAP_TYPE_REF);
                 properties = Map.of("props", bodyMap);
             } catch (Exception e) {
                 exchange.setException(
@@ -132,6 +138,19 @@ public class Neo4jProducer extends DefaultProducer {
         }
 
         executeWriteQuery(exchange, query, properties, databaseName, Neo4Operation.CREATE_NODE);
+    }
+
+    /**
+     * Validates a Neo4j property name before it is spliced into a Cypher query. Property values are passed as bound
+     * parameters, but the property name is inserted into the query text, so it must be a safe identifier. Names that do
+     * not match are rejected with a clear error instead of producing a malformed or unintended query.
+     */
+    static void validatePropertyName(String name) {
+        if (name == null || !VALID_PROPERTY_NAME.matcher(name).matches()) {
+            throw new IllegalArgumentException(
+                    "Invalid Neo4j property name: '" + name + "'. Property names must match "
+                                               + VALID_PROPERTY_NAME.pattern());
+        }
     }
 
     private void retrieveNodes(Exchange exchange) throws NoSuchHeaderException {
@@ -158,13 +177,14 @@ public class Neo4jProducer extends DefaultProducer {
 
                 if (!matchMap.isEmpty()) {
                     StringBuilder whereClause = new StringBuilder();
-                    queryParams = new java.util.HashMap<>();
+                    queryParams = new HashMap<>();
                     int paramIndex = 0;
 
                     for (Map.Entry<String, Object> entry : matchMap.entrySet()) {
                         if (paramIndex > 0) {
                             whereClause.append(" AND ");
                         }
+                        validatePropertyName(entry.getKey());
                         String paramName = "param" + paramIndex;
                         whereClause.append(alias).append(".").append(entry.getKey())
                                 .append(" = $").append(paramName);
@@ -178,6 +198,9 @@ public class Neo4jProducer extends DefaultProducer {
                     // Empty map, match all nodes
                     query = String.format("MATCH (%s:%s) RETURN %s", alias, label, alias);
                 }
+            } catch (IllegalArgumentException iae) {
+                exchange.setException(new Neo4jOperationException(RETRIEVE_NODES, iae));
+                return;
             } catch (Exception e) {
                 exchange.setException(
                         new Neo4jOperationException(
@@ -256,13 +279,14 @@ public class Neo4jProducer extends DefaultProducer {
 
                 if (!matchMap.isEmpty()) {
                     StringBuilder whereClause = new StringBuilder();
-                    queryParams = new java.util.HashMap<>();
+                    queryParams = new HashMap<>();
                     int paramIndex = 0;
 
                     for (Map.Entry<String, Object> entry : matchMap.entrySet()) {
                         if (paramIndex > 0) {
                             whereClause.append(" AND ");
                         }
+                        validatePropertyName(entry.getKey());
                         String paramName = "param" + paramIndex;
                         whereClause.append(alias).append(".").append(entry.getKey())
                                 .append(" = $").append(paramName);
@@ -276,6 +300,9 @@ public class Neo4jProducer extends DefaultProducer {
                     // Empty map, delete all nodes of this label
                     query = String.format("MATCH (%s:%s) %s DELETE %s", alias, label, detached, alias);
                 }
+            } catch (IllegalArgumentException iae) {
+                exchange.setException(new Neo4jOperationException(Neo4Operation.DELETE_NODE, iae));
+                return;
             } catch (Exception e) {
                 exchange.setException(
                         new Neo4jOperationException(
@@ -309,13 +336,14 @@ public class Neo4jProducer extends DefaultProducer {
 
         final String databaseName = getEndpoint().getName();
 
-        String query = String.format("CREATE VECTOR INDEX %s IF NOT EXISTS\n" +
-                                     "FOR (%s:%s)\n" +
-                                     "ON %s.embedding\n" +
-                                     "OPTIONS { indexConfig: {\n" +
-                                     " `vector.dimensions`: %s,\n" +
-                                     " `vector.similarity_function`: '%s'\n" +
-                                     "}}",
+        String query = String.format("""
+                CREATE VECTOR INDEX %s IF NOT EXISTS
+                FOR (%s:%s)
+                ON %s.embedding
+                OPTIONS { indexConfig: {
+                 `vector.dimensions`: %s,
+                 `vector.similarity_function`: '%s'
+                }}""",
                 vectorIndexName, alias, label, alias, dimension, similarityFunction.name());
 
         executeWriteQuery(exchange, query, null, databaseName, Neo4Operation.CREATE_VECTOR_INDEX);
@@ -348,10 +376,10 @@ public class Neo4jProducer extends DefaultProducer {
 
         Object body = exchange.getMessage().getBody();
 
-        if (body instanceof Neo4jEmbedding) {
-            id = ((Neo4jEmbedding) body).getId();
-            text = ((Neo4jEmbedding) body).getText();
-            vectors = ((Neo4jEmbedding) body).getVectors();
+        if (body instanceof Neo4jEmbedding neo4jEmbed) {
+            id = neo4jEmbed.getId();
+            text = neo4jEmbed.getText();
+            vectors = neo4jEmbed.getVectors();
         } else {
             id = exchange.getMessage().getHeader(Neo4jHeaders.VECTOR_ID, () -> UUID.randomUUID(), String.class);
             vectors = exchange.getMessage().getHeader(CamelLangchain4jAttributes.CAMEL_LANGCHAIN4J_EMBEDDING_VECTOR,
@@ -383,8 +411,8 @@ public class Neo4jProducer extends DefaultProducer {
         float[] vectors;
 
         Object body = exchange.getMessage().getMandatoryBody();
-        if (body instanceof Neo4jEmbedding) {
-            vectors = ((Neo4jEmbedding) body).getVectors();
+        if (body instanceof Neo4jEmbedding neo4jEmbed) {
+            vectors = neo4jEmbed.getVectors();
         } else {
             vectors = exchange.getMessage().getBody(float[].class);
         }

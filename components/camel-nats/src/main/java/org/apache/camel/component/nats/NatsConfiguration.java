@@ -20,9 +20,9 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 
 import io.nats.client.Connection;
-import io.nats.client.Nats;
 import io.nats.client.Options;
 import io.nats.client.Options.Builder;
+import io.nats.client.api.AckPolicy;
 import io.nats.client.api.ConsumerConfiguration;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.spi.Metadata;
@@ -34,7 +34,7 @@ import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.camel.util.ObjectHelper;
 
 @UriParams
-public class NatsConfiguration {
+public class NatsConfiguration implements Cloneable {
 
     @UriPath
     @Metadata(required = true)
@@ -75,12 +75,38 @@ public class NatsConfiguration {
     private boolean replyToDisabled;
     @UriParam(label = "consumer")
     private String maxMessages;
+    @UriParam(label = "consumer", defaultValue = "Explicit", enums = "None,All,Explicit")
+    private AckPolicy ackPolicy;
+    @UriParam(label = "consumer", defaultValue = "30000")
+    private long ackWait = 30000;
+    @UriParam(label = "consumer", defaultValue = "5000")
+    private long nackWait = 5000;
+    @UriParam(label = "consumer")
+    private long maxDeliver;
+    @UriParam(label = "consumer", defaultValue = "false")
+    private boolean manualAck;
     @UriParam(label = "consumer", defaultValue = "10")
     private int poolSize = 10;
     @UriParam(label = "common", defaultValue = "true")
     private boolean flushConnection = true;
     @UriParam(label = "common", defaultValue = "1000")
     private int flushTimeout = 1000;
+    @UriParam(label = "common", defaultValue = "false")
+    private boolean jetstreamEnabled = false;
+    @UriParam(label = "common")
+    private String jetstreamName;
+    @UriParam(label = "advanced", defaultValue = "true")
+    private boolean jetstreamAsync = true;
+    @UriParam(label = "consumer,advanced")
+    private ConsumerConfiguration consumerConfiguration;
+    @UriParam(label = "consumer", defaultValue = "true")
+    private boolean pullSubscription = true;
+    @UriParam(label = "consumer", defaultValue = "10")
+    private int pullBatchSize = 10;
+    @UriParam(label = "consumer", defaultValue = "1000")
+    private long pullFetchTimeout = 1000;
+    @UriParam(label = "consumer")
+    private String durableName;
     @UriParam(label = "security")
     private boolean secure;
     @UriParam(label = "security")
@@ -91,18 +117,14 @@ public class NatsConfiguration {
     private boolean traceConnection;
     @UriParam(label = "advanced")
     private HeaderFilterStrategy headerFilterStrategy = new DefaultHeaderFilterStrategy();
-    @UriParam(label = "common", defaultValue = "false")
-    private boolean jetstreamEnabled = false;
-    @UriParam(label = "common")
-    private String jetstreamName;
-    @UriParam(label = "advanced", defaultValue = "true")
-    private boolean jetstreamAsync = true;
-    @UriParam(label = "advanced")
-    private ConsumerConfiguration consumerConfiguration;
-    @UriParam(label = "advanced", defaultValue = "true")
-    private boolean pullSubscription = true;
-    @UriParam(label = "advanced")
-    private String durableName;
+
+    public NatsConfiguration copy() {
+        try {
+            return (NatsConfiguration) clone();
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * URLs to one or more NAT servers. Use comma to separate URLs when specifying multiple servers.
@@ -552,6 +574,30 @@ public class NatsConfiguration {
         this.pullSubscription = pullSubscription;
     }
 
+    public int getPullBatchSize() {
+        return pullBatchSize;
+    }
+
+    /**
+     * Maximum number of messages to fetch per pull request when using a JetStream Pull Subscription. Only used when
+     * {@code pullSubscription=true}.
+     */
+    public void setPullBatchSize(int pullBatchSize) {
+        this.pullBatchSize = pullBatchSize;
+    }
+
+    public long getPullFetchTimeout() {
+        return pullFetchTimeout;
+    }
+
+    /**
+     * Maximum time (in milliseconds) to wait for a batch of messages to be available on the server during a single
+     * fetch when using a JetStream Pull Subscription. Only used when {@code pullSubscription=true}.
+     */
+    public void setPullFetchTimeout(long pullFetchTimeout) {
+        this.pullFetchTimeout = pullFetchTimeout;
+    }
+
     /**
      * The name to assign to the JetStream durable consumer.
      * <p>
@@ -573,5 +619,87 @@ public class NatsConfiguration {
      */
     public void setDurableName(String durableName) {
         this.durableName = durableName;
+    }
+
+    public AckPolicy getAckPolicy() {
+        return ackPolicy;
+    }
+
+    /**
+     * Acknowledgement mode.
+     * <p>
+     * none = Messages are acknowledged as soon as the server sends them (danger: messages that Camel failed to process
+     * is also ack). Clients do not need to ack. all = All messages with a sequence number less than the message acked
+     * are also acknowledged. E.g. reading a batch of messages 1..100. Ack on message 100 will acknowledge 1..99 as
+     * well. explicit (default) = Each message is acknowledged individually by Camel after the message has been
+     * processed, this ensures the message is only ack if success and nack if processing failed due to an exception
+     * during routing. Message can be acked out of sequence and create gaps of unacknowledged messages in the consumer.
+     */
+    public void setAckPolicy(AckPolicy ackPolicy) {
+        this.ackPolicy = ackPolicy;
+    }
+
+    public long getAckWait() {
+        return ackWait;
+    }
+
+    /**
+     * After a message is delivered to a consumer, the server waits 30 seconds (default) for an acknowledgement. If none
+     * arrives (timeout), the message becomes eligible for redelivery.
+     */
+    public void setAckWait(long ackWait) {
+        this.ackWait = ackWait;
+    }
+
+    public long getNackWait() {
+        return nackWait;
+    }
+
+    /**
+     * For negative acknowledgements (NAK), redelivery is delayed by 5 seconds (default).
+     * <p>
+     * Setting this to 0 or negative makes the redelivery immediately. Be careful as this can cause the consumer to keep
+     * re-processing the same message over and over again due to intermediate error that last a while.
+     */
+    public void setNackWait(long nackWait) {
+        this.nackWait = nackWait;
+    }
+
+    public long getMaxDeliver() {
+        return maxDeliver;
+    }
+
+    /**
+     * Maximum number of attempts to deliver a message from Nats to a consumer.
+     *
+     * Once MaxDeliver is reached, the NATS server stops attempting to deliver that specific message. The message is not
+     * deleted, it remains in the stream but is simply skipped.
+     *
+     * It is recommended to set this option to a sensible value in case a message is poison and can not successfully be
+     * processed and would always keep failing.
+     */
+    public void setMaxDeliver(long maxDeliver) {
+        this.maxDeliver = maxDeliver;
+    }
+
+    public boolean isManualAck() {
+        return manualAck;
+    }
+
+    /**
+     * Whether to allow doing manual acknowledgment via {@link NatsManualAck}.
+     * <p/>
+     * If this option is enabled then an instance of {@link NatsManualAck} is stored on the
+     * {@link org.apache.camel.Exchange} message header, which allows end users to access this API and perform manual
+     * ack/nak/term operations via the JetStream consumer.
+     * <p/>
+     * When enabled, the automatic acknowledgment on exchange completion is disabled. If the user does not call any ack
+     * method, the message remains unacknowledged and NATS will redeliver it after the ackWait timeout expires.
+     * <p/>
+     * This option is only applicable when JetStream is enabled (jetstreamEnabled=true). It has no effect when
+     * ackPolicy=None since the server acknowledges messages automatically on delivery.
+     */
+    public void setManualAck(boolean manualAck) {
+        this.manualAck = manualAck;
     }
 }

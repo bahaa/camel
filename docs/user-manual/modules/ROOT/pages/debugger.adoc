@@ -14,15 +14,17 @@ method and return `true`.
 
 In this unit test
 
+._Java-only: extending CamelTestSupport for debugging_
 [source,java]
------------------------------------------------
+----
 public class DebugTest extends CamelTestSupport
------------------------------------------------
+----
 
 We want to debug the following route
 
+._Java-only: creating a route to debug in a unit test_
 [source,java]
------------------------------------------------
+----
 @Override
 protected RouteBuilder createRouteBuilder() throws Exception {
     return new RouteBuilder() {
@@ -36,10 +38,11 @@ protected RouteBuilder createRouteBuilder() throws Exception {
         }
     };
 }
------------------------------------------------
+----
 
 Which can easily done by overriding the `debugBefore` method as shown
 
+._Java-only: enabling the debugger and setting a breakpoint in debugBefore_
 [source,java]
 -----------------------------------------------
 @Override
@@ -82,8 +85,9 @@ A trick to debug a Camel route written with Java DSL is to modify the route to i
 
 For instance:
 
+._Java-only: inserting a processor breakpoint into a route for debugging_
 [source,java]
------------------------------------------------
+----
 public class MyRouteBuilder extends RouteBuilder {
 
     @Override
@@ -101,7 +105,7 @@ public class MyRouteBuilder extends RouteBuilder {
         	.log("${body}");
     }
 }
------------------------------------------------
+----
 
 === Implementing a custom debugger
 

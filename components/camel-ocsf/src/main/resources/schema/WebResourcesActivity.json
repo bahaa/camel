@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/classes/web_resources_activity",
+  "title": "WebResourcesActivity",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.WebResourcesActivity",
+  "description": "WebResourcesActivity event class.",
+  "extends": {
+    "$ref": "OcsfEvent.json"
+  },
+  "properties": {
+    "src_endpoint": {
+      "$ref": "NetworkEndpoint.json"
+    },
+    "http_response": {
+      "$ref": "HttpResponse.json"
+    },
+    "tls": {
+      "$ref": "Tls.json"
+    },
+    "dst_endpoint": {
+      "$ref": "NetworkEndpoint.json"
+    },
+    "web_resources": {
+      "type": "array",
+      "title": "Web Resources",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "http_request": {
+      "$ref": "HttpRequest.json"
+    },
+    "web_resources_result": {
+      "type": "array",
+      "title": "Web Resources Result",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "raw_data_size": {
+      "type": "integer",
+      "title": "Raw Data Size"
+    },
+    "raw_data_hash": {
+      "$ref": "Fingerprint.json"
+    },
+    "enrichments": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Enrichment.json"
+      }
+    }
+  }
+}

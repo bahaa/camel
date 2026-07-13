@@ -56,7 +56,8 @@ import static org.apache.camel.component.couchbase.CouchbaseConstants.DEFAULT_QU
 import static org.apache.camel.component.couchbase.CouchbaseConstants.DEFAULT_VIEWNAME;
 
 /**
- * Query Couchbase Views with a poll strategy and/or perform various operations against Couchbase databases.
+ * Query Couchbase databases using SQL++ (N1QL) queries or MapReduce Views with a poll strategy and/or perform various
+ * operations against Couchbase databases.
  */
 @UriEndpoint(firstVersion = "2.19.0", scheme = "couchbase", title = "Couchbase", syntax = "couchbase:protocol://hostname:port",
              category = { Category.DATABASE }, headersClass = CouchbaseConstants.class)
@@ -71,7 +72,7 @@ public class CouchbaseEndpoint extends ScheduledPollEndpoint implements Endpoint
     @UriPath(defaultValue = "8091")
     private int port;
 
-    @UriParam
+    @UriParam(endpointIdentity = true)
     @Metadata(required = true)
     private String bucket;
 
@@ -86,14 +87,18 @@ public class CouchbaseEndpoint extends ScheduledPollEndpoint implements Endpoint
     private String key;
 
     // Authentication
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String username;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String password;
 
     // Additional hosts
     @UriParam(label = "advanced")
     private String additionalHosts;
+
+    // Connection string
+    @UriParam(label = "advanced")
+    private String connectionString;
 
     // Persistence and replication parameters
     @UriParam(label = "producer", defaultValue = "0")
@@ -114,10 +119,23 @@ public class CouchbaseEndpoint extends ScheduledPollEndpoint implements Endpoint
 
     @UriParam(label = "producer")
     private long startingIdForInsertsFrom;
+
+    // SQL++ query
+    @UriParam(label = "consumer", defaultValue = "false",
+              description = "If true, use the deprecated MapReduce Views to query documents via designDocumentName and viewName."
+                            + " If false (default), use SQL++ queries instead.")
+    private boolean useView;
+    @UriParam(label = "consumer")
+    private String statement;
+
     // View control
-    @UriParam(label = "consumer", defaultValue = DEFAULT_DESIGN_DOCUMENT_NAME)
+    @UriParam(label = "consumer", defaultValue = DEFAULT_DESIGN_DOCUMENT_NAME,
+              description = "The design document name to use. Deprecated: use the statement option with SQL++ queries instead.")
+    @Deprecated
     private String designDocumentName = DEFAULT_DESIGN_DOCUMENT_NAME;
-    @UriParam(label = "consumer", defaultValue = DEFAULT_VIEWNAME)
+    @UriParam(label = "consumer", defaultValue = DEFAULT_VIEWNAME,
+              description = "The view name to use. Deprecated: use the statement option with SQL++ queries instead.")
+    @Deprecated
     private String viewName = DEFAULT_VIEWNAME;
     @UriParam(label = "consumer", defaultValue = "-1")
     private int limit = -1;
@@ -311,6 +329,19 @@ public class CouchbaseEndpoint extends ScheduledPollEndpoint implements Endpoint
         this.additionalHosts = additionalHosts;
     }
 
+    public String getConnectionString() {
+        return connectionString;
+    }
+
+    /**
+     * The Couchbase SDK connection string to use (e.g., couchbase://hostname:11210). When set, this takes precedence
+     * over the hostname and port options for the SDK connection. This is useful when the KV port is not the default
+     * 11210, for example when connecting to a container with dynamic port mappings.
+     */
+    public void setConnectionString(String connectionString) {
+        this.connectionString = connectionString;
+    }
+
     public int getPersistTo() {
         return persistTo;
     }
@@ -399,24 +430,109 @@ public class CouchbaseEndpoint extends ScheduledPollEndpoint implements Endpoint
         this.consumerRetryPause = consumerRetryPause;
     }
 
+    public String getStatement() {
+        return statement;
+    }
+
+    /**
+     * A SQL++ (N1QL) query statement for consuming documents. When set, the consumer uses SQL++ queries instead of
+     * MapReduce views. The query should select META().id AS __id to identify documents. Example: SELECT META().id AS
+     * __id, * FROM `myCollection` WHERE type = 'order' LIMIT 100. If not set and useView is false, a SQL++ query is
+     * auto-generated from the bucket, scope, collection, limit, skip, descending, rangeStartKey, and rangeEndKey
+     * options.
+     */
+    public void setStatement(String statement) {
+        this.statement = statement;
+    }
+
+    public boolean isUseView() {
+        return useView;
+    }
+
+    /**
+     * If true, use the deprecated MapReduce Views to query documents via designDocumentName and viewName. If false
+     * (default), use SQL++ queries instead. When both useView is false and statement is not set, a SQL++ query is
+     * auto-generated from the endpoint options (limit, skip, descending, etc.).
+     */
+    public void setUseView(boolean useView) {
+        this.useView = useView;
+    }
+
+    /**
+     * Builds a SQL++ query from the endpoint options.
+     */
+    String buildSqlQuery() {
+        StringBuilder sb = new StringBuilder("SELECT META().id AS __id, * FROM `");
+        // Use the collection if set, otherwise use the bucket name (default collection)
+        if (collection != null && !collection.isEmpty()) {
+            sb.append(collection);
+        } else {
+            sb.append(bucket);
+        }
+        sb.append('`');
+
+        // WHERE clause from range keys
+        String startKey = rangeStartKey;
+        String endKey = rangeEndKey;
+        boolean hasStart = startKey != null && !startKey.isEmpty();
+        boolean hasEnd = endKey != null && !endKey.isEmpty();
+        if (hasStart || hasEnd) {
+            sb.append(" WHERE ");
+            if (hasStart && hasEnd) {
+                sb.append("META().id >= '").append(startKey).append("' AND META().id <= '").append(endKey).append('\'');
+            } else if (hasStart) {
+                sb.append("META().id >= '").append(startKey).append('\'');
+            } else {
+                sb.append("META().id <= '").append(endKey).append('\'');
+            }
+        }
+
+        // ORDER BY
+        if (descending) {
+            sb.append(" ORDER BY META().id DESC");
+        }
+
+        // LIMIT
+        if (limit > 0) {
+            sb.append(" LIMIT ").append(limit);
+        }
+
+        // OFFSET
+        if (skip > 0) {
+            sb.append(" OFFSET ").append(skip);
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * @deprecated Use {@link #setStatement(String)} with SQL++ queries instead.
+     */
+    @Deprecated
     public String getDesignDocumentName() {
         return designDocumentName;
     }
 
     /**
-     * The design document name to use
+     * @deprecated Use {@link #setStatement(String)} with SQL++ queries instead.
      */
+    @Deprecated
     public void setDesignDocumentName(String designDocumentName) {
         this.designDocumentName = designDocumentName;
     }
 
+    /**
+     * @deprecated Use {@link #setStatement(String)} with SQL++ queries instead.
+     */
+    @Deprecated
     public String getViewName() {
         return viewName;
     }
 
     /**
-     * The view name to use
+     * @deprecated Use {@link #setStatement(String)} with SQL++ queries instead.
      */
+    @Deprecated
     public void setViewName(String viewName) {
         this.viewName = viewName;
     }
@@ -554,13 +670,43 @@ public class CouchbaseEndpoint extends ScheduledPollEndpoint implements Endpoint
 
     //create from couchbase-client
     private Bucket createClient() throws Exception {
-        List<URI> hosts = Arrays.asList(makeBootstrapURI());
-        String connectionString;
-
         if (bucket == null || bucket.isEmpty()) {
             throw new CamelException(COUCHBASE_URI_ERROR);
         }
 
+        ClusterEnvironment env = createClusterEnvironment();
+
+        String connStr;
+        if (connectionString != null && !connectionString.isEmpty()) {
+            connStr = connectionString;
+        } else {
+            List<URI> hosts = Arrays.asList(makeBootstrapURI());
+            String addHosts = hosts.stream()
+                    .map(URI::getHost)
+                    .collect(Collectors.joining(","));
+            connStr = !addHosts.isEmpty() ? addHosts : hostname;
+        }
+
+        Cluster cluster = Cluster.connect(connStr, ClusterOptions
+                .clusterOptions(username, password)
+                .environment(env));
+
+        return cluster.bucket(bucket);
+    }
+
+    /**
+     * Creates the {@link ClusterEnvironment} for connecting to Couchbase.
+     * <p>
+     * Explicitly configures the {@link DefaultJsonSerializer} to prevent the Couchbase SDK from auto-detecting Jackson
+     * on the classpath (CAMEL-22090). Without this, when a non-shaded Jackson library is present (e.g., via
+     * camel-jackson, Spring Boot, or Quarkus), the SDK would use {@code JacksonJsonSerializer} backed by the non-shaded
+     * Jackson {@code ObjectMapper}. This causes deserialization failures because the SDK's internal types (such as view
+     * row keys) rely on the shaded Jackson classes bundled within the Couchbase SDK.
+     * <p>
+     * The {@link DefaultJsonSerializer} uses the shaded Jackson {@code ObjectMapper} bundled inside the Couchbase SDK,
+     * ensuring consistent serialization/deserialization regardless of what other Jackson versions are on the classpath.
+     */
+    ClusterEnvironment createClusterEnvironment() {
         ClusterEnvironment.Builder cfb = ClusterEnvironment.builder();
         cfb.jsonSerializer(DefaultJsonSerializer.create());
         if (queryTimeout != DEFAULT_QUERY_TIMEOUT) {
@@ -568,24 +714,7 @@ public class CouchbaseEndpoint extends ScheduledPollEndpoint implements Endpoint
                     .connectTimeout(Duration.ofMillis(connectTimeout))
                     .queryTimeout(Duration.ofMillis(queryTimeout));
         }
-
-        ClusterEnvironment env = cfb.build();
-
-        String addHosts = hosts.stream()
-                .map(URI::getHost)
-                .collect(Collectors.joining(","));
-
-        if (!addHosts.isEmpty()) {
-            connectionString = addHosts;
-        } else {
-            connectionString = hostname;
-        }
-
-        Cluster cluster = Cluster.connect(connectionString, ClusterOptions
-                .clusterOptions(username, password)
-                .environment(env));
-
-        return cluster.bucket(bucket);
+        return cfb.build();
     }
 
     /**

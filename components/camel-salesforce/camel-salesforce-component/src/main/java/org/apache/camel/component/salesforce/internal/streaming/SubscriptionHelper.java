@@ -21,14 +21,19 @@ import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.CookieStore;
 import java.net.URI;
+import java.time.Duration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 import org.apache.camel.CamelException;
@@ -40,6 +45,8 @@ import org.apache.camel.component.salesforce.StreamingApiConsumer;
 import org.apache.camel.component.salesforce.api.SalesforceException;
 import org.apache.camel.component.salesforce.internal.SalesforceSession;
 import org.apache.camel.support.service.ServiceSupport;
+import org.apache.camel.support.task.Tasks;
+import org.apache.camel.support.task.budget.Budgets;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.client.ClientSessionChannel;
 import org.cometd.bayeux.client.ClientSessionChannel.MessageListener;
@@ -47,6 +54,7 @@ import org.cometd.client.BayeuxClient;
 import org.cometd.client.BayeuxClient.State;
 import org.cometd.client.http.jetty.JettyHttpClientTransport;
 import org.cometd.client.transport.ClientTransport;
+import org.cometd.common.TransportException;
 import org.eclipse.jetty.client.Request;
 import org.eclipse.jetty.http.HttpCookie;
 import org.eclipse.jetty.http.HttpCookieStore;
@@ -65,7 +73,7 @@ import static org.cometd.bayeux.Message.SUBSCRIPTION_FIELD;
 
 public class SubscriptionHelper extends ServiceSupport {
 
-    static final ReplayExtension REPLAY_EXTENSION = new ReplayExtension();
+    private final ReplayExtension replayExtension = new ReplayExtension();
 
     private static final Logger LOG = LoggerFactory.getLogger(SubscriptionHelper.class);
 
@@ -79,6 +87,9 @@ public class SubscriptionHelper extends ServiceSupport {
     private static final String SERVER_TOO_BUSY_ERROR = "503::";
     private static final String AUTHENTICATION_INVALID = "401::Authentication invalid";
     private static final String INVALID_REPLAY_ID_PATTERN = "400::The replayId \\{.*} you provided was invalid.*";
+    private static final String CHANNEL_INVALID_PATTERN = "400::The channel.*";
+    private static final String DENIED_BY_SEC_POLICY = "403:denied_by_security_policy";
+    private static final String AUTHORIZATION_ERROR = "403::";
 
     BayeuxClient client;
 
@@ -100,6 +111,7 @@ public class SubscriptionHelper extends ServiceSupport {
             = new ConcurrentHashMap<>();
 
     private final Set<String> channelsToSubscribe = ConcurrentHashMap.newKeySet();
+    private final Lock channelsLock = new ReentrantLock();
 
     private final ClientSessionChannel.MessageListener handshakeListener = createHandshakeListener();
 
@@ -125,7 +137,7 @@ public class SubscriptionHelper extends ServiceSupport {
                 if (handshakeError != null) {
                     if (handshakeError.startsWith("403::")) {
                         String failureReason = getFailureReason(message);
-                        if (failureReason.equals(AUTHENTICATION_INVALID)) {
+                        if (AUTHENTICATION_INVALID.equals(failureReason)) {
                             LOG.debug(
                                     "attempting login due to handshake error: 403 -> 401::Authentication invalid");
                             session.attemptLoginUntilSuccessful(backoffIncrement, maxBackoff);
@@ -136,8 +148,13 @@ public class SubscriptionHelper extends ServiceSupport {
                 LOG.debug("Handshake failed, so try again.");
                 client.handshake();
             } else if (!channelToConsumers.isEmpty()) {
-                channelsToSubscribe.clear();
-                channelsToSubscribe.addAll(channelToConsumers.keySet());
+                channelsLock.lock();
+                try {
+                    channelsToSubscribe.clear();
+                    channelsToSubscribe.addAll(channelToConsumers.keySet());
+                } finally {
+                    channelsLock.unlock();
+                }
                 LOG.info("Handshake successful. Channels to subscribe: {}", channelsToSubscribe);
             }
         });
@@ -146,6 +163,9 @@ public class SubscriptionHelper extends ServiceSupport {
     private MessageListener createConnectionListener() {
         return (channel, message) -> component.getHttpClient().getWorkerPool().execute(() -> {
             LOG.debug("[CHANNEL:META_CONNECT]: {}", message);
+            String reconnectAdvice = message.getAdvice() != null
+                    ? (String) message.getAdvice().get("reconnect")
+                    : null;
 
             if (!message.isSuccessful()) {
                 LOG.warn("Connect failure: {}", message);
@@ -157,15 +177,35 @@ public class SubscriptionHelper extends ServiceSupport {
                     LOG.debug("Attempting login...");
                     session.attemptLoginUntilSuccessful(backoffIncrement, maxBackoff);
                 }
-                if (message.getAdvice() == null || "none".equals(message.getAdvice().get("reconnect"))) {
-                    LOG.debug("Advice == none, so handshaking");
+                // Per Bayeux spec: handshake on null advice, "none", "handshake", or any non-"retry" value.
+                // When advice is "retry", the CometD client handles reconnection automatically.
+                if (reconnectAdvice == null || !"retry".equals(reconnectAdvice)) {
+                    LOG.debug("Reconnect advice [{}] on failed connect, initiating handshake", reconnectAdvice);
+                    client.handshake();
+                } else if (isTemporaryError(message)) {
+                    LOG.debug("Initiating handshake after temporary error: {}", message);
                     client.handshake();
                 }
-            } else if (!channelsToSubscribe.isEmpty()) {
-                LOG.info("Subscribing to channels: {}", channelsToSubscribe);
-                for (var channelName : channelsToSubscribe) {
-                    for (var consumer : channelToConsumers.get(channelName)) {
-                        subscribe(consumer);
+            } else if (reconnectAdvice != null && !"retry".equals(reconnectAdvice)) {
+                LOG.warn("Reconnect advice [{}] on successful connect, initiating handshake", reconnectAdvice);
+                client.handshake();
+            } else {
+                Set<String> toSubscribe = null;
+                channelsLock.lock();
+                try {
+                    if (!channelsToSubscribe.isEmpty()) {
+                        toSubscribe = new HashSet<>(channelsToSubscribe);
+                        channelsToSubscribe.clear();
+                    }
+                } finally {
+                    channelsLock.unlock();
+                }
+                if (toSubscribe != null) {
+                    LOG.info("Subscribing to channels: {}", toSubscribe);
+                    for (var channelName : toSubscribe) {
+                        for (var consumer : channelToConsumers.get(channelName)) {
+                            subscribe(consumer);
+                        }
                     }
                 }
             }
@@ -177,6 +217,16 @@ public class SubscriptionHelper extends ServiceSupport {
             LOG.debug("[CHANNEL:META_SUBSCRIBE]: {}", message);
             var channelName = message.getOrDefault(SUBSCRIPTION_FIELD, "").toString();
             if (!message.isSuccessful()) {
+                if (channelName.isEmpty()) {
+                    Map<String, Object> advice = message.getAdvice();
+                    if (advice != null && "handshake".equals(advice.get("reconnect"))) {
+                        LOG.warn("Subscription failure: empty channel, advice == handshake, so handshaking");
+                        client.handshake();
+                    } else {
+                        LOG.error("Subscription failure: empty channel and no handshake advice");
+                    }
+                    return;
+                }
                 LOG.warn("Subscription failure: {}", message);
                 var consumers = channelToConsumers.getOrDefault(channelName, emptySet());
                 consumers.stream().findFirst().ifPresent(salesforceConsumer -> subscriptionFailed(salesforceConsumer, message));
@@ -206,7 +256,8 @@ public class SubscriptionHelper extends ServiceSupport {
         boolean abort = true;
 
         LOG.warn(msg);
-        if (isTemporaryError(message)) {
+        if (isTemporaryError(message) || error.equals(AUTHENTICATION_INVALID) || error.startsWith(DENIED_BY_SEC_POLICY)
+                || error.startsWith(AUTHORIZATION_ERROR)) {
 
             // retry after delay
             final long backoff = handshakeBackoff.getAndAdd(backoffIncrement);
@@ -215,14 +266,21 @@ public class SubscriptionHelper extends ServiceSupport {
             } else {
                 abort = false;
 
-                try {
-                    LOG.debug("Pausing for {} msecs before subscribe attempt", backoff);
-                    Thread.sleep(backoff);
-                    for (var consumer : consumers) {
-                        subscribe(consumer);
-                    }
-                } catch (InterruptedException e) {
-                    LOG.warn("Aborting subscribe on interrupt!", e);
+                LOG.debug("Pausing for {} msecs before subscribe attempt", backoff);
+                // Use Camel's task API for backoff delay instead of Thread.sleep()
+                // We use initialDelay for the actual delay, and maxIterations(1) to run once
+                Tasks.foregroundTask()
+                        .withBudget(Budgets.iterationBudget()
+                                .withMaxIterations(1)
+                                .withInitialDelay(Duration.ofMillis(backoff))
+                                .withInterval(Duration.ZERO)
+                                .build())
+                        .withName("SalesforceSubscribeRetryDelay")
+                        .build()
+                        .run(component.getCamelContext(), () -> true);
+
+                for (var consumer : consumers) {
+                    subscribe(consumer);
                 }
             }
         } else if (error.matches(INVALID_REPLAY_ID_PATTERN)) {
@@ -231,10 +289,13 @@ public class SubscriptionHelper extends ServiceSupport {
                     = firstConsumer.getEndpoint().getConfiguration().getFallBackReplayId();
             LOG.warn(error);
             LOG.warn("Falling back to replayId {} for channel {}", fallBackReplayId, channelName);
-            REPLAY_EXTENSION.setReplayId(channelName, fallBackReplayId);
+            replayExtension.setReplayId(channelName, fallBackReplayId);
             for (var consumer : consumers) {
                 subscribe(consumer);
             }
+        } else if (error.matches(CHANNEL_INVALID_PATTERN)) {
+            LOG.warn("Channel invalid for channel {}, removing from subscription list", channelName);
+            channelsToSubscribe.remove(channelName);
         }
 
         if (abort && client != null) {
@@ -408,7 +469,7 @@ public class SubscriptionHelper extends ServiceSupport {
         BayeuxClient client = new BayeuxClient(getEndpointUrl(component), transport);
 
         // added eagerly to check for support during handshake
-        client.addExtension(REPLAY_EXTENSION);
+        client.addExtension(component.getSubscriptionHelper().getReplayExtension());
 
         return client;
     }
@@ -419,7 +480,6 @@ public class SubscriptionHelper extends ServiceSupport {
             // create subscription for consumer
             final String channelName = getChannelName(consumer.getTopicName());
             channelToConsumers.computeIfAbsent(channelName, key -> ConcurrentHashMap.newKeySet()).add(consumer);
-            channelsToSubscribe.add(channelName);
 
             setReplayIdIfAbsent(consumer.getEndpoint());
 
@@ -439,9 +499,18 @@ public class SubscriptionHelper extends ServiceSupport {
         }
     }
 
+    ReplayExtension getReplayExtension() {
+        return replayExtension;
+    }
+
     private static boolean isTemporaryError(Message message) {
         String failureReason = getFailureReason(message);
-        return failureReason != null && failureReason.startsWith(SERVER_TOO_BUSY_ERROR);
+        if (failureReason != null && failureReason.startsWith(SERVER_TOO_BUSY_ERROR)) {
+            return true;
+        }
+        Exception exception = getFailure(message);
+        return exception instanceof IOException || exception instanceof TransportException
+                || exception instanceof TimeoutException;
     }
 
     private static String getFailureReason(Message message) {
@@ -465,7 +534,7 @@ public class SubscriptionHelper extends ServiceSupport {
 
             final Long replayIdValue = replayId.get();
 
-            REPLAY_EXTENSION.setReplayIdIfAbsent(channelName, replayIdValue);
+            replayExtension.setReplayIdIfAbsent(channelName, replayIdValue);
         }
     }
 

@@ -16,6 +16,7 @@
  */
 package org.apache.camel.support.jsse;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,11 +26,14 @@ import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLSocket;
 
 import org.apache.camel.CamelContext;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.parallel.Isolated;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -742,6 +746,339 @@ public class SSLContextParametersTest extends AbstractJsseParametersTest {
     }
 
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_21)
+    public void testNamedGroups() throws Exception {
+        SSLContext controlContext = SSLContext.getInstance("TLSv1.3");
+        controlContext.init(null, null, null);
+        SSLEngine controlEngine = controlContext.createSSLEngine();
+        String[] controlNamedGroups = getNamedGroups(controlEngine.getSSLParameters());
+
+        // default - no named groups configured
+        // When PQC groups are available (JDK 25+), auto-configuration reorders named groups
+        SSLContextParameters scp = new SSLContextParameters();
+        SSLContext context = scp.createSSLContext(null);
+
+        SSLEngine engine = context.createSSLEngine();
+        SSLSocket socket = (SSLSocket) context.getSocketFactory().createSocket();
+        SSLServerSocket serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        if (Arrays.asList(controlNamedGroups).contains("X25519MLKEM768")) {
+            // PQC auto-configuration reorders groups with X25519MLKEM768 first
+            assertEquals("X25519MLKEM768", getNamedGroups(engine.getSSLParameters())[0]);
+            assertEquals("X25519MLKEM768", getNamedGroups(socket.getSSLParameters())[0]);
+            assertEquals("X25519MLKEM768", getNamedGroups(serverSocket.getSSLParameters())[0]);
+        } else {
+            // No PQC available, should keep JVM defaults
+            assertArrayEquals(controlNamedGroups, getNamedGroups(engine.getSSLParameters()));
+            assertArrayEquals(controlNamedGroups, getNamedGroups(socket.getSSLParameters()));
+            assertArrayEquals(controlNamedGroups, getNamedGroups(serverSocket.getSSLParameters()));
+        }
+
+        // empty ngp - sets empty list
+        NamedGroupsParameters ngp = new NamedGroupsParameters();
+        scp.setNamedGroups(ngp);
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertEquals(0, getNamedGroups(engine.getSSLParameters()).length);
+        assertEquals(0, getNamedGroups(socket.getSSLParameters()).length);
+        assertEquals(0, getNamedGroups(serverSocket.getSSLParameters()).length);
+
+        // explicit named group
+        ngp.setNamedGroup(Collections.singletonList(controlNamedGroups[0]));
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertEquals(1, getNamedGroups(engine.getSSLParameters()).length);
+        assertEquals(controlNamedGroups[0], getNamedGroups(engine.getSSLParameters())[0]);
+        assertEquals(1, getNamedGroups(socket.getSSLParameters()).length);
+        assertEquals(controlNamedGroups[0], getNamedGroups(socket.getSSLParameters())[0]);
+        assertEquals(1, getNamedGroups(serverSocket.getSSLParameters()).length);
+        assertEquals(controlNamedGroups[0], getNamedGroups(serverSocket.getSSLParameters())[0]);
+
+        // explicit named groups override filter
+        FilterParameters filter = new FilterParameters();
+        filter.getInclude().add(".*");
+        scp.setNamedGroupsFilter(filter);
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertEquals(1, getNamedGroups(engine.getSSLParameters()).length);
+        assertEquals(controlNamedGroups[0], getNamedGroups(engine.getSSLParameters())[0]);
+        assertEquals(1, getNamedGroups(socket.getSSLParameters()).length);
+        assertEquals(controlNamedGroups[0], getNamedGroups(socket.getSSLParameters())[0]);
+        assertEquals(1, getNamedGroups(serverSocket.getSSLParameters()).length);
+        assertEquals(controlNamedGroups[0], getNamedGroups(serverSocket.getSSLParameters())[0]);
+    }
+
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_21)
+    public void testNamedGroupsFilter() throws Exception {
+        SSLContext controlContext = SSLContext.getInstance("TLSv1.3");
+        controlContext.init(null, null, null);
+        SSLEngine controlEngine = controlContext.createSSLEngine();
+        String[] controlNamedGroups = getNamedGroups(controlEngine.getSSLParameters());
+
+        // default - no filter, keeps defaults (or PQC-reordered defaults on JDK 25+)
+        SSLContextParameters scp = new SSLContextParameters();
+        SSLContext context = scp.createSSLContext(null);
+
+        SSLEngine engine = context.createSSLEngine();
+        SSLSocket socket = (SSLSocket) context.getSocketFactory().createSocket();
+        SSLServerSocket serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        if (Arrays.asList(controlNamedGroups).contains("X25519MLKEM768")) {
+            assertEquals("X25519MLKEM768", getNamedGroups(engine.getSSLParameters())[0]);
+            assertEquals("X25519MLKEM768", getNamedGroups(socket.getSSLParameters())[0]);
+            assertEquals("X25519MLKEM768", getNamedGroups(serverSocket.getSSLParameters())[0]);
+        } else {
+            assertArrayEquals(controlNamedGroups, getNamedGroups(engine.getSSLParameters()));
+            assertArrayEquals(controlNamedGroups, getNamedGroups(socket.getSSLParameters()));
+            assertArrayEquals(controlNamedGroups, getNamedGroups(serverSocket.getSSLParameters()));
+        }
+
+        // empty filter - no includes means no groups match
+        FilterParameters filter = new FilterParameters();
+        scp.setNamedGroupsFilter(filter);
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertEquals(0, getNamedGroups(engine.getSSLParameters()).length);
+        assertEquals(0, getNamedGroups(socket.getSSLParameters()).length);
+        assertEquals(0, getNamedGroups(serverSocket.getSSLParameters()).length);
+
+        // include all
+        filter.getInclude().add(".*");
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertArrayEquals(controlNamedGroups, getNamedGroups(engine.getSSLParameters()));
+        assertArrayEquals(controlNamedGroups, getNamedGroups(socket.getSSLParameters()));
+        assertArrayEquals(controlNamedGroups, getNamedGroups(serverSocket.getSSLParameters()));
+
+        // include all but exclude all (excludes win)
+        filter.getExclude().add(".*");
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertEquals(0, getNamedGroups(engine.getSSLParameters()).length);
+        assertEquals(0, getNamedGroups(socket.getSSLParameters()).length);
+        assertEquals(0, getNamedGroups(serverSocket.getSSLParameters()).length);
+
+        // include only x* groups (e.g. x25519, x448)
+        filter.getInclude().clear();
+        filter.getExclude().clear();
+        filter.getInclude().add("x.*");
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertTrue(getNamedGroups(engine.getSSLParameters()).length >= 1);
+        for (String group : getNamedGroups(engine.getSSLParameters())) {
+            assertTrue(group.startsWith("x"), "Expected group starting with 'x' but got: " + group);
+        }
+        assertTrue(getNamedGroups(socket.getSSLParameters()).length >= 1);
+        for (String group : getNamedGroups(socket.getSSLParameters())) {
+            assertTrue(group.startsWith("x"), "Expected group starting with 'x' but got: " + group);
+        }
+        assertTrue(getNamedGroups(serverSocket.getSSLParameters()).length >= 1);
+        for (String group : getNamedGroups(serverSocket.getSSLParameters())) {
+            assertTrue(group.startsWith("x"), "Expected group starting with 'x' but got: " + group);
+        }
+    }
+
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_21)
+    public void testNamedGroupsDoNotAffectCipherSuitesOrProtocols() throws Exception {
+        SSLContext controlContext = SSLContext.getInstance("TLSv1.3");
+        controlContext.init(null, null, null);
+        SSLEngine controlEngine = controlContext.createSSLEngine();
+
+        // setting named groups should not change cipher suites or protocols
+        SSLContextParameters scp = new SSLContextParameters();
+        NamedGroupsParameters ngp = new NamedGroupsParameters();
+        ngp.setNamedGroup(Collections.singletonList("x25519"));
+        scp.setNamedGroups(ngp);
+
+        SSLContext context = scp.createSSLContext(null);
+        SSLEngine engine = context.createSSLEngine();
+
+        assertArrayEquals(controlEngine.getEnabledCipherSuites(), engine.getEnabledCipherSuites());
+        assertArrayEquals(controlEngine.getEnabledProtocols(), engine.getEnabledProtocols());
+        assertEquals(1, getNamedGroups(engine.getSSLParameters()).length);
+        assertEquals("x25519", getNamedGroups(engine.getSSLParameters())[0]);
+    }
+
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_21)
+    public void testSignatureSchemes() throws Exception {
+        SSLContext controlContext = SSLContext.getInstance("TLSv1.3");
+        controlContext.init(null, null, null);
+        SSLEngine controlEngine = controlContext.createSSLEngine();
+        String[] controlSignatureSchemes = getSignatureSchemes(controlEngine.getSSLParameters());
+
+        // default - no signature schemes configured, should keep defaults
+        SSLContextParameters scp = new SSLContextParameters();
+        SSLContext context = scp.createSSLContext(null);
+
+        SSLEngine engine = context.createSSLEngine();
+        SSLSocket socket = (SSLSocket) context.getSocketFactory().createSocket();
+        SSLServerSocket serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertArrayEquals(controlSignatureSchemes, getSignatureSchemes(engine.getSSLParameters()));
+        assertArrayEquals(controlSignatureSchemes, getSignatureSchemes(socket.getSSLParameters()));
+        assertArrayEquals(controlSignatureSchemes, getSignatureSchemes(serverSocket.getSSLParameters()));
+
+        // empty ssp - sets empty list
+        SignatureSchemesParameters ssp = new SignatureSchemesParameters();
+        scp.setSignatureSchemes(ssp);
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertEquals(0, getSignatureSchemes(engine.getSSLParameters()).length);
+        assertEquals(0, getSignatureSchemes(socket.getSSLParameters()).length);
+        assertEquals(0, getSignatureSchemes(serverSocket.getSSLParameters()).length);
+
+        // explicit signature scheme
+        ssp.setSignatureScheme(Collections.singletonList("rsa_pss_rsae_sha256"));
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertEquals(1, getSignatureSchemes(engine.getSSLParameters()).length);
+        assertEquals("rsa_pss_rsae_sha256", getSignatureSchemes(engine.getSSLParameters())[0]);
+        assertEquals(1, getSignatureSchemes(socket.getSSLParameters()).length);
+        assertEquals("rsa_pss_rsae_sha256", getSignatureSchemes(socket.getSSLParameters())[0]);
+        assertEquals(1, getSignatureSchemes(serverSocket.getSSLParameters()).length);
+        assertEquals("rsa_pss_rsae_sha256", getSignatureSchemes(serverSocket.getSSLParameters())[0]);
+
+        // explicit signature schemes override filter
+        FilterParameters filter = new FilterParameters();
+        filter.getInclude().add(".*");
+        scp.setSignatureSchemesFilter(filter);
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertEquals(1, getSignatureSchemes(engine.getSSLParameters()).length);
+        assertEquals("rsa_pss_rsae_sha256", getSignatureSchemes(engine.getSSLParameters())[0]);
+        assertEquals(1, getSignatureSchemes(socket.getSSLParameters()).length);
+        assertEquals("rsa_pss_rsae_sha256", getSignatureSchemes(socket.getSSLParameters())[0]);
+        assertEquals(1, getSignatureSchemes(serverSocket.getSSLParameters()).length);
+        assertEquals("rsa_pss_rsae_sha256", getSignatureSchemes(serverSocket.getSSLParameters())[0]);
+    }
+
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_21)
+    public void testSignatureSchemesFilter() throws Exception {
+        // Note: SSLParameters.getSignatureSchemes() returns null by default (unlike getNamedGroups()),
+        // so filters operate on explicitly provided schemes rather than JDK defaults.
+
+        // default - no filter, keeps defaults (null)
+        SSLContextParameters scp = new SSLContextParameters();
+        SSLContext context = scp.createSSLContext(null);
+
+        SSLEngine engine = context.createSSLEngine();
+        SSLSocket socket = (SSLSocket) context.getSocketFactory().createSocket();
+        SSLServerSocket serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertNull(getSignatureSchemes(engine.getSSLParameters()));
+        assertNull(getSignatureSchemes(socket.getSSLParameters()));
+        assertNull(getSignatureSchemes(serverSocket.getSSLParameters()));
+
+        // empty filter - no includes means no schemes match (empty array)
+        FilterParameters filter = new FilterParameters();
+        scp.setSignatureSchemesFilter(filter);
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        assertEquals(0, getSignatureSchemes(engine.getSSLParameters()).length);
+        assertEquals(0, getSignatureSchemes(socket.getSSLParameters()).length);
+        assertEquals(0, getSignatureSchemes(serverSocket.getSSLParameters()).length);
+
+        // explicit schemes override filter - filter ignored when schemes are set
+        SignatureSchemesParameters ssp = new SignatureSchemesParameters();
+        List<String> allSchemes = new LinkedList<>();
+        allSchemes.add("ecdsa_secp256r1_sha256");
+        allSchemes.add("ecdsa_secp384r1_sha384");
+        allSchemes.add("rsa_pss_rsae_sha256");
+        allSchemes.add("ed25519");
+        ssp.setSignatureScheme(allSchemes);
+        scp.setSignatureSchemes(ssp);
+
+        filter.getInclude().add("ecdsa_.*");
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+
+        // explicit schemes take precedence over filter
+        assertEquals(4, getSignatureSchemes(engine.getSSLParameters()).length);
+
+        // clear explicit schemes, keep filter - now filter applies to empty JDK defaults
+        scp.setSignatureSchemes(null);
+        filter.getInclude().clear();
+        filter.getInclude().add(".*");
+        context = scp.createSSLContext(null);
+        engine = context.createSSLEngine();
+        socket = (SSLSocket) context.getSocketFactory().createSocket();
+        serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket();
+
+        // JDK defaults are null → filtering null gives empty array
+        assertEquals(0, getSignatureSchemes(engine.getSSLParameters()).length);
+        assertEquals(0, getSignatureSchemes(socket.getSSLParameters()).length);
+        assertEquals(0, getSignatureSchemes(serverSocket.getSSLParameters()).length);
+    }
+
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_21)
+    public void testSignatureSchemesDoNotAffectOtherSettings() throws Exception {
+        SSLContext controlContext = SSLContext.getInstance("TLSv1.3");
+        controlContext.init(null, null, null);
+        SSLEngine controlEngine = controlContext.createSSLEngine();
+
+        // setting signature schemes should not change cipher suites, protocols, or named groups
+        SSLContextParameters scp = new SSLContextParameters();
+        SignatureSchemesParameters ssp = new SignatureSchemesParameters();
+        ssp.setSignatureScheme(Collections.singletonList("rsa_pss_rsae_sha256"));
+        scp.setSignatureSchemes(ssp);
+
+        SSLContext context = scp.createSSLContext(null);
+        SSLEngine engine = context.createSSLEngine();
+
+        assertArrayEquals(controlEngine.getEnabledCipherSuites(), engine.getEnabledCipherSuites());
+        assertArrayEquals(controlEngine.getEnabledProtocols(), engine.getEnabledProtocols());
+        // Named groups may be reordered by PQC auto-configuration, but same groups should be present
+        String[] controlGroups = getNamedGroups(controlEngine.getSSLParameters());
+        String[] engineGroups = getNamedGroups(engine.getSSLParameters());
+        if (controlGroups != null && Arrays.asList(controlGroups).contains("X25519MLKEM768")) {
+            assertEquals("X25519MLKEM768", engineGroups[0]);
+            assertEquals(controlGroups.length, engineGroups.length);
+        } else {
+            assertArrayEquals(controlGroups, engineGroups);
+        }
+        assertEquals(1, getSignatureSchemes(engine.getSSLParameters()).length);
+        assertEquals("rsa_pss_rsae_sha256", getSignatureSchemes(engine.getSSLParameters())[0]);
+    }
+
+    @Test
     public void testSessionTimeout() throws Exception {
         SSLContextParameters scp = new SSLContextParameters();
         scp.setSessionTimeout("60");
@@ -826,6 +1163,78 @@ public class SSLContextParametersTest extends AbstractJsseParametersTest {
         assertEquals(defaultContext.getProvider().getName(), context.getProvider().getName());
     }
 
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_21)
+    public void testPqcNamedGroupsAutoConfigured() throws Exception {
+        SSLContext controlContext = SSLContext.getInstance("TLSv1.3");
+        controlContext.init(null, null, null);
+        SSLEngine controlEngine = controlContext.createSSLEngine();
+        String[] controlNamedGroups = getNamedGroups(controlEngine.getSSLParameters());
+        boolean pqcAvailable = controlNamedGroups != null
+                && Arrays.asList(controlNamedGroups).contains("X25519MLKEM768");
+
+        SSLContextParameters scp = new SSLContextParameters();
+        SSLContext context = scp.createSSLContext(null);
+        SSLEngine engine = context.createSSLEngine();
+        String[] resultGroups = getNamedGroups(engine.getSSLParameters());
+
+        if (pqcAvailable) {
+            // X25519MLKEM768 should be first
+            assertEquals("X25519MLKEM768", resultGroups[0]);
+            // All original groups should still be present
+            List<String> resultList = Arrays.asList(resultGroups);
+            for (String group : controlNamedGroups) {
+                assertTrue(resultList.contains(group), "Expected group " + group + " to be present");
+            }
+        } else {
+            // No PQC, defaults should be unchanged
+            assertArrayEquals(controlNamedGroups, resultGroups);
+        }
+    }
+
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_21)
+    public void testPqcNamedGroupsUserConfigOverrides() throws Exception {
+        // User-configured named groups should NOT be overridden by PQC auto-config
+        SSLContextParameters scp = new SSLContextParameters();
+        NamedGroupsParameters ngp = new NamedGroupsParameters();
+        ngp.setNamedGroup(Collections.singletonList("secp256r1"));
+        scp.setNamedGroups(ngp);
+
+        SSLContext context = scp.createSSLContext(null);
+        SSLEngine engine = context.createSSLEngine();
+
+        assertEquals(1, getNamedGroups(engine.getSSLParameters()).length);
+        assertEquals("secp256r1", getNamedGroups(engine.getSSLParameters())[0]);
+    }
+
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_21)
+    public void testPqcNamedGroupsFilterOverrides() throws Exception {
+        // User-configured named groups filter should NOT be overridden by PQC auto-config
+        SSLContextParameters scp = new SSLContextParameters();
+        FilterParameters filter = new FilterParameters();
+        filter.getInclude().add("secp.*");
+        scp.setNamedGroupsFilter(filter);
+
+        SSLContext context = scp.createSSLContext(null);
+        SSLEngine engine = context.createSSLEngine();
+
+        for (String group : getNamedGroups(engine.getSSLParameters())) {
+            assertTrue(group.startsWith("secp"), "Expected group starting with 'secp' but got: " + group);
+        }
+    }
+
+    @Test
+    public void testPqcAutoConfigDoesNotPersist() throws Exception {
+        // PQC auto-config should not permanently mutate the SSLContextParameters instance
+        SSLContextParameters scp = new SSLContextParameters();
+        scp.createSSLContext(null);
+
+        // After createSSLContext, namedGroups should be null (reset)
+        assertNull(scp.getNamedGroups());
+    }
+
     protected String[] getDefaultCipherSuiteIncludes(String[] availableCipherSuites) {
         List<String> enabled = new LinkedList<>();
 
@@ -851,5 +1260,17 @@ public class SSLContextParametersTest extends AbstractJsseParametersTest {
         for (String value : values) {
             assertTrue(value.startsWith(prefix), value + " does not start with the prefix " + prefix);
         }
+    }
+
+    // Reflection helpers for JDK 20+ SSLParameters.getNamedGroups()/getSignatureSchemes()
+    // These methods are not available with --release 17 compilation target
+    private static String[] getNamedGroups(SSLParameters params) throws Exception {
+        Method m = SSLParameters.class.getMethod("getNamedGroups");
+        return (String[]) m.invoke(params);
+    }
+
+    private static String[] getSignatureSchemes(SSLParameters params) throws Exception {
+        Method m = SSLParameters.class.getMethod("getSignatureSchemes");
+        return (String[]) m.invoke(params);
     }
 }

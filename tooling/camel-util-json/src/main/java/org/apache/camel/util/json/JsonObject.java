@@ -20,10 +20,15 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * JsonObject is a common non-thread safe data format for string to data mappings. The contents of a JsonObject are only
@@ -49,10 +54,266 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
      * Instantiate a new JsonObject by accepting a map's entries, which could lead to de/serialization issues of the
      * resulting JsonObject since the entry values aren't validated as JSON values.
      *
+     * The json-path syntax also supports arrays using square brackets with the position index, such as
+     * "foo.bar[0].title", "foo.bar[1].title". You can use "last" as index number to get the last element of the array.
+     *
      * @param map represents the mappings to produce the JsonObject with.
      */
     public JsonObject(final Map<String, ?> map) {
         super(map);
+    }
+
+    /**
+     * A very basic json-path that can retrieve leaf node using a dot syntax, such as "foo.bar.title", to get the title
+     * attribute from the leaf JsonObject object (ie bar).
+     *
+     * The json-path syntax also supports arrays using square brackets with the position index, such as
+     * "foo.bar[0].title", "foo.bar[1].title". You can use "last" as index number to get the last element of the array.
+     *
+     * The returned value is expected to be a String
+     *
+     * @throws IllegalArgumentException if the path traversal does not exist
+     */
+    public String pathString(final String path) {
+        Object returnable = path(path);
+        if (returnable instanceof Boolean) {
+            returnable = returnable.toString();
+        } else if (returnable instanceof Number) {
+            returnable = returnable.toString();
+        }
+        return (String) returnable;
+    }
+
+    /**
+     * A very basic json-path that can retrieve leaf node using a dot syntax, such as "foo.bar.title", to get the title
+     * attribute from the leaf JsonObject object (ie bar).
+     *
+     * The json-path syntax also supports arrays using square brackets with the position index, such as
+     * "foo.bar[0].title", "foo.bar[1].title". You can use "last" as index number to get the last element of the array.
+     *
+     * You can use ?. to mark a path as optional, which returns null instead of throwing an exception if the path
+     * traversal does not exist.
+     *
+     * The returned value is expected to be an Integer
+     *
+     * @throws IllegalArgumentException if the path traversal does not exist
+     */
+    public Integer pathInteger(String path) {
+        Object returnable = path(path);
+        if (returnable == null) {
+            return null;
+        }
+        if (returnable instanceof String str) {
+            /* A String can be used to construct a BigDecimal. */
+            returnable = new BigDecimal(str);
+        }
+        return ((Number) returnable).intValue();
+    }
+
+    /**
+     * A very basic json-path that can retrieve leaf node using a dot syntax, such as "foo.bar.title", to get the title
+     * attribute from the leaf JsonObject object (ie bar).
+     *
+     * The json-path syntax also supports arrays using square brackets with the position index, such as
+     * "foo.bar[0].title", "foo.bar[1].title". You can use "last" as index number to get the last element of the array.
+     *
+     * You can use ?. to mark a path as optional, which returns null instead of throwing an exception if the path
+     * traversal does not exist.
+     *
+     * The returned value is expected to be a Boolean
+     *
+     * @throws IllegalArgumentException if the path traversal does not exist
+     */
+    public Boolean pathBoolean(String path) {
+        Object returnable = path(path);
+        if (returnable instanceof String str) {
+            returnable = Boolean.valueOf(str);
+        }
+        return (Boolean) returnable;
+    }
+
+    /**
+     * A very basic json-path that can retrieve leaf node using a dot syntax, such as "foo.bar.title", to get the title
+     * attribute from the leaf JsonObject object (ie bar).
+     *
+     * The json-path syntax also supports arrays using square brackets with the position index, such as
+     * "foo.bar[0].title", "foo.bar[1].title". You can use "last" as index number to get the last element of the array.
+     *
+     * You can use ?. to mark a path as optional, which returns null instead of throwing an exception if the path
+     * traversal does not exist.
+     *
+     * The returned value can be an attribute or another JSonObject node
+     *
+     * @throws IllegalArgumentException if the path traversal does not exist
+     */
+    public Object path(final String path) {
+        Object answer = null;
+
+        boolean optional = path.startsWith("?");
+        Map jo = this;
+        String sub = path;
+        if (optional && !path.contains(".") && !path.contains("[")) {
+            sub = sub.substring(1);
+        } else if (path.contains(".")) {
+            // grab until last dot
+            int pos = path.lastIndexOf(".");
+            optional = '?' == path.charAt(pos - 1);
+            sub = path.substring(pos + 1);
+            if (optional) {
+                pos = pos - 1;
+            }
+            Optional<Object> o = doPath(path.substring(0, pos));
+            if (o.isPresent()) {
+                answer = o.get();
+                if (answer instanceof Map map) {
+                    jo = map;
+                }
+            } else {
+                optional = true;
+                jo = null;
+            }
+        } else if (path.contains("[")) {
+            jo = null;
+            Optional<Object> o = doPath(path);
+            if (o.isPresent()) {
+                answer = o.get();
+                if (answer instanceof Map map) {
+                    jo = map;
+                }
+            } else {
+                optional = true;
+            }
+        }
+
+        // last part can be an index
+        if (sub.startsWith("[")) {
+            int pos = -1;
+            String num = sub.substring(1, sub.length() - 1);
+            if ("last".equals(num)) {
+                pos = Integer.MAX_VALUE;
+            } else {
+                pos = Integer.parseInt(num);
+            }
+            if (pos != -1 && answer instanceof List<?> arr) {
+                jo = null;
+                if (pos == Integer.MAX_VALUE) {
+                    answer = arr.get(arr.size() - 1);
+                } else if (pos < arr.size()) {
+                    answer = arr.get(pos);
+                } else {
+                    answer = null;
+                }
+            }
+        }
+        if (jo != null) {
+            answer = jo.get(sub);
+        }
+        if (answer == null && !optional) {
+            throw new IllegalArgumentException("JSonObject path " + path + " is null");
+        }
+        return answer;
+    }
+
+    /**
+     * A very basic json-path that can retrieve leaf node using a dot syntax, such as "foo.bar.title", to get the title
+     * attribute from the leaf JsonObject object (ie bar).
+     *
+     * The json-path syntax also supports arrays using square brackets with the position index, such as
+     * "foo.bar[0].title", "foo.bar[1].title". You can use "last" as index number to get the last element of the array.
+     *
+     * You can use ?. to mark a path as optional, which returns null instead of throwing an exception if the path
+     * traversal does not exist.
+     *
+     * The returned value is a JsonObject
+     *
+     * @throws IllegalArgumentException if the path traversal does not exist
+     */
+    public JsonObject pathJsonObject(final String path) {
+        var o = doPath(path).orElse(null);
+        return JsonObject.class.cast(o);
+    }
+
+    private static String[] splitWithDelimiters(String input, String regex) {
+        List<String> parts = new ArrayList<>();
+        Matcher m = Pattern.compile(regex).matcher(input);
+        int lastEnd = 0;
+        while (m.find()) {
+            parts.add(input.substring(lastEnd, m.start()));
+            parts.add(m.group());
+            lastEnd = m.end();
+        }
+        parts.add(input.substring(lastEnd));
+        return parts.toArray(new String[0]);
+    }
+
+    private Optional<Object> doPath(final String path) {
+        Object answer = null;
+
+        String[] split = splitWithDelimiters(path, "(\\?\\.|\\.)");
+        for (int i = 0; i < split.length; i = i + 2) {
+            String part = split[i];
+            String dot = i > 0 ? split[i - 1] : null;
+            int pos = -1;
+            boolean optional;
+            if (part.startsWith("?")) {
+                part = part.substring(1);
+                optional = true;
+            } else {
+                optional = dot != null && dot.equals("?.");
+            }
+            // notice multi-level index is not supported, such as[0][0] or [0][1]
+            if (part.endsWith("]")) {
+                String num = part.substring(part.lastIndexOf('[') + 1, part.length() - 1);
+                if ("last".equals(num)) {
+                    pos = Integer.MAX_VALUE;
+                } else {
+                    pos = Integer.parseInt(num);
+                }
+                part = part.substring(0, part.lastIndexOf('['));
+            }
+            if (answer instanceof Map jo) {
+                answer = jo.get(part);
+            } else {
+                answer = get(part);
+            }
+            if (pos != -1 && answer instanceof List<?> arr) {
+                if (pos == Integer.MAX_VALUE) {
+                    answer = arr.get(arr.size() - 1);
+                } else if (pos < arr.size()) {
+                    answer = arr.get(pos);
+                } else {
+                    answer = null;
+                }
+            }
+            if (answer == null && !optional) {
+                throw new IllegalArgumentException("JSonObject path " + path + " at " + part + " does not exist");
+            } else if (answer == null) {
+                return Optional.empty();
+            }
+        }
+        return Optional.ofNullable(answer);
+    }
+
+    /**
+     * A convenience method that assumes there is another JsonObject at the given key.
+     *
+     * @param  key                representing where the value ought to be stored at.
+     * @return                    the value stored at the key.
+     * @throws ClassCastException if the value didn't match the assumed return type.
+     */
+    public JsonObject getJsonObject(final String key) {
+        return getMap(key);
+    }
+
+    /**
+     * A convenience method that assumes there is a JsonArray at the given key.
+     *
+     * @param  key                representing where the value ought to be stored at.
+     * @return                    the value stored at the key.
+     * @throws ClassCastException if the value didn't match the assumed return type.
+     */
+    public JsonArray getJsonArray(final String key) {
+        return getCollection(key);
     }
 
     /**
@@ -75,9 +336,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         } else if (returnable instanceof Number) {
             /* A number can be used to construct a BigDecimal */
             returnable = new BigDecimal(returnable.toString());
-        } else if (returnable instanceof String) {
+        } else if (returnable instanceof String str) {
             /* A number can be used to construct a BigDecimal */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return (BigDecimal) returnable;
     }
@@ -108,9 +369,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         } else if (returnable instanceof Number) {
             /* A number can be used to construct a BigDecimal */
             returnable = new BigDecimal(returnable.toString());
-        } else if (returnable instanceof String) {
+        } else if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return (BigDecimal) returnable;
     }
@@ -124,8 +385,8 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
      */
     public Boolean getBoolean(final String key) {
         Object returnable = this.get(key);
-        if (returnable instanceof String) {
-            returnable = Boolean.valueOf((String) returnable);
+        if (returnable instanceof String str) {
+            returnable = Boolean.valueOf(str);
         }
         return (Boolean) returnable;
     }
@@ -145,8 +406,8 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         } else {
             return defaultValue;
         }
-        if (returnable instanceof String) {
-            returnable = Boolean.valueOf((String) returnable);
+        if (returnable instanceof String str) {
+            returnable = Boolean.valueOf(str);
         }
         return (Boolean) returnable;
     }
@@ -166,9 +427,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).byteValue();
     }
@@ -195,9 +456,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).byteValue();
     }
@@ -260,9 +521,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).doubleValue();
     }
@@ -289,9 +550,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).doubleValue();
     }
@@ -464,9 +725,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).floatValue();
     }
@@ -493,9 +754,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).floatValue();
     }
@@ -515,9 +776,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).intValue();
     }
@@ -544,9 +805,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).intValue();
     }
@@ -566,9 +827,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).longValue();
     }
@@ -595,9 +856,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).longValue();
     }
@@ -660,9 +921,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).shortValue();
     }
@@ -689,9 +950,9 @@ public class JsonObject extends LinkedHashMap<String, Object> implements Jsonabl
         if (returnable == null) {
             return null;
         }
-        if (returnable instanceof String) {
+        if (returnable instanceof String str) {
             /* A String can be used to construct a BigDecimal. */
-            returnable = new BigDecimal((String) returnable);
+            returnable = new BigDecimal(str);
         }
         return ((Number) returnable).shortValue();
     }

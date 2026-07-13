@@ -26,10 +26,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import com.azure.core.http.rest.PagedIterable;
@@ -70,7 +73,7 @@ class BlobOperationsIT extends Base {
 
     @BeforeAll
     public void setup() throws Exception {
-        randomBlobName = RandomStringUtils.randomAlphabetic(10);
+        randomBlobName = RandomStringUtils.secure().nextAlphabetic(10);
 
         blobContainerClientWrapper = new BlobServiceClientWrapper(serviceClient)
                 .getBlobContainerClientWrapper(configuration.getContainerName());
@@ -290,6 +293,64 @@ class BlobOperationsIT extends Base {
     }
 
     @Test
+    void testuploadBlockBlobChunkedWithStream(@TempDir Path testDir) throws Exception {
+        // Create a test file larger than 256KB to test chunked upload
+        final Path testFile = testDir.resolve("large_upload_test.txt");
+        final String content = RandomStringUtils.randomAlphanumeric(512 * 1024); // 512KB of random content
+        Files.writeString(testFile, content);
+
+        final BlobClientWrapper blobClientWrapper = blobContainerClientWrapper.getBlobClientWrapper("large_upload_test.txt");
+        final BlobOperations operations = new BlobOperations(configuration, blobClientWrapper);
+
+        // Test with InputStream (simulates stream caching scenario)
+        final Exchange exchange = new DefaultExchange(context);
+        exchange.getIn().setBody(new FileInputStream(testFile.toFile()));
+        exchange.getIn().setHeader(BlobConstants.BLOB_UPLOAD_SIZE, testFile.toFile().length());
+        exchange.getIn().setHeader(BlobConstants.BLOCK_SIZE, 128 * 1024L);
+        exchange.getIn().setHeader(BlobConstants.MAX_CONCURRENCY, 4);
+
+        final BlobOperationResponse response = operations.uploadBlockBlobChunked(exchange);
+
+        assertNotNull(response);
+        assertTrue((boolean) response.getBody());
+        assertNotNull(response.getHeaders().get(BlobConstants.E_TAG));
+
+        // Verify content
+        final BlobOperationResponse getBlobResponse = operations.getBlob(null);
+        assertEquals(content, IOUtils.toString((InputStream) getBlobResponse.getBody(), Charset.defaultCharset()));
+
+        blobClientWrapper.delete(null, null, null);
+    }
+
+    @Test
+    void testuploadBlockBlobChunkedWithFilePath(@TempDir Path testDir) throws Exception {
+        // Create a test file
+        final Path testFile = testDir.resolve("file_path_upload_test.txt");
+        final String content = "Test content for file-based upload";
+        Files.writeString(testFile, content);
+
+        final BlobClientWrapper blobClientWrapper
+                = blobContainerClientWrapper.getBlobClientWrapper("file_path_upload_test.txt");
+        final BlobOperations operations = new BlobOperations(configuration, blobClientWrapper);
+
+        // Test with File object (uses memory-mapped I/O)
+        final Exchange exchange = new DefaultExchange(context);
+        exchange.getIn().setBody(testFile.toFile());
+
+        final BlobOperationResponse response = operations.uploadBlockBlobChunked(exchange);
+
+        assertNotNull(response);
+        assertTrue((boolean) response.getBody());
+        assertNotNull(response.getHeaders().get(BlobConstants.E_TAG));
+
+        // Verify content
+        final BlobOperationResponse getBlobResponse = operations.getBlob(null);
+        assertEquals(content, IOUtils.toString((InputStream) getBlobResponse.getBody(), Charset.defaultCharset()));
+
+        blobClientWrapper.delete(null, null, null);
+    }
+
+    @Test
     void testGetBlobBlockList() {
         final BlobClientWrapper blobClientWrapper = blobContainerClientWrapper.getBlobClientWrapper(randomBlobName);
         final BlobOperations operations = new BlobOperations(configuration, blobClientWrapper);
@@ -423,6 +484,103 @@ class BlobOperationsIT extends Base {
         assertTrue(IOUtils.toString((InputStream) getBlobResponse.getBody(), StandardCharsets.UTF_8).trim().isEmpty());
 
         blobClientWrapper.delete(null, null, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void testSetAndGetBlobTags() {
+        final BlobClientWrapper blobClientWrapper = blobContainerClientWrapper.getBlobClientWrapper(randomBlobName);
+        final BlobOperations operations = new BlobOperations(configuration, blobClientWrapper);
+
+        final Map<String, String> tags = new HashMap<>();
+        tags.put("status", "quarantine");
+        tags.put("category", "document");
+        tags.put("priority", "high");
+
+        // set tags via header
+        final Exchange setExchange = new DefaultExchange(context);
+        setExchange.getIn().setHeader(BlobConstants.BLOB_TAGS, tags);
+
+        final BlobOperationResponse setResponse = operations.setBlobTags(setExchange);
+        assertNotNull(setResponse);
+        assertTrue((boolean) setResponse.getBody());
+
+        // get tags
+        final Exchange getExchange = new DefaultExchange(context);
+        final BlobOperationResponse getResponse = operations.getBlobTags(getExchange);
+
+        assertNotNull(getResponse);
+        assertNotNull(getResponse.getBody());
+
+        final Map<String, String> retrievedTags = (Map<String, String>) getResponse.getBody();
+        assertEquals(3, retrievedTags.size());
+        assertEquals("quarantine", retrievedTags.get("status"));
+        assertEquals("document", retrievedTags.get("category"));
+        assertEquals("high", retrievedTags.get("priority"));
+
+        // also verify tags are in exchange headers
+        assertEquals(retrievedTags, getResponse.getHeaders().get(BlobConstants.BLOB_TAGS));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void testSetBlobTagsFromBody() {
+        final BlobClientWrapper blobClientWrapper = blobContainerClientWrapper.getBlobClientWrapper(randomBlobName);
+        final BlobOperations operations = new BlobOperations(configuration, blobClientWrapper);
+
+        final Map<String, String> tags = new HashMap<>();
+        tags.put("owner", "test-user");
+        tags.put("scanned", "true");
+
+        // set tags via body
+        final Exchange setExchange = new DefaultExchange(context);
+        setExchange.getIn().setBody(tags);
+
+        final BlobOperationResponse setResponse = operations.setBlobTags(setExchange);
+        assertNotNull(setResponse);
+        assertTrue((boolean) setResponse.getBody());
+
+        // verify by getting tags back
+        final Exchange getExchange = new DefaultExchange(context);
+        final BlobOperationResponse getResponse = operations.getBlobTags(getExchange);
+
+        final Map<String, String> retrievedTags = (Map<String, String>) getResponse.getBody();
+        assertEquals(2, retrievedTags.size());
+        assertEquals("test-user", retrievedTags.get("owner"));
+        assertEquals("true", retrievedTags.get("scanned"));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void testOverwriteBlobTags() {
+        final BlobClientWrapper blobClientWrapper = blobContainerClientWrapper.getBlobClientWrapper(randomBlobName);
+        final BlobOperations operations = new BlobOperations(configuration, blobClientWrapper);
+
+        // set initial tags
+        final Map<String, String> initialTags = new HashMap<>();
+        initialTags.put("status", "pending");
+
+        final Exchange setExchange1 = new DefaultExchange(context);
+        setExchange1.getIn().setHeader(BlobConstants.BLOB_TAGS, initialTags);
+        operations.setBlobTags(setExchange1);
+
+        // overwrite with new tags
+        final Map<String, String> newTags = new HashMap<>();
+        newTags.put("status", "processed");
+        newTags.put("result", "clean");
+
+        final Exchange setExchange2 = new DefaultExchange(context);
+        setExchange2.getIn().setHeader(BlobConstants.BLOB_TAGS, newTags);
+        operations.setBlobTags(setExchange2);
+
+        // verify only new tags are present (set replaces all tags)
+        final Exchange getExchange = new DefaultExchange(context);
+        final BlobOperationResponse getResponse = operations.getBlobTags(getExchange);
+
+        final Map<String, String> retrievedTags = (Map<String, String>) getResponse.getBody();
+        assertEquals(2, retrievedTags.size());
+        assertEquals("processed", retrievedTags.get("status"));
+        assertEquals("clean", retrievedTags.get("result"));
     }
 
     @Test

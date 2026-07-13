@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-parent</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
         <relativePath>../parent</relativePath>
     </parent>
 
@@ -70,7 +70,7 @@
         <module>camel-cxf</module>
         <module>camel-jms</module>
         <module>camel-master</module>
-        <module>camel-service</module>
+
 
         <!-- Abstract components -->
         <module>camel-tracing</module>
@@ -100,6 +100,7 @@
         <module>camel-box</module>
         <module>camel-braintree</module>
         <module>camel-caffeine</module>
+        <module>camel-camunda</module>
         <module>camel-cassandraql</module>
         <module>camel-cbor</module>
         <module>camel-chunk</module>
@@ -114,11 +115,12 @@
         <module>camel-crypto</module>
         <module>camel-crypto-pgp</module>
         <module>camel-csimple-joor</module>
-	<module>camel-csv</module>
-	<module>camel-cyberark-vault</module>
+        <module>camel-csv</module>
+        <module>camel-cyberark-vault</module>
         <module>camel-dapr</module>
         <module>camel-datasonnet</module>
         <module>camel-debug</module>
+        <module>camel-diagram</module>
         <module>camel-debezium</module>
         <module>camel-dhis2</module>
         <module>camel-digitalocean</module>
@@ -131,7 +133,7 @@
         <module>camel-ehcache</module>
         <module>camel-elasticsearch</module>
         <module>camel-elasticsearch-rest-client</module>
-        <module>camel-elytron</module>
+        <module>camel-event</module>
         <module>camel-exec</module>
         <module>camel-fastjson</module>
         <module>camel-fhir</module>
@@ -141,19 +143,17 @@
         <module>camel-flowable</module>
         <module>camel-fop</module>
         <module>camel-freemarker</module>
+        <module>camel-ftp-common</module>
         <module>camel-ftp</module>
         <module>camel-fory</module>
         <module>camel-geocoder</module>
         <module>camel-git</module>
-        <module>camel-github</module>
+        <module>camel-github2</module>
         <module>camel-google</module>
-        <module>camel-grape</module>
         <module>camel-graphql</module>
         <module>camel-grok</module>
-        <module>camel-groovy-xml</module>
         <module>camel-grpc</module>
         <module>camel-gson</module>
-        <module>camel-guava-eventbus</module>
         <module>camel-hashicorp-vault</module>
         <module>camel-hazelcast</module>
         <module>camel-headersmap</module>
@@ -174,6 +174,10 @@
         <module>camel-jackson-avro</module>
         <module>camel-jackson-protobuf</module>
         <module>camel-jacksonxml</module>
+        <module>camel-jackson3</module>
+        <module>camel-jackson3-avro</module>
+        <module>camel-jackson3-protobuf</module>
+        <module>camel-jackson3xml</module>
         <module>camel-jandex</module>
         <module>camel-jasypt</module>
         <module>camel-javascript</module>
@@ -197,6 +201,7 @@
         <module>camel-jsonata</module>
         <module>camel-jsonb</module>
         <module>camel-jsonpath</module>
+        <module>camel-jsoup</module>
         <module>camel-json-patch</module>
         <module>camel-jt400</module>
         <module>camel-jta</module>
@@ -235,10 +240,10 @@
         <module>camel-nats</module>
         <module>camel-netty-http</module>
         <module>camel-netty</module>
-        <module>camel-nitrite</module>
         <module>camel-oaipmh</module>
         <module>camel-oauth</module>
         <module>camel-observation</module>
+        <module>camel-ocsf</module>
         <module>camel-ognl</module>
         <module>camel-olingo2</module>
         <module>camel-olingo4</module>
@@ -286,6 +291,7 @@
         <module>camel-schematron</module>
         <module>camel-servicenow</module>
         <module>camel-servlet</module>
+        <module>camel-shell</module>
         <module>camel-shiro</module>
         <module>camel-sjms2</module>
         <module>camel-sjms</module>
@@ -302,7 +308,6 @@
         <module>camel-sql</module>
         <module>camel-ssh</module>
         <module>camel-stax</module>
-        <module>camel-stomp</module>
         <module>camel-stream</module>
         <module>camel-stringtemplate</module>
         <module>camel-stitch</module>
@@ -351,6 +356,7 @@
         <module>camel-jooq</module>
         <!-- observability-services requires the availability of other components -->
         <module>camel-observability-services</module>
+        <module>camel-mina-sftp</module>
     </modules>
 
     <properties>
@@ -553,7 +559,6 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <configuration>
-                            <argLine>${camel.failsafe.fork.vmargs}</argLine>
                             <reuseForks>${camel.failsafe.reuseForks}</reuseForks>
                             <forkedProcessTimeoutInSeconds>${camel.failsafe.forkTimeout}</forkedProcessTimeoutInSeconds>
                             <redirectTestOutputToFile>false</redirectTestOutputToFile>
@@ -568,8 +573,6 @@
                         </configuration>
                         <executions>
                             <execution>
-                                <id>integration-test</id>
-                                <phase>verify</phase>
                                 <goals>
                                     <goal>integration-test</goal>
                                     <goal>verify</goal>

@@ -30,10 +30,14 @@ public class DoclingComponentConfigurer extends PropertyConfigurerSupport implem
     public boolean configure(CamelContext camelContext, Object obj, String name, Object value, boolean ignoreCase) {
         DoclingComponent target = (DoclingComponent) obj;
         switch (ignoreCase ? name.toLowerCase() : name) {
+        case "abortonerror":
+        case "abortOnError": getOrCreateConfiguration(target).setAbortOnError(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "apikeyheader":
         case "apiKeyHeader": getOrCreateConfiguration(target).setApiKeyHeader(property(camelContext, java.lang.String.class, value)); return true;
         case "asyncpollinterval":
         case "asyncPollInterval": getOrCreateConfiguration(target).setAsyncPollInterval(property(camelContext, long.class, value)); return true;
+        case "asynctaskttl":
+        case "asyncTaskTtl": getOrCreateConfiguration(target).setAsyncTaskTtl(property(camelContext, long.class, value)); return true;
         case "asynctimeout":
         case "asyncTimeout": getOrCreateConfiguration(target).setAsyncTimeout(property(camelContext, long.class, value)); return true;
         case "authenticationscheme":
@@ -50,17 +54,47 @@ public class DoclingComponentConfigurer extends PropertyConfigurerSupport implem
         case "batchSize": getOrCreateConfiguration(target).setBatchSize(property(camelContext, int.class, value)); return true;
         case "batchtimeout":
         case "batchTimeout": getOrCreateConfiguration(target).setBatchTimeout(property(camelContext, long.class, value)); return true;
+        case "chunkingincluderawtext":
+        case "chunkingIncludeRawText": getOrCreateConfiguration(target).setChunkingIncludeRawText(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "chunkingmaxtokens":
+        case "chunkingMaxTokens": getOrCreateConfiguration(target).setChunkingMaxTokens(property(camelContext, java.lang.Integer.class, value)); return true;
+        case "chunkingmergepeers":
+        case "chunkingMergePeers": getOrCreateConfiguration(target).setChunkingMergePeers(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "chunkingtokenizer":
+        case "chunkingTokenizer": getOrCreateConfiguration(target).setChunkingTokenizer(property(camelContext, java.lang.String.class, value)); return true;
+        case "chunkingusemarkdowntables":
+        case "chunkingUseMarkdownTables": getOrCreateConfiguration(target).setChunkingUseMarkdownTables(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "configuration": target.setConfiguration(property(camelContext, org.apache.camel.component.docling.DoclingConfiguration.class, value)); return true;
         case "contentinbody":
         case "contentInBody": getOrCreateConfiguration(target).setContentInBody(property(camelContext, boolean.class, value)); return true;
+        case "docodeenrichment":
+        case "doCodeEnrichment": getOrCreateConfiguration(target).setDoCodeEnrichment(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "doformulaenrichment":
+        case "doFormulaEnrichment": getOrCreateConfiguration(target).setDoFormulaEnrichment(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "doocr":
+        case "doOcr": getOrCreateConfiguration(target).setDoOcr(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "dopictureclassification":
+        case "doPictureClassification": getOrCreateConfiguration(target).setDoPictureClassification(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "dopicturedescription":
+        case "doPictureDescription": getOrCreateConfiguration(target).setDoPictureDescription(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "dotablestructure":
+        case "doTableStructure": getOrCreateConfiguration(target).setDoTableStructure(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "doclingcommand":
         case "doclingCommand": getOrCreateConfiguration(target).setDoclingCommand(property(camelContext, java.lang.String.class, value)); return true;
         case "doclingserveurl":
         case "doclingServeUrl": getOrCreateConfiguration(target).setDoclingServeUrl(property(camelContext, java.lang.String.class, value)); return true;
+        case "documenttimeout":
+        case "documentTimeout": getOrCreateConfiguration(target).setDocumentTimeout(property(camelContext, java.lang.Long.class, value)); return true;
         case "enableocr":
         case "enableOCR": getOrCreateConfiguration(target).setEnableOCR(property(camelContext, boolean.class, value)); return true;
-        case "extractallmetadata":
-        case "extractAllMetadata": getOrCreateConfiguration(target).setExtractAllMetadata(property(camelContext, boolean.class, value)); return true;
+        case "forceocr":
+        case "forceOcr": getOrCreateConfiguration(target).setForceOcr(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "imageexportmode":
+        case "imageExportMode": getOrCreateConfiguration(target).setImageExportMode(property(camelContext, java.lang.String.class, value)); return true;
+        case "imagesscale":
+        case "imagesScale": getOrCreateConfiguration(target).setImagesScale(property(camelContext, java.lang.Double.class, value)); return true;
+        case "includeimages":
+        case "includeImages": getOrCreateConfiguration(target).setIncludeImages(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "includelayoutinfo":
         case "includeLayoutInfo": getOrCreateConfiguration(target).setIncludeLayoutInfo(property(camelContext, boolean.class, value)); return true;
         case "includemetadatainheaders":
@@ -71,15 +105,28 @@ public class DoclingComponentConfigurer extends PropertyConfigurerSupport implem
         case "lazyStartProducer": target.setLazyStartProducer(property(camelContext, boolean.class, value)); return true;
         case "maxfilesize":
         case "maxFileSize": getOrCreateConfiguration(target).setMaxFileSize(property(camelContext, long.class, value)); return true;
+        case "mdpagebreakplaceholder":
+        case "mdPageBreakPlaceholder": getOrCreateConfiguration(target).setMdPageBreakPlaceholder(property(camelContext, java.lang.String.class, value)); return true;
+        case "oauthprofile":
+        case "oauthProfile": getOrCreateConfiguration(target).setOauthProfile(property(camelContext, java.lang.String.class, value)); return true;
+        case "ocrengine":
+        case "ocrEngine": getOrCreateConfiguration(target).setOcrEngine(property(camelContext, java.lang.String.class, value)); return true;
         case "ocrlanguage":
         case "ocrLanguage": getOrCreateConfiguration(target).setOcrLanguage(property(camelContext, java.lang.String.class, value)); return true;
         case "operation": getOrCreateConfiguration(target).setOperation(property(camelContext, org.apache.camel.component.docling.DoclingOperations.class, value)); return true;
         case "outputformat":
         case "outputFormat": getOrCreateConfiguration(target).setOutputFormat(property(camelContext, java.lang.String.class, value)); return true;
+        case "pdfbackend":
+        case "pdfBackend": getOrCreateConfiguration(target).setPdfBackend(property(camelContext, java.lang.String.class, value)); return true;
+        case "pipeline": getOrCreateConfiguration(target).setPipeline(property(camelContext, java.lang.String.class, value)); return true;
         case "processtimeout":
         case "processTimeout": getOrCreateConfiguration(target).setProcessTimeout(property(camelContext, long.class, value)); return true;
         case "splitbatchresults":
         case "splitBatchResults": getOrCreateConfiguration(target).setSplitBatchResults(property(camelContext, boolean.class, value)); return true;
+        case "tablecellmatching":
+        case "tableCellMatching": getOrCreateConfiguration(target).setTableCellMatching(property(camelContext, java.lang.Boolean.class, value)); return true;
+        case "tablemode":
+        case "tableMode": getOrCreateConfiguration(target).setTableMode(property(camelContext, java.lang.String.class, value)); return true;
         case "useasyncmode":
         case "useAsyncMode": getOrCreateConfiguration(target).setUseAsyncMode(property(camelContext, boolean.class, value)); return true;
         case "usedoclingserve":
@@ -93,10 +140,14 @@ public class DoclingComponentConfigurer extends PropertyConfigurerSupport implem
     @Override
     public Class<?> getOptionType(String name, boolean ignoreCase) {
         switch (ignoreCase ? name.toLowerCase() : name) {
+        case "abortonerror":
+        case "abortOnError": return java.lang.Boolean.class;
         case "apikeyheader":
         case "apiKeyHeader": return java.lang.String.class;
         case "asyncpollinterval":
         case "asyncPollInterval": return long.class;
+        case "asynctaskttl":
+        case "asyncTaskTtl": return long.class;
         case "asynctimeout":
         case "asyncTimeout": return long.class;
         case "authenticationscheme":
@@ -113,17 +164,47 @@ public class DoclingComponentConfigurer extends PropertyConfigurerSupport implem
         case "batchSize": return int.class;
         case "batchtimeout":
         case "batchTimeout": return long.class;
+        case "chunkingincluderawtext":
+        case "chunkingIncludeRawText": return java.lang.Boolean.class;
+        case "chunkingmaxtokens":
+        case "chunkingMaxTokens": return java.lang.Integer.class;
+        case "chunkingmergepeers":
+        case "chunkingMergePeers": return java.lang.Boolean.class;
+        case "chunkingtokenizer":
+        case "chunkingTokenizer": return java.lang.String.class;
+        case "chunkingusemarkdowntables":
+        case "chunkingUseMarkdownTables": return java.lang.Boolean.class;
         case "configuration": return org.apache.camel.component.docling.DoclingConfiguration.class;
         case "contentinbody":
         case "contentInBody": return boolean.class;
+        case "docodeenrichment":
+        case "doCodeEnrichment": return java.lang.Boolean.class;
+        case "doformulaenrichment":
+        case "doFormulaEnrichment": return java.lang.Boolean.class;
+        case "doocr":
+        case "doOcr": return java.lang.Boolean.class;
+        case "dopictureclassification":
+        case "doPictureClassification": return java.lang.Boolean.class;
+        case "dopicturedescription":
+        case "doPictureDescription": return java.lang.Boolean.class;
+        case "dotablestructure":
+        case "doTableStructure": return java.lang.Boolean.class;
         case "doclingcommand":
         case "doclingCommand": return java.lang.String.class;
         case "doclingserveurl":
         case "doclingServeUrl": return java.lang.String.class;
+        case "documenttimeout":
+        case "documentTimeout": return java.lang.Long.class;
         case "enableocr":
         case "enableOCR": return boolean.class;
-        case "extractallmetadata":
-        case "extractAllMetadata": return boolean.class;
+        case "forceocr":
+        case "forceOcr": return java.lang.Boolean.class;
+        case "imageexportmode":
+        case "imageExportMode": return java.lang.String.class;
+        case "imagesscale":
+        case "imagesScale": return java.lang.Double.class;
+        case "includeimages":
+        case "includeImages": return java.lang.Boolean.class;
         case "includelayoutinfo":
         case "includeLayoutInfo": return boolean.class;
         case "includemetadatainheaders":
@@ -134,15 +215,28 @@ public class DoclingComponentConfigurer extends PropertyConfigurerSupport implem
         case "lazyStartProducer": return boolean.class;
         case "maxfilesize":
         case "maxFileSize": return long.class;
+        case "mdpagebreakplaceholder":
+        case "mdPageBreakPlaceholder": return java.lang.String.class;
+        case "oauthprofile":
+        case "oauthProfile": return java.lang.String.class;
+        case "ocrengine":
+        case "ocrEngine": return java.lang.String.class;
         case "ocrlanguage":
         case "ocrLanguage": return java.lang.String.class;
         case "operation": return org.apache.camel.component.docling.DoclingOperations.class;
         case "outputformat":
         case "outputFormat": return java.lang.String.class;
+        case "pdfbackend":
+        case "pdfBackend": return java.lang.String.class;
+        case "pipeline": return java.lang.String.class;
         case "processtimeout":
         case "processTimeout": return long.class;
         case "splitbatchresults":
         case "splitBatchResults": return boolean.class;
+        case "tablecellmatching":
+        case "tableCellMatching": return java.lang.Boolean.class;
+        case "tablemode":
+        case "tableMode": return java.lang.String.class;
         case "useasyncmode":
         case "useAsyncMode": return boolean.class;
         case "usedoclingserve":
@@ -157,10 +251,14 @@ public class DoclingComponentConfigurer extends PropertyConfigurerSupport implem
     public Object getOptionValue(Object obj, String name, boolean ignoreCase) {
         DoclingComponent target = (DoclingComponent) obj;
         switch (ignoreCase ? name.toLowerCase() : name) {
+        case "abortonerror":
+        case "abortOnError": return getOrCreateConfiguration(target).getAbortOnError();
         case "apikeyheader":
         case "apiKeyHeader": return getOrCreateConfiguration(target).getApiKeyHeader();
         case "asyncpollinterval":
         case "asyncPollInterval": return getOrCreateConfiguration(target).getAsyncPollInterval();
+        case "asynctaskttl":
+        case "asyncTaskTtl": return getOrCreateConfiguration(target).getAsyncTaskTtl();
         case "asynctimeout":
         case "asyncTimeout": return getOrCreateConfiguration(target).getAsyncTimeout();
         case "authenticationscheme":
@@ -177,17 +275,47 @@ public class DoclingComponentConfigurer extends PropertyConfigurerSupport implem
         case "batchSize": return getOrCreateConfiguration(target).getBatchSize();
         case "batchtimeout":
         case "batchTimeout": return getOrCreateConfiguration(target).getBatchTimeout();
+        case "chunkingincluderawtext":
+        case "chunkingIncludeRawText": return getOrCreateConfiguration(target).getChunkingIncludeRawText();
+        case "chunkingmaxtokens":
+        case "chunkingMaxTokens": return getOrCreateConfiguration(target).getChunkingMaxTokens();
+        case "chunkingmergepeers":
+        case "chunkingMergePeers": return getOrCreateConfiguration(target).getChunkingMergePeers();
+        case "chunkingtokenizer":
+        case "chunkingTokenizer": return getOrCreateConfiguration(target).getChunkingTokenizer();
+        case "chunkingusemarkdowntables":
+        case "chunkingUseMarkdownTables": return getOrCreateConfiguration(target).getChunkingUseMarkdownTables();
         case "configuration": return target.getConfiguration();
         case "contentinbody":
         case "contentInBody": return getOrCreateConfiguration(target).isContentInBody();
+        case "docodeenrichment":
+        case "doCodeEnrichment": return getOrCreateConfiguration(target).getDoCodeEnrichment();
+        case "doformulaenrichment":
+        case "doFormulaEnrichment": return getOrCreateConfiguration(target).getDoFormulaEnrichment();
+        case "doocr":
+        case "doOcr": return getOrCreateConfiguration(target).getDoOcr();
+        case "dopictureclassification":
+        case "doPictureClassification": return getOrCreateConfiguration(target).getDoPictureClassification();
+        case "dopicturedescription":
+        case "doPictureDescription": return getOrCreateConfiguration(target).getDoPictureDescription();
+        case "dotablestructure":
+        case "doTableStructure": return getOrCreateConfiguration(target).getDoTableStructure();
         case "doclingcommand":
         case "doclingCommand": return getOrCreateConfiguration(target).getDoclingCommand();
         case "doclingserveurl":
         case "doclingServeUrl": return getOrCreateConfiguration(target).getDoclingServeUrl();
+        case "documenttimeout":
+        case "documentTimeout": return getOrCreateConfiguration(target).getDocumentTimeout();
         case "enableocr":
         case "enableOCR": return getOrCreateConfiguration(target).isEnableOCR();
-        case "extractallmetadata":
-        case "extractAllMetadata": return getOrCreateConfiguration(target).isExtractAllMetadata();
+        case "forceocr":
+        case "forceOcr": return getOrCreateConfiguration(target).getForceOcr();
+        case "imageexportmode":
+        case "imageExportMode": return getOrCreateConfiguration(target).getImageExportMode();
+        case "imagesscale":
+        case "imagesScale": return getOrCreateConfiguration(target).getImagesScale();
+        case "includeimages":
+        case "includeImages": return getOrCreateConfiguration(target).getIncludeImages();
         case "includelayoutinfo":
         case "includeLayoutInfo": return getOrCreateConfiguration(target).isIncludeLayoutInfo();
         case "includemetadatainheaders":
@@ -198,15 +326,28 @@ public class DoclingComponentConfigurer extends PropertyConfigurerSupport implem
         case "lazyStartProducer": return target.isLazyStartProducer();
         case "maxfilesize":
         case "maxFileSize": return getOrCreateConfiguration(target).getMaxFileSize();
+        case "mdpagebreakplaceholder":
+        case "mdPageBreakPlaceholder": return getOrCreateConfiguration(target).getMdPageBreakPlaceholder();
+        case "oauthprofile":
+        case "oauthProfile": return getOrCreateConfiguration(target).getOauthProfile();
+        case "ocrengine":
+        case "ocrEngine": return getOrCreateConfiguration(target).getOcrEngine();
         case "ocrlanguage":
         case "ocrLanguage": return getOrCreateConfiguration(target).getOcrLanguage();
         case "operation": return getOrCreateConfiguration(target).getOperation();
         case "outputformat":
         case "outputFormat": return getOrCreateConfiguration(target).getOutputFormat();
+        case "pdfbackend":
+        case "pdfBackend": return getOrCreateConfiguration(target).getPdfBackend();
+        case "pipeline": return getOrCreateConfiguration(target).getPipeline();
         case "processtimeout":
         case "processTimeout": return getOrCreateConfiguration(target).getProcessTimeout();
         case "splitbatchresults":
         case "splitBatchResults": return getOrCreateConfiguration(target).isSplitBatchResults();
+        case "tablecellmatching":
+        case "tableCellMatching": return getOrCreateConfiguration(target).getTableCellMatching();
+        case "tablemode":
+        case "tableMode": return getOrCreateConfiguration(target).getTableMode();
         case "useasyncmode":
         case "useAsyncMode": return getOrCreateConfiguration(target).isUseAsyncMode();
         case "usedoclingserve":

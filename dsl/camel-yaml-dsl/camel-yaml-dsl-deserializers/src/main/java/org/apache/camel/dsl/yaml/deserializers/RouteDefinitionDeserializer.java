@@ -28,6 +28,7 @@ import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.spi.annotations.YamlIn;
 import org.apache.camel.spi.annotations.YamlProperty;
 import org.apache.camel.spi.annotations.YamlType;
+import org.apache.camel.util.StringHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snakeyaml.engine.v2.nodes.MappingNode;
@@ -48,7 +49,7 @@ import org.snakeyaml.engine.v2.nodes.NodeTuple;
                   @YamlProperty(name = "precondition", type = "string"),
                   @YamlProperty(name = "routeConfigurationId", type = "string"),
                   @YamlProperty(name = "autoStartup", type = "boolean"),
-                  @YamlProperty(name = "routePolicy", type = "string"),
+                  @YamlProperty(name = "routePolicyRef", type = "string"),
                   @YamlProperty(name = "startupOrder", type = "number"),
                   @YamlProperty(name = "streamCache", type = "boolean"),
                   @YamlProperty(name = "messageHistory", type = "boolean"),
@@ -89,7 +90,7 @@ public class RouteDefinitionDeserializer extends YamlDeserializerBase<RouteDefin
 
             setDeserializationContext(val, dc);
 
-            key = org.apache.camel.util.StringHelper.dashToCamelCase(key);
+            key = StringHelper.dashToCamelCase(key);
             switch (key) {
                 case "id":
                     target.setId(asText(val));
@@ -115,7 +116,7 @@ public class RouteDefinitionDeserializer extends YamlDeserializerBase<RouteDefin
                 case "autoStartup":
                     target.setAutoStartup(asText(val));
                     break;
-                case "routePolicy":
+                case "routePolicyRef":
                     target.setRoutePolicyRef(asText(val));
                     break;
                 case "startupOrder":

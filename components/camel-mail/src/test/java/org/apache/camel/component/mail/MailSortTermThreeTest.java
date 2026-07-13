@@ -29,7 +29,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.eclipse.angus.mail.imap.SortTerm;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +52,7 @@ public class MailSortTermThreeTest extends CamelTestSupport {
     private SearchTerm searchTerm = new SearchTermBuilder().subject("Camel").build();
 
     @Override
-    public void doPreSetup() throws Exception {
+    public void setupResources() throws Exception {
         prepareMailbox();
     }
 

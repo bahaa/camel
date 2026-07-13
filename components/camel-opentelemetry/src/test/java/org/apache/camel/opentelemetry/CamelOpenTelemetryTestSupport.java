@@ -38,7 +38,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.spi.InterceptStrategy;
 import org.apache.camel.spi.ThreadPoolFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.util.ObjectHelper;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
@@ -55,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @Tags({ @Tag("not-parallel") })
 @SetSystemProperty(key = "io.opentelemetry.context.enableStrictContext", value = "true")
+@Deprecated(since = "4.19.0")
 class CamelOpenTelemetryTestSupport extends CamelTestSupport {
     static final AttributeKey<String> CAMEL_URI_KEY = AttributeKey.stringKey("camel-uri");
     static final AttributeKey<String> COMPONENT_KEY = AttributeKey.stringKey("component");

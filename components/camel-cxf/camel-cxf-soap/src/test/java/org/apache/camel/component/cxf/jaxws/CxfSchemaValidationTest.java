@@ -27,7 +27,7 @@ import javax.xml.namespace.QName;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.cxf.common.CXFTestSupport;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.wsdl_first.Person;
 import org.apache.camel.wsdl_first.PersonService;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -40,8 +40,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class CxfSchemaValidationTest extends CamelTestSupport {
 
@@ -107,11 +107,7 @@ public class CxfSchemaValidationTest extends CamelTestSupport {
     @Test
     public void schemaValidationDisabledServerTest() throws Exception {
         // invoke the service with a non-valid message
-        try {
-            invokeService(serviceAddressValidationDisabled, RandomStringUtils.secure().next(40, true, true));
-        } catch (SOAPFaultException e) {
-            fail("Do not expect an exception here");
-        }
+        invokeService(serviceAddressValidationDisabled, RandomStringUtils.secure().next(40, true, true));
     }
 
     @Test
@@ -133,12 +129,9 @@ public class CxfSchemaValidationTest extends CamelTestSupport {
         <xsd:element name="personId" type="tns:MyStringType"/>
 
         */
-        try {
-            invokeService(serviceAddressValidationEnabled, RandomStringUtils.secure().next(40, true, true));
-            fail("expect a Validation exception here");
-        } catch (SOAPFaultException e) {
-            assertEquals("the length of the value is 40, but the required maximum is 30.", e.getMessage(), "");
-        }
+        SOAPFaultException e = assertThrows(SOAPFaultException.class,
+                () -> invokeService(serviceAddressValidationEnabled, RandomStringUtils.secure().next(40, true, true)));
+        assertEquals("the length of the value is 40, but the required maximum is 30.", e.getMessage(), "");
     }
 
     @Test

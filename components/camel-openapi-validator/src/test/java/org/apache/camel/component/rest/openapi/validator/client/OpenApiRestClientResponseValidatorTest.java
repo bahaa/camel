@@ -23,7 +23,7 @@ import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import org.apache.camel.Exchange;
 import org.apache.camel.spi.RestClientResponseValidator;
-import org.apache.camel.test.junit5.ExchangeTestSupport;
+import org.apache.camel.test.junit6.ExchangeTestSupport;
 import org.apache.camel.util.IOHelper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -63,7 +63,7 @@ public class OpenApiRestClientResponseValidatorTest extends ExchangeTestSupport 
         exchange.getMessage().setBody("{ \"name\": \"tiger\" }");
         error = validator.validate(exchange, new RestClientResponseValidator.ValidationContext(
                 "application/json", "application/json", null, null));
-        Assertions.assertTrue(error.body().contains("Object has missing required properties ([\\\"photoUrls\\\"])"));
+        Assertions.assertTrue(error.body().contains("Object has missing required properties ([\"photoUrls\"])"));
 
         exchange.getMessage().setBody("{ \"name\": \"tiger\", \"photoUrls\": [\"image.jpg\"] }");
         error = validator.validate(exchange, new RestClientResponseValidator.ValidationContext(

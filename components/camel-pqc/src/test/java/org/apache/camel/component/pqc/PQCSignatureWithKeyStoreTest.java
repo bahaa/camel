@@ -33,7 +33,7 @@ import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -131,7 +131,7 @@ public class PQCSignatureWithKeyStoreTest extends CamelTestSupport {
         KeyStore keyStore = KeyStore.getInstance("JKS");
         char[] password = "changeit".toCharArray();
         keyStore.load(null, password); // initialize new keystore
-        keyStore.setKeyEntry("mykey", kp.getPrivate(), password, new java.security.cert.Certificate[] { certificate });
+        keyStore.setKeyEntry("mykey", kp.getPrivate(), password, new Certificate[] { certificate });
 
         // Save keystore to file
         try (FileOutputStream fos = new FileOutputStream("keystore.jks")) {

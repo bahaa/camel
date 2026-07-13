@@ -18,6 +18,7 @@ package org.apache.camel.telemetry.mock;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.camel.telemetry.Span;
@@ -45,12 +46,18 @@ public class MockTrace {
 
 }
 
-class SpanComparator implements java.util.Comparator<Span> {
+class SpanComparator implements Comparator<Span> {
     @Override
     public int compare(Span a, Span b) {
         // cast to get timestamp without changing the Span interface
         MockSpanAdapter msa = (MockSpanAdapter) a;
         MockSpanAdapter msb = (MockSpanAdapter) b;
-        return (int) (Long.parseLong(msa.getTag("initTimestamp")) - Long.parseLong(msb.getTag("initTimestamp")));
+        int cmp = Long.compare(Long.parseLong(msa.getTag("initTimestamp")), Long.parseLong(msb.getTag("initTimestamp")));
+        if (cmp != 0) {
+            return cmp;
+        }
+        // When start times tie, sort by end time descending so that parent
+        // spans (which end after their children) come first.
+        return Long.compare(Long.parseLong(msb.getTag("endTimestamp")), Long.parseLong(msa.getTag("endTimestamp")));
     }
 }

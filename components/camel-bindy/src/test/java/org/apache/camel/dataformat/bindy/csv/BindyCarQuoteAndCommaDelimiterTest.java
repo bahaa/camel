@@ -22,7 +22,7 @@ import org.apache.camel.dataformat.bindy.format.factories.DefaultFactoryRegistry
 import org.apache.camel.dataformat.bindy.model.car.Car;
 import org.apache.camel.dataformat.bindy.model.car.Car.Colour;
 import org.apache.camel.model.dataformat.BindyType;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -90,7 +90,7 @@ public class BindyCarQuoteAndCommaDelimiterTest extends CamelTestSupport {
             @Override
             public void configure() {
 
-                Class<?> type = org.apache.camel.dataformat.bindy.model.car.Car.class;
+                Class<?> type = Car.class;
                 BindyCsvDataFormat dataFormat = new BindyCsvDataFormat();
                 dataFormat.setClassType(type);
                 dataFormat.setLocale("en");

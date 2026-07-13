@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/classes/smb_activity",
+  "title": "SmbActivity",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.SmbActivity",
+  "description": "SmbActivity event class.",
+  "extends": {
+    "$ref": "OcsfEvent.json"
+  },
+  "properties": {
+    "open_type": {
+      "type": "string",
+      "title": "Open Type"
+    },
+    "ja4_fingerprint_list": {
+      "type": "array",
+      "title": "JA4+ Fingerprints",
+      "items": {
+        "$ref": "Ja4Fingerprint.json"
+      }
+    },
+    "observation_point": {
+      "type": "string",
+      "title": "Observation Point"
+    },
+    "src_endpoint": {
+      "$ref": "NetworkEndpoint.json"
+    },
+    "tree_uid": {
+      "type": "string",
+      "title": "Tree UID"
+    },
+    "tls": {
+      "$ref": "Tls.json"
+    },
+    "cumulative_traffic": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "share_type_id": {
+      "type": "integer",
+      "title": "Share Type ID"
+    },
+    "response": {
+      "$ref": "Response.json"
+    },
+    "dst_endpoint": {
+      "$ref": "NetworkEndpoint.json"
+    },
+    "packet_list": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Packet.json"
+      }
+    },
+    "connection_info": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "app_name": {
+      "type": "string",
+      "title": "Application Name"
+    },
+    "traffic": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "network_observation_point": {
+      "$ref": "NetworkEndpoint.json"
+    },
+    "share": {
+      "type": "string",
+      "title": "Share"
+    },
+    "share_type": {
+      "type": "string",
+      "title": "Share Type"
+    },
+    "dce_rpc": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "command": {
+      "type": "string",
+      "title": "Command"
+    },
+    "dialect": {
+      "type": "string",
+      "title": "Dialect"
+    },
+    "app_protocol_name": {
+      "type": "string",
+      "title": "Application Protocol Name"
+    },
+    "observation_point_id": {
+      "type": "integer",
+      "title": "Observation Point ID"
+    },
+    "proxy": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "raw_data_size": {
+      "type": "integer",
+      "title": "Raw Data Size"
+    },
+    "client_dialects": {
+      "type": "array",
+      "title": "Client Dialects",
+      "items": {
+        "type": "string"
+      }
+    },
+    "raw_data_hash": {
+      "$ref": "Fingerprint.json"
+    },
+    "file": {
+      "$ref": "File.json"
+    },
+    "enrichments": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Enrichment.json"
+      }
+    }
+  }
+}

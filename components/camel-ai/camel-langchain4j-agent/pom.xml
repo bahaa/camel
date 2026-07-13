@@ -25,7 +25,7 @@
     <parent>
         <artifactId>camel-ai-parent</artifactId>
         <groupId>org.apache.camel</groupId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-langchain4j-agent</artifactId>
@@ -56,6 +56,16 @@
       <version>${langchain4j-version}</version>
     </dependency>
     <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-mcp</artifactId>
+      <version>${langchain4j-beta-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-guardrails</artifactId>
+      <version>${langchain4j-beta-version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.camel</groupId>
       <artifactId>camel-langchain4j-tools</artifactId>
       <version>${project.version}</version>
@@ -64,7 +74,7 @@
     <!-- for testing -->
     <dependency>
       <groupId>org.apache.camel</groupId>
-      <artifactId>camel-test-spring-junit5</artifactId>
+      <artifactId>camel-test-spring-junit6</artifactId>
       <scope>test</scope>
     </dependency>
       <dependency>
@@ -105,9 +115,19 @@
       </dependency>
       <dependency>
           <groupId>org.apache.camel</groupId>
+          <artifactId>camel-json-validator</artifactId>
+          <scope>test</scope>
+      </dependency>
+      <dependency>
+          <groupId>org.apache.camel</groupId>
           <artifactId>camel-test-infra-ollama</artifactId>
           <version>${project.version}</version>
-          <type>test-jar</type>
+          <scope>test</scope>
+      </dependency>
+      <dependency>
+          <groupId>org.apache.camel</groupId>
+          <artifactId>camel-test-infra-mcp-everything</artifactId>
+          <version>${project.version}</version>
           <scope>test</scope>
       </dependency>
   </dependencies>

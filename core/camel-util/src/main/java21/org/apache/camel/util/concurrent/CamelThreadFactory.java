@@ -20,14 +20,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Thread factory which creates threads supporting a naming pattern.
- * The factory creates virtual threads in case the System property {@code camel.threads.virtual.enabled} set to
- * {@code true}.
+ * Thread factory which creates threads supporting a naming pattern. The factory creates virtual threads in case the
+ * System property {@code camel.threads.virtual.enabled} set to {@code true}.
  */
 public final class CamelThreadFactory implements ThreadFactoryTypeAware {
     private static final Logger LOG = LoggerFactory.getLogger(CamelThreadFactory.class);
-
-    private static final ThreadFactoryType TYPE = ThreadFactoryType.current();
 
     private final String pattern;
     private final String name;
@@ -38,7 +35,7 @@ public final class CamelThreadFactory implements ThreadFactoryTypeAware {
         this.pattern = pattern;
         this.name = name;
         this.daemon = daemon;
-        this.threadType = daemon ? TYPE : ThreadFactoryType.PLATFORM;
+        this.threadType = daemon ? ThreadFactoryType.current() : ThreadFactoryType.PLATFORM;
     }
 
     @Override
@@ -88,4 +85,3 @@ public final class CamelThreadFactory implements ThreadFactoryTypeAware {
         }
     }
 }
-

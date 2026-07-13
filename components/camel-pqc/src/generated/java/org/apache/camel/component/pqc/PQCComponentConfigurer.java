@@ -32,19 +32,41 @@ public class PQCComponentConfigurer extends PropertyConfigurerSupport implements
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "autowiredenabled":
         case "autowiredEnabled": target.setAutowiredEnabled(property(camelContext, boolean.class, value)); return true;
+        case "classicalkemalgorithm":
+        case "classicalKEMAlgorithm": getOrCreateConfiguration(target).setClassicalKEMAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
+        case "classicalkeyagreement":
+        case "classicalKeyAgreement": getOrCreateConfiguration(target).setClassicalKeyAgreement(property(camelContext, javax.crypto.KeyAgreement.class, value)); return true;
+        case "classicalkeypair":
+        case "classicalKeyPair": getOrCreateConfiguration(target).setClassicalKeyPair(property(camelContext, java.security.KeyPair.class, value)); return true;
+        case "classicalsignaturealgorithm":
+        case "classicalSignatureAlgorithm": getOrCreateConfiguration(target).setClassicalSignatureAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
+        case "classicalsigner":
+        case "classicalSigner": getOrCreateConfiguration(target).setClassicalSigner(property(camelContext, java.security.Signature.class, value)); return true;
         case "configuration": target.setConfiguration(property(camelContext, org.apache.camel.component.pqc.PQCConfiguration.class, value)); return true;
         case "healthcheckconsumerenabled":
         case "healthCheckConsumerEnabled": target.setHealthCheckConsumerEnabled(property(camelContext, boolean.class, value)); return true;
         case "healthcheckproducerenabled":
         case "healthCheckProducerEnabled": target.setHealthCheckProducerEnabled(property(camelContext, boolean.class, value)); return true;
+        case "hybridkdfalgorithm":
+        case "hybridKdfAlgorithm": getOrCreateConfiguration(target).setHybridKdfAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
         case "keyencapsulationalgorithm":
         case "keyEncapsulationAlgorithm": getOrCreateConfiguration(target).setKeyEncapsulationAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
         case "keygenerator":
         case "keyGenerator": getOrCreateConfiguration(target).setKeyGenerator(property(camelContext, javax.crypto.KeyGenerator.class, value)); return true;
+        case "keylifecyclemanager":
+        case "keyLifecycleManager": getOrCreateConfiguration(target).setKeyLifecycleManager(property(camelContext, org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager.class, value)); return true;
         case "keypair":
         case "keyPair": getOrCreateConfiguration(target).setKeyPair(property(camelContext, java.security.KeyPair.class, value)); return true;
         case "keypairalias":
         case "keyPairAlias": getOrCreateConfiguration(target).setKeyPairAlias(property(camelContext, java.lang.String.class, value)); return true;
+        case "keyrotationcheckinterval":
+        case "keyRotationCheckInterval": target.setKeyRotationCheckInterval(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
+        case "keyrotationmaxage":
+        case "keyRotationMaxAge": target.setKeyRotationMaxAge(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
+        case "keyrotationmaxusage":
+        case "keyRotationMaxUsage": target.setKeyRotationMaxUsage(property(camelContext, long.class, value)); return true;
+        case "keyrotationschedulerenabled":
+        case "keyRotationSchedulerEnabled": target.setKeyRotationSchedulerEnabled(property(camelContext, boolean.class, value)); return true;
         case "keystore":
         case "keyStore": getOrCreateConfiguration(target).setKeyStore(property(camelContext, java.security.KeyStore.class, value)); return true;
         case "keystorepassword":
@@ -55,8 +77,12 @@ public class PQCComponentConfigurer extends PropertyConfigurerSupport implements
         case "signaturealgorithm":
         case "signatureAlgorithm": getOrCreateConfiguration(target).setSignatureAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
         case "signer": getOrCreateConfiguration(target).setSigner(property(camelContext, java.security.Signature.class, value)); return true;
+        case "statefulkeywarningthreshold":
+        case "statefulKeyWarningThreshold": getOrCreateConfiguration(target).setStatefulKeyWarningThreshold(property(camelContext, double.class, value)); return true;
         case "storeextractedsecretkeyasheader":
         case "storeExtractedSecretKeyAsHeader": getOrCreateConfiguration(target).setStoreExtractedSecretKeyAsHeader(property(camelContext, boolean.class, value)); return true;
+        case "strictkeylifecycle":
+        case "strictKeyLifecycle": getOrCreateConfiguration(target).setStrictKeyLifecycle(property(camelContext, boolean.class, value)); return true;
         case "symmetrickeyalgorithm":
         case "symmetricKeyAlgorithm": getOrCreateConfiguration(target).setSymmetricKeyAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
         case "symmetrickeylength":
@@ -67,7 +93,7 @@ public class PQCComponentConfigurer extends PropertyConfigurerSupport implements
 
     @Override
     public String[] getAutowiredNames() {
-        return new String[]{"keyGenerator", "keyPair", "keyStore", "signer"};
+        return new String[]{"classicalKeyAgreement", "classicalKeyPair", "classicalSigner", "keyGenerator", "keyLifecycleManager", "keyPair", "keyStore", "signer"};
     }
 
     @Override
@@ -75,19 +101,41 @@ public class PQCComponentConfigurer extends PropertyConfigurerSupport implements
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "autowiredenabled":
         case "autowiredEnabled": return boolean.class;
+        case "classicalkemalgorithm":
+        case "classicalKEMAlgorithm": return java.lang.String.class;
+        case "classicalkeyagreement":
+        case "classicalKeyAgreement": return javax.crypto.KeyAgreement.class;
+        case "classicalkeypair":
+        case "classicalKeyPair": return java.security.KeyPair.class;
+        case "classicalsignaturealgorithm":
+        case "classicalSignatureAlgorithm": return java.lang.String.class;
+        case "classicalsigner":
+        case "classicalSigner": return java.security.Signature.class;
         case "configuration": return org.apache.camel.component.pqc.PQCConfiguration.class;
         case "healthcheckconsumerenabled":
         case "healthCheckConsumerEnabled": return boolean.class;
         case "healthcheckproducerenabled":
         case "healthCheckProducerEnabled": return boolean.class;
+        case "hybridkdfalgorithm":
+        case "hybridKdfAlgorithm": return java.lang.String.class;
         case "keyencapsulationalgorithm":
         case "keyEncapsulationAlgorithm": return java.lang.String.class;
         case "keygenerator":
         case "keyGenerator": return javax.crypto.KeyGenerator.class;
+        case "keylifecyclemanager":
+        case "keyLifecycleManager": return org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager.class;
         case "keypair":
         case "keyPair": return java.security.KeyPair.class;
         case "keypairalias":
         case "keyPairAlias": return java.lang.String.class;
+        case "keyrotationcheckinterval":
+        case "keyRotationCheckInterval": return long.class;
+        case "keyrotationmaxage":
+        case "keyRotationMaxAge": return long.class;
+        case "keyrotationmaxusage":
+        case "keyRotationMaxUsage": return long.class;
+        case "keyrotationschedulerenabled":
+        case "keyRotationSchedulerEnabled": return boolean.class;
         case "keystore":
         case "keyStore": return java.security.KeyStore.class;
         case "keystorepassword":
@@ -98,8 +146,12 @@ public class PQCComponentConfigurer extends PropertyConfigurerSupport implements
         case "signaturealgorithm":
         case "signatureAlgorithm": return java.lang.String.class;
         case "signer": return java.security.Signature.class;
+        case "statefulkeywarningthreshold":
+        case "statefulKeyWarningThreshold": return double.class;
         case "storeextractedsecretkeyasheader":
         case "storeExtractedSecretKeyAsHeader": return boolean.class;
+        case "strictkeylifecycle":
+        case "strictKeyLifecycle": return boolean.class;
         case "symmetrickeyalgorithm":
         case "symmetricKeyAlgorithm": return java.lang.String.class;
         case "symmetrickeylength":
@@ -114,19 +166,41 @@ public class PQCComponentConfigurer extends PropertyConfigurerSupport implements
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "autowiredenabled":
         case "autowiredEnabled": return target.isAutowiredEnabled();
+        case "classicalkemalgorithm":
+        case "classicalKEMAlgorithm": return getOrCreateConfiguration(target).getClassicalKEMAlgorithm();
+        case "classicalkeyagreement":
+        case "classicalKeyAgreement": return getOrCreateConfiguration(target).getClassicalKeyAgreement();
+        case "classicalkeypair":
+        case "classicalKeyPair": return getOrCreateConfiguration(target).getClassicalKeyPair();
+        case "classicalsignaturealgorithm":
+        case "classicalSignatureAlgorithm": return getOrCreateConfiguration(target).getClassicalSignatureAlgorithm();
+        case "classicalsigner":
+        case "classicalSigner": return getOrCreateConfiguration(target).getClassicalSigner();
         case "configuration": return target.getConfiguration();
         case "healthcheckconsumerenabled":
         case "healthCheckConsumerEnabled": return target.isHealthCheckConsumerEnabled();
         case "healthcheckproducerenabled":
         case "healthCheckProducerEnabled": return target.isHealthCheckProducerEnabled();
+        case "hybridkdfalgorithm":
+        case "hybridKdfAlgorithm": return getOrCreateConfiguration(target).getHybridKdfAlgorithm();
         case "keyencapsulationalgorithm":
         case "keyEncapsulationAlgorithm": return getOrCreateConfiguration(target).getKeyEncapsulationAlgorithm();
         case "keygenerator":
         case "keyGenerator": return getOrCreateConfiguration(target).getKeyGenerator();
+        case "keylifecyclemanager":
+        case "keyLifecycleManager": return getOrCreateConfiguration(target).getKeyLifecycleManager();
         case "keypair":
         case "keyPair": return getOrCreateConfiguration(target).getKeyPair();
         case "keypairalias":
         case "keyPairAlias": return getOrCreateConfiguration(target).getKeyPairAlias();
+        case "keyrotationcheckinterval":
+        case "keyRotationCheckInterval": return target.getKeyRotationCheckInterval();
+        case "keyrotationmaxage":
+        case "keyRotationMaxAge": return target.getKeyRotationMaxAge();
+        case "keyrotationmaxusage":
+        case "keyRotationMaxUsage": return target.getKeyRotationMaxUsage();
+        case "keyrotationschedulerenabled":
+        case "keyRotationSchedulerEnabled": return target.isKeyRotationSchedulerEnabled();
         case "keystore":
         case "keyStore": return getOrCreateConfiguration(target).getKeyStore();
         case "keystorepassword":
@@ -137,8 +211,12 @@ public class PQCComponentConfigurer extends PropertyConfigurerSupport implements
         case "signaturealgorithm":
         case "signatureAlgorithm": return getOrCreateConfiguration(target).getSignatureAlgorithm();
         case "signer": return getOrCreateConfiguration(target).getSigner();
+        case "statefulkeywarningthreshold":
+        case "statefulKeyWarningThreshold": return getOrCreateConfiguration(target).getStatefulKeyWarningThreshold();
         case "storeextractedsecretkeyasheader":
         case "storeExtractedSecretKeyAsHeader": return getOrCreateConfiguration(target).isStoreExtractedSecretKeyAsHeader();
+        case "strictkeylifecycle":
+        case "strictKeyLifecycle": return getOrCreateConfiguration(target).isStrictKeyLifecycle();
         case "symmetrickeyalgorithm":
         case "symmetricKeyAlgorithm": return getOrCreateConfiguration(target).getSymmetricKeyAlgorithm();
         case "symmetrickeylength":

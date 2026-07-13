@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/classes/datastore_activity",
+  "title": "DatastoreActivity",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.DatastoreActivity",
+  "description": "DatastoreActivity event class.",
+  "extends": {
+    "$ref": "OcsfEvent.json"
+  },
+  "properties": {
+    "databucket": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "src_endpoint": {
+      "$ref": "NetworkEndpoint.json"
+    },
+    "http_response": {
+      "$ref": "HttpResponse.json"
+    },
+    "type": {
+      "type": "string",
+      "title": "Datastore Type"
+    },
+    "actor": {
+      "$ref": "Actor.json"
+    },
+    "dst_endpoint": {
+      "$ref": "NetworkEndpoint.json"
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "type_id": {
+      "type": "integer",
+      "title": "Datastore Type ID"
+    },
+    "http_request": {
+      "$ref": "HttpRequest.json"
+    },
+    "query_info": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "raw_data_size": {
+      "type": "integer",
+      "title": "Raw Data Size"
+    },
+    "raw_data_hash": {
+      "$ref": "Fingerprint.json"
+    },
+    "enrichments": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Enrichment.json"
+      }
+    }
+  }
+}

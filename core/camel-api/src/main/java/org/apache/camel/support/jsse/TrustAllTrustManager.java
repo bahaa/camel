@@ -17,6 +17,7 @@
 package org.apache.camel.support.jsse;
 
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 
 import javax.net.ssl.X509TrustManager;
 
@@ -31,6 +32,8 @@ import org.slf4j.LoggerFactory;
  * completely bypasses SSL certificate verification. Using this in production can expose the application to
  * man-in-the-middle attacks.
  * </p>
+ *
+ * @since 4.9
  */
 public class TrustAllTrustManager implements X509TrustManager {
 
@@ -43,12 +46,12 @@ public class TrustAllTrustManager implements X509TrustManager {
 
     @Override
     public void checkClientTrusted(X509Certificate[] certs, String authType) {
-        LOG.debug("Trusting client certificate: {}", certs);
+        LOG.debug("Trusting client certificate: {}", Arrays.toString(certs));
     }
 
     @Override
     public void checkServerTrusted(X509Certificate[] certs, String authType) {
-        LOG.debug("Trusting server certificate: {}", certs);
+        LOG.debug("Trusting server certificate: {}", Arrays.toString(certs));
     }
 
     @Override

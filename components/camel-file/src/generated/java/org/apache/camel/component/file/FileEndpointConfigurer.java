@@ -52,6 +52,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "charset": target.setCharset(property(camelContext, java.lang.String.class, value)); return true;
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": target.setChecksumFileAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
+        case "checksumwritefile":
+        case "checksumWriteFile": target.setChecksumWriteFile(property(camelContext, boolean.class, value)); return true;
         case "chmod": target.setChmod(property(camelContext, java.lang.String.class, value)); return true;
         case "chmoddirectory":
         case "chmodDirectory": target.setChmodDirectory(property(camelContext, java.lang.String.class, value)); return true;
@@ -138,7 +140,7 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "premove":
         case "preMove": target.setPreMove(property(camelContext, java.lang.String.class, value)); return true;
         case "presort":
-        case "preSort": target.setPreSort(property(camelContext, boolean.class, value)); return true;
+        case "preSort": target.setPreSort(property(camelContext, java.lang.String.class, value)); return true;
         case "probecontenttype":
         case "probeContentType": target.setProbeContentType(property(camelContext, boolean.class, value)); return true;
         case "processstrategy":
@@ -240,6 +242,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "charset": return java.lang.String.class;
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": return java.lang.String.class;
+        case "checksumwritefile":
+        case "checksumWriteFile": return boolean.class;
         case "chmod": return java.lang.String.class;
         case "chmoddirectory":
         case "chmodDirectory": return java.lang.String.class;
@@ -326,7 +330,7 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "premove":
         case "preMove": return java.lang.String.class;
         case "presort":
-        case "preSort": return boolean.class;
+        case "preSort": return java.lang.String.class;
         case "probecontenttype":
         case "probeContentType": return boolean.class;
         case "processstrategy":
@@ -429,6 +433,8 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "charset": return target.getCharset();
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": return target.getChecksumFileAlgorithm();
+        case "checksumwritefile":
+        case "checksumWriteFile": return target.isChecksumWriteFile();
         case "chmod": return target.getChmod();
         case "chmoddirectory":
         case "chmodDirectory": return target.getChmodDirectory();
@@ -515,7 +521,7 @@ public class FileEndpointConfigurer extends PropertyConfigurerSupport implements
         case "premove":
         case "preMove": return target.getPreMove();
         case "presort":
-        case "preSort": return target.isPreSort();
+        case "preSort": return target.getPreSort();
         case "probecontenttype":
         case "probeContentType": return target.isProbeContentType();
         case "processstrategy":

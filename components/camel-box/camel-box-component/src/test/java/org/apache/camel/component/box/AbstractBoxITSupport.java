@@ -26,8 +26,8 @@ import com.box.sdk.BoxFolder;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.support.PropertyBindingSupport;
-import org.apache.camel.test.junit5.CamelTestSupport;
-import org.apache.camel.test.junit5.TestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
+import org.apache.camel.test.junit6.TestSupport;
 import org.junit.jupiter.api.TestInstance;
 
 /**
@@ -44,7 +44,7 @@ public class AbstractBoxITSupport extends CamelTestSupport {
     protected boolean jwtAuthentication;
     protected Map<String, Object> options;
 
-    private static boolean hasCredentials() throws IOException {
+    protected static boolean hasCredentials() throws IOException {
         if (properties.isEmpty()) {
             TestSupport.loadExternalProperties(properties, AbstractBoxITSupport.class, TEST_OPTIONS_PROPERTIES);
         }

@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.camel.tooling.model.ComponentModel.ComponentOptionModel;
@@ -30,6 +31,8 @@ import org.apache.camel.tooling.model.ComponentModel.EndpointHeaderModel;
 import org.apache.camel.tooling.model.ComponentModel.EndpointOptionModel;
 import org.apache.camel.tooling.model.DataFormatModel.DataFormatOptionModel;
 import org.apache.camel.tooling.model.EipModel.EipOptionModel;
+import org.apache.camel.tooling.model.JBangCommandModel.JBangCommand;
+import org.apache.camel.tooling.model.JBangCommandModel.JBangCommandOption;
 import org.apache.camel.tooling.model.JBangModel.JBangGroupModel;
 import org.apache.camel.tooling.model.JBangModel.JBangOptionModel;
 import org.apache.camel.tooling.model.LanguageModel.LanguageOptionModel;
@@ -40,6 +43,9 @@ import org.apache.camel.util.json.JsonObject;
 import org.apache.camel.util.json.Jsoner;
 
 public final class JsonMapper {
+
+    private static final String SECURITY = "security";
+    private static final String INSECURE_VALUE = "insecureValue";
 
     private JsonMapper() {
     }
@@ -408,6 +414,15 @@ public final class JsonMapper {
                 model.addFunction(func);
             }
         }
+        JsonObject mpro = (JsonObject) obj.get("operators");
+        if (mpro != null) {
+            for (Map.Entry<String, Object> entry : mpro.entrySet()) {
+                JsonObject mp = (JsonObject) entry.getValue();
+                LanguageModel.LanguageOperatorModel op = new LanguageModel.LanguageOperatorModel();
+                parseOperator(mp, op, entry.getKey());
+                model.addOperator(op);
+            }
+        }
         return model;
     }
 
@@ -429,6 +444,10 @@ public final class JsonMapper {
         final List<LanguageModel.LanguageFunctionModel> functions = model.getFunctions();
         if (!functions.isEmpty()) {
             wrapper.put("functions", asJsonObjectFunctions(functions));
+        }
+        final List<LanguageModel.LanguageOperatorModel> operators = model.getOperators();
+        if (!operators.isEmpty()) {
+            wrapper.put("operators", asJsonObjectOperators(operators));
         }
         return wrapper;
     }
@@ -476,6 +495,15 @@ public final class JsonMapper {
         parseModel(mobj, model);
         model.setGroup(mobj.getString("group"));
         parseArtifact(mobj, model);
+        JsonObject options = (JsonObject) obj.get("options");
+        if (options != null) {
+            for (Map.Entry<String, Object> entry : options.entrySet()) {
+                JsonObject mp = (JsonObject) entry.getValue();
+                DevConsoleModel.DevConsoleOptionModel option = new DevConsoleModel.DevConsoleOptionModel();
+                parseOption(mp, option, entry.getKey());
+                model.addOption(option);
+            }
+        }
         return model;
     }
 
@@ -492,6 +520,9 @@ public final class JsonMapper {
         obj.entrySet().removeIf(e -> e.getValue() == null);
         JsonObject wrapper = new JsonObject();
         wrapper.put("console", obj);
+        if (!model.getOptions().isEmpty()) {
+            wrapper.put("options", asJsonObject(model.getOptions()));
+        }
         return wrapper;
     }
 
@@ -540,6 +571,9 @@ public final class JsonMapper {
         if (model.isNativeSupported()) {
             obj.put("nativeSupported", model.isNativeSupported());
         }
+        if (!model.getAliases().isEmpty()) {
+            obj.put("aliases", model.getAliases());
+        }
         if (!model.getMetadata().isEmpty()) {
             obj.put("metadata", model.getMetadata());
         }
@@ -563,6 +597,10 @@ public final class JsonMapper {
         model.setJavaType(mobj.getString("javaType"));
         model.setSupportLevel(SupportLevel.safeValueOf(mobj.getString("supportLevel")));
         model.setNativeSupported(mobj.getBooleanOrDefault("nativeSupported", false));
+        Collection<String> aliases = mobj.getCollection("aliases");
+        if (aliases != null) {
+            model.setAliases(aliases.stream().collect(Collectors.toList()));
+        }
         model.setMetadata(mobj.getMapOrDefault("metadata", new JsonObject()));
     }
 
@@ -588,6 +626,8 @@ public final class JsonMapper {
         option.setAutowired(mp.getBooleanOrDefault("autowired", false));
         option.setDeprecationNote(mp.getString("deprecationNote"));
         option.setSecret(mp.getBooleanOrDefault("secret", false));
+        option.setSecurity(mp.getString(SECURITY));
+        option.setInsecureValue(mp.getString(INSECURE_VALUE));
         option.setDefaultValue(mp.get("defaultValue"));
         option.setAsPredicate(mp.getBooleanOrDefault("asPredicate", false));
         option.setConfigurationClass(mp.getString("configurationClass"));
@@ -599,6 +639,7 @@ public final class JsonMapper {
         option.setLargeInput(mp.getBooleanOrDefault("largeInput", false));
         option.setInputLanguage(mp.getString("inputLanguage"));
         option.setImportant(mp.getBooleanOrDefault("important", false));
+        option.setEndpointIdentity(mp.getBooleanOrDefault("endpointIdentity", false));
     }
 
     private static void parseGroup(JsonObject mp, MainGroupModel option) {
@@ -632,6 +673,61 @@ public final class JsonMapper {
         func.setDescription(mp.getString("description"));
         func.setOgnl(mp.getBoolean("ognl"));
         func.setSuffix(mp.getString("suffix"));
+        // parse params array
+        Object paramsObj = mp.get("params");
+        if (paramsObj instanceof JsonArray paramsArr) {
+            for (Object p : paramsArr) {
+                if (p instanceof JsonObject po) {
+                    LanguageModel.FunctionParamModel param = new LanguageModel.FunctionParamModel();
+                    param.setName(po.getString("name"));
+                    param.setJavaType(po.getString("javaType"));
+                    param.setRequired(po.getBooleanOrDefault("required", false));
+                    param.setDefaultValue(po.getString("defaultValue"));
+                    param.setDescription(po.getString("description"));
+                    func.addParam(param);
+                }
+            }
+        }
+        // parse examples array
+        Object examplesObj = mp.get("examples");
+        if (examplesObj instanceof JsonArray examplesArr) {
+            for (Object e : examplesArr) {
+                if (e instanceof String s) {
+                    func.addExample(s);
+                }
+            }
+        }
+    }
+
+    private static void parseOperator(JsonObject mp, LanguageModel.LanguageOperatorModel op, String name) {
+        op.setName(name);
+        op.setConstantName(name);
+        Integer idx = mp.getInteger("index");
+        if (idx != null) {
+            op.setIndex(idx);
+        }
+        op.setKind(mp.getString("kind"));
+        op.setDisplayName(mp.getString("displayName"));
+        op.setGroup(mp.getString("group"));
+        op.setLabel(mp.getString("label"));
+        op.setJavaType(mp.getString("javaType"));
+        op.setDeprecated(mp.getBooleanOrDefault("deprecated", false));
+        op.setDeprecationNote(mp.getString("deprecationNote"));
+        op.setDescription(mp.getString("description"));
+        op.setOperatorKind(mp.getString("operatorKind"));
+        op.setOperatorSyntax(mp.getString("operatorSyntax"));
+        Integer prec = mp.getInteger("precedence");
+        if (prec != null) {
+            op.setPrecedence(prec);
+        }
+        Object examplesObj = mp.get("examples");
+        if (examplesObj instanceof JsonArray examplesArr) {
+            for (Object e : examplesArr) {
+                if (e instanceof String s) {
+                    op.addExample(s);
+                }
+            }
+        }
     }
 
     public static JsonObject asJsonObject(List<? extends BaseOptionModel> options) {
@@ -656,6 +752,49 @@ public final class JsonMapper {
             }
             if (o.getSuffix() != null) {
                 jo.put("suffix", o.getSuffix());
+            }
+            if (!o.getParams().isEmpty()) {
+                JsonArray paramsArr = new JsonArray();
+                for (LanguageModel.FunctionParamModel p : o.getParams()) {
+                    JsonObject po = new JsonObject();
+                    po.put("name", p.getName());
+                    if (p.getJavaType() != null) {
+                        po.put("javaType", p.getJavaType());
+                    }
+                    po.put("required", p.isRequired());
+                    if (p.getDefaultValue() != null) {
+                        po.put("defaultValue", p.getDefaultValue());
+                    }
+                    if (p.getDescription() != null) {
+                        po.put("description", p.getDescription());
+                    }
+                    paramsArr.add(po);
+                }
+                jo.put("params", paramsArr);
+            }
+            if (!o.getExamples().isEmpty()) {
+                jo.put("examples", new JsonArray(o.getExamples()));
+            }
+            json.put(o.getName(), jo);
+        }
+        return json;
+    }
+
+    public static JsonObject asJsonObjectOperators(List<LanguageModel.LanguageOperatorModel> options) {
+        JsonObject json = new JsonObject();
+        for (int i = 0; i < options.size(); i++) {
+            var o = options.get(i);
+            o.setIndex(i);
+            JsonObject jo = asJsonObject(o);
+            if (o.getOperatorKind() != null) {
+                jo.put("operatorKind", o.getOperatorKind());
+            }
+            if (o.getOperatorSyntax() != null) {
+                jo.put("operatorSyntax", o.getOperatorSyntax());
+            }
+            jo.put("precedence", o.getPrecedence());
+            if (!o.getExamples().isEmpty()) {
+                jo.put("examples", new JsonArray(o.getExamples()));
             }
             json.put(o.getName(), jo);
         }
@@ -719,6 +858,12 @@ public final class JsonMapper {
         prop.put("deprecationNote", option.getDeprecationNote());
         prop.put("autowired", option.isAutowired());
         prop.put("secret", option.isSecret());
+        if (!Strings.isNullOrEmpty(option.getSecurity())) {
+            prop.put(SECURITY, option.getSecurity());
+        }
+        if (!Strings.isNullOrEmpty(option.getInsecureValue())) {
+            prop.put(INSECURE_VALUE, option.getInsecureValue());
+        }
         if (option.getDefaultValue() != null) {
             prop.put("defaultValue", option.resolveDefaultValue());
         }
@@ -737,6 +882,10 @@ public final class JsonMapper {
         if (option.isImportant()) {
             // only include if supported to not regen all files
             prop.put("important", option.isImportant());
+        }
+        if (option.isEndpointIdentity()) {
+            // only include if supported to not regen all files
+            prop.put("endpointIdentity", option.isEndpointIdentity());
         }
         prop.put("asPredicate", option.isAsPredicate());
         prop.put("configurationClass", option.getConfigurationClass());
@@ -809,51 +958,56 @@ public final class JsonMapper {
     }
 
     public static JsonObject asJsonObject(MainModel model) {
+        return asGroupedOptionsJson(
+                model.getGroups(), MainGroupModel::getName, MainGroupModel::getDescription, MainGroupModel::getSourceType,
+                model.getOptions(), MainOptionModel::getSourceType);
+    }
+
+    public static JsonObject asJsonObject(JBangModel model) {
+        return asGroupedOptionsJson(
+                model.getGroups(), JBangGroupModel::getName, JBangGroupModel::getDescription, JBangGroupModel::getSourceType,
+                model.getOptions(), JBangOptionModel::getSourceType);
+    }
+
+    private static <G, O extends BaseOptionModel> JsonObject asGroupedOptionsJson(
+            List<G> groups,
+            Function<G, String> groupName,
+            Function<G, String> groupDescription,
+            Function<G, String> groupSourceType,
+            List<O> options,
+            Function<O, String> optionSourceType) {
+
         JsonObject json = new JsonObject();
-        JsonArray groups = new JsonArray();
-        for (MainGroupModel group : model.getGroups()) {
+        JsonArray groupsArr = new JsonArray();
+        for (G group : groups) {
             JsonObject j = new JsonObject();
-            j.put("name", group.getName());
-            if (group.getDescription() != null) {
-                j.put("description", group.getDescription());
-            }
-            if (group.getSourceType() != null) {
-                j.put("sourceType", group.getSourceType());
-            }
-            groups.add(j);
+            j.put("name", groupName.apply(group));
+            putIfNotNull(j, "description", groupDescription.apply(group));
+            putIfNotNull(j, "sourceType", groupSourceType.apply(group));
+            groupsArr.add(j);
         }
-        json.put("groups", groups);
+        json.put("groups", groupsArr);
         JsonArray props = new JsonArray();
-        for (MainOptionModel prop : model.getOptions()) {
+        for (O prop : options) {
             JsonObject j = new JsonObject();
             j.put("name", prop.getName());
             j.put("required", prop.isRequired());
-            if (prop.getDescription() != null) {
-                j.put("description", prop.getDescription());
-            }
-            if (prop.getGroup() != null) {
-                j.put("group", prop.getGroup());
-            }
-            if (prop.getLabel() != null) {
-                j.put("label", prop.getLabel());
-            }
-            if (prop.getSourceType() != null) {
-                j.put("sourceType", prop.getSourceType());
-            }
+            putIfNotNull(j, "description", prop.getDescription());
+            putIfNotNull(j, "group", prop.getGroup());
+            putIfNotNull(j, "label", prop.getLabel());
+            putIfNotNull(j, "sourceType", optionSourceType.apply(prop));
             j.put("type", prop.getType());
             j.put("javaType", prop.getJavaType());
-            if (prop.getDefaultValue() != null) {
-                j.put("defaultValue", prop.resolveDefaultValue());
-            }
+            putIfNotNull(j, "defaultValue", prop.getDefaultValue() != null ? prop.resolveDefaultValue() : null);
             j.put("secret", prop.isSecret());
-            if (prop.getEnums() != null) {
-                j.put("enum", prop.getEnums());
-            }
+            putIfNotEmpty(j, SECURITY, prop.getSecurity());
+            putIfNotEmpty(j, INSECURE_VALUE, prop.getInsecureValue());
+            putIfNotNull(j, "enum", prop.getEnums());
             if (prop.isDeprecated()) {
-                j.put("deprecated", prop.isDeprecated());
+                j.put("deprecated", true);
             }
             if (prop.isAutowired()) {
-                j.put("autowired", prop.isAutowired());
+                j.put("autowired", true);
             }
             props.add(j);
         }
@@ -861,57 +1015,16 @@ public final class JsonMapper {
         return json;
     }
 
-    public static JsonObject asJsonObject(JBangModel model) {
-        JsonObject json = new JsonObject();
-        JsonArray groups = new JsonArray();
-        for (JBangGroupModel group : model.getGroups()) {
-            JsonObject j = new JsonObject();
-            j.put("name", group.getName());
-            if (group.getDescription() != null) {
-                j.put("description", group.getDescription());
-            }
-            if (group.getSourceType() != null) {
-                j.put("sourceType", group.getSourceType());
-            }
-            groups.add(j);
+    private static void putIfNotNull(JsonObject obj, String key, Object value) {
+        if (value != null) {
+            obj.put(key, value);
         }
-        json.put("groups", groups);
-        JsonArray props = new JsonArray();
-        for (JBangOptionModel prop : model.getOptions()) {
-            JsonObject j = new JsonObject();
-            j.put("name", prop.getName());
-            j.put("required", prop.isRequired());
-            if (prop.getDescription() != null) {
-                j.put("description", prop.getDescription());
-            }
-            if (prop.getGroup() != null) {
-                j.put("group", prop.getGroup());
-            }
-            if (prop.getLabel() != null) {
-                j.put("label", prop.getLabel());
-            }
-            if (prop.getSourceType() != null) {
-                j.put("sourceType", prop.getSourceType());
-            }
-            j.put("type", prop.getType());
-            j.put("javaType", prop.getJavaType());
-            if (prop.getDefaultValue() != null) {
-                j.put("defaultValue", prop.resolveDefaultValue());
-            }
-            j.put("secret", prop.isSecret());
-            if (prop.getEnums() != null) {
-                j.put("enum", prop.getEnums());
-            }
-            if (prop.isDeprecated()) {
-                j.put("deprecated", prop.isDeprecated());
-            }
-            if (prop.isAutowired()) {
-                j.put("autowired", prop.isAutowired());
-            }
-            props.add(j);
+    }
+
+    private static void putIfNotEmpty(JsonObject obj, String key, String value) {
+        if (!Strings.isNullOrEmpty(value)) {
+            obj.put(key, value);
         }
-        json.put("properties", props);
-        return json;
     }
 
     public static JsonObject asJsonObject(ReleaseModel model) {
@@ -940,12 +1053,220 @@ public final class JsonMapper {
         return model;
     }
 
+    public static JsonObject asJsonObject(SecurityAdvisoryModel model) {
+        JsonObject json = new JsonObject();
+        json.put("cve", model.getCve());
+        if (model.getDate() != null) {
+            json.put("date", model.getDate());
+        }
+        if (model.getSeverity() != null) {
+            json.put("severity", model.getSeverity());
+        }
+        if (model.getSummary() != null) {
+            json.put("summary", model.getSummary());
+        }
+        if (model.getAffected() != null) {
+            json.put("affected", model.getAffected());
+        }
+        if (model.getFixed() != null) {
+            json.put("fixed", model.getFixed());
+        }
+        if (model.getMitigation() != null) {
+            json.put("mitigation", model.getMitigation());
+        }
+        if (model.getUrl() != null) {
+            json.put("url", model.getUrl());
+        }
+        if (model.getComponents() != null && !model.getComponents().isEmpty()) {
+            json.put("components", new JsonArray(model.getComponents()));
+        }
+        return json;
+    }
+
+    public static SecurityAdvisoryModel generateSecurityAdvisoryModel(JsonObject obj) {
+        SecurityAdvisoryModel model = new SecurityAdvisoryModel();
+        model.setCve(obj.getString("cve"));
+        model.setDate(obj.getString("date"));
+        model.setSeverity(obj.getString("severity"));
+        model.setSummary(obj.getString("summary"));
+        model.setAffected(obj.getString("affected"));
+        model.setFixed(obj.getString("fixed"));
+        model.setMitigation(obj.getString("mitigation"));
+        model.setUrl(obj.getString("url"));
+        JsonArray components = (JsonArray) obj.get("components");
+        if (components != null) {
+            for (Object component : components) {
+                model.getComponents().add(String.valueOf(component));
+            }
+        }
+        return model;
+    }
+
     public static String createJsonSchema(MainModel model) {
         JsonObject wrapper = asJsonObject(model);
         return serialize(wrapper);
     }
 
     public static String createJsonSchema(JBangModel model) {
+        JsonObject wrapper = asJsonObject(model);
+        return serialize(wrapper);
+    }
+
+    // JBangCommandModel serialization/deserialization
+
+    public static JBangCommandModel generateJBangCommandModel(String json) {
+        JsonObject obj = deserialize(json);
+        return generateJBangCommandModel(obj);
+    }
+
+    public static JBangCommandModel generateJBangCommandModel(JsonObject obj) {
+        JBangCommandModel model = new JBangCommandModel();
+        JsonArray commands = (JsonArray) obj.get("commands");
+        if (commands != null) {
+            for (Object entry : commands) {
+                JsonObject cmdObj = (JsonObject) entry;
+                JBangCommand command = parseJBangCommand(cmdObj);
+                model.addCommand(command);
+            }
+        }
+        return model;
+    }
+
+    private static JBangCommand parseJBangCommand(JsonObject obj) {
+        JBangCommand command = new JBangCommand();
+        command.setName(obj.getString("name"));
+        command.setFullName(obj.getString("fullName"));
+        command.setDescription(obj.getString("description"));
+        command.setDeprecated(obj.getBooleanOrDefault("deprecated", false));
+        command.setDeprecationNote(obj.getString("deprecationNote"));
+        command.setSourceClass(obj.getString("sourceClass"));
+        command.setExamples(obj.getString("examples"));
+
+        JsonArray options = (JsonArray) obj.get("options");
+        if (options != null) {
+            for (Object optEntry : options) {
+                JsonObject optObj = (JsonObject) optEntry;
+                JBangCommandOption option = parseJBangCommandOption(optObj);
+                command.addOption(option);
+            }
+        }
+
+        JsonArray subcommands = (JsonArray) obj.get("subcommands");
+        if (subcommands != null) {
+            for (Object subEntry : subcommands) {
+                JsonObject subObj = (JsonObject) subEntry;
+                JBangCommand subcommand = parseJBangCommand(subObj);
+                command.addSubcommand(subcommand);
+            }
+        }
+
+        return command;
+    }
+
+    private static JBangCommandOption parseJBangCommandOption(JsonObject obj) {
+        JBangCommandOption option = new JBangCommandOption();
+        option.setNames(obj.getString("names"));
+        option.setDescription(obj.getString("description"));
+        option.setDefaultValue(obj.get("defaultValue"));
+        option.setJavaType(obj.getString("javaType"));
+        option.setType(obj.getString("type"));
+        option.setRequired(obj.getBooleanOrDefault("required", false));
+        option.setDeprecated(obj.getBooleanOrDefault("deprecated", false));
+        option.setDeprecationNote(obj.getString("deprecationNote"));
+        option.setHidden(obj.getBooleanOrDefault("hidden", false));
+        option.setParamLabel(obj.getString("paramLabel"));
+        option.setEnums(asStringList(obj.getCollection("enum")));
+        return option;
+    }
+
+    public static JsonObject asJsonObject(JBangCommandModel model) {
+        JsonObject json = new JsonObject();
+        JsonArray commands = new JsonArray();
+        for (JBangCommand cmd : model.getCommands()) {
+            commands.add(asJsonObject(cmd));
+        }
+        json.put("commands", commands);
+        return json;
+    }
+
+    private static JsonObject asJsonObject(JBangCommand cmd) {
+        JsonObject json = new JsonObject();
+        json.put("name", cmd.getName());
+        if (cmd.getFullName() != null) {
+            json.put("fullName", cmd.getFullName());
+        }
+        if (cmd.getDescription() != null) {
+            json.put("description", cmd.getDescription());
+        }
+        if (cmd.isDeprecated()) {
+            json.put("deprecated", true);
+        }
+        if (cmd.getDeprecationNote() != null) {
+            json.put("deprecationNote", cmd.getDeprecationNote());
+        }
+        if (cmd.getSourceClass() != null) {
+            json.put("sourceClass", cmd.getSourceClass());
+        }
+        if (cmd.getExamples() != null) {
+            json.put("examples", cmd.getExamples());
+        }
+
+        if (cmd.hasOptions()) {
+            JsonArray options = new JsonArray();
+            for (JBangCommandOption opt : cmd.getOptions()) {
+                options.add(asJsonObject(opt));
+            }
+            json.put("options", options);
+        }
+
+        if (cmd.hasSubcommands()) {
+            JsonArray subcommands = new JsonArray();
+            for (JBangCommand sub : cmd.getSubcommands()) {
+                subcommands.add(asJsonObject(sub));
+            }
+            json.put("subcommands", subcommands);
+        }
+
+        return json;
+    }
+
+    private static JsonObject asJsonObject(JBangCommandOption opt) {
+        JsonObject json = new JsonObject();
+        json.put("names", opt.getNames());
+        if (opt.getDescription() != null) {
+            json.put("description", opt.getDescription());
+        }
+        if (opt.getDefaultValue() != null) {
+            json.put("defaultValue", opt.getDefaultValue());
+        }
+        if (opt.getJavaType() != null) {
+            json.put("javaType", opt.getJavaType());
+        }
+        if (opt.getType() != null) {
+            json.put("type", opt.getType());
+        }
+        if (opt.isRequired()) {
+            json.put("required", true);
+        }
+        if (opt.isDeprecated()) {
+            json.put("deprecated", true);
+        }
+        if (opt.getDeprecationNote() != null) {
+            json.put("deprecationNote", opt.getDeprecationNote());
+        }
+        if (opt.isHidden()) {
+            json.put("hidden", true);
+        }
+        if (opt.getParamLabel() != null) {
+            json.put("paramLabel", opt.getParamLabel());
+        }
+        if (opt.getEnums() != null && !opt.getEnums().isEmpty()) {
+            json.put("enum", opt.getEnums());
+        }
+        return json;
+    }
+
+    public static String createJsonSchema(JBangCommandModel model) {
         JsonObject wrapper = asJsonObject(model);
         return serialize(wrapper);
     }

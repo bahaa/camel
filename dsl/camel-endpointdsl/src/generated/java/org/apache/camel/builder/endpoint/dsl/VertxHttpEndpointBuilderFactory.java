@@ -415,6 +415,40 @@ public interface VertxHttpEndpointBuilderFactory {
             return this;
         }
         /**
+         * The tracing policy used by the HTTP client when integrating with
+         * observability frameworks such as OpenTelemetry. If not specified the
+         * HTTP client applies a default tracing policy of PROPAGATE.
+         * 
+         * The option is a: <code>io.vertx.core.tracing.TracingPolicy</code>
+         * type.
+         * 
+         * Group: producer
+         * 
+         * @param tracingPolicy the value to set
+         * @return the dsl builder
+         */
+        default VertxHttpEndpointBuilder tracingPolicy(io.vertx.core.tracing.TracingPolicy tracingPolicy) {
+            doSetProperty("tracingPolicy", tracingPolicy);
+            return this;
+        }
+        /**
+         * The tracing policy used by the HTTP client when integrating with
+         * observability frameworks such as OpenTelemetry. If not specified the
+         * HTTP client applies a default tracing policy of PROPAGATE.
+         * 
+         * The option will be converted to a
+         * <code>io.vertx.core.tracing.TracingPolicy</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param tracingPolicy the value to set
+         * @return the dsl builder
+         */
+        default VertxHttpEndpointBuilder tracingPolicy(String tracingPolicy) {
+            doSetProperty("tracingPolicy", tracingPolicy);
+            return this;
+        }
+        /**
          * If enabled and an Exchange failed processing on the consumer side,
          * and if the caused Exception was sent back serialized in the response
          * as a application/x-java-serialized-object content type. On the
@@ -786,6 +820,28 @@ public interface VertxHttpEndpointBuilderFactory {
             doSetProperty("lazyStartProducer", lazyStartProducer);
             return this;
         }
+        /**
+         * Sets an ObjectInputFilter pattern (jdk.serialFilter syntax) applied
+         * when deserializing Java objects from HTTP responses with Content-Type
+         * application/x-java-serialized-object. This is used when
+         * transferException is enabled (or when allowJavaSerializedObject is
+         * enabled on the component) and the remote side returns a serialized
+         * payload. When not set, the filter configured via the JVM system
+         * property jdk.serialFilter is used when present; otherwise a
+         * conservative default filter denying java.net. and otherwise allowing
+         * java., javax. and org.apache.camel. packages is applied.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param deserializationFilter the value to set
+         * @return the dsl builder
+         */
+        default AdvancedVertxHttpEndpointBuilder deserializationFilter(String deserializationFilter) {
+            doSetProperty("deserializationFilter", deserializationFilter);
+            return this;
+        }
     }
 
     public interface VertxHttpBuilders {
@@ -852,7 +908,7 @@ public interface VertxHttpEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final VertxHttpHeaderNameBuilder INSTANCE = new VertxHttpHeaderNameBuilder();
+        public static final VertxHttpHeaderNameBuilder INSTANCE = new VertxHttpHeaderNameBuilder();
 
         /**
          * The http method.

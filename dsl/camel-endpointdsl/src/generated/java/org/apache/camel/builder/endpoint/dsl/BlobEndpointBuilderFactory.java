@@ -541,6 +541,24 @@ public interface BlobEndpointBuilderFactory {
             return this;
         }
         /**
+         * The snapshot identifier used to target a specific blob snapshot on
+         * read operations (getBlob, downloadBlobToFile, downloadLink). When
+         * set, the read targets the snapshot scoped client instead of the live
+         * blob. Can also be provided per-exchange via the
+         * CamelAzureStorageBlobSnapshotId header.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common
+         * 
+         * @param snapshotId the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder snapshotId(String snapshotId) {
+            doSetProperty("snapshotId", snapshotId);
+            return this;
+        }
+        /**
          * An optional timeout value beyond which a RuntimeException will be
          * raised.
          * 
@@ -569,6 +587,192 @@ public interface BlobEndpointBuilderFactory {
          */
         default BlobEndpointConsumerBuilder timeout(String timeout) {
             doSetProperty("timeout", timeout);
+            return this;
+        }
+        /**
+         * The blob version identifier used to target a specific blob version on
+         * read operations (getBlob, downloadBlobToFile, downloadLink). Requires
+         * blob versioning to be enabled on the storage account. When set, the
+         * read targets the version scoped client instead of the live blob. Can
+         * also be provided per-exchange via the CamelAzureStorageBlobVersionId
+         * header.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common
+         * 
+         * @param versionId the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder versionId(String versionId) {
+            doSetProperty("versionId", versionId);
+            return this;
+        }
+        /**
+         * Delete blobs from Azure after they have been retrieved. The delete is
+         * only performed if the Exchange is committed. If a rollback occurs,
+         * the blob is not deleted. If this option is false, then the same blobs
+         * will be retrieved over and over again in the polls. Therefore, you
+         * need to use the Idempotent Consumer EIP in the route to filter out
+         * duplicates. You can filter using the BlobConstants#BLOB_NAME header,
+         * or only the blob name.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param deleteAfterRead the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder deleteAfterRead(boolean deleteAfterRead) {
+            doSetProperty("deleteAfterRead", deleteAfterRead);
+            return this;
+        }
+        /**
+         * Delete blobs from Azure after they have been retrieved. The delete is
+         * only performed if the Exchange is committed. If a rollback occurs,
+         * the blob is not deleted. If this option is false, then the same blobs
+         * will be retrieved over and over again in the polls. Therefore, you
+         * need to use the Idempotent Consumer EIP in the route to filter out
+         * duplicates. You can filter using the BlobConstants#BLOB_NAME header,
+         * or only the blob name.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param deleteAfterRead the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder deleteAfterRead(String deleteAfterRead) {
+            doSetProperty("deleteAfterRead", deleteAfterRead);
+            return this;
+        }
+        /**
+         * Define the destination blob prefix to use when a blob must be moved,
+         * and moveAfterRead is set to true.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param destinationBlobPrefix the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder destinationBlobPrefix(String destinationBlobPrefix) {
+            doSetProperty("destinationBlobPrefix", destinationBlobPrefix);
+            return this;
+        }
+        /**
+         * Define the destination blob suffix to use when a blob must be moved,
+         * and moveAfterRead is set to true.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param destinationBlobSuffix the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder destinationBlobSuffix(String destinationBlobSuffix) {
+            doSetProperty("destinationBlobSuffix", destinationBlobSuffix);
+            return this;
+        }
+        /**
+         * Define the destination container where a blob must be moved when
+         * moveAfterRead is set to true.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param destinationContainer the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder destinationContainer(String destinationContainer) {
+            doSetProperty("destinationContainer", destinationContainer);
+            return this;
+        }
+        /**
+         * Move blobs from the container to a different container after they
+         * have been retrieved. To accomplish the operation, the
+         * destinationContainer option must be set. The copy blob operation is
+         * only performed if the Exchange is committed. If a rollback occurs,
+         * the blob is not moved.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param moveAfterRead the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder moveAfterRead(boolean moveAfterRead) {
+            doSetProperty("moveAfterRead", moveAfterRead);
+            return this;
+        }
+        /**
+         * Move blobs from the container to a different container after they
+         * have been retrieved. To accomplish the operation, the
+         * destinationContainer option must be set. The copy blob operation is
+         * only performed if the Exchange is committed. If a rollback occurs,
+         * the blob is not moved.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param moveAfterRead the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder moveAfterRead(String moveAfterRead) {
+            doSetProperty("moveAfterRead", moveAfterRead);
+            return this;
+        }
+        /**
+         * Remove the contents of the prefix configuration string from the new
+         * blob name before moving. For example, if prefix is set to 'notify/'
+         * and the destinationBlobPrefix is set to 'archive/', a blob with a
+         * name of 'notify/example.txt' will be moved to 'archive/example.txt',
+         * rather than the default behavior where the new name is
+         * 'archive/notify/example.txt'. Only applicable when moveAfterRead is
+         * true.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param removePrefixOnMove the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder removePrefixOnMove(boolean removePrefixOnMove) {
+            doSetProperty("removePrefixOnMove", removePrefixOnMove);
+            return this;
+        }
+        /**
+         * Remove the contents of the prefix configuration string from the new
+         * blob name before moving. For example, if prefix is set to 'notify/'
+         * and the destinationBlobPrefix is set to 'archive/', a blob with a
+         * name of 'notify/example.txt' will be moved to 'archive/example.txt',
+         * rather than the default behavior where the new name is
+         * 'archive/notify/example.txt'. Only applicable when moveAfterRead is
+         * true.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: consumer
+         * 
+         * @param removePrefixOnMove the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointConsumerBuilder removePrefixOnMove(String removePrefixOnMove) {
+            doSetProperty("removePrefixOnMove", removePrefixOnMove);
             return this;
         }
         /**
@@ -1807,6 +2011,24 @@ public interface BlobEndpointBuilderFactory {
             return this;
         }
         /**
+         * The snapshot identifier used to target a specific blob snapshot on
+         * read operations (getBlob, downloadBlobToFile, downloadLink). When
+         * set, the read targets the snapshot scoped client instead of the live
+         * blob. Can also be provided per-exchange via the
+         * CamelAzureStorageBlobSnapshotId header.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common
+         * 
+         * @param snapshotId the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointProducerBuilder snapshotId(String snapshotId) {
+            doSetProperty("snapshotId", snapshotId);
+            return this;
+        }
+        /**
          * An optional timeout value beyond which a RuntimeException will be
          * raised.
          * 
@@ -1835,6 +2057,25 @@ public interface BlobEndpointBuilderFactory {
          */
         default BlobEndpointProducerBuilder timeout(String timeout) {
             doSetProperty("timeout", timeout);
+            return this;
+        }
+        /**
+         * The blob version identifier used to target a specific blob version on
+         * read operations (getBlob, downloadBlobToFile, downloadLink). Requires
+         * blob versioning to be enabled on the storage account. When set, the
+         * read targets the version scoped client instead of the live blob. Can
+         * also be provided per-exchange via the CamelAzureStorageBlobVersionId
+         * header.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common
+         * 
+         * @param versionId the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointProducerBuilder versionId(String versionId) {
+            doSetProperty("versionId", versionId);
             return this;
         }
         /**
@@ -1901,6 +2142,38 @@ public interface BlobEndpointBuilderFactory {
          */
         default BlobEndpointProducerBuilder blockListType(String blockListType) {
             doSetProperty("blockListType", blockListType);
+            return this;
+        }
+        /**
+         * The block size in bytes to use for chunked uploads with
+         * uploadBlockBlobChunked operation. Default is 4MB (4194304). Maximum
+         * is 4000MB. Must be greater than 0.
+         * 
+         * The option is a: <code>java.lang.Long</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param blockSize the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointProducerBuilder blockSize(Long blockSize) {
+            doSetProperty("blockSize", blockSize);
+            return this;
+        }
+        /**
+         * The block size in bytes to use for chunked uploads with
+         * uploadBlockBlobChunked operation. Default is 4MB (4194304). Maximum
+         * is 4000MB. Must be greater than 0.
+         * 
+         * The option will be converted to a <code>java.lang.Long</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param blockSize the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointProducerBuilder blockSize(String blockSize) {
+            doSetProperty("blockSize", blockSize);
             return this;
         }
         /**
@@ -2162,6 +2435,73 @@ public interface BlobEndpointBuilderFactory {
          */
         default BlobEndpointProducerBuilder downloadLinkExpiration(String downloadLinkExpiration) {
             doSetProperty("downloadLinkExpiration", downloadLinkExpiration);
+            return this;
+        }
+        /**
+         * The maximum number of parallel requests to use during upload with
+         * uploadBlockBlobChunked operation. Default is determined by the Azure
+         * SDK based on available processors.
+         * 
+         * The option is a: <code>java.lang.Integer</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param maxConcurrency the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointProducerBuilder maxConcurrency(Integer maxConcurrency) {
+            doSetProperty("maxConcurrency", maxConcurrency);
+            return this;
+        }
+        /**
+         * The maximum number of parallel requests to use during upload with
+         * uploadBlockBlobChunked operation. Default is determined by the Azure
+         * SDK based on available processors.
+         * 
+         * The option will be converted to a <code>java.lang.Integer</code>
+         * type.
+         * 
+         * Group: producer
+         * 
+         * @param maxConcurrency the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointProducerBuilder maxConcurrency(String maxConcurrency) {
+            doSetProperty("maxConcurrency", maxConcurrency);
+            return this;
+        }
+        /**
+         * The maximum size in bytes for a single upload request with
+         * uploadBlockBlobChunked operation. Files smaller than this will be
+         * uploaded in a single request. Files larger will use chunked upload
+         * with blocks of size blockSize. Default is 256MB.
+         * 
+         * The option is a: <code>java.lang.Long</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param maxSingleUploadSize the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointProducerBuilder maxSingleUploadSize(Long maxSingleUploadSize) {
+            doSetProperty("maxSingleUploadSize", maxSingleUploadSize);
+            return this;
+        }
+        /**
+         * The maximum size in bytes for a single upload request with
+         * uploadBlockBlobChunked operation. Files smaller than this will be
+         * uploaded in a single request. Files larger will use chunked upload
+         * with blocks of size blockSize. Default is 256MB.
+         * 
+         * The option will be converted to a <code>java.lang.Long</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param maxSingleUploadSize the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointProducerBuilder maxSingleUploadSize(String maxSingleUploadSize) {
+            doSetProperty("maxSingleUploadSize", maxSingleUploadSize);
             return this;
         }
         /**
@@ -2870,6 +3210,24 @@ public interface BlobEndpointBuilderFactory {
             return this;
         }
         /**
+         * The snapshot identifier used to target a specific blob snapshot on
+         * read operations (getBlob, downloadBlobToFile, downloadLink). When
+         * set, the read targets the snapshot scoped client instead of the live
+         * blob. Can also be provided per-exchange via the
+         * CamelAzureStorageBlobSnapshotId header.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common
+         * 
+         * @param snapshotId the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointBuilder snapshotId(String snapshotId) {
+            doSetProperty("snapshotId", snapshotId);
+            return this;
+        }
+        /**
          * An optional timeout value beyond which a RuntimeException will be
          * raised.
          * 
@@ -2898,6 +3256,25 @@ public interface BlobEndpointBuilderFactory {
          */
         default BlobEndpointBuilder timeout(String timeout) {
             doSetProperty("timeout", timeout);
+            return this;
+        }
+        /**
+         * The blob version identifier used to target a specific blob version on
+         * read operations (getBlob, downloadBlobToFile, downloadLink). Requires
+         * blob versioning to be enabled on the storage account. When set, the
+         * read targets the version scoped client instead of the live blob. Can
+         * also be provided per-exchange via the CamelAzureStorageBlobVersionId
+         * header.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: common
+         * 
+         * @param versionId the value to set
+         * @return the dsl builder
+         */
+        default BlobEndpointBuilder versionId(String versionId) {
+            doSetProperty("versionId", versionId);
             return this;
         }
         /**
@@ -3060,7 +3437,7 @@ public interface BlobEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final BlobHeaderNameBuilder INSTANCE = new BlobHeaderNameBuilder();
+        public static final BlobHeaderNameBuilder INSTANCE = new BlobHeaderNameBuilder();
 
         /**
          * (All) Specify the producer operation to execute, please see the doc
@@ -3842,8 +4219,9 @@ public interface BlobEndpointBuilderFactory {
             return "CamelAzureStorageBlobListBlobContainersOptions";
         }
         /**
-         * (downloadBlobToFile) ParallelTransferOptions to use to download to
-         * file. Number of parallel transfers parameter is ignored.
+         * (downloadBlobToFile, uploadBlockBlobChunked) ParallelTransferOptions
+         * to use to download to file or upload from file. Number of parallel
+         * transfers parameter is ignored for downloads.
          * 
          * The option is a: {@code ParallelTransferOptions} type.
          * 
@@ -3854,6 +4232,65 @@ public interface BlobEndpointBuilderFactory {
          */
         public String azureStorageBlobParallelTransferOptions() {
             return "CamelAzureStorageBlobParallelTransferOptions";
+        }
+        /**
+         * (uploadBlockBlobChunked) The local file path to upload. Can be
+         * provided as a File, Path, or String in the message body, or via this
+         * header.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AzureStorageBlobFilePath}.
+         */
+        public String azureStorageBlobFilePath() {
+            return "CamelAzureStorageBlobFilePath";
+        }
+        /**
+         * (uploadBlockBlobChunked) The block size in bytes to use for chunked
+         * uploads. Default is 4MB (4194304). Maximum is 4000MB. Must be greater
+         * than 0.
+         * 
+         * The option is a: {@code Long} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AzureStorageBlobBlockSize}.
+         */
+        public String azureStorageBlobBlockSize() {
+            return "CamelAzureStorageBlobBlockSize";
+        }
+        /**
+         * (uploadBlockBlobChunked) The maximum number of parallel requests to
+         * use during upload. Default is determined by the Azure SDK based on
+         * available processors.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AzureStorageBlobMaxConcurrency}.
+         */
+        public String azureStorageBlobMaxConcurrency() {
+            return "CamelAzureStorageBlobMaxConcurrency";
+        }
+        /**
+         * (uploadBlockBlobChunked) The maximum size in bytes for a single
+         * upload request. Files smaller than this will be uploaded in a single
+         * request. Files larger will use chunked upload with blocks of size
+         * blockSize. Default is 256MB.
+         * 
+         * The option is a: {@code Long} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AzureStorageBlobMaxSingleUploadSize}.
+         */
+        public String azureStorageBlobMaxSingleUploadSize() {
+            return "CamelAzureStorageBlobMaxSingleUploadSize";
         }
         /**
          * (downloadLink) Override the default expiration (millis) of URL
@@ -3943,6 +4380,156 @@ public interface BlobEndpointBuilderFactory {
          */
         public String azureStorageBlobContext() {
             return "CamelAzureStorageBlobContext";
+        }
+        /**
+         * The snapshot identifier. On createBlobSnapshot it is set on the
+         * exchange as the id of the newly created snapshot. On read operations
+         * (getBlob, downloadBlobToFile, downloadLink) it can be provided as
+         * input to target a specific blob snapshot.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: common
+         * 
+         * @return the name of the header {@code AzureStorageBlobSnapshotId}.
+         */
+        public String azureStorageBlobSnapshotId() {
+            return "CamelAzureStorageBlobSnapshotId";
+        }
+        /**
+         * The blob version identifier. On read operations (getBlob,
+         * downloadBlobToFile, downloadLink) it can be provided as input to
+         * target a specific blob version when versioning is enabled on the
+         * storage account. On the consumer side it is populated from the blob
+         * properties when available.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: common
+         * 
+         * @return the name of the header {@code AzureStorageBlobVersionId}.
+         */
+        public String azureStorageBlobVersionId() {
+            return "CamelAzureStorageBlobVersionId";
+        }
+        /**
+         * Flag indicating whether this is the current version of the blob.
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code
+         * AzureStorageBlobIsCurrentVersion}.
+         */
+        public String azureStorageBlobIsCurrentVersion() {
+            return "CamelAzureStorageBlobIsCurrentVersion";
+        }
+        /**
+         * (producer) (setBlobTags) The tags to set on the blob as key-value
+         * pairs. (consumer) The tags retrieved from the blob.
+         * 
+         * The option is a: {@code Map<String,String>} type.
+         * 
+         * Group: common
+         * 
+         * @return the name of the header {@code AzureStorageBlobTags}.
+         */
+        public String azureStorageBlobTags() {
+            return "CamelAzureStorageBlobTags";
+        }
+        /**
+         * (findBlobsByTags) A SQL-like expression that filters blobs across the
+         * storage account based on their index tags, for example Environment =
+         * 'Production' AND Status = 'Active'.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code AzureStorageBlobTagFilter}.
+         */
+        public String azureStorageBlobTagFilter() {
+            return "CamelAzureStorageBlobTagFilter";
+        }
+        /**
+         * (producer) (setBlobLegalHold) The legal hold status to set on the
+         * blob. When set to true the blob is protected from modification and
+         * deletion until the hold is cleared by setting the value to false.
+         * (consumer) The legal hold status returned by the setBlobLegalHold
+         * operation.
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: common
+         * 
+         * @return the name of the header {@code AzureStorageBlobLegalHold}.
+         */
+        public String azureStorageBlobLegalHold() {
+            return "CamelAzureStorageBlobLegalHold";
+        }
+        /**
+         * (setBlobImmutabilityPolicy) A pre-built BlobImmutabilityPolicy object
+         * that overrides the policy expiry time and mode headers when present.
+         * 
+         * The option is a: {@code
+         * com.azure.storage.blob.models.BlobImmutabilityPolicy} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AzureStorageBlobImmutabilityPolicy}.
+         */
+        public String azureStorageBlobImmutabilityPolicy() {
+            return "CamelAzureStorageBlobImmutabilityPolicy";
+        }
+        /**
+         * (setBlobImmutabilityPolicy) The expiry time of the time-based
+         * retention policy. Required unless a pre-built BlobImmutabilityPolicy
+         * is provided via the body or the
+         * CamelAzureStorageBlobImmutabilityPolicy header.
+         * 
+         * The option is a: {@code java.time.OffsetDateTime} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AzureStorageBlobImmutabilityPolicyExpiryTime}.
+         */
+        public String azureStorageBlobImmutabilityPolicyExpiryTime() {
+            return "CamelAzureStorageBlobImmutabilityPolicyExpiryTime";
+        }
+        /**
+         * (setBlobImmutabilityPolicy) The mode of the immutability policy:
+         * UNLOCKED (default, can be modified or deleted), LOCKED (cannot be
+         * modified or shortened, only extended), or MUTABLE.
+         * 
+         * The option is a: {@code
+         * com.azure.storage.blob.models.BlobImmutabilityPolicyMode} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AzureStorageBlobImmutabilityPolicyMode}.
+         */
+        public String azureStorageBlobImmutabilityPolicyMode() {
+            return "CamelAzureStorageBlobImmutabilityPolicyMode";
+        }
+        /**
+         * (setBlobTier) The rehydrate priority used when rehydrating a blob
+         * from the archive tier: Standard or High. Ignored when changing tier
+         * between non-archive tiers.
+         * 
+         * The option is a: {@code
+         * com.azure.storage.blob.models.RehydratePriority} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code
+         * AzureStorageBlobRehydratePriority}.
+         */
+        public String azureStorageBlobRehydratePriority() {
+            return "CamelAzureStorageBlobRehydratePriority";
         }
     }
     static BlobEndpointBuilder endpointBuilder(String componentName, String path) {

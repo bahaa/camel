@@ -353,6 +353,42 @@ public interface DebeziumMysqlComponentBuilderFactory {
         }
     
         /**
+         * The number of seconds to wait for a read from the binlog connection
+         * to complete before the server times out. A value of 0 means use the
+         * MySQL server default. May need to be increased in high-latency
+         * network environments to prevent EOFException during streaming.
+         * 
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
+         * 
+         * Group: mysql
+         * 
+         * @param binlogNetReadTimeout the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMysqlComponentBuilder binlogNetReadTimeout(long binlogNetReadTimeout) {
+            doSetProperty("binlogNetReadTimeout", binlogNetReadTimeout);
+            return this;
+        }
+    
+        /**
+         * The number of seconds to wait for a write to the binlog connection to
+         * complete before the server times out. A value of 0 means use the
+         * MySQL server default. May need to be increased when large data
+         * volumes cause EOFException during streaming.
+         * 
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
+         * 
+         * Group: mysql
+         * 
+         * @param binlogNetWriteTimeout the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMysqlComponentBuilder binlogNetWriteTimeout(long binlogNetWriteTimeout) {
+            doSetProperty("binlogNetWriteTimeout", binlogNetWriteTimeout);
+            return this;
+        }
+    
+        /**
          * Regular expressions matching columns to exclude from change events.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
@@ -518,7 +554,7 @@ public interface DebeziumMysqlComponentBuilderFactory {
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
          * Default:
-         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret
+         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret|.*credentials\.json$
          * Group: mysql
          * 
          * @param customSanitizePattern the value to set
@@ -845,6 +881,27 @@ public interface DebeziumMysqlComponentBuilderFactory {
     
         
         /**
+         * Specifies which ANTLR grammar to use for parsing MySQL DDL
+         * statements. 'default' uses the Oracle MySQL grammar, which is
+         * actively maintained and supports MySQL 8.0 features. 'legacy' uses
+         * the Positive Technologies grammar for backward compatibility with
+         * existing deployments.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: default
+         * Group: mysql
+         * 
+         * @param ddlParserType the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMysqlComponentBuilder ddlParserType(java.lang.String ddlParserType) {
+            doSetProperty("ddlParserType", ddlParserType);
+            return this;
+        }
+    
+        
+        /**
          * Specify how DECIMAL and NUMERIC columns should be represented in
          * change events, including: 'precise' (the default) uses
          * java.math.BigDecimal to represent values, which are encoded in the
@@ -984,6 +1041,25 @@ public interface DebeziumMysqlComponentBuilderFactory {
          */
         default DebeziumMysqlComponentBuilder extendedHeadersEnabled(boolean extendedHeadersEnabled) {
             doSetProperty("extendedHeadersEnabled", extendedHeadersEnabled);
+            return this;
+        }
+    
+        
+        /**
+         * Whether the connector should ignore GTID during recovery and restart
+         * from the binlog file and position instead. GTID mode on the server
+         * remains enabled, and GTID tracking resumes normally after recovery.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: mysql
+         * 
+         * @param gtidIgnoreOnRecovery the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMysqlComponentBuilder gtidIgnoreOnRecovery(boolean gtidIgnoreOnRecovery) {
+            doSetProperty("gtidIgnoreOnRecovery", gtidIgnoreOnRecovery);
             return this;
         }
     
@@ -1332,6 +1408,48 @@ public interface DebeziumMysqlComponentBuilderFactory {
          */
         default DebeziumMysqlComponentBuilder maxQueueSizeInBytes(long maxQueueSizeInBytes) {
             doSetProperty("maxQueueSizeInBytes", maxQueueSizeInBytes);
+            return this;
+        }
+    
+        
+        /**
+         * The fully-qualified class name of the storage implementation for
+         * schema metadata. The class must implement
+         * io.debezium.relational.TableMappingStorage. Defaults to
+         * io.debezium.relational.ConcurrentMapTableMappingStorage for in-memory
+         * storage.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: io.debezium.relational.ConcurrentMapTableMappingStorage
+         * Group: mysql
+         * 
+         * @param memoryManagementSchemasClass the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMysqlComponentBuilder memoryManagementSchemasClass(java.lang.String memoryManagementSchemasClass) {
+            doSetProperty("memoryManagementSchemasClass", memoryManagementSchemasClass);
+            return this;
+        }
+    
+        
+        /**
+         * The fully-qualified class name of the storage implementation for
+         * table metadata. The class must implement
+         * io.debezium.relational.TableMappingStorage. Defaults to
+         * io.debezium.relational.ConcurrentMapTableMappingStorage for in-memory
+         * storage.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: io.debezium.relational.ConcurrentMapTableMappingStorage
+         * Group: mysql
+         * 
+         * @param memoryManagementTablesClass the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMysqlComponentBuilder memoryManagementTablesClass(java.lang.String memoryManagementTablesClass) {
+            doSetProperty("memoryManagementTablesClass", memoryManagementTablesClass);
             return this;
         }
     
@@ -1926,6 +2044,28 @@ public interface DebeziumMysqlComponentBuilderFactory {
     
         
         /**
+         * The factor used to scale the number of snapshot chunks per table. The
+         * default behavior is to take 'row_count/snapshot.max.threads' to
+         * compute the number of rows per chunks. This may not be ideal for
+         * larger tables, and using the multiplier, the formula is adjusted to
+         * increase the number of chunks by using
+         * 'row_count/(snapshot.max.threads snapshot.max.threads.multiplier).
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Default: 1
+         * Group: mysql
+         * 
+         * @param snapshotMaxThreadsMultiplier the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMysqlComponentBuilder snapshotMaxThreadsMultiplier(int snapshotMaxThreadsMultiplier) {
+            doSetProperty("snapshotMaxThreadsMultiplier", snapshotMaxThreadsMultiplier);
+            return this;
+        }
+    
+        
+        /**
          * The criteria for running a snapshot upon startup of the connector.
          * Select one of the following snapshot options: 'when_needed': On
          * startup, the connector runs a snapshot if one is needed.;
@@ -1944,11 +2084,7 @@ public interface DebeziumMysqlComponentBuilderFactory {
          * the connector begins to stream changes from the binlog.;
          * 'initial_only': The connector performs a snapshot as it does for the
          * 'initial' option, but after the connector completes the snapshot, it
-         * stops, and does not stream changes from the binlog.; 'never': The
-         * connector does not run a snapshot. Upon first startup, the connector
-         * immediately begins reading from the beginning of the binlog. The
-         * 'never' mode should be used with care, and only when the binlog is
-         * known to contain all history.
+         * stops, and does not stream changes from the binlog.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -2180,6 +2316,25 @@ public interface DebeziumMysqlComponentBuilderFactory {
     
         
         /**
+         * Enable to collect various kind of statistics, like latencies in
+         * record processing, and derived data like quantiles. By default
+         * collecting statistics is enabled.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: mysql
+         * 
+         * @param statisticsMetricsEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumMysqlComponentBuilder statisticsMetricsEnabled(boolean statisticsMetricsEnabled) {
+            doSetProperty("statisticsMetricsEnabled", statisticsMetricsEnabled);
+            return this;
+        }
+    
+        
+        /**
          * A delay period after the snapshot is completed and the streaming
          * begins, given in milliseconds. Defaults to 0 ms.
          * 
@@ -2399,6 +2554,8 @@ public interface DebeziumMysqlComponentBuilderFactory {
             case "autowiredEnabled": ((DebeziumMySqlComponent) component).setAutowiredEnabled((boolean) value); return true;
             case "bigintUnsignedHandlingMode": getOrCreateConfiguration((DebeziumMySqlComponent) component).setBigintUnsignedHandlingMode((java.lang.String) value); return true;
             case "binlogBufferSize": getOrCreateConfiguration((DebeziumMySqlComponent) component).setBinlogBufferSize((int) value); return true;
+            case "binlogNetReadTimeout": getOrCreateConfiguration((DebeziumMySqlComponent) component).setBinlogNetReadTimeout((long) value); return true;
+            case "binlogNetWriteTimeout": getOrCreateConfiguration((DebeziumMySqlComponent) component).setBinlogNetWriteTimeout((long) value); return true;
             case "columnExcludeList": getOrCreateConfiguration((DebeziumMySqlComponent) component).setColumnExcludeList((java.lang.String) value); return true;
             case "columnIncludeList": getOrCreateConfiguration((DebeziumMySqlComponent) component).setColumnIncludeList((java.lang.String) value); return true;
             case "columnPropagateSourceType": getOrCreateConfiguration((DebeziumMySqlComponent) component).setColumnPropagateSourceType((java.lang.String) value); return true;
@@ -2427,6 +2584,7 @@ public interface DebeziumMysqlComponentBuilderFactory {
             case "databaseSslTruststorePassword": getOrCreateConfiguration((DebeziumMySqlComponent) component).setDatabaseSslTruststorePassword((java.lang.String) value); return true;
             case "databaseUser": getOrCreateConfiguration((DebeziumMySqlComponent) component).setDatabaseUser((java.lang.String) value); return true;
             case "datatypePropagateSourceType": getOrCreateConfiguration((DebeziumMySqlComponent) component).setDatatypePropagateSourceType((java.lang.String) value); return true;
+            case "ddlParserType": getOrCreateConfiguration((DebeziumMySqlComponent) component).setDdlParserType((java.lang.String) value); return true;
             case "decimalHandlingMode": getOrCreateConfiguration((DebeziumMySqlComponent) component).setDecimalHandlingMode((java.lang.String) value); return true;
             case "enableTimeAdjuster": getOrCreateConfiguration((DebeziumMySqlComponent) component).setEnableTimeAdjuster((boolean) value); return true;
             case "errorsMaxRetries": getOrCreateConfiguration((DebeziumMySqlComponent) component).setErrorsMaxRetries((int) value); return true;
@@ -2434,6 +2592,7 @@ public interface DebeziumMysqlComponentBuilderFactory {
             case "eventProcessingFailureHandlingMode": getOrCreateConfiguration((DebeziumMySqlComponent) component).setEventProcessingFailureHandlingMode((java.lang.String) value); return true;
             case "executorShutdownTimeoutMs": getOrCreateConfiguration((DebeziumMySqlComponent) component).setExecutorShutdownTimeoutMs((long) value); return true;
             case "extendedHeadersEnabled": getOrCreateConfiguration((DebeziumMySqlComponent) component).setExtendedHeadersEnabled((boolean) value); return true;
+            case "gtidIgnoreOnRecovery": getOrCreateConfiguration((DebeziumMySqlComponent) component).setGtidIgnoreOnRecovery((boolean) value); return true;
             case "gtidSourceExcludes": getOrCreateConfiguration((DebeziumMySqlComponent) component).setGtidSourceExcludes((java.lang.String) value); return true;
             case "gtidSourceFilterDmlEvents": getOrCreateConfiguration((DebeziumMySqlComponent) component).setGtidSourceFilterDmlEvents((boolean) value); return true;
             case "gtidSourceIncludes": getOrCreateConfiguration((DebeziumMySqlComponent) component).setGtidSourceIncludes((java.lang.String) value); return true;
@@ -2452,6 +2611,8 @@ public interface DebeziumMysqlComponentBuilderFactory {
             case "maxBatchSize": getOrCreateConfiguration((DebeziumMySqlComponent) component).setMaxBatchSize((int) value); return true;
             case "maxQueueSize": getOrCreateConfiguration((DebeziumMySqlComponent) component).setMaxQueueSize((int) value); return true;
             case "maxQueueSizeInBytes": getOrCreateConfiguration((DebeziumMySqlComponent) component).setMaxQueueSizeInBytes((long) value); return true;
+            case "memoryManagementSchemasClass": getOrCreateConfiguration((DebeziumMySqlComponent) component).setMemoryManagementSchemasClass((java.lang.String) value); return true;
+            case "memoryManagementTablesClass": getOrCreateConfiguration((DebeziumMySqlComponent) component).setMemoryManagementTablesClass((java.lang.String) value); return true;
             case "messageKeyColumns": getOrCreateConfiguration((DebeziumMySqlComponent) component).setMessageKeyColumns((java.lang.String) value); return true;
             case "minRowCountToStreamResults": getOrCreateConfiguration((DebeziumMySqlComponent) component).setMinRowCountToStreamResults((int) value); return true;
             case "notificationEnabledChannels": getOrCreateConfiguration((DebeziumMySqlComponent) component).setNotificationEnabledChannels((java.lang.String) value); return true;
@@ -2484,6 +2645,7 @@ public interface DebeziumMysqlComponentBuilderFactory {
             case "snapshotLockingMode": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSnapshotLockingMode((java.lang.String) value); return true;
             case "snapshotLockTimeoutMs": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSnapshotLockTimeoutMs((long) value); return true;
             case "snapshotMaxThreads": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSnapshotMaxThreads((int) value); return true;
+            case "snapshotMaxThreadsMultiplier": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSnapshotMaxThreadsMultiplier((int) value); return true;
             case "snapshotMode": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSnapshotMode((java.lang.String) value); return true;
             case "snapshotModeConfigurationBasedSnapshotData": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSnapshotModeConfigurationBasedSnapshotData((boolean) value); return true;
             case "snapshotModeConfigurationBasedSnapshotOnDataError": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSnapshotModeConfigurationBasedSnapshotOnDataError((boolean) value); return true;
@@ -2496,6 +2658,7 @@ public interface DebeziumMysqlComponentBuilderFactory {
             case "snapshotSelectStatementOverrides": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSnapshotSelectStatementOverrides((java.lang.String) value); return true;
             case "snapshotTablesOrderByRowCount": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSnapshotTablesOrderByRowCount((java.lang.String) value); return true;
             case "sourceinfoStructMaker": getOrCreateConfiguration((DebeziumMySqlComponent) component).setSourceinfoStructMaker((java.lang.String) value); return true;
+            case "statisticsMetricsEnabled": getOrCreateConfiguration((DebeziumMySqlComponent) component).setStatisticsMetricsEnabled((boolean) value); return true;
             case "streamingDelayMs": getOrCreateConfiguration((DebeziumMySqlComponent) component).setStreamingDelayMs((long) value); return true;
             case "tableExcludeList": getOrCreateConfiguration((DebeziumMySqlComponent) component).setTableExcludeList((java.lang.String) value); return true;
             case "tableIgnoreBuiltin": getOrCreateConfiguration((DebeziumMySqlComponent) component).setTableIgnoreBuiltin((boolean) value); return true;

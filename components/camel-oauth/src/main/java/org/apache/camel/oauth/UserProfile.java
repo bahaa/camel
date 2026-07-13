@@ -44,6 +44,22 @@ public class UserProfile {
         this.attributes = attributes;
     }
 
+    /**
+     * Creates a UserProfile from a token endpoint response without JWT verification. Suitable for the SPI path where
+     * the response comes directly from a trusted token endpoint via client_credentials grant.
+     */
+    public static UserProfile fromTokenResponse(JsonObject json) {
+        var principal = json.deepCopy();
+        var attributes = new JsonObject();
+        long now = System.currentTimeMillis() / 1000L;
+        if (principal.has("expires_in")) {
+            var expiresIn = json.get("expires_in").getAsLong();
+            attributes.addProperty("exp", now + expiresIn);
+            attributes.addProperty("iat", now);
+        }
+        return new UserProfile(principal, attributes);
+    }
+
     public static UserProfile fromJson(OAuthConfig config, JsonObject json) {
         var principal = json.deepCopy();
         var attributes = new JsonObject();
@@ -162,17 +178,18 @@ public class UserProfile {
             var signedJWT = SignedJWT.parse(token);
             var keyID = signedJWT.getHeader().getKeyID();
 
-            // Fetch Keycloak public key
+            // Resolve the signing key from the configured JWK set and verify the token signature
             var jwkSet = config.getJWKSet();
-            if (!jwkSet.isEmpty()) {
-                var rsaKey = (RSAKey) jwkSet.getKeyByKeyId(keyID);
-                if (rsaKey == null) {
-                    throw new OAuthException("No matching key found for: " + keyID);
-                }
-                RSAPublicKey publicKey = rsaKey.toRSAPublicKey();
-                if (!signedJWT.verify(new RSASSAVerifier(publicKey))) {
-                    throw new OAuthException("Invalid token signature");
-                }
+            if (jwkSet == null || jwkSet.isEmpty()) {
+                throw new OAuthException("Cannot verify token signature: no JWK set available");
+            }
+            var rsaKey = (RSAKey) jwkSet.getKeyByKeyId(keyID);
+            if (rsaKey == null) {
+                throw new OAuthException("No matching key found for: " + keyID);
+            }
+            RSAPublicKey publicKey = rsaKey.toRSAPublicKey();
+            if (!signedJWT.verify(new RSASSAVerifier(publicKey))) {
+                throw new OAuthException("Invalid token signature");
             }
 
             // Decode the payload into a JsonObject

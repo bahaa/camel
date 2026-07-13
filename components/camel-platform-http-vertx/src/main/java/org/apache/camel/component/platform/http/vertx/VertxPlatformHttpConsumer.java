@@ -17,6 +17,7 @@
 package org.apache.camel.component.platform.http.vertx;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -52,8 +53,11 @@ import org.apache.camel.component.platform.http.cookie.CookieConfiguration;
 import org.apache.camel.component.platform.http.cookie.CookieHandler;
 import org.apache.camel.component.platform.http.spi.Method;
 import org.apache.camel.component.platform.http.spi.PlatformHttpConsumer;
+import org.apache.camel.component.platform.http.spi.PlatformHttpSecurityHandler;
 import org.apache.camel.spi.HeaderFilterStrategy;
+import org.apache.camel.spi.RestRegistry;
 import org.apache.camel.support.DefaultConsumer;
+import org.apache.camel.support.PluginHelper;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.MimeTypeHelper;
 import org.slf4j.Logger;
@@ -72,16 +76,22 @@ import static org.apache.camel.util.CollectionHelper.appendEntry;
  */
 public class VertxPlatformHttpConsumer extends DefaultConsumer
         implements PlatformHttpConsumer, Suspendable {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(VertxPlatformHttpConsumer.class);
     private static final Pattern PATH_PARAMETER_PATTERN = Pattern.compile("\\{([^/}]+)\\}");
+    private static final String PRE_AUTHENTICATED_EXCHANGE = VertxPlatformHttpConsumer.class.getName()
+                                                             + ".preAuthenticatedExchange";
+    private static final String AUTHORIZATION = "Authorization";
 
     private final List<Handler<RoutingContext>> handlers;
     private final String fileNameExtWhitelist;
     private final boolean muteExceptions;
     private final boolean handleWriteResponseError;
+    private final PlatformHttpSecurityHandler securityHandler;
+    private final List<Route> routes = new ArrayList<>();
+    private RestRegistry restRegistry;
     private Set<Method> methods;
     private String path;
-    private Route route;
     private VertxPlatformHttpRouter router;
     private HttpRequestBodyHandler httpRequestBodyHandler;
     private CookieConfiguration cookieConfiguration;
@@ -91,6 +101,14 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
                                      Processor processor,
                                      List<Handler<RoutingContext>> handlers,
                                      String routerName) {
+        this(endpoint, processor, handlers, routerName, null);
+    }
+
+    public VertxPlatformHttpConsumer(PlatformHttpEndpoint endpoint,
+                                     Processor processor,
+                                     List<Handler<RoutingContext>> handlers,
+                                     String routerName,
+                                     PlatformHttpSecurityHandler securityHandler) {
         super(endpoint, processor);
 
         this.handlers = handlers;
@@ -99,6 +117,7 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
         this.muteExceptions = endpoint.isMuteException();
         this.handleWriteResponseError = endpoint.isHandleWriteResponseError();
         this.routerName = routerName;
+        this.securityHandler = securityHandler;
     }
 
     @Override
@@ -109,8 +128,12 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
     @Override
     protected void doInit() throws Exception {
         super.doInit();
+
+        // camel-rest is optional
+        restRegistry = PluginHelper.getRestRegistry(getEndpoint().getCamelContext());
+
         methods = Method.parseList(getEndpoint().getHttpMethodRestrict());
-        path = configureEndpointPath(getEndpoint());
+        path = configureEndpointPath(getEndpoint());  // in vertx-web we should replace path parameters from {xxx} to :xxx syntax
         router = VertxPlatformHttpRouter.lookup(getEndpoint().getCamelContext(), routerName);
         if (router == null) {
             // dynamic assigned port number, then lookup using -0
@@ -135,20 +158,22 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
     protected void doStart() throws Exception {
         super.doStart();
 
-        final Route newRoute = router.route(path);
+        if (restRegistry != null && startRestServicesContractFirst()) {
+            // rest-dsl contract first using multiple routers per api endpoint
+            return;
+        }
 
+        // standard http consumer using a single router
+        final Route newRoute = router.route(path);
         if (getEndpoint().getRequestTimeout() > 0) {
             newRoute.handler(TimeoutHandler.create(getEndpoint().getRequestTimeout()));
         }
-
         if (getEndpoint().getCamelContext().getRestConfiguration().isEnableCORS() && getEndpoint().getConsumes() != null) {
             ((RouteImpl) newRoute).setEmptyBodyPermittedWithConsumes(true);
         }
-
         if (!methods.equals(Method.getAll())) {
             methods.forEach(m -> newRoute.method(HttpMethod.valueOf(m.name())));
         }
-
         if (getEndpoint().getComponent().isServerRequestValidation()) {
             if (getEndpoint().getConsumes() != null) {
                 //comma separated contentTypes has to be registered one by one
@@ -163,24 +188,99 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
                 }
             }
         }
-
+        configureSecurityHandler(newRoute);
         httpRequestBodyHandler.configureRoute(newRoute);
         for (Handler<RoutingContext> handler : handlers) {
             newRoute.handler(handler);
         }
-
         newRoute.handler(this::handleRequest);
-
-        this.route = newRoute;
+        this.routes.add(newRoute);
     }
 
     @Override
     protected void doStop() throws Exception {
-        if (route != null) {
-            route.remove();
-            route = null;
-        }
+        this.routes.forEach(Route::remove);
+        this.routes.clear();
         super.doStop();
+    }
+
+    /**
+     * Special start logic for Rest DSL with contract-first, which need to use fine-grained vertx router to make this
+     * consistent with Camel, otherwise there is only 1 vertx router to handle all the API endpoints (coarse grained)
+     * which distorts the observability in vertx and camel-quarkus.
+     *
+     * @return true if in rest-dsl contract-first mode, false if standard mode
+     */
+    protected boolean startRestServicesContractFirst() throws Exception {
+        boolean matched = false;
+        for (var r : restRegistry.listAllRestServices()) {
+            // rest-dsl contract-first we need to create a new unique router per API endpoint
+            String target = path;
+            if (target.endsWith("*")) {
+                target = target.substring(0, target.length() - 1);
+            }
+            if (r.isContractFirst() && target.equals(r.getBasePath())) {
+                matched = true;
+                String u = r.getBasePath() + r.getBaseUrl();
+                u = configureEndpointPath(u); // in vertx-web we should replace path parameters from {xxx} to :xxx syntax
+                String v = r.getMethod();
+                String c = r.getConsumes();
+                String p = r.getProduces();
+
+                Route sr = router.route(u);
+                sr.method(HttpMethod.valueOf(v));
+                if (getEndpoint().getComponent().isServerRequestValidation()) {
+                    if (c != null) {
+                        for (String cc : c.split(",")) {
+                            sr.consumes(cc);
+                        }
+                    }
+                    if (p != null) {
+                        for (String pp : p.split(",")) {
+                            sr.produces(pp);
+                        }
+                    }
+                }
+                configureSecurityHandler(sr);
+                httpRequestBodyHandler.configureRoute(sr);
+                for (Handler<RoutingContext> handler : handlers) {
+                    sr.handler(handler);
+                }
+                sr.handler(this::handleRequest);
+                this.routes.add(sr);
+            }
+        }
+        for (var r : restRegistry.listAllRestSpecifications()) {
+            // rest-dsl contract-first we need to see if there is an api spec
+            // that should be exposed via a vertx http router
+            String target = path;
+            if (target.endsWith("*")) {
+                target = target.substring(0, target.length() - 1);
+            }
+            if (r.isSpecification() && target.equals(r.getBasePath())) {
+                String u = r.getBasePath() + r.getBaseUrl();
+                String v = r.getMethod();
+                String p = r.getProduces();
+
+                Route sr = router.route(u);
+                sr.method(HttpMethod.valueOf(v));
+                if (getEndpoint().getComponent().isServerRequestValidation()) {
+                    if (p != null) {
+                        for (String pp : p.split(",")) {
+                            sr.produces(pp);
+                        }
+                    }
+                }
+                configureSecurityHandler(sr);
+                httpRequestBodyHandler.configureRoute(sr);
+                for (Handler<RoutingContext> handler : handlers) {
+                    sr.handler(handler);
+                }
+                sr.handler(this::handleRequest);
+                this.routes.add(sr);
+            }
+        }
+        return matched;
     }
 
     private String configureEndpointPath(PlatformHttpEndpoint endpoint) {
@@ -188,6 +288,10 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
         if (endpoint.isMatchOnUriPrefix() && !path.endsWith("*")) {
             path += "*";
         }
+        return configureEndpointPath(path);
+    }
+
+    private String configureEndpointPath(String path) {
         // Transform from the Camel path param syntax /path/{key} to vert.x web's /path/:key
         return PATH_PARAMETER_PATTERN.matcher(path).replaceAll(":$1");
     }
@@ -199,7 +303,7 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
         }
 
         final Vertx vertx = ctx.vertx();
-        final Exchange exchange = createExchange(false);
+        final Exchange exchange = getOrCreateExchange(ctx);
         exchange.setPattern(ExchangePattern.InOut);
 
         //
@@ -279,6 +383,53 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
         return null;
     }
 
+    private void configureSecurityHandler(Route route) {
+        if (securityHandler != null) {
+            route.handler(this::handleSecurity);
+        }
+    }
+
+    private void handleSecurity(RoutingContext ctx) {
+        if (isSuspended()) {
+            handleSuspend(ctx);
+            return;
+        }
+
+        ctx.request().pause();
+        Exchange exchange = createExchange(false);
+        exchange.setPattern(ExchangePattern.InOut);
+        Message in = initializeHttpMessage(exchange, ctx);
+        populateCamelHeaders(ctx, in.getHeaders(), exchange, getEndpoint().getHeaderFilterStrategy());
+
+        ctx.vertx().executeBlocking(() -> securityHandler.authenticate(getEndpoint(), exchange), false)
+                .onComplete(result -> {
+                    if (result.failed()) {
+                        ctx.request().resume();
+                        handleFailure(exchange, ctx, result.cause());
+                    } else if (Boolean.TRUE.equals(result.result())) {
+                        exchange.getMessage().reset();
+                        ctx.put(PRE_AUTHENTICATED_EXCHANGE, exchange);
+                        ctx.next();
+                        ctx.request().resume();
+                    } else {
+                        ctx.request().resume();
+                        writeResponse(ctx, exchange, getEndpoint().getHeaderFilterStrategy(), muteExceptions)
+                                .onComplete(writeResponseResult -> {
+                                    if (writeResponseResult.succeeded()) {
+                                        releaseExchange(exchange, false);
+                                    } else {
+                                        handleFailure(exchange, ctx, writeResponseResult.cause());
+                                    }
+                                });
+                    }
+                });
+    }
+
+    private Exchange getOrCreateExchange(RoutingContext ctx) {
+        Exchange exchange = ctx.get(PRE_AUTHENTICATED_EXCHANGE);
+        return exchange != null ? exchange : createExchange(false);
+    }
+
     private static void handleSuspend(RoutingContext ctx) {
         ctx.response().setStatusCode(503);
         ctx.end();
@@ -293,13 +444,7 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
 
     protected Future<Void> processHttpRequest(Exchange exchange, RoutingContext ctx) {
         // reuse existing http message if pooled
-        Message in = exchange.getIn();
-        if (in instanceof HttpMessage hm) {
-            hm.init(exchange, ctx.request(), ctx.response());
-        } else {
-            in = new HttpMessage(exchange, ctx.request(), ctx.response());
-            exchange.setMessage(in);
-        }
+        Message in = initializeHttpMessage(exchange, ctx);
 
         final String charset = ctx.parsedHeaders().contentType().parameter("charset");
         if (charset != null) {
@@ -318,9 +463,23 @@ public class VertxPlatformHttpConsumer extends DefaultConsumer
         return populateCamelMessage(ctx, exchange, in);
     }
 
+    private Message initializeHttpMessage(Exchange exchange, RoutingContext ctx) {
+        Message in = exchange.getIn();
+        if (in instanceof HttpMessage hm) {
+            hm.init(exchange, ctx.request(), ctx.response());
+        } else {
+            in = new HttpMessage(exchange, ctx.request(), ctx.response());
+            exchange.setMessage(in);
+        }
+        return in;
+    }
+
     protected Future<Void> populateCamelMessage(RoutingContext ctx, Exchange exchange, Message message) {
         final HeaderFilterStrategy headerFilterStrategy = getEndpoint().getHeaderFilterStrategy();
         populateCamelHeaders(ctx, message.getHeaders(), exchange, headerFilterStrategy);
+        if (securityHandler != null) {
+            message.removeHeader(AUTHORIZATION);
+        }
         return httpRequestBodyHandler.handle(ctx, message);
     }
 

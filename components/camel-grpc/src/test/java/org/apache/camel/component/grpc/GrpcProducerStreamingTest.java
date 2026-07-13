@@ -19,6 +19,7 @@ package org.apache.camel.component.grpc;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -26,38 +27,31 @@ import io.grpc.stub.StreamObserver;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.camel.test.junit5.TestSupport.assertListSize;
+import static org.apache.camel.test.junit6.TestSupport.assertListSize;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@DisabledIfSystemProperty(named = "ci.env.name", matches = ".*", disabledReason = "Flaky on GitHub Actions")
 public class GrpcProducerStreamingTest extends CamelTestSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(GrpcProducerStreamingTest.class);
 
-    private static final int GRPC_TEST_PORT = AvailablePortFinder.getNextAvailable();
+    private Server grpcServer;
+    private PingPongImpl pingPongServer;
 
-    private static Server grpcServer;
-    private static PingPongImpl pingPongServer;
-
-    @BeforeEach
-    public void startGrpcServer() throws Exception {
+    @Override
+    protected void setupResources() throws Exception {
         pingPongServer = new PingPongImpl();
-        grpcServer = ServerBuilder.forPort(GRPC_TEST_PORT).addService(pingPongServer).build().start();
-        LOG.info("gRPC server started on port {}", GRPC_TEST_PORT);
+        grpcServer = ServerBuilder.forPort(0).addService(pingPongServer).build().start();
+        LOG.info("gRPC server started on port {}", grpcServer.getPort());
     }
 
-    @AfterEach
-    public void stopGrpcServer() {
+    @Override
+    protected void cleanupResources() {
         if (grpcServer != null) {
             grpcServer.shutdown();
             LOG.info("gRPC server stopped");
@@ -98,7 +92,7 @@ public class GrpcProducerStreamingTest extends CamelTestSupport {
         replies.expectedMessageCount(messageGroupCount);
         replies.assertIsSatisfied();
 
-        Thread.sleep(2000);
+        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> assertListSize(pingPongServer.getLastStreamRequests(), 1));
 
         for (int i = messageGroupCount + 1; i <= 2 * messageGroupCount; i++) {
             template.sendBody("direct:grpc-stream-async-async-route",
@@ -123,7 +117,7 @@ public class GrpcProducerStreamingTest extends CamelTestSupport {
             @Override
             public void configure() {
                 from("direct:grpc-stream-async-async-route")
-                        .to("grpc://localhost:" + GRPC_TEST_PORT
+                        .to("grpc://localhost:" + grpcServer.getPort()
                             + "/org.apache.camel.component.grpc.PingPong?producerStrategy=STREAMING&streamRepliesTo=direct:grpc-replies&method=pingAsyncAsync");
 
                 from("direct:grpc-replies")

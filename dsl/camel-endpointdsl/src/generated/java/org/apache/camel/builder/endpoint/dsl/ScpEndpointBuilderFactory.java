@@ -45,24 +45,6 @@ public interface ScpEndpointBuilderFactory {
         }
 
         /**
-         * If provided, then Camel will write a checksum file when the original
-         * file has been written. The checksum file will contain the checksum
-         * created with the provided algorithm for the original file. The
-         * checksum file will always be written in the same folder as the
-         * original file.
-         * 
-         * The option is a: <code>java.lang.String</code> type.
-         * 
-         * Group: producer
-         * 
-         * @param checksumFileAlgorithm the value to set
-         * @return the dsl builder
-         */
-        default ScpEndpointBuilder checksumFileAlgorithm(String checksumFileAlgorithm) {
-            doSetProperty("checksumFileAlgorithm", checksumFileAlgorithm);
-            return this;
-        }
-        /**
          * Allows you to set chmod on the stored file. For example chmod=664.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -114,6 +96,22 @@ public interface ScpEndpointBuilderFactory {
             return this;
         }
         /**
+         * If provided, then Camel will calculate a checksum from the file that
+         * has been written, and store the result in the CamelFileChecksum
+         * header.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: producer
+         * 
+         * @param checksumFileAlgorithm the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder checksumFileAlgorithm(String checksumFileAlgorithm) {
+            doSetProperty("checksumFileAlgorithm", checksumFileAlgorithm);
+            return this;
+        }
+        /**
          * Use Expression such as File Language to dynamically set the filename.
          * For consumers, it's used as a filename filter. For producers, it's
          * used to evaluate the filename to write. If an expression is set, it
@@ -140,6 +138,86 @@ public interface ScpEndpointBuilderFactory {
          */
         default ScpEndpointBuilder fileName(String fileName) {
             doSetProperty("fileName", fileName);
+            return this;
+        }
+        /**
+         * Used for jailing (restricting) writing files to the starting
+         * directory (and sub) only. This is enabled by default to not allow
+         * Camel to write files to outside directories (to be more secured out
+         * of the box). You can turn this off to allow writing files to
+         * directories outside the starting directory, such as parent or root
+         * folders. For consumers that use a localWorkDirectory, this also
+         * restricts the downloaded files to stay within the configured
+         * localWorkDirectory.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: common
+         * 
+         * @param jailStartingDirectory the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder jailStartingDirectory(boolean jailStartingDirectory) {
+            doSetProperty("jailStartingDirectory", jailStartingDirectory);
+            return this;
+        }
+        /**
+         * Used for jailing (restricting) writing files to the starting
+         * directory (and sub) only. This is enabled by default to not allow
+         * Camel to write files to outside directories (to be more secured out
+         * of the box). You can turn this off to allow writing files to
+         * directories outside the starting directory, such as parent or root
+         * folders. For consumers that use a localWorkDirectory, this also
+         * restricts the downloaded files to stay within the configured
+         * localWorkDirectory.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: common
+         * 
+         * @param jailStartingDirectory the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder jailStartingDirectory(String jailStartingDirectory) {
+            doSetProperty("jailStartingDirectory", jailStartingDirectory);
+            return this;
+        }
+        /**
+         * If checksumFileAlgorithm has been configured then this option
+         * controls whether to write a checksum file as well or not. The
+         * checksum file will always be written in the same folder as the
+         * original file.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: producer
+         * 
+         * @param checksumWriteFile the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder checksumWriteFile(boolean checksumWriteFile) {
+            doSetProperty("checksumWriteFile", checksumWriteFile);
+            return this;
+        }
+        /**
+         * If checksumFileAlgorithm has been configured then this option
+         * controls whether to write a checksum file as well or not. The
+         * checksum file will always be written in the same folder as the
+         * original file.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: producer
+         * 
+         * @param checksumWriteFile the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder checksumWriteFile(String checksumWriteFile) {
+            doSetProperty("checksumWriteFile", checksumWriteFile);
             return this;
         }
         /**
@@ -183,46 +261,6 @@ public interface ScpEndpointBuilderFactory {
             return this;
         }
         /**
-         * Used for jailing (restricting) writing files to the starting
-         * directory (and sub) only. This is enabled by default to not allow
-         * Camel to write files to outside directories (to be more secured out
-         * of the box). You can turn this off to allow writing files to
-         * directories outside the starting directory, such as parent or root
-         * folders.
-         * 
-         * The option is a: <code>boolean</code> type.
-         * 
-         * Default: true
-         * Group: producer
-         * 
-         * @param jailStartingDirectory the value to set
-         * @return the dsl builder
-         */
-        default ScpEndpointBuilder jailStartingDirectory(boolean jailStartingDirectory) {
-            doSetProperty("jailStartingDirectory", jailStartingDirectory);
-            return this;
-        }
-        /**
-         * Used for jailing (restricting) writing files to the starting
-         * directory (and sub) only. This is enabled by default to not allow
-         * Camel to write files to outside directories (to be more secured out
-         * of the box). You can turn this off to allow writing files to
-         * directories outside the starting directory, such as parent or root
-         * folders.
-         * 
-         * The option will be converted to a <code>boolean</code> type.
-         * 
-         * Default: true
-         * Group: producer
-         * 
-         * @param jailStartingDirectory the value to set
-         * @return the dsl builder
-         */
-        default ScpEndpointBuilder jailStartingDirectory(String jailStartingDirectory) {
-            doSetProperty("jailStartingDirectory", jailStartingDirectory);
-            return this;
-        }
-        /**
          * Sets whether to use strict host key checking. Possible values are:
          * no, yes.
          * 
@@ -236,6 +274,85 @@ public interface ScpEndpointBuilderFactory {
          */
         default ScpEndpointBuilder strictHostKeyChecking(String strictHostKeyChecking) {
             doSetProperty("strictHostKeyChecking", strictHostKeyChecking);
+            return this;
+        }
+        /**
+         * Set a comma separated list of CA signature algorithms accepted for
+         * host certificate verification. If not specified the default list from
+         * JSch will be used (matches OpenSSH 8.2 defaults).
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param caSignatureAlgorithms the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder caSignatureAlgorithms(String caSignatureAlgorithms) {
+            doSetProperty("caSignatureAlgorithms", caSignatureAlgorithms);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate as a byte array for certificate-based
+         * authentication.
+         * 
+         * The option is a: <code>byte[]</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certBytes the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder certBytes(byte[] certBytes) {
+            doSetProperty("certBytes", certBytes);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate as a byte array for certificate-based
+         * authentication.
+         * 
+         * The option will be converted to a <code>byte[]</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certBytes the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder certBytes(String certBytes) {
+            doSetProperty("certBytes", certBytes);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate file path for certificate-based
+         * authentication.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certFile the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder certFile(String certFile) {
+            doSetProperty("certFile", certFile);
+            return this;
+        }
+        /**
+         * Set the OpenSSH certificate (loaded from classpath by default) for
+         * certificate-based authentication.
+         * 
+         * This option can also be loaded from an existing file, by prefixing
+         * with file: or classpath: followed by the location of the file.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param certUri the value to set
+         * @return the dsl builder
+         */
+        default ScpEndpointBuilder certUri(String certUri) {
+            doSetProperty("certUri", certUri);
             return this;
         }
         /**

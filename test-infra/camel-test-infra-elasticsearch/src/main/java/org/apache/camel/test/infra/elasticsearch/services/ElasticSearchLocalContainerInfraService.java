@@ -38,7 +38,7 @@ import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @InfraService(service = ElasticSearchInfraService.class,
-              description = "NoSQL Database Elasticsearch",
+              description = "Elasticsearch is a distributed search and analytics engine",
               serviceAlias = "elasticsearch")
 public class ElasticSearchLocalContainerInfraService
         implements ElasticSearchInfraService, ContainerService<ElasticsearchContainer> {
@@ -77,11 +77,7 @@ public class ElasticSearchLocalContainerInfraService
 
                 withPassword(PASSWORD);
 
-                if (fixedPort) {
-                    addFixedExposedPort(ELASTIC_SEARCH_PORT, ELASTIC_SEARCH_PORT);
-                } else {
-                    withExposedPorts(ELASTIC_SEARCH_PORT);
-                }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, ELASTIC_SEARCH_PORT);
 
                 setWaitStrategy(
                         new LogMessageWaitStrategy()

@@ -46,7 +46,6 @@ import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBu
 import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
-import org.apache.hc.core5.reactor.ssl.TlsDetails;
 import org.apache.hc.core5.util.Timeout;
 import org.opensearch.client.RestClient;
 import org.opensearch.client.RestClientBuilder;
@@ -492,7 +491,15 @@ class OpensearchProducer extends DefaultAsyncProducer {
             // Configure SSL if enabled
             if (configuration.isEnableSSL()) {
                 SSLContext sslContext = null;
-                if (ObjectHelper.isNotEmpty(configuration.getCertificatePath())) {
+                if (configuration.getSslContextParameters() != null) {
+                    // Use SSLContextParameters (allows configuring named groups, cipher suites, protocols)
+                    try {
+                        sslContext = configuration.getSslContextParameters()
+                                .createSSLContext(getEndpoint().getCamelContext());
+                    } catch (Exception e) {
+                        throw new RuntimeException("Failed to create SSLContext from SSLContextParameters", e);
+                    }
+                } else if (ObjectHelper.isNotEmpty(configuration.getCertificatePath())) {
                     // Use custom certificate
                     sslContext = createSslContextFromCa();
                 } else {
@@ -506,9 +513,7 @@ class OpensearchProducer extends DefaultAsyncProducer {
 
                 // Build TLS strategy
                 ClientTlsStrategyBuilder tlsStrategyBuilder = ClientTlsStrategyBuilder.create()
-                        .setHostnameVerifier(configuration.getHostnameVerifier())
-                        .setTlsDetailsFactory(
-                                sslEngine -> new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol()));
+                        .setHostnameVerifier(configuration.getHostnameVerifier());
 
                 // Set SSL context if available
                 if (sslContext != null) {

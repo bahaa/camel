@@ -26,7 +26,6 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.is;
 
 public class VertxPlatformHttpFileResponseTest {
-
     @Test
     void testFileResponse() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -41,7 +40,7 @@ public class VertxPlatformHttpFileResponseTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             String requestBody = "Give me a file";
             given()
@@ -68,7 +67,7 @@ public class VertxPlatformHttpFileResponseTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             String requestBody = "Give me a file";
             given()

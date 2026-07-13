@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/classes/incident_finding",
+  "title": "IncidentFinding",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.IncidentFinding",
+  "description": "IncidentFinding event class.",
+  "extends": {
+    "$ref": "OcsfEvent.json"
+  },
+  "properties": {
+    "impact_id": {
+      "type": "integer",
+      "title": "Impact ID"
+    },
+    "finding_info_list": {
+      "type": "array",
+      "title": "Finding Information List",
+      "items": {
+        "$ref": "FindingInfo.json"
+      }
+    },
+    "ticket": {
+      "$ref": "Ticket.json"
+    },
+    "priority": {
+      "type": "string",
+      "title": "Priority"
+    },
+    "impact_score": {
+      "type": "integer",
+      "title": "Impact Score"
+    },
+    "tickets": {
+      "type": "array",
+      "title": "Tickets",
+      "items": {
+        "$ref": "Ticket.json"
+      }
+    },
+    "comment": {
+      "type": "string",
+      "title": "Comment"
+    },
+    "verdict_id": {
+      "type": "integer",
+      "title": "Verdict ID"
+    },
+    "assignee_group": {
+      "$ref": "Group.json"
+    },
+    "confidence": {
+      "type": "string",
+      "title": "Confidence"
+    },
+    "confidence_id": {
+      "type": "integer",
+      "title": "Confidence ID"
+    },
+    "desc": {
+      "type": "string",
+      "title": "Description"
+    },
+    "confidence_score": {
+      "type": "integer",
+      "title": "Confidence Score"
+    },
+    "priority_id": {
+      "type": "integer",
+      "title": "Priority ID"
+    },
+    "verdict": {
+      "type": "string",
+      "title": "Verdict"
+    },
+    "vendor_attributes": {
+      "$ref": "VendorAttributes.json"
+    },
+    "impact": {
+      "type": "string",
+      "title": "Impact"
+    },
+    "is_suspected_breach": {
+      "type": "boolean",
+      "title": "Suspected Breach"
+    },
+    "attacks": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Attack.json"
+      }
+    },
+    "assignee": {
+      "$ref": "User.json"
+    },
+    "raw_data_size": {
+      "type": "integer",
+      "title": "Raw Data Size"
+    },
+    "raw_data_hash": {
+      "$ref": "Fingerprint.json"
+    },
+    "enrichments": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Enrichment.json"
+      }
+    },
+    "src_url": {
+      "type": "string",
+      "title": "Source URL"
+    }
+  }
+}

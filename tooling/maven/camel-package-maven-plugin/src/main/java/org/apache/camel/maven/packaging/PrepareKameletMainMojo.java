@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -71,6 +72,9 @@ public class PrepareKameletMainMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.directory}/../../../catalog/camel-catalog")
     protected File catalogDir;
 
+    @Parameter(defaultValue = "${project.directory}/../../../components")
+    protected File componentsDir;
+
     @Parameter(defaultValue = "src/generated/")
     protected File genDir;
 
@@ -94,6 +98,12 @@ public class PrepareKameletMainMojo extends AbstractMojo {
             updateKnownDependencies();
         } catch (Exception e) {
             throw new MojoFailureException("Error updating camel-component-known-dependencies.properties", e);
+        }
+
+        try {
+            updateKnownFactoryFinders();
+        } catch (Exception e) {
+            throw new MojoFailureException("Error updating camel-factoryfinder-known-dependencies.properties", e);
         }
     }
 
@@ -143,6 +153,27 @@ public class PrepareKameletMainMojo extends AbstractMojo {
         writeSourceIfChanged(source, "resources", "camel-component-known-dependencies.properties", genDir);
     }
 
+    protected void updateKnownFactoryFinders() throws Exception {
+        List<String> lines = findFactoryFinder(componentsDir);
+
+        // remove duplicate
+        lines = lines.stream().distinct().collect(Collectors.toList());
+        // and sort
+        Collections.sort(lines);
+
+        getLog().info("Found " + lines.size() + " FactoryFinder @JdkService");
+
+        // load license header
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("license-header.txt")) {
+            this.licenseHeader = loadText(is);
+        } catch (Exception e) {
+            throw new MojoFailureException("Error loading license-header.txt file", e);
+        }
+
+        String source = String.join("\n", lines) + "\n";
+        writeSourceIfChanged(source, "resources", "camel-factoryfinder-known-dependencies.properties", genDir);
+    }
+
     protected boolean writeSourceIfChanged(String source, String filePath, String fileName, File outputDir)
             throws MojoFailureException {
         Path target = outputDir.toPath().resolve(filePath).resolve(fileName);
@@ -176,6 +207,63 @@ public class PrepareKameletMainMojo extends AbstractMojo {
         if (buildContext != null) {
             buildContext.refresh(file.toFile());
         }
+    }
+
+    private static List<String> findFactoryFinder(File rootDir) {
+        List<String> answer = new ArrayList<>();
+        String serviceDir = "src/generated/resources/META-INF/services/org/apache/camel/";
+
+        for (File f : Objects.requireNonNull(rootDir.listFiles())) {
+            if (f.isDirectory()) {
+                File fd = new File(f, serviceDir);
+                if (fd.isDirectory()) {
+                    String artifact = f.getName();
+                    if (artifact.startsWith("camel-")) {
+                        artifact = artifact.substring(6);
+                    }
+                    findFactoryFinder(answer, artifact, fd, null);
+                }
+                // scan nested module directories (e.g., camel-infinispan/camel-infinispan/)
+                File[] children = f.listFiles();
+                if (children != null) {
+                    for (File nested : children) {
+                        if (nested.isDirectory() && nested.getName().startsWith("camel-")) {
+                            fd = new File(nested, serviceDir);
+                            if (fd.isDirectory()) {
+                                String nestedArtifact = nested.getName();
+                                if (nestedArtifact.startsWith("camel-")) {
+                                    nestedArtifact = nestedArtifact.substring(6);
+                                }
+                                findFactoryFinder(answer, nestedArtifact, fd, null);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return answer;
+    }
+
+    private static void findFactoryFinder(List<String> answer, String artifact, File dir, String subdir) {
+        for (File sf : Objects.requireNonNull(dir.listFiles())) {
+            if (sf.isFile() && !sf.getName().contains(".") && acceptFactoryFinderFile(sf.getName())) {
+                // service marker file
+                String path = subdir != null ? subdir + "/" + sf.getName() : sf.getName();
+                answer.add("META-INF/services/org/apache/camel/" + path + "=camel:" + artifact);
+            } else if (sf.isDirectory() && acceptFactoryFinderSubDir(sf.getName())) {
+                findFactoryFinder(answer, artifact, sf, sf.getName());
+            }
+        }
+    }
+
+    private static boolean acceptFactoryFinderSubDir(String name) {
+        return "cloud".equals(name) || "platform-http".equals(name) || "periodic-task".equals(name)
+                || "resource-resolver".equals(name);
+    }
+
+    private static boolean acceptFactoryFinderFile(String name) {
+        return !"TypeConverterLoader".equals(name) && !"reactive-executor".equals(name) && !"thread-pool-factory".equals(name);
     }
 
 }

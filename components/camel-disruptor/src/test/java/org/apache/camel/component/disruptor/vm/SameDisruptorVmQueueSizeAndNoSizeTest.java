@@ -19,12 +19,12 @@ package org.apache.camel.component.disruptor.vm;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.ResolveEndpointFailedException;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  *
@@ -37,39 +37,33 @@ public class SameDisruptorVmQueueSizeAndNoSizeTest extends CamelTestSupport {
             template.sendBody("disruptor-vm:foo?blockWhenFull=false", Integer.toString(i));
         }
 
-        try {
+        CamelExecutionException e = assertThrows(CamelExecutionException.class, () -> {
             template.sendBody("disruptor-vm:foo?blockWhenFull=false", "Should be full now");
-            fail("Should fail");
-        } catch (CamelExecutionException e) {
-            IllegalStateException ise = assertIsInstanceOf(IllegalStateException.class, e.getCause());
-            assertEquals("Disruptors ringbuffer was full", ise.getMessage());
-        }
+        });
+        IllegalStateException ise = assertIsInstanceOf(IllegalStateException.class, e.getCause());
+        assertEquals("Disruptors ringbuffer was full", ise.getMessage());
     }
 
     @Test
     void testSameQueueDifferentSize() {
-        try {
+        ResolveEndpointFailedException e = assertThrows(ResolveEndpointFailedException.class, () -> {
             template.sendBody("disruptor-vm:foo?size=256", "Should fail");
-            fail("Should fail");
-        } catch (ResolveEndpointFailedException e) {
-            IllegalArgumentException ise = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
-            assertEquals(
-                    "Cannot use existing queue disruptor-vm://foo as the existing queue size 128 does not match given queue size 256",
-                    ise.getMessage());
-        }
+        });
+        IllegalArgumentException ise = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
+        assertEquals(
+                "Cannot use existing queue disruptor-vm://foo as the existing queue size 128 does not match given queue size 256",
+                ise.getMessage());
     }
 
     @Test
     void testSameQueueDifferentSizeBar() {
-        try {
+        ResolveEndpointFailedException e = assertThrows(ResolveEndpointFailedException.class, () -> {
             template.sendBody("disruptor-vm:bar?size=256", "Should fail");
-            fail("Should fail");
-        } catch (ResolveEndpointFailedException e) {
-            IllegalArgumentException ise = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
-            assertEquals("Cannot use existing queue disruptor-vm://bar as the existing queue size " + 1024
-                         + " does not match given queue size 256",
-                    ise.getMessage());
-        }
+        });
+        IllegalArgumentException ise = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
+        assertEquals("Cannot use existing queue disruptor-vm://bar as the existing queue size " + 1024
+                     + " does not match given queue size 256",
+                ise.getMessage());
     }
 
     @Override
@@ -77,10 +71,10 @@ public class SameDisruptorVmQueueSizeAndNoSizeTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from("disruptor-vm:foo?size=128&blockWhenFull=false").routeId("foo").noAutoStartup()
+                from("disruptor-vm:foo?size=128&blockWhenFull=false").routeId("foo").autoStartup(false)
                         .to("mock:foo");
 
-                from("disruptor-vm:bar").routeId("bar").noAutoStartup()
+                from("disruptor-vm:bar").routeId("bar").autoStartup(false)
                         .to("mock:bar");
             }
         };

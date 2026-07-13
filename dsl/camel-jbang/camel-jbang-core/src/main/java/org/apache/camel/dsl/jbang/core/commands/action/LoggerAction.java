@@ -31,12 +31,17 @@ import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.LoggingLevelCompletionCandidates;
 import org.apache.camel.dsl.jbang.core.common.PidNameAgeCompletionCandidates;
 import org.apache.camel.dsl.jbang.core.common.ProcessHelper;
+import org.apache.camel.dsl.jbang.core.common.TerminalWidthHelper;
 import org.apache.camel.util.TimeUtils;
 import org.apache.camel.util.json.JsonObject;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "logger",
-                     description = "List or change logging levels", sortOptions = false, showDefaultValues = true)
+                     description = "List or change logging levels", sortOptions = false, showDefaultValues = true,
+                     footer = {
+                             "%nExamples:",
+                             "  camel cmd logger",
+                             "  camel cmd logger --logging-level=DEBUG --logger=org.apache.camel" })
 public class LoggerAction extends ActionBaseCommand {
 
     @CommandLine.Parameters(description = "Name or pid of running Camel integration", arity = "0..1")
@@ -88,7 +93,7 @@ public class LoggerAction extends ActionBaseCommand {
     protected Integer callList() {
         List<Row> rows = new ArrayList<>();
 
-        List<Long> pids = findPids("*");
+        List<Long> pids = findPids(name);
         ProcessHandle.allProcesses()
                 .filter(ph -> pids.contains(ph.pid()))
                 .forEach(ph -> {
@@ -124,13 +129,20 @@ public class LoggerAction extends ActionBaseCommand {
         rows.sort(this::sortRow);
 
         if (!rows.isEmpty()) {
+            int tw = terminalWidth();
+            int fixedWidth = 10 + 10 + 10; // PID + AGE + LEVEL (approx)
+            int borderOverhead = TerminalWidthHelper.noBorderOverhead(5);
+            int nameWidth = TerminalWidthHelper.flexWidth(tw, fixedWidth + 60, borderOverhead, 15, 40);
+            int loggerWidth = TerminalWidthHelper.flexWidth(tw, fixedWidth + nameWidth, borderOverhead, 20, 60);
+
             printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
                     new Column().header("PID").headerAlign(HorizontalAlign.CENTER).with(r -> r.pid),
                     new Column().header("NAME").dataAlign(HorizontalAlign.LEFT)
-                            .maxWidth(40, OverflowBehaviour.ELLIPSIS_RIGHT)
+                            .maxWidth(nameWidth, OverflowBehaviour.ELLIPSIS_RIGHT)
                             .with(r -> r.name),
                     new Column().header("AGE").headerAlign(HorizontalAlign.CENTER).with(r -> r.ago),
-                    new Column().header("LOGGER").dataAlign(HorizontalAlign.LEFT).with(r -> r.logger),
+                    new Column().header("LOGGER").dataAlign(HorizontalAlign.LEFT)
+                            .maxWidth(loggerWidth, OverflowBehaviour.ELLIPSIS_RIGHT).with(r -> r.logger),
                     new Column().header("LEVEL").dataAlign(HorizontalAlign.RIGHT).with(r -> r.level))));
         }
 

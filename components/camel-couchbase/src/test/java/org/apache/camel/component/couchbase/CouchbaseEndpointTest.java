@@ -19,6 +19,9 @@ package org.apache.camel.component.couchbase;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.couchbase.client.java.codec.DefaultJsonSerializer;
+import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import org.apache.camel.Processor;
 import org.junit.jupiter.api.Test;
 
@@ -168,5 +171,104 @@ public class CouchbaseEndpointTest {
         assertEquals(1L, endpoint.getQueryTimeout());
 
         endpoint.setDescending(false);
+    }
+
+    @Test
+    public void testBuildSqlQuerySimple() {
+        CouchbaseEndpoint endpoint = new CouchbaseEndpoint();
+        endpoint.setBucket("myBucket");
+        String query = endpoint.buildSqlQuery();
+        assertEquals("SELECT META().id AS __id, * FROM `myBucket`", query);
+    }
+
+    @Test
+    public void testBuildSqlQueryWithCollection() {
+        CouchbaseEndpoint endpoint = new CouchbaseEndpoint();
+        endpoint.setBucket("myBucket");
+        endpoint.setCollection("myCollection");
+        String query = endpoint.buildSqlQuery();
+        assertEquals("SELECT META().id AS __id, * FROM `myCollection`", query);
+    }
+
+    @Test
+    public void testBuildSqlQueryWithLimitAndSkip() {
+        CouchbaseEndpoint endpoint = new CouchbaseEndpoint();
+        endpoint.setBucket("myBucket");
+        endpoint.setLimit(10);
+        endpoint.setSkip(5);
+        String query = endpoint.buildSqlQuery();
+        assertEquals("SELECT META().id AS __id, * FROM `myBucket` LIMIT 10 OFFSET 5", query);
+    }
+
+    @Test
+    public void testBuildSqlQueryWithDescending() {
+        CouchbaseEndpoint endpoint = new CouchbaseEndpoint();
+        endpoint.setBucket("myBucket");
+        endpoint.setDescending(true);
+        endpoint.setLimit(10);
+        String query = endpoint.buildSqlQuery();
+        assertEquals("SELECT META().id AS __id, * FROM `myBucket` ORDER BY META().id DESC LIMIT 10", query);
+    }
+
+    @Test
+    public void testBuildSqlQueryWithRangeKeys() {
+        CouchbaseEndpoint endpoint = new CouchbaseEndpoint();
+        endpoint.setBucket("myBucket");
+        endpoint.setRangeStartKey("docA");
+        endpoint.setRangeEndKey("docZ");
+        String query = endpoint.buildSqlQuery();
+        assertEquals(
+                "SELECT META().id AS __id, * FROM `myBucket` WHERE META().id >= 'docA' AND META().id <= 'docZ'",
+                query);
+    }
+
+    @Test
+    public void testBuildSqlQueryWithStartKeyOnly() {
+        CouchbaseEndpoint endpoint = new CouchbaseEndpoint();
+        endpoint.setBucket("myBucket");
+        endpoint.setRangeStartKey("docA");
+        String query = endpoint.buildSqlQuery();
+        assertEquals("SELECT META().id AS __id, * FROM `myBucket` WHERE META().id >= 'docA'", query);
+    }
+
+    @Test
+    public void testBuildSqlQueryFullOptions() {
+        CouchbaseEndpoint endpoint = new CouchbaseEndpoint();
+        endpoint.setBucket("myBucket");
+        endpoint.setCollection("orders");
+        endpoint.setRangeStartKey("order_001");
+        endpoint.setRangeEndKey("order_999");
+        endpoint.setDescending(true);
+        endpoint.setLimit(50);
+        endpoint.setSkip(10);
+        String query = endpoint.buildSqlQuery();
+        assertEquals(
+                "SELECT META().id AS __id, * FROM `orders`"
+                     + " WHERE META().id >= 'order_001' AND META().id <= 'order_999'"
+                     + " ORDER BY META().id DESC LIMIT 50 OFFSET 10",
+                query);
+    }
+
+    /**
+     * Verifies that the ClusterEnvironment is configured with DefaultJsonSerializer to prevent the Couchbase SDK from
+     * auto-detecting non-shaded Jackson on the classpath (CAMEL-22090). When non-shaded Jackson is present (e.g., via
+     * camel-jackson, Spring Boot, or Quarkus), auto-detection would cause the SDK to use JacksonJsonSerializer, leading
+     * to deserialization failures for SDK internal types that depend on shaded Jackson classes.
+     */
+    @Test
+    public void testClusterEnvironmentUsesDefaultJsonSerializer() {
+        CouchbaseEndpoint endpoint = new CouchbaseEndpoint();
+        ClusterEnvironment env = endpoint.createClusterEnvironment();
+        try {
+            JsonSerializer serializer = env.jsonSerializer();
+            // The serializer must not be JacksonJsonSerializer since that would fail
+            // when a non-shaded Jackson is on the classpath. It should be wrapped in
+            // JsonValueSerializerWrapper which delegates to DefaultJsonSerializer.
+            assertEquals("com.couchbase.client.java.codec.JsonValueSerializerWrapper",
+                    serializer.getClass().getName(),
+                    "ClusterEnvironment should wrap DefaultJsonSerializer in JsonValueSerializerWrapper");
+        } finally {
+            env.shutdown();
+        }
     }
 }

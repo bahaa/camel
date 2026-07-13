@@ -29,7 +29,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
@@ -41,11 +41,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Unit test for moveTo.
  */
 public class MailMoveToTest extends CamelTestSupport {
-    private static final MailboxUser jones = Mailbox.getOrCreateUser("jones", "secret");
-    private static final MailboxUser jones2 = Mailbox.getOrCreateUser("jones2", "secret");
+    private static final MailboxUser jones = Mailbox.getOrCreateUser("MailMoveToTest-jones", "secret");
+    private static final MailboxUser jones2 = Mailbox.getOrCreateUser("MailMoveToTest-jones2", "secret");
 
     @Override
-    public void doPreSetup() throws Exception {
+    public void setupResources() throws Exception {
         prepareMailbox();
     }
 

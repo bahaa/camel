@@ -31,6 +31,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.camel.AsyncCallback;
 import org.apache.camel.CamelContext;
@@ -118,6 +120,7 @@ public class MockEndpoint extends DefaultEndpoint implements BrowsableEndpoint, 
     private volatile Map<String, Object> expectedPropertyValues;
     private volatile Map<String, Object> expectedVariableValues;
 
+    private final Lock lock = new ReentrantLock();
     private final AtomicInteger counter = new AtomicInteger();
 
     @UriPath(description = "Name of mock endpoint")
@@ -1016,6 +1019,19 @@ public class MockEndpoint extends DefaultEndpoint implements BrowsableEndpoint, 
     }
 
     /**
+     * Sets an expectation that the given String body values are received by this endpoint in the specified order.
+     * <p/>
+     * <b>Important:</b> The number of bodies must match the expected number of messages, so if you expect three
+     * messages, then there must be three bodies.
+     * <p/>
+     * <b>Important:</b> This overrides any previous set value using {@link #expectedMessageCount(int)}
+     */
+    public void expectedBodiesReceived(String... bodies) {
+        List<Object> bodyList = new ArrayList<>(Arrays.asList(bodies));
+        expectedBodiesReceived(bodyList);
+    }
+
+    /**
      * Adds an expectation that the given body value are received by this endpoint
      */
     public AssertionClause expectedBodyReceived() {
@@ -1746,7 +1762,8 @@ public class MockEndpoint extends DefaultEndpoint implements BrowsableEndpoint, 
         return (MockComponent) super.getComponent();
     }
 
-    protected synchronized void onExchange(Exchange exchange) {
+    protected void onExchange(Exchange exchange) {
+        lock.lock();
         try {
             if (log) {
                 String line = getComponent().getExchangeFormatter().format(exchange);
@@ -1774,6 +1791,7 @@ public class MockEndpoint extends DefaultEndpoint implements BrowsableEndpoint, 
             if (latch != null) {
                 latch.countDown();
             }
+            lock.unlock();
         }
     }
 

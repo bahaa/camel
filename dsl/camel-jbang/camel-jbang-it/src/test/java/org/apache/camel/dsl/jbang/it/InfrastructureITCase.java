@@ -21,13 +21,23 @@ import java.time.Duration;
 import org.apache.camel.dsl.jbang.it.support.JBangTestSupport;
 import org.assertj.core.api.Assertions;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
+
+@Tag("container-only")
+@DisabledOnOs(WINDOWS)
 public class InfrastructureITCase extends JBangTestSupport {
     private static final String SERVICE = "ftp";
     private static final String IMPL_SERVICE = "artemis";
     private static final String IMPLEMENTATION = "amqp";
+
+    private String getServicePID(String message) {
+        return message.split(":")[1].replaceAll("[^0-9]", "");
+    }
 
     @Test
     public void infraListTest() {
@@ -39,7 +49,7 @@ public class InfrastructureITCase extends JBangTestSupport {
     @Test
     public void runStopServiceTest() {
         String msg = execute("infra run --background " + SERVICE);
-        String PID = getPID(msg);
+        String PID = getServicePID(msg);
         Assertions.assertThat(msg).contains(String.format("Running %s in background", SERVICE));
         Awaitility.await()
                 .atMost(Duration.ofSeconds(30))
@@ -55,7 +65,7 @@ public class InfrastructureITCase extends JBangTestSupport {
     @Test
     public void runServiceWithImplementationTest() {
         String msg = execute(String.format("infra run --background %s %s", IMPL_SERVICE, IMPLEMENTATION));
-        String PID = getPID(msg);
+        String PID = getServicePID(msg);
         Assertions.assertThat(msg).contains(String.format("Running %s in background", IMPL_SERVICE));
         Awaitility.await()
                 .atMost(Duration.ofSeconds(30))
@@ -66,7 +76,17 @@ public class InfrastructureITCase extends JBangTestSupport {
         checkCommandDoesNotOutput("infra ps", PID);
     }
 
-    private String getPID(String message) {
-        return message.split(":")[1].replaceAll("[^0-9]", "");
+    @DisabledIfSystemProperty(named = "ci.env.name", matches = ".*",
+                              disabledReason = "Requires too much resources")
+    @Test
+    public void sendMessageTest() {
+        String msg = execute("infra run --background " + SERVICE);
+        String PID = getServicePID(msg);
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(30))
+                .pollInterval(Duration.ofSeconds(1))
+                .untilAsserted(() -> Assertions.assertThat(execute("infra ps"))
+                        .containsPattern(PID));
+        checkCommandOutputs("cmd send --infra " + SERVICE + " --body=\'hello\'", "Sent (success)");
     }
 }

@@ -25,7 +25,7 @@ import org.apache.camel.Predicate;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.AbstractApplicationContext;
@@ -66,8 +66,8 @@ public class DnsDigEndpointSpringTest extends CamelSpringTestSupport {
             }
         });
         Map<String, Object> headers = new HashMap<>();
-        headers.put("dns.name", "monkey.wp.dg.cx");
-        headers.put("dns.type", "TXT");
+        headers.put(DnsConstants.DNS_NAME, "monkey.wp.dg.cx");
+        headers.put(DnsConstants.DNS_TYPE, "TXT");
         template.sendBodyAndHeaders(null, headers);
         resultEndpoint.assertIsSatisfied();
     }

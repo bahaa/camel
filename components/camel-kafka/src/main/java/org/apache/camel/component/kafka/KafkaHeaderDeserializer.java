@@ -74,8 +74,8 @@ public class KafkaHeaderDeserializer implements Processor {
             return value;
         }
 
-        if (value instanceof byte[]) {
-            return new String((byte[]) value, StandardCharsets.UTF_8);
+        if (value instanceof byte[] byteArray) {
+            return new String(byteArray, StandardCharsets.UTF_8);
         }
 
         return value.toString();
@@ -85,7 +85,7 @@ public class KafkaHeaderDeserializer implements Processor {
      * Exclude special Kafka headers from auto deserialization.
      */
     private boolean shouldDeserialize(Map.Entry<String, Object> entry) {
-        return !entry.getKey().equals("kafka.HEADERS") && !entry.getKey().equals("CamelKafkaManualCommit");
+        return !entry.getKey().equals(KafkaConstants.HEADERS) && !entry.getKey().equals(KafkaConstants.MANUAL_COMMIT);
     }
 
     public void setEnabled(String enabled) {

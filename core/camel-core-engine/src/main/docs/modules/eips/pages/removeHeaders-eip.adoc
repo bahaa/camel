@@ -1,7 +1,7 @@
 = Remove Headers EIP
 :doctitle: Remove Headers
 :shortname: removeHeaders
-:description: Removes message headers whose name matches a specified pattern
+:description: Removes all message headers whose names match a given pattern. Useful for stripping internal Camel headers before sending to external systems.
 :since: 
 :supportlevel: Stable
 :tabs-sync-option:
@@ -60,13 +60,14 @@ YAML::
 +
 [source,yaml]
 ----
-- from:
-    uri: seda:b
-    steps:
-      - removeHeaders:
-          pattern: "*"
-      - to:
-          uri: mock:result
+- route:
+    from:
+      uri: seda:b
+      steps:
+        - removeHeaders:
+            pattern: "*"
+        - to:
+            uri: mock:result
 ----
 ====
 
@@ -100,14 +101,29 @@ YAML::
 +
 [source,yaml]
 ----
-- from:
-    uri: seda:b
-    steps:
-      - removeHeaders: "Camel*"
-      - to:
-          uri: mock:result
+- route:
+    from:
+      uri: seda:b
+      steps:
+        - removeHeaders: "Camel*"
+        - to:
+            uri: mock:result
 ----
 ====
+
+== Leaking Camel headers when sending to an endpoint
+
+When I send a message to a Camel endpoint such as the
+xref:components::mail-component.adoc[Mail] component, then the mail include some message
+headers I do not want. How can I avoid this?
+
+This is a gotcha more people encounter. However, it's very easy to solve.
+To remove all headers (see above) use a `*` expression:
+
+Most components will automatically remove all Camel specific headers (the header key starts with `Camel`) using
+the `DefaultHeaderFilterStrategy` which automatic removes these headers. However if you use a component that does
+not do this, such as a custom component, or a Camel component which has not been improved to do that, then you can
+remove all these Camel specific headers using `Camel*` with the `removeHeaders` EIP as shown previously on this page.
 
 == See Also
 

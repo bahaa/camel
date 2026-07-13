@@ -162,10 +162,10 @@ public final class VertxPlatformHttpSupport {
     }
 
     static Integer determineContentLength(Object body) {
-        if (body instanceof byte[]) {
-            return ((byte[]) body).length;
-        } else if (body instanceof ByteBuffer) {
-            return ((ByteBuffer) body).remaining();
+        if (body instanceof byte[] byteArray) {
+            return byteArray.length;
+        } else if (body instanceof ByteBuffer bytebuffer) {
+            return bytebuffer.remaining();
         }
         return null;
     }
@@ -186,13 +186,13 @@ public final class VertxPlatformHttpSupport {
                 LOGGER.trace("No payload to send as reply for exchange: {}", camelExchange);
                 ctx.end();
                 promise.complete();
-            } else if (body instanceof String) {
-                ctx.end((String) body);
+            } else if (body instanceof String string) {
+                ctx.end(string);
                 promise.complete();
-            } else if (body instanceof InputStream) {
-                writeResponseAs(promise, ctx, (InputStream) body);
-            } else if (body instanceof Buffer) {
-                ctx.end((Buffer) body);
+            } else if (body instanceof InputStream inputstream) {
+                writeResponseAs(promise, ctx, inputstream);
+            } else if (body instanceof Buffer buffer) {
+                ctx.end(buffer);
                 promise.complete();
             } else if (body instanceof ByteBuffer bb) {
                 writeResponseAs(promise, ctx, bb);
@@ -237,8 +237,12 @@ public final class VertxPlatformHttpSupport {
         Vertx vertx = ctx.vertx();
         Context context = vertx.getOrCreateContext();
 
+        // For SSE streams, flush each chunk immediately instead of greedily filling the buffer
+        String contentType = response.headers().get("Content-Type");
+        boolean eagerFlush = contentType != null && contentType.startsWith("text/event-stream");
+
         // Process the InputStream async to avoid blocking the Vert.x event loop on large responses
-        AsyncInputStream asyncInputStream = new AsyncInputStream(vertx, context, is);
+        AsyncInputStream asyncInputStream = new AsyncInputStream(vertx, context, is, eagerFlush);
         asyncInputStream.exceptionHandler(promise::fail);
         asyncInputStream.endHandler(event -> endHandler(promise, response, asyncInputStream));
 

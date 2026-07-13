@@ -33,9 +33,16 @@ import org.apache.camel.StatefulService;
  * Implementations must be stateful services that can be started and stopped as part of the normal Camel lifecycle, and
  * they must be aware of the CamelContext they are operating on.
  *
- * @see ContextServicePlugin
- * @see CamelContextAware
- * @see StatefulService
+ * @see   ContextServicePlugin
+ * @see   CamelContextAware
+ * @see   StatefulService
+ * @since 4.15
  */
 public interface ContextServiceLoaderPluginResolver extends CamelContextAware, StatefulService {
+
+    /**
+     * Invokes {@link ContextServicePlugin#onReload(org.apache.camel.CamelContext)} on all discovered plugins, giving
+     * them an opportunity to refresh their state before routes are reloaded.
+     */
+    void onReload();
 }

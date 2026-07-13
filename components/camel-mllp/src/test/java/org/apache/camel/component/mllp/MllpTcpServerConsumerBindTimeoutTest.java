@@ -28,12 +28,15 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.junit.rule.mllp.MllpClientResource;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.test.mllp.Hl7TestMessageGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class MllpTcpServerConsumerBindTimeoutTest extends CamelTestSupport {
+
+    @RegisterExtension
+    AvailablePortFinder.Port mllpClientPort = AvailablePortFinder.find();
 
     @RegisterExtension
     public MllpClientResource mllpClient = new MllpClientResource();
@@ -46,6 +49,7 @@ public class MllpTcpServerConsumerBindTimeoutTest extends CamelTestSupport {
         return true;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected CamelContext createCamelContext() throws Exception {
         DefaultCamelContext context = (DefaultCamelContext) super.createCamelContext();
@@ -60,7 +64,7 @@ public class MllpTcpServerConsumerBindTimeoutTest extends CamelTestSupport {
     protected RouteBuilder createRouteBuilder() {
 
         mllpClient.setMllpHost("localhost");
-        mllpClient.setMllpPort(AvailablePortFinder.getNextAvailable());
+        mllpClient.setMllpPort(mllpClientPort.getPort());
 
         return new RouteBuilder() {
             int connectTimeout = 500;

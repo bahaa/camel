@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -32,6 +33,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509KeyManager;
 
 import org.apache.camel.CamelContext;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,25 +44,37 @@ public class SSLContextParameters extends BaseSSLContextParameters {
 
     protected static final String DEFAULT_SECURE_SOCKET_PROTOCOL = "TLSv1.3";
 
+    /**
+     * The post-quantum hybrid named group to detect for auto-configuration.
+     */
+    private static final String PQC_NAMED_GROUP = "X25519MLKEM768";
+
+    /**
+     * The preferred named group ordering when PQC groups are available. This ordering ensures post-quantum key exchange
+     * is preferred while maintaining classical fallbacks for compatibility.
+     */
+    private static final List<String> PQC_PREFERRED_NAMED_GROUPS
+            = List.of("X25519MLKEM768", "x25519", "secp256r1", "secp384r1");
+
     private static final Logger LOG = LoggerFactory.getLogger(SSLContextParameters.class);
 
     /**
      * The optional key manager configuration for creating the {@link KeyManager}s used in constructing an
      * {@link SSLContext}.
      */
-    private KeyManagersParameters keyManagers;
+    private @Nullable KeyManagersParameters keyManagers;
 
     /**
      * The optional trust manager configuration for creating the {@link TrustManager}s used in constructing an
      * {@link SSLContext}.
      */
-    private TrustManagersParameters trustManagers;
+    private @Nullable TrustManagersParameters trustManagers;
 
     /**
      * The optional secure random configuration options to use for constructing the {@link SecureRandom} used in the
      * creation of an {@link SSLContext}.
      */
-    private SecureRandomParameters secureRandom;
+    private @Nullable SecureRandomParameters secureRandom;
 
     /**
      * The optional configuration options to be applied purely to the client side settings of the {@link SSLContext}.
@@ -68,7 +82,7 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      * parameters apply to {@link SSLSocketFactory}s and {@link SSLEngine}s produced by the {@code SSLContext} produced
      * from this class as well as to the {@code SSLContext} itself.
      */
-    private SSLContextClientParameters clientParameters;
+    private @Nullable SSLContextClientParameters clientParameters;
 
     /**
      * The optional configuration options to be applied purely to the server side settings of the {@link SSLContext}.
@@ -76,12 +90,12 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      * parameters apply to {@link SSLServerSocketFactory}s and {@link SSLEngine}s produced by the {@code SSLContext}
      * produced from this class as well as to the {@code SSLContext} itself.
      */
-    private SSLContextServerParameters serverParameters;
+    private @Nullable SSLContextServerParameters serverParameters;
 
     /**
      * The optional provider identifier for the JSSE implementation to use when constructing an {@link SSLContext}.
      */
-    private String provider;
+    private @Nullable String provider;
 
     /**
      * The optional protocol for the secure sockets created by the {@link SSLContext} represented by this instance's
@@ -89,14 +103,14 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      *
      * See https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html
      */
-    private String secureSocketProtocol;
+    private @Nullable String secureSocketProtocol;
 
     /**
      * An optional certificate alias to use. This is useful when the keystore has multiple certificates.
      */
-    private String certAlias;
+    private @Nullable String certAlias;
 
-    public KeyManagersParameters getKeyManagers() {
+    public @Nullable KeyManagersParameters getKeyManagers() {
         return keyManagers;
     }
 
@@ -106,11 +120,11 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      *
      * @param keyManagers the options or {@code null} to provide no {@code KeyManager}s
      */
-    public void setKeyManagers(KeyManagersParameters keyManagers) {
+    public void setKeyManagers(@Nullable KeyManagersParameters keyManagers) {
         this.keyManagers = keyManagers;
     }
 
-    public TrustManagersParameters getTrustManagers() {
+    public @Nullable TrustManagersParameters getTrustManagers() {
         return trustManagers;
     }
 
@@ -120,11 +134,11 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      *
      * @param trustManagers the options or {@code null} to provide no {@code TrustManager}s
      */
-    public void setTrustManagers(TrustManagersParameters trustManagers) {
+    public void setTrustManagers(@Nullable TrustManagersParameters trustManagers) {
         this.trustManagers = trustManagers;
     }
 
-    public SecureRandomParameters getSecureRandom() {
+    public @Nullable SecureRandomParameters getSecureRandom() {
         return secureRandom;
     }
 
@@ -134,11 +148,11 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      *
      * @param secureRandom the options or {@code null} to use the default
      */
-    public void setSecureRandom(SecureRandomParameters secureRandom) {
+    public void setSecureRandom(@Nullable SecureRandomParameters secureRandom) {
         this.secureRandom = secureRandom;
     }
 
-    public SSLContextClientParameters getClientParameters() {
+    public @Nullable SSLContextClientParameters getClientParameters() {
         return clientParameters;
     }
 
@@ -150,11 +164,11 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      *
      * @param clientParameters the optional additional client-side parameters
      */
-    public void setClientParameters(SSLContextClientParameters clientParameters) {
+    public void setClientParameters(@Nullable SSLContextClientParameters clientParameters) {
         this.clientParameters = clientParameters;
     }
 
-    public SSLContextServerParameters getServerParameters() {
+    public @Nullable SSLContextServerParameters getServerParameters() {
         return serverParameters;
     }
 
@@ -166,11 +180,11 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      *
      * @param serverParameters the optional additional client-side parameters
      */
-    public void setServerParameters(SSLContextServerParameters serverParameters) {
+    public void setServerParameters(@Nullable SSLContextServerParameters serverParameters) {
         this.serverParameters = serverParameters;
     }
 
-    public String getProvider() {
+    public @Nullable String getProvider() {
         return provider;
     }
 
@@ -183,7 +197,7 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      * @see            Security#getProviders(java.util.Map)
      * @see            #setSecureSocketProtocol(String)
      */
-    public void setProvider(String provider) {
+    public void setProvider(@Nullable String provider) {
         this.provider = provider;
     }
 
@@ -202,11 +216,11 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      *
      * @param secureSocketProtocol the name of the protocol or {@code null} to use the default (TLS)
      */
-    public void setSecureSocketProtocol(String secureSocketProtocol) {
+    public void setSecureSocketProtocol(@Nullable String secureSocketProtocol) {
         this.secureSocketProtocol = secureSocketProtocol;
     }
 
-    public String getCertAlias() {
+    public @Nullable String getCertAlias() {
         return certAlias;
     }
 
@@ -215,7 +229,7 @@ public class SSLContextParameters extends BaseSSLContextParameters {
      *
      * @param certAlias an optional certificate alias to use
      */
-    public void setCertAlias(String certAlias) {
+    public void setCertAlias(@Nullable String certAlias) {
         this.certAlias = certAlias;
     }
 
@@ -268,23 +282,32 @@ public class SSLContextParameters extends BaseSSLContextParameters {
         }
 
         KeyManager[] keyManagers = this.keyManagers == null ? null : this.keyManagers.createKeyManagers();
+        @Nullable
         TrustManager[] trustManagers = this.trustManagers == null ? null : this.trustManagers.createTrustManagers();
         SecureRandom secureRandom = this.secureRandom == null ? null : this.secureRandom.createSecureRandom();
 
+        String protocol = this.parsePropertyValue(this.getSecureSocketProtocol());
+        if (protocol == null) {
+            protocol = DEFAULT_SECURE_SOCKET_PROTOCOL;
+        }
         SSLContext context;
         if (this.getProvider() == null) {
-            context = SSLContext.getInstance(this.parsePropertyValue(this.getSecureSocketProtocol()));
+            context = SSLContext.getInstance(protocol);
         } else {
-            context = SSLContext.getInstance(this.parsePropertyValue(this.getSecureSocketProtocol()),
-                    this.parsePropertyValue(this.getProvider()));
+            String provider = this.parsePropertyValue(this.getProvider());
+            context = SSLContext.getInstance(protocol, provider != null ? provider : this.getProvider());
         }
 
         if (this.getCertAlias() != null && keyManagers != null) {
             for (int idx = 0; idx < keyManagers.length; idx++) {
                 if (keyManagers[idx] instanceof X509KeyManager x509KeyManager) {
                     try {
+                        String certAlias = this.parsePropertyValue(this.getCertAlias());
+                        if (certAlias == null) {
+                            certAlias = this.getCertAlias();
+                        }
                         keyManagers[idx] = new AliasedX509ExtendedKeyManager(
-                                this.parsePropertyValue(this.getCertAlias()),
+                                certAlias,
                                 x509KeyManager);
                     } catch (Exception e) {
                         throw new GeneralSecurityException(e);
@@ -300,6 +323,12 @@ public class SSLContextParameters extends BaseSSLContextParameters {
 
         context.init(keyManagers, trustManagers, secureRandom);
 
+        // Auto-configure PQC named groups when available and no user configuration is present
+        boolean autoConfiguredPqc = false;
+        if (this.getNamedGroups() == null && this.getNamedGroupsFilter() == null) {
+            autoConfiguredPqc = applyPqcNamedGroupDefaults(context);
+        }
+
         this.configureSSLContext(context);
 
         // Decorate the context.
@@ -310,7 +339,56 @@ public class SSLContextParameters extends BaseSSLContextParameters {
                         this.getSSLSocketFactoryConfigurers(context),
                         this.getSSLServerSocketFactoryConfigurers(context)));
 
+        // Reset auto-configured PQC named groups so they don't persist on this instance
+        if (autoConfiguredPqc) {
+            this.setNamedGroups(null);
+        }
+
         return context;
+    }
+
+    /**
+     * Auto-configures post-quantum named groups when the JVM supports them and the user hasn't explicitly configured
+     * named groups or named groups filters.
+     * <p/>
+     * When {@code X25519MLKEM768} is available (typically JDK 25+), this method sets the preferred named group ordering
+     * to prioritize post-quantum key exchange, protecting against harvest-now-decrypt-later attacks.
+     *
+     * @param  context the initialized SSLContext to probe for available named groups
+     * @return         {@code true} if PQC named groups were auto-configured, {@code false} otherwise
+     */
+    private boolean applyPqcNamedGroupDefaults(SSLContext context) {
+        SSLEngine probeEngine = context.createSSLEngine();
+        String[] availableGroups = getNamedGroupsFromParams(probeEngine.getSSLParameters());
+
+        if (availableGroups == null) {
+            return false;
+        }
+
+        List<String> available = Arrays.asList(availableGroups);
+        if (!available.contains(PQC_NAMED_GROUP)) {
+            return false;
+        }
+
+        // Build preferred ordering: PQC preferred groups first (if available), then remaining
+        List<String> ordered = new ArrayList<>();
+        for (String preferred : PQC_PREFERRED_NAMED_GROUPS) {
+            if (available.contains(preferred)) {
+                ordered.add(preferred);
+            }
+        }
+        for (String group : availableGroups) {
+            if (!ordered.contains(group)) {
+                ordered.add(group);
+            }
+        }
+
+        NamedGroupsParameters ngp = new NamedGroupsParameters();
+        ngp.setNamedGroup(ordered);
+        this.setNamedGroups(ngp);
+
+        LOG.info("Auto-configured PQC named groups: {}", ordered);
+        return true;
     }
 
     @Override

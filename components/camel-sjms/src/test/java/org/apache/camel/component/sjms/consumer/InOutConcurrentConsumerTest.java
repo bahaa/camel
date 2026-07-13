@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.EndpointInject;
@@ -29,7 +30,7 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.component.sjms.support.JmsTestSupport;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.body;
+import static org.apache.camel.test.junit6.TestSupport.body;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -58,7 +59,7 @@ public class InOutConcurrentConsumerTest extends JmsTestSupport {
             futures.add(out);
         }
 
-        MockEndpoint.assertIsSatisfied(context);
+        MockEndpoint.assertIsSatisfied(context, 20, TimeUnit.SECONDS);
 
         for (int i = 0; i < futures.size(); i++) {
             Object out = futures.get(i).get();

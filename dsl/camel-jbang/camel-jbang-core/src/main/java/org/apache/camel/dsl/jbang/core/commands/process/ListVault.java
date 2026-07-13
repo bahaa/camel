@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.github.freva.asciitable.AsciiTable;
 import com.github.freva.asciitable.Column;
@@ -27,14 +28,19 @@ import com.github.freva.asciitable.HorizontalAlign;
 import com.github.freva.asciitable.OverflowBehaviour;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.ProcessHelper;
+import org.apache.camel.dsl.jbang.core.common.TerminalWidthHelper;
 import org.apache.camel.util.TimeUtils;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
+import org.apache.camel.util.json.Jsoner;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "vault",
-         description = "List secrets from security vaults", sortOptions = false, showDefaultValues = true)
+         description = "List secrets from security vaults", sortOptions = false, showDefaultValues = true,
+         footer = {
+                 "%nExamples:",
+                 "  camel get vault" })
 public class ListVault extends ProcessWatchCommand {
 
     public static class PidNameCompletionCandidates implements Iterable<String> {
@@ -81,10 +87,12 @@ public class ListVault extends ProcessWatchCommand {
                         if ("CamelJBang".equals(row.name)) {
                             row.name = ProcessHelper.extractName(root, ph);
                         }
+                        final Row baseRow = row.copy();
                         JsonObject vaults = (JsonObject) root.get("vaults");
                         if (vaults != null) {
                             JsonObject aws = (JsonObject) vaults.get("aws-secrets");
                             if (aws != null) {
+                                row = baseRow.copy();
                                 row.vault = "AWS";
                                 row.region = aws.getString("region");
                                 row.lastCheck = aws.getLongOrDefault("lastCheckTimestamp", 0);
@@ -103,6 +111,7 @@ public class ListVault extends ProcessWatchCommand {
                             }
                             JsonObject gcp = (JsonObject) vaults.get("gcp-secrets");
                             if (gcp != null) {
+                                row = baseRow.copy();
                                 row.vault = "GCP";
                                 row.lastCheck = gcp.getLongOrDefault("lastCheckTimestamp", 0);
                                 row.lastReload = gcp.getLongOrDefault("lastReloadTimestamp", 0);
@@ -120,6 +129,7 @@ public class ListVault extends ProcessWatchCommand {
                             }
                             JsonObject azure = (JsonObject) vaults.get("azure-secrets");
                             if (azure != null) {
+                                row = baseRow.copy();
                                 row.vault = "Azure";
                                 row.lastCheck = azure.getLongOrDefault("lastCheckTimestamp", 0);
                                 row.lastReload = azure.getLongOrDefault("lastReloadTimestamp", 0);
@@ -138,6 +148,7 @@ public class ListVault extends ProcessWatchCommand {
 
                             JsonObject kubernetes = (JsonObject) vaults.get("kubernetes-secrets");
                             if (kubernetes != null) {
+                                row = baseRow.copy();
                                 row.vault = "Kubernetes";
                                 row.lastCheck = kubernetes.getLongOrDefault("startCheckTimestamp", 0);
                                 row.lastReload = kubernetes.getLongOrDefault("lastReloadTimestamp", 0);
@@ -156,6 +167,7 @@ public class ListVault extends ProcessWatchCommand {
 
                             JsonObject hashicorp = (JsonObject) vaults.get("hashicorp-secrets");
                             if (hashicorp != null) {
+                                row = baseRow.copy();
                                 row.vault = "Hashicorp";
                                 row.lastCheck = hashicorp.getLongOrDefault("startCheckTimestamp", 0);
                                 row.lastReload = hashicorp.getLongOrDefault("lastReloadTimestamp", 0);
@@ -164,6 +176,7 @@ public class ListVault extends ProcessWatchCommand {
 
                             JsonObject cmKubernetes = (JsonObject) vaults.get("kubernetes-configmaps");
                             if (cmKubernetes != null) {
+                                row = baseRow.copy();
                                 row.vault = "Kubernetes-cm";
                                 row.lastCheck = cmKubernetes.getLongOrDefault("startCheckTimestamp", 0);
                                 row.lastReload = cmKubernetes.getLongOrDefault("lastReloadTimestamp", 0);
@@ -187,17 +200,39 @@ public class ListVault extends ProcessWatchCommand {
         rows.sort(this::sortRow);
 
         if (!rows.isEmpty()) {
-            printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
-                    new Column().header("PID").headerAlign(HorizontalAlign.CENTER).with(r -> r.pid),
-                    new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).maxWidth(40, OverflowBehaviour.ELLIPSIS_RIGHT)
-                            .with(r -> r.name),
-                    new Column().header("VAULT").dataAlign(HorizontalAlign.LEFT).with(r -> r.vault),
-                    new Column().header("REGION").dataAlign(HorizontalAlign.LEFT).with(r -> r.region),
-                    new Column().header("SECRET").dataAlign(HorizontalAlign.LEFT).maxWidth(40, OverflowBehaviour.ELLIPSIS_RIGHT)
-                            .with(r -> r.secret),
-                    new Column().header("AGE").headerAlign(HorizontalAlign.CENTER).with(this::getAgo),
-                    new Column().header("UPDATE").headerAlign(HorizontalAlign.LEFT).with(this::getReloadAgo),
-                    new Column().header("CHECK").headerAlign(HorizontalAlign.LEFT).with(this::getCheckAgo))));
+            if (jsonOutput) {
+                printer().println(Jsoner.serialize(rows.stream().map(r -> {
+                    JsonObject jo = new JsonObject();
+                    jo.put("pid", r.pid);
+                    jo.put("name", r.name);
+                    jo.put("vault", r.vault);
+                    jo.put("region", r.region);
+                    jo.put("secret", r.secret);
+                    jo.put("age", getAgo(r));
+                    jo.put("update", getReloadAgo(r));
+                    jo.put("check", getCheckAgo(r));
+                    return jo;
+                }).collect(Collectors.toList())));
+            } else {
+                // Flexible columns: NAME (40), SECRET (40)
+                // Fixed columns: PID(8)+VAULT(10)+REGION(10)+AGE(8)+UPDATE(8)+CHECK(8) ~= 52
+                int tw = terminalWidth();
+                int nameW = TerminalWidthHelper.flexWidth(tw, 52 + 40, TerminalWidthHelper.noBorderOverhead(8), 15, 40);
+                int secretW = TerminalWidthHelper.flexWidth(tw, 52 + nameW, TerminalWidthHelper.noBorderOverhead(8), 15, 40);
+                printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
+                        new Column().header("PID").headerAlign(HorizontalAlign.CENTER).with(r -> r.pid),
+                        new Column().header("NAME").dataAlign(HorizontalAlign.LEFT)
+                                .maxWidth(nameW, OverflowBehaviour.ELLIPSIS_RIGHT)
+                                .with(r -> r.name),
+                        new Column().header("VAULT").dataAlign(HorizontalAlign.LEFT).with(r -> r.vault),
+                        new Column().header("REGION").dataAlign(HorizontalAlign.LEFT).with(r -> r.region),
+                        new Column().header("SECRET").dataAlign(HorizontalAlign.LEFT)
+                                .maxWidth(secretW, OverflowBehaviour.ELLIPSIS_RIGHT)
+                                .with(r -> r.secret),
+                        new Column().header("AGE").headerAlign(HorizontalAlign.CENTER).with(this::getAgo),
+                        new Column().header("UPDATE").headerAlign(HorizontalAlign.LEFT).with(this::getReloadAgo),
+                        new Column().header("CHECK").headerAlign(HorizontalAlign.LEFT).with(this::getCheckAgo))));
+            }
         }
 
         return 0;

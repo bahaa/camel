@@ -30,6 +30,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Expression;
 import org.apache.camel.FailedToStartRouteException;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.NamedRoute;
 import org.apache.camel.Predicate;
 import org.apache.camel.Processor;
 import org.apache.camel.Route;
@@ -42,7 +43,6 @@ import org.apache.camel.impl.engine.SimpleCamelContext;
 import org.apache.camel.model.BeanFactoryDefinition;
 import org.apache.camel.model.DataFormatDefinition;
 import org.apache.camel.model.FaultToleranceConfigurationDefinition;
-import org.apache.camel.model.Model;
 import org.apache.camel.model.ModelCamelContext;
 import org.apache.camel.model.ModelLifecycleStrategy;
 import org.apache.camel.model.ProcessorDefinition;
@@ -53,7 +53,6 @@ import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.model.RouteDefinitionHelper;
 import org.apache.camel.model.RouteTemplateDefinition;
 import org.apache.camel.model.TemplatedRouteDefinition;
-import org.apache.camel.model.cloud.ServiceCallConfigurationDefinition;
 import org.apache.camel.model.language.ExpressionDefinition;
 import org.apache.camel.model.rest.RestDefinition;
 import org.apache.camel.model.transformer.TransformerDefinition;
@@ -84,7 +83,7 @@ import org.apache.camel.support.scan.InvertingPackageScanFilter;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.OrderedLocationProperties;
 import org.apache.camel.util.StopWatch;
-import org.apache.camel.util.concurrent.NamedThreadLocal;
+import org.apache.camel.util.concurrent.ContextValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,9 +93,12 @@ import org.slf4j.LoggerFactory;
 public class DefaultCamelContext extends SimpleCamelContext implements ModelCamelContext {
 
     // global options that can be set on CamelContext as part of concurrent testing
-    // which means options should be isolated via thread-locals and not a static instance
-    // use a HashMap to store only JDK classes in the thread-local so there will not be any Camel classes leaking
-    private static final ThreadLocal<Map<String, Object>> OPTIONS = new NamedThreadLocal<>("CamelContextOptions", HashMap::new);
+    // which means options should be isolated via thread-locals and not a static
+    // instance
+    // use a HashMap to store only JDK classes in the thread-local so there will not
+    // be any Camel classes leaking
+    private static final ContextValue<Map<String, Object>> OPTIONS
+            = ContextValue.newThreadLocal("CamelContextOptions", HashMap::new);
     private static final String OPTION_NO_START = "OptionNoStart";
     private static final String OPTION_DISABLE_JMX = "OptionDisableJMX";
     private static final String OPTION_EXCLUDE_ROUTES = "OptionExcludeRoutes";
@@ -104,7 +106,7 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     private static final Logger LOG = LoggerFactory.getLogger(DefaultCamelContext.class);
     private static final UuidGenerator UUID = new SimpleUuidGenerator();
 
-    private final Model model = new DefaultModel(this);
+    private final DefaultModel model = new DefaultModel(this);
 
     /**
      * Creates the {@link ModelCamelContext} using {@link org.apache.camel.support.DefaultRegistry} as registry.
@@ -174,7 +176,8 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     }
 
     public static boolean isDisableJmx() {
-        return (Boolean) getOptions().getOrDefault(OPTION_DISABLE_JMX, Boolean.getBoolean(JmxSystemPropertyKeys.DISABLED));
+        return (Boolean) getOptions().getOrDefault(OPTION_DISABLE_JMX,
+                Boolean.getBoolean(JmxSystemPropertyKeys.DISABLED));
     }
 
     @Override
@@ -315,7 +318,8 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     }
 
     @Override
-    public void addRouteTemplateDefinitions(Collection<RouteTemplateDefinition> routeTemplateDefinitions) throws Exception {
+    public void addRouteTemplateDefinitions(Collection<RouteTemplateDefinition> routeTemplateDefinitions)
+            throws Exception {
         model.addRouteTemplateDefinitions(routeTemplateDefinitions);
     }
 
@@ -325,7 +329,8 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     }
 
     @Override
-    public void removeRouteTemplateDefinitions(Collection<RouteTemplateDefinition> routeTemplateDefinitions) throws Exception {
+    public void removeRouteTemplateDefinitions(Collection<RouteTemplateDefinition> routeTemplateDefinitions)
+            throws Exception {
         if (!isLockModel()) {
             model.removeRouteTemplateDefinitions(routeTemplateDefinitions);
         }
@@ -346,7 +351,9 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     }
 
     @Override
-    public void addRouteTemplateDefinitionConverter(String templateIdPattern, RouteTemplateDefinition.Converter converter) {
+    public void addRouteTemplateDefinitionConverter(
+            String templateIdPattern,
+            RouteTemplateDefinition.Converter converter) {
         model.addRouteTemplateDefinitionConverter(templateIdPattern, converter);
     }
 
@@ -357,7 +364,9 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     }
 
     @Override
-    public String addRouteFromTemplate(String routeId, String routeTemplateId, String prefixId, Map<String, Object> parameters)
+    public String addRouteFromTemplate(
+            String routeId, String routeTemplateId, String prefixId,
+            Map<String, Object> parameters)
             throws Exception {
         return model.addRouteFromTemplate(routeId, routeTemplateId, prefixId, null, parameters);
     }
@@ -378,7 +387,8 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
 
     @Override
     public String addRouteFromTemplate(
-            String routeId, String routeTemplateId, String prefixId, String group, RouteTemplateContext routeTemplateContext)
+            String routeId, String routeTemplateId, String prefixId, String group,
+            RouteTemplateContext routeTemplateContext)
             throws Exception {
         return model.addRouteFromTemplate(routeId, routeTemplateId, prefixId, group, routeTemplateContext);
     }
@@ -402,7 +412,8 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     }
 
     @Override
-    public void addRouteFromTemplatedRoutes(Collection<TemplatedRouteDefinition> templatedRouteDefinitions) throws Exception {
+    public void addRouteFromTemplatedRoutes(Collection<TemplatedRouteDefinition> templatedRouteDefinitions)
+            throws Exception {
         model.addRouteFromTemplatedRoutes(templatedRouteDefinitions);
     }
 
@@ -417,6 +428,11 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
         if (!isLockModel()) {
             model.removeRouteTemplateDefinitions(pattern);
         }
+    }
+
+    @Override
+    public List<NamedRoute> getNamedRouteDefinitions() {
+        return new ArrayList<>(model.getRouteDefinitions());
     }
 
     @Override
@@ -512,26 +528,6 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     @Override
     public List<TransformerDefinition> getTransformers() {
         return model.getTransformers();
-    }
-
-    @Override
-    public ServiceCallConfigurationDefinition getServiceCallConfiguration(String serviceName) {
-        return model.getServiceCallConfiguration(serviceName);
-    }
-
-    @Override
-    public void setServiceCallConfiguration(ServiceCallConfigurationDefinition configuration) {
-        model.setServiceCallConfiguration(configuration);
-    }
-
-    @Override
-    public void setServiceCallConfigurations(List<ServiceCallConfigurationDefinition> configurations) {
-        model.setServiceCallConfigurations(configurations);
-    }
-
-    @Override
-    public void addServiceCallConfiguration(String serviceName, ServiceCallConfigurationDefinition configuration) {
-        model.addServiceCallConfiguration(serviceName, configuration);
     }
 
     @Override
@@ -641,11 +637,13 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     public void startRouteDefinitions(List<RouteDefinition> routeDefinitions) throws Exception {
         // indicate we are staring the route using this thread so
         // we are able to query this if needed
-        boolean alreadyStartingRoutes = isStartingRoutes();
-        if (!alreadyStartingRoutes) {
-            setStartingRoutes(true);
-        }
+        startingRoutes(() -> {
+            doStartRouteDefinitions(routeDefinitions);
+            return null;
+        });
+    }
 
+    private void doStartRouteDefinitions(List<RouteDefinition> routeDefinitions) throws Exception {
         PropertiesComponent pc = getCamelContextReference().getPropertiesComponent();
         // route templates supports binding beans that are local for the template only
         // in this local mode then we need to check for side-effects (see further)
@@ -654,143 +652,161 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
         if (registry instanceof LocalBeanRepositoryAware localBeanRepositoryAware) {
             localBeans = localBeanRepositoryAware;
         }
-        try {
-            RouteDefinitionHelper.forceAssignIds(getCamelContextReference(), routeDefinitions);
-            List<RouteDefinition> routeDefinitionsToRemove = null;
-            for (RouteDefinition routeDefinition : routeDefinitions) {
-                try {
-                    // assign ids to the routes and validate that the id's is all unique
-                    String duplicate = RouteDefinitionHelper.validateUniqueIds(routeDefinition, routeDefinitions,
-                            routeDefinition.getNodePrefixId());
-                    if (duplicate != null) {
-                        throw new FailedToStartRouteException(
-                                routeDefinition.getId(),
-                                "Duplicate id detected: " + duplicate
-                                                         + ". Please correct ids to be unique among all your routes.");
+        RouteDefinitionHelper.forceAssignIds(getCamelContextReference(), routeDefinitions);
+        List<RouteDefinition> routeDefinitionsToRemove = null;
+        for (RouteDefinition routeDefinition : routeDefinitions) {
+            try {
+                // assign ids to the routes and validate that the id's is all unique
+                String duplicate = RouteDefinitionHelper.validateUniqueIds(routeDefinition, routeDefinitions,
+                        routeDefinition.getNodePrefixId());
+                if (duplicate != null) {
+                    throw new FailedToStartRouteException(
+                            routeDefinition.getId(),
+                            "Duplicate id detected: " + duplicate
+                                                     + ". Please correct ids to be unique among all your routes.");
+                }
+
+                // if the route definition was created via a route template then we need to
+                // prepare its parameters when the route is being created and started
+                if (routeDefinition.isTemplate() != null && routeDefinition.isTemplate()
+                        && routeDefinition.getTemplateParameters() != null) {
+
+                    // apply configurer if any present
+                    if (routeDefinition.getRouteTemplateContext().getConfigurer() != null) {
+                        routeDefinition.getRouteTemplateContext().getConfigurer()
+                                .accept(routeDefinition.getRouteTemplateContext());
                     }
 
-                    // if the route definition was created via a route template then we need to prepare its parameters when the route is being created and started
-                    if (routeDefinition.isTemplate() != null && routeDefinition.isTemplate()
-                            && routeDefinition.getTemplateParameters() != null) {
+                    // copy parameters/bean repository to not cause side effect
+                    Map<String, Object> params = new HashMap<>(routeDefinition.getTemplateParameters());
+                    LocalBeanRegistry bbr = (LocalBeanRegistry) routeDefinition.getRouteTemplateContext()
+                            .getLocalBeanRepository();
+                    LocalBeanRegistry bbrCopy = new LocalBeanRegistry();
 
-                        // apply configurer if any present
-                        if (routeDefinition.getRouteTemplateContext().getConfigurer() != null) {
-                            routeDefinition.getRouteTemplateContext().getConfigurer()
-                                    .accept(routeDefinition.getRouteTemplateContext());
-                        }
-
-                        // copy parameters/bean repository to not cause side effect
-                        Map<String, Object> params = new HashMap<>(routeDefinition.getTemplateParameters());
-                        LocalBeanRegistry bbr
-                                = (LocalBeanRegistry) routeDefinition.getRouteTemplateContext().getLocalBeanRepository();
-                        LocalBeanRegistry bbrCopy = new LocalBeanRegistry();
-
-                        // make all bean in the bean repository use unique keys (need to add uuid counter)
-                        // so when the route template is used again to create another route, then there is
-                        // no side-effect from previously used values that Camel may use in its endpoint
-                        // registry and elsewhere
-                        if (bbr != null && !bbr.isEmpty()) {
-                            for (Map.Entry<String, Object> param : params.entrySet()) {
-                                Object value = param.getValue();
-                                if (value instanceof String oldKey) {
-                                    boolean clash = bbr.keys().stream().anyMatch(k -> k.equals(oldKey));
-                                    if (clash) {
-                                        String newKey = oldKey + "-" + UUID.generateUuid();
-                                        LOG.debug(
-                                                "Route: {} re-assigning local-bean id: {} to: {} to ensure ids are globally unique",
-                                                routeDefinition.getId(), oldKey, newKey);
-                                        bbrCopy.put(newKey, bbr.remove(oldKey));
-                                        param.setValue(newKey);
-                                    }
-                                }
-                            }
-                            // the remainder of the local beans must also have their ids made global unique
-                            for (Map.Entry<String, Map<Class<?>, Object>> entry : bbr.entrySet()) {
-                                String oldKey = entry.getKey();
-                                String newKey = oldKey + "-" + UUID.generateUuid();
-                                LOG.debug(
-                                        "Route: {} re-assigning local-bean id: {} to: {} to ensure ids are globally unique",
-                                        routeDefinition.getId(), oldKey, newKey);
-                                bbrCopy.put(newKey, entry.getValue());
-                                if (!params.containsKey(oldKey)) {
-                                    // if a bean was bound as local bean with a key and it was not defined as template parameter
-                                    // then store it as if it was a template parameter with same key=value which allows us
-                                    // to use this local bean in the route without any problem such as:
-                                    //   to("bean:{{myBean}}")
-                                    // and myBean is the local bean id.
-                                    params.put(oldKey, newKey);
+                    // make all bean in the bean repository use unique keys (need to add uuid
+                    // counter)
+                    // so when the route template is used again to create another route, then there
+                    // is
+                    // no side-effect from previously used values that Camel may use in its endpoint
+                    // registry and elsewhere
+                    if (bbr != null && !bbr.isEmpty()) {
+                        Map<String, String> beanNameMappings = new HashMap<>();
+                        for (Map.Entry<String, Object> param : params.entrySet()) {
+                            Object value = param.getValue();
+                            if (value instanceof String oldKey) {
+                                boolean clash = bbr.keys().stream().anyMatch(k -> k.equals(oldKey));
+                                if (clash) {
+                                    String newKey = oldKey + "-" + UUID.generateUuid();
+                                    LOG.debug(
+                                            "Route: {} re-assigning local-bean id: {} to: {} to ensure ids are globally unique",
+                                            routeDefinition.getId(), oldKey, newKey);
+                                    bbrCopy.put(newKey, bbr.remove(oldKey));
+                                    param.setValue(newKey);
+                                    beanNameMappings.put(oldKey, newKey);
                                 }
                             }
                         }
-
-                        OrderedLocationProperties prop = new OrderedLocationProperties();
-                        if (routeDefinition.getTemplateDefaultParameters() != null) {
-                            // need to keep track if a parameter is set as default value or end user configured value
-                            params.forEach((k, v) -> {
-                                Object dv = routeDefinition.getTemplateDefaultParameters().get(k);
-                                prop.put(routeDefinition.getLocation(), k, v, dv);
-                            });
-                        } else {
-                            prop.putAll(routeDefinition.getLocation(), params);
+                        // ensure bean names removed during clash detection are still
+                        // available as template parameters so they can be referenced
+                        // directly in routes via {{beanName}}
+                        for (Map.Entry<String, String> mapping : beanNameMappings.entrySet()) {
+                            if (!params.containsKey(mapping.getKey())) {
+                                params.put(mapping.getKey(), mapping.getValue());
+                            }
                         }
-                        pc.setLocalProperties(prop);
-
-                        // we need to shadow the bean registry on the CamelContext with the local beans from the route template context
-                        if (localBeans != null) {
-                            localBeans.setLocalBeanRepository(bbrCopy);
+                        // the remainder of the local beans must also have their ids made global unique
+                        for (Map.Entry<String, Map<Class<?>, Object>> entry : bbr.entrySet()) {
+                            String oldKey = entry.getKey();
+                            String newKey = oldKey + "-" + UUID.generateUuid();
+                            LOG.debug(
+                                    "Route: {} re-assigning local-bean id: {} to: {} to ensure ids are globally unique",
+                                    routeDefinition.getId(), oldKey, newKey);
+                            bbrCopy.put(newKey, entry.getValue());
+                            if (!params.containsKey(oldKey)) {
+                                // if a bean was bound as local bean with a key and it was not defined as
+                                // template parameter
+                                // then store it as if it was a template parameter with same key=value which
+                                // allows us
+                                // to use this local bean in the route without any problem such as:
+                                // to("bean:{{myBean}}")
+                                // and myBean is the local bean id.
+                                params.put(oldKey, newKey);
+                            }
                         }
-
-                        // need to reset auto assigned ids, so there is no clash when creating routes
-                        ProcessorDefinitionHelper.resetAllAutoAssignedNodeIds(routeDefinition);
-                        // must re-init parent when created from a template
-                        RouteDefinitionHelper.initParent(routeDefinition);
                     }
-                    // Check if the route is included
-                    if (includedRoute(routeDefinition)) {
-                        // must ensure route is prepared, before we can start it
-                        if (!routeDefinition.isPrepared()) {
-                            RouteDefinitionHelper.prepareRoute(getCamelContextReference(), routeDefinition);
-                            routeDefinition.markPrepared();
-                        }
-                        // force the creation of ids on all nodes in the route
-                        RouteDefinitionHelper.forceAssignIds(this, routeDefinition.getInput());
-                        RouteDefinitionHelper.forceAssignIds(this, routeDefinition);
 
-                        StartupStepRecorder recorder
-                                = getCamelContextReference().getCamelContextExtension().getStartupStepRecorder();
-                        StartupStep step = recorder.beginStep(Route.class, routeDefinition.getRouteId(), "Create Route");
-
-                        getCamelContextExtension().createRoute(routeDefinition.getRouteId());
-
-                        Route route = model.getModelReifierFactory().createRoute(this, routeDefinition);
-                        recorder.endStep(step);
-
-                        RouteService routeService = new RouteService(route);
-                        startRouteService(routeService, true);
+                    OrderedLocationProperties prop = new OrderedLocationProperties();
+                    if (routeDefinition.getTemplateDefaultParameters() != null) {
+                        // need to keep track if a parameter is set as default value or end user
+                        // configured value
+                        params.forEach((k, v) -> {
+                            Object dv = routeDefinition.getTemplateDefaultParameters().get(k);
+                            prop.put(routeDefinition.getLocation(), k, v, dv);
+                        });
                     } else {
-                        // Add the definition to the list of definitions to remove as the route is excluded
-                        if (routeDefinitionsToRemove == null) {
-                            routeDefinitionsToRemove = new ArrayList<>(routeDefinitions.size());
-                        }
-                        routeDefinitionsToRemove.add(routeDefinition);
+                        prop.putAll(routeDefinition.getLocation(), params);
                     }
-                } finally {
-                    // clear local after the route is created via the reifier
-                    pc.setLocalProperties(null);
+                    pc.setLocalProperties(prop);
+
+                    // we need to shadow the bean registry on the CamelContext with the local beans
+                    // from the route template context
                     if (localBeans != null) {
-                        localBeans.setLocalBeanRepository(null);
+                        localBeans.setLocalBeanRepository(bbrCopy);
                     }
+
+                    // need to reset auto assigned ids, so there is no clash when creating routes
+                    ProcessorDefinitionHelper.resetAllAutoAssignedNodeIds(routeDefinition);
+                    // must re-init parent when created from a template
+                    RouteDefinitionHelper.initParent(routeDefinition);
+                }
+                // Check if the route is included
+                if (includedRoute(routeDefinition)) {
+                    // must ensure route is prepared, before we can start it
+                    if (!routeDefinition.isPrepared()) {
+                        RouteDefinitionHelper.prepareRoute(getCamelContextReference(), routeDefinition);
+                        routeDefinition.markPrepared();
+                    }
+                    // force the creation of ids on all nodes in the route
+                    RouteDefinitionHelper.forceAssignIds(this, routeDefinition.getInput());
+                    RouteDefinitionHelper.forceAssignIds(this, routeDefinition);
+
+                    StartupStepRecorder recorder = getCamelContextReference().getCamelContextExtension()
+                            .getStartupStepRecorder();
+                    StartupStep step = recorder.beginStep(Route.class, routeDefinition.getRouteId(),
+                            "Create Route");
+
+                    getCamelContextExtension().createRoute(routeDefinition.getRouteId(), () -> {
+                        try {
+                            Route route = model.getModelReifierFactory().createRoute(this, routeDefinition);
+                            recorder.endStep(step);
+
+                            RouteService routeService = new RouteService(route);
+                            startRouteService(routeService, true);
+                        } catch (RuntimeException e) {
+                            throw e;
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                } else {
+                    // Add the definition to the list of definitions to remove as the route is
+                    // excluded
+                    if (routeDefinitionsToRemove == null) {
+                        routeDefinitionsToRemove = new ArrayList<>(routeDefinitions.size());
+                    }
+                    routeDefinitionsToRemove.add(routeDefinition);
+                }
+            } finally {
+                // clear local after the route is created via the reifier
+                pc.setLocalProperties(null);
+                if (localBeans != null) {
+                    localBeans.setLocalBeanRepository(null);
                 }
             }
-            if (routeDefinitionsToRemove != null) {
-                // Remove all the excluded routes
-                model.removeRouteDefinitions(routeDefinitionsToRemove);
-            }
-        } finally {
-            if (!alreadyStartingRoutes) {
-                setStartingRoutes(false);
-            }
-            getCamelContextExtension().createRoute(null);
+        }
+        if (routeDefinitionsToRemove != null) {
+            // Remove all the excluded routes
+            model.removeRouteDefinitions(routeDefinitionsToRemove);
         }
     }
 
@@ -834,8 +850,10 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
 
     @Override
     protected boolean removeRoute(String routeId, LoggingLevel loggingLevel) throws Exception {
-        // synchronize on model first to avoid deadlock with concurrent 'addRoutes' calls:
-        synchronized (model) {
+        // lock on model first to avoid deadlock with concurrent 'addRoutes'
+        // calls:
+        model.getLock().lock();
+        try {
             getLock().lock();
             try {
                 boolean removed = super.removeRoute(routeId, loggingLevel);
@@ -850,14 +868,20 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
             } finally {
                 getLock().unlock();
             }
+        } finally {
+            model.getLock().unlock();
         }
     }
 
     @Override
     public boolean removeRoute(String routeId) throws Exception {
-        // synchronize on model first to avoid deadlock with concurrent 'addRoutes' calls:
-        synchronized (model) {
+        // lock on model first to avoid deadlock with concurrent 'addRoutes'
+        // calls:
+        model.getLock().lock();
+        try {
             return super.removeRoute(routeId);
+        } finally {
+            model.getLock().unlock();
         }
     }
 
@@ -874,7 +898,8 @@ public class DefaultCamelContext extends SimpleCamelContext implements ModelCame
     private static TransformerKey createTransformerKey(TransformerDefinition def) {
         if (ObjectHelper.isNotEmpty(def.getScheme())) {
             return ObjectHelper.isNotEmpty(def.getName())
-                    ? new TransformerKey(def.getScheme() + ":" + def.getName()) : new TransformerKey(def.getScheme());
+                    ? new TransformerKey(def.getScheme() + ":" + def.getName())
+                    : new TransformerKey(def.getScheme());
         }
         if (ObjectHelper.isNotEmpty(def.getName())) {
             return new TransformerKey(def.getName());

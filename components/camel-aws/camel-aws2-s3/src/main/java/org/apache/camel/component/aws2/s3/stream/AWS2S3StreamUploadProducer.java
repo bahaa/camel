@@ -45,6 +45,7 @@ import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.URISupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.AwsResponse;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.BucketCannedACL;
@@ -210,6 +211,7 @@ public class AWS2S3StreamUploadProducer extends DefaultProducer {
                         if (uploadResult.versionId() != null) {
                             message.setHeader(AWS2S3Constants.VERSION_ID, uploadResult.versionId());
                         }
+                        populateHttpResponseCode(uploadResult, message);
                     }
                     continue;
                 }
@@ -277,6 +279,7 @@ public class AWS2S3StreamUploadProducer extends DefaultProducer {
                     if (uploadResult.versionId() != null) {
                         message.setHeader(AWS2S3Constants.VERSION_ID, uploadResult.versionId());
                     }
+                    populateHttpResponseCode(uploadResult, message);
                     state = null;
                     continue;
                 }
@@ -404,6 +407,7 @@ public class AWS2S3StreamUploadProducer extends DefaultProducer {
                     if (uploadResult.versionId() != null) {
                         message.setHeader(AWS2S3Constants.VERSION_ID, uploadResult.versionId());
                     }
+                    populateHttpResponseCode(uploadResult, message);
                 }
 
             } catch (Exception e) {
@@ -560,13 +564,13 @@ public class AWS2S3StreamUploadProducer extends DefaultProducer {
         String headerName = getConfiguration().getTimestampHeaderName();
         Object timestampObj = exchange.getIn().getHeader(headerName);
 
-        if (timestampObj instanceof Long) {
-            return (Long) timestampObj;
-        } else if (timestampObj instanceof Date) {
-            return ((Date) timestampObj).getTime();
-        } else if (timestampObj instanceof String) {
+        if (timestampObj instanceof Long ts) {
+            return ts;
+        } else if (timestampObj instanceof Date date) {
+            return date.getTime();
+        } else if (timestampObj instanceof String str) {
             try {
-                return Long.parseLong((String) timestampObj);
+                return Long.parseLong(str);
             } catch (NumberFormatException e) {
                 LOG.warn("Cannot parse timestamp header '{}' with value '{}'", headerName, timestampObj);
                 return null;
@@ -625,6 +629,12 @@ public class AWS2S3StreamUploadProducer extends DefaultProducer {
 
     public static Message getMessageForResponse(final Exchange exchange) {
         return exchange.getMessage();
+    }
+
+    private static void populateHttpResponseCode(AwsResponse response, Message message) {
+        if (response != null && response.sdkHttpResponse() != null) {
+            message.setHeader(Exchange.HTTP_RESPONSE_CODE, response.sdkHttpResponse().statusCode());
+        }
     }
 
     private class UploadState {

@@ -22,7 +22,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -31,10 +33,9 @@ import org.apache.camel.catalog.DefaultCamelCatalog;
 import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.PathUtils;
 import org.apache.camel.dsl.jbang.core.common.RuntimeUtil;
+import org.apache.camel.dsl.jbang.core.common.TemplateHelper;
 import org.apache.camel.dsl.jbang.core.common.VersionHelper;
-import org.apache.camel.tooling.maven.MavenGav;
 import org.apache.camel.util.CamelCaseOrderedProperties;
-import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 
 import static org.apache.camel.dsl.jbang.core.commands.ExportHelper.exportPackageName;
@@ -45,7 +46,7 @@ class ExportCamelMain extends Export {
 
     public ExportCamelMain(CamelJBangMain main) {
         super(main);
-        pomTemplateName = "main-pom.tmpl";
+        pomTemplateName = "main-pom.ftl";
     }
 
     @Override
@@ -55,18 +56,10 @@ class ExportCamelMain extends Export {
             printer().printErr("--gav must be in syntax: groupId:artifactId:version");
             return 1;
         }
-        if (!buildTool.equals("maven") && !buildTool.equals("gradle")) {
-            printer().printErr("--build-tool must either be maven or gradle, was: " + buildTool);
-            return 1;
-        }
-        if (buildTool.equals("gradle")) {
-            printer().printErr("--build-tool=gradle is not support yet for camel-main runtime.");
-            return 1;
-        }
 
         // the settings file has information what to export
         Path settings = CommandLineHelper.getWorkDir().resolve(Run.RUN_SETTINGS_FILE);
-        if (fresh || !files.isEmpty() || !Files.exists(settings)) {
+        if (mavenResolver.fresh() || !files.isEmpty() || !Files.exists(settings)) {
             // allow to automatic build
             printer().println("Generating fresh run data");
             int silent = runSilently(ignoreLoadingError, lazyBean, verbose);
@@ -163,23 +156,30 @@ class ExportCamelMain extends Export {
         // copy agent JARs and remove as dependency
         copyAgentDependencies(deps);
         deps.removeIf(d -> d.startsWith("agent:"));
-        if ("maven".equals(buildTool)) {
-            createMavenPom(settings, profile,
-                    buildDir.resolve("pom.xml"), deps, srcPackageName);
-            if (mavenWrapper) {
-                copyMavenWrapper();
-            }
+        createMavenPom(settings, profile,
+                buildDir.resolve("pom.xml"), deps, srcPackageName);
+        if (mavenWrapper) {
+            copyMavenWrapper();
         }
-        copyDockerFiles(BUILD_DIR);
+        if (docker) {
+            copyDockerFiles(BUILD_DIR);
+        }
         String appJar = Paths.get("target", ids[1] + "-" + ids[2] + ".jar").toString();
         copyReadme(BUILD_DIR, appJar);
         if (cleanExportDir || !exportDir.equals(".")) {
             // cleaning current dir can be a bit dangerous so only clean if explicit enabled
             // otherwise always clean export-dir to avoid stale data
+            if (cleanExportDir) {
+                String absPath = Path.of(exportDir).toAbsolutePath().toString();
+                if (!CommandHelper.confirmOperation("Are you sure you want to delete " + absPath + "?", yes)) {
+                    return 1;
+                }
+            }
             CommandHelper.cleanExportDir(exportDir);
         }
         // copy to export dir and remove work dir
         PathUtils.copyDirectory(buildDir, Path.of(exportDir));
+        createDeferredSymlinks(buildDir, Path.of(exportDir));
         PathUtils.deleteDirectory(buildDir);
 
         return 0;
@@ -187,10 +187,6 @@ class ExportCamelMain extends Export {
 
     private void createMavenPom(Path settings, Path profile, Path pom, Set<String> deps, String packageName) throws Exception {
         String[] ids = gav.split(":");
-
-        InputStream is = ExportCamelMain.class.getClassLoader().getResourceAsStream("templates/" + pomTemplateName);
-        String context = IOHelper.loadText(is);
-        IOHelper.close(is);
 
         CamelCatalog catalog = new DefaultCamelCatalog();
         if (ObjectHelper.isEmpty(camelVersion)) {
@@ -200,97 +196,46 @@ class ExportCamelMain extends Export {
             camelVersion = VersionHelper.extractCamelVersion();
         }
 
-        context = context.replaceAll("\\{\\{ \\.GroupId }}", ids[0]);
-        context = context.replaceAll("\\{\\{ \\.ArtifactId }}", ids[1]);
-        context = context.replaceAll("\\{\\{ \\.Version }}", ids[2]);
-        context = context.replaceAll("\\{\\{ \\.JavaVersion }}", javaVersion);
-        context = context.replaceAll("\\{\\{ \\.CamelVersion }}", camelVersion);
-        if (packageName != null) {
-            context = context.replaceAll("\\{\\{ \\.MainClassname }}", packageName + "." + mainClassname);
-        } else {
-            context = context.replaceAll("\\{\\{ \\.MainClassname }}", mainClassname);
-        }
-        context = context.replaceFirst("\\{\\{ \\.ProjectBuildOutputTimestamp }}", this.getBuildMavenProjectDate());
-
         Properties prop = new CamelCaseOrderedProperties();
         RuntimeUtil.loadProperties(prop, settings);
         String repos = getMavenRepositories(settings, prop, camelVersion);
 
-        context = replaceBuildProperties(context);
-
-        if (repos == null || repos.isEmpty()) {
-            context = context.replaceFirst("\\{\\{ \\.MavenRepositories }}", "");
+        // build the template data model
+        Map<String, Object> model = new HashMap<>();
+        model.put("GroupId", ids[0]);
+        model.put("ArtifactId", ids[1]);
+        model.put("Version", ids[2]);
+        model.put("JavaVersion", javaVersion);
+        model.put("CamelVersion", camelVersion);
+        if (packageName != null) {
+            model.put("MainClassname", packageName + "." + mainClassname);
         } else {
-            String s = mavenRepositoriesAsPomXml(repos);
-            context = context.replaceFirst("\\{\\{ \\.MavenRepositories }}", s);
+            model.put("MainClassname", mainClassname);
         }
+        model.put("ProjectBuildOutputTimestamp", this.getBuildMavenProjectDate());
+        model.put("BuildProperties", formatBuildProperties());
+        model.put("Repositories", buildRepositoryList(repos));
+        model.put("Dependencies", buildDependencyList(deps));
+        model.put("JibMavenPluginVersion", jibMavenPluginVersion(settings, prop));
 
-        List<MavenGav> gavs = new ArrayList<>();
-        for (String dep : deps) {
-            MavenGav gav = parseMavenGav(dep);
-            String gid = gav.getGroupId();
-            if ("org.apache.camel".equals(gid)) {
-                // uses BOM so version should not be included
-                gav.setVersion(null);
-            }
-            gavs.add(gav);
-        }
+        // kubernetes/docker properties
+        enrichKubernetesModel(model, settings, profile);
 
-        // sort artifacts
-        gavs.sort(mavenGavComparator());
-
-        StringBuilder sb = new StringBuilder();
-        for (MavenGav gav : gavs) {
-            sb.append("        <dependency>\n");
-            sb.append("            <groupId>").append(gav.getGroupId()).append("</groupId>\n");
-            sb.append("            <artifactId>").append(gav.getArtifactId()).append("</artifactId>\n");
-            if (gav.getVersion() != null) {
-                sb.append("            <version>").append(gav.getVersion()).append("</version>\n");
-            }
-            if (gav.getScope() != null) {
-                sb.append("            <scope>").append(gav.getScope()).append("</scope>\n");
-            }
-            // special for lib JARs
-            if ("lib".equals(gav.getPackaging())) {
-                sb.append("            <scope>system</scope>\n");
-                sb.append("            <systemPath>\\$\\{project.basedir}/lib/").append(gav.getArtifactId()).append("-")
-                        .append(gav.getVersion()).append(".jar</systemPath>\n");
-            }
-            if ("camel-kamelets-utils".equals(gav.getArtifactId())) {
-                // special for camel-kamelets-utils
-                sb.append("            <exclusions>\n");
-                sb.append("                <exclusion>\n");
-                sb.append("                    <groupId>org.apache.camel</groupId>\n");
-                sb.append("                    <artifactId>*</artifactId>\n");
-                sb.append("                </exclusion>\n");
-                sb.append("            </exclusions>\n");
-            }
-            sb.append("        </dependency>\n");
-        }
-
-        context = context.replaceFirst("\\{\\{ \\.CamelDependencies }}", sb.toString());
-
-        // include docker/kubernetes with jib/jkube
-        context = enrichMavenPomJib(context, settings, profile);
-
+        String context = TemplateHelper.processTemplate(pomTemplateName, model);
         Files.writeString(pom, context);
     }
 
-    protected String enrichMavenPomJib(String context, Path settings, Path profile) throws Exception {
-        StringBuilder sb1 = new StringBuilder();
-        StringBuilder sb2 = new StringBuilder();
-
+    private void enrichKubernetesModel(Map<String, Object> model, Path settings, Path profile) throws Exception {
         // is kubernetes included?
         Properties prop = new CamelCaseOrderedProperties();
         if (Files.exists(profile)) {
             RuntimeUtil.loadProperties(prop, profile);
         }
-        // include additional build properties
         boolean jib = prop.stringPropertyNames().stream().anyMatch(s -> s.startsWith("jib."));
         boolean jkube = prop.stringPropertyNames().stream().anyMatch(s -> s.startsWith("jkube."));
-        // jib is used for docker and kubernetes, jkube is only used for kubernetes
+
+        List<Map<String, String>> kubernetesProperties = new ArrayList<>();
         if (jib || jkube) {
-            // include all jib/jkube/label properties
             String fromImage = null;
             for (String key : prop.stringPropertyNames()) {
                 String value = prop.getProperty(key);
@@ -299,83 +244,59 @@ class ExportCamelMain extends Export {
                 }
                 boolean accept = key.startsWith("jkube.") || key.startsWith("jib.") || key.startsWith("label.");
                 if (accept) {
-                    sb1.append(String.format("        <%s>%s</%s>%n", key, value, key));
+                    kubernetesProperties.add(Map.of("key", key, "value", value));
                 }
             }
-            // from image is mandatory so use a default image if none provided
             if (fromImage == null) {
                 fromImage = "mirror.gcr.io/library/eclipse-temurin:" + javaVersion + "-jre";
-                sb1.append(String.format("        <%s>%s</%s>%n", "jib.from.image", fromImage, "jib.from.image"));
+                kubernetesProperties.add(Map.of("key", "jib.from.image", "value", fromImage));
             }
+        }
+        model.put("KubernetesProperties", kubernetesProperties);
 
-            InputStream is = ExportCamelMain.class.getClassLoader().getResourceAsStream("templates/main-docker-pom.tmpl");
-            String context2 = IOHelper.loadText(is);
-            IOHelper.close(is);
-
-            context2 = context2.replaceFirst("\\{\\{ \\.JibMavenPluginVersion }}",
-                    jibMavenPluginVersion(settings, prop));
-
-            // image from/to auth
-            String auth = "";
-            if (prop.stringPropertyNames().stream().anyMatch(s -> s.startsWith("jib.from.auth."))) {
-                is = ExportCamelMain.class.getClassLoader().getResourceAsStream("templates/main-docker-from-auth-pom.tmpl");
-                auth = IOHelper.loadText(is);
-                IOHelper.close(is);
-            }
-            context2 = context2.replace("{{ .JibFromImageAuth }}", auth);
-            auth = "";
-            if (prop.stringPropertyNames().stream().anyMatch(s -> s.startsWith("jib.to.auth."))) {
-                is = ExportCamelMain.class.getClassLoader().getResourceAsStream("templates/main-docker-to-auth-pom.tmpl");
-                auth = IOHelper.loadText(is);
-                IOHelper.close(is);
-            }
-            context2 = context2.replace("{{ .JibToImageAuth }}", auth);
-            // http port setting
+        model.put("hasJib", jib || jkube);
+        model.put("hasJkube", jkube);
+        if (jib || jkube) {
+            model.put("hasJibFromAuth",
+                    prop.stringPropertyNames().stream().anyMatch(s -> s.startsWith("jib.from.auth.")));
+            model.put("hasJibToAuth",
+                    prop.stringPropertyNames().stream().anyMatch(s -> s.startsWith("jib.to.auth.")));
             int port = httpServerPort(settings);
             if (port == -1) {
                 port = 8080;
             }
-            context2 = context2.replaceFirst("\\{\\{ \\.Port }}", String.valueOf(port));
-            sb2.append(context2);
-            // jkube is only used for kubernetes
-            if (jkube) {
-                is = ExportCamelMain.class.getClassLoader().getResourceAsStream("templates/main-jkube-pom.tmpl");
-                String context3 = IOHelper.loadText(is);
-                IOHelper.close(is);
-                context3 = context3.replaceFirst("\\{\\{ \\.JkubeMavenPluginVersion }}",
-                        jkubeMavenPluginVersion(settings, prop));
-                sb2.append(context3);
-            }
+            model.put("Port", String.valueOf(port));
         }
-
-        // remove empty lines
-        String s1 = sb1.toString().replaceAll("(\\r?\\n){2,}", "\n");
-        String s2 = sb2.toString().replaceAll("(\\r?\\n){2,}", "\n");
-
-        context = context.replace("{{ .CamelKubernetesProperties }}", s1);
-        context = context.replace("{{ .CamelKubernetesPlugins }}", s2);
-        return context;
+        if (jkube) {
+            model.put("JkubeMavenPluginVersion", jkubeMavenPluginVersion(settings, prop));
+        }
     }
 
     @Override
     protected Set<String> resolveDependencies(Path settings, Path profile) throws Exception {
         Set<String> answer = super.resolveDependencies(settings, profile);
 
-        if (profile != null && Files.exists(profile)) {
-            Properties prop = new CamelCaseOrderedProperties();
-            RuntimeUtil.loadProperties(prop, profile);
-            // if metrics is defined then include camel-micrometer-prometheus for camel-main runtime
-            if (prop.getProperty("camel.metrics.enabled") != null
-                    || prop.getProperty("camel.management.metricsEnabled") != null
-                    || prop.getProperty("camel.server.metricsEnabled") != null) {
-                answer.add("mvn:org.apache.camel:camel-micrometer-prometheus");
-            }
-        }
-
         // remove out of the box dependencies
         answer.removeIf(s -> s.contains("camel-core"));
         answer.removeIf(s -> s.contains("camel-main"));
         answer.removeIf(s -> s.contains("camel-health"));
+        // spring-boot-starter JARs are not usable in camel-main runtime
+        answer.removeIf(s -> s.contains("spring-boot-starter"));
+
+        if (profile != null && Files.exists(profile)) {
+            Properties prop = new CamelCaseOrderedProperties();
+            RuntimeUtil.loadProperties(prop, profile);
+            // if metrics is defined then include camel-micrometer-prometheus for camel-main runtime
+            if (prop.containsKey("camel.metrics.enabled")
+                    || prop.containsKey("camel.management.metricsEnabled")
+                    || prop.containsKey("camel.server.metricsEnabled")) {
+                answer.add("mvn:org.apache.camel:camel-micrometer-prometheus");
+            }
+            // if health-check is defined then include camel-health for camel-main runtime
+            if (prop.containsKey("camel.management.healthCheckEnabled")) {
+                answer.add("mvn:org.apache.camel:camel-health");
+            }
+        }
 
         boolean main = answer.stream().anyMatch(s -> s.contains("mvn:org.apache.camel:camel-platform-http-main"));
         if (hasOpenapi(answer) && !main) {
@@ -396,18 +317,15 @@ class ExportCamelMain extends Export {
     }
 
     private void createMainClassSource(Path srcJavaDir, String packageName, String mainClassname) throws Exception {
-        InputStream is = ExportCamelMain.class.getClassLoader().getResourceAsStream("templates/main.tmpl");
-        String context = IOHelper.loadText(is);
-        IOHelper.close(is);
-
+        Map<String, Object> model = new HashMap<>();
         if (packageName != null) {
-            context = context.replaceFirst("\\{\\{ \\.PackageName }}", "package " + packageName + ";");
-        } else {
-            context = context.replaceFirst("\\{\\{ \\.PackageName }}", "");
+            model.put("PackageName", "package " + packageName + ";");
         }
-        context = context.replaceAll("\\{\\{ \\.MainClassname }}", mainClassname);
+        model.put("MainClassname", mainClassname);
+
+        String content = TemplateHelper.processTemplate("main.ftl", model);
         Path outputFile = srcJavaDir.resolve(mainClassname + ".java");
-        Files.writeString(outputFile, context);
+        Files.writeString(outputFile, content);
     }
 
     @Override
@@ -424,9 +342,6 @@ class ExportCamelMain extends Export {
         ExportHelper.safeCopy(is, srcResourcesDir.resolve("log4j2.properties"));
         is = ExportCamelMain.class.getResourceAsStream("/log4j2.component.properties");
         ExportHelper.safeCopy(is, srcResourcesDir.resolve("log4j2.component.properties"));
-        // assembly for runner jar
-        is = ExportCamelMain.class.getResourceAsStream("/assembly/runner.xml");
-        ExportHelper.safeCopy(is, srcResourcesDir.resolve("assembly/runner.xml"));
     }
 
     protected void copyGroovyPrecompiled(Path srcResourcesDir) throws Exception {

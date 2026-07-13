@@ -16,6 +16,8 @@
  */
 package org.apache.camel.test.infra.postgres.services;
 
+import java.util.Arrays;
+
 import org.apache.camel.spi.annotations.InfraService;
 import org.apache.camel.test.infra.common.LocalPropertyResolver;
 import org.apache.camel.test.infra.common.services.ContainerEnvironmentUtil;
@@ -28,7 +30,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @InfraService(service = PostgresInfraService.class,
-              description = "Postgres SQL Database",
+              description = "PostgreSQL is an open source object-relational database",
               serviceAlias = { "postgres" })
 public class PostgresLocalContainerInfraService implements PostgresInfraService, ContainerService<PostgreSQLContainer> {
 
@@ -60,10 +62,18 @@ public class PostgresLocalContainerInfraService implements PostgresInfraService,
                 super(DockerImageName.parse(imageName)
                         .asCompatibleSubstituteFor("postgres"));
 
-                if (fixedPort) {
-                    addFixedExposedPort(5432, 5432);
-                }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, 5432);
                 withLogConsumer(new Slf4jLogConsumer(LOG));
+
+                // PostgreSQL disables prepared transactions by default
+                // (max_prepared_transactions = 0), which rejects the PREPARE TRANSACTION
+                // issued by XA two-phase commit. Append to the command configured by
+                // testcontainers ("postgres -c fsync=off") instead of replacing it.
+                String[] command = getCommandParts();
+                String[] augmented = Arrays.copyOf(command, command.length + 2);
+                augmented[command.length] = "-c";
+                augmented[command.length + 1] = "max_prepared_transactions=100";
+                setCommand(augmented);
             }
         }
 

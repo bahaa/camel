@@ -34,15 +34,12 @@ public class BedrockAgentConfiguration implements Cloneable, AwsCommonConfigurat
     @UriParam
     @Metadata(label = "advanced", autowired = true)
     private BedrockAgentClient bedrockAgentClient;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String accessKey;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String secretKey;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String sessionToken;
-    @UriParam(enums = "anthropic.claude-instant-v1,anthropic.claude-v2,anthropic.claude-v2:1")
-    @Metadata(required = true)
-    private String modelId;
     @UriParam
     @Metadata
     private String knowledgeBaseId;
@@ -65,7 +62,7 @@ public class BedrockAgentConfiguration implements Cloneable, AwsCommonConfigurat
     private String region;
     @UriParam
     private boolean pojoRequest;
-    @UriParam(label = "security")
+    @UriParam(label = "security", security = "insecure:ssl")
     private boolean trustAllCertificates;
     @UriParam
     private boolean overrideEndpoint;
@@ -269,17 +266,6 @@ public class BedrockAgentConfiguration implements Cloneable, AwsCommonConfigurat
      */
     public void setProfileCredentialsName(String profileCredentialsName) {
         this.profileCredentialsName = profileCredentialsName;
-    }
-
-    public String getModelId() {
-        return modelId;
-    }
-
-    /**
-     * Define the model Id we are going to use
-     */
-    public void setModelId(String modelId) {
-        this.modelId = modelId;
     }
 
     public String getKnowledgeBaseId() {

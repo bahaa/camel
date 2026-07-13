@@ -17,12 +17,12 @@
 package org.apache.camel.component.jetty.rest.producer;
 
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class JettyRestProducerInvalidApiDocTest extends CamelTestSupport {
 
@@ -43,13 +43,11 @@ public class JettyRestProducerInvalidApiDocTest extends CamelTestSupport {
 
             }
         });
-        try {
-            context.start();
-            fail("Should fail");
-        } catch (Exception e) {
-            IllegalArgumentException iae = assertIsInstanceOf(IllegalArgumentException.class, e.getCause().getCause());
-            assertEquals("OpenApi api-doc does not contain operation for get:/api/hello/unknown/{name}", iae.getMessage());
-        }
+
+        Exception e = assertThrows(Exception.class, () -> context.start(), "Should fail");
+
+        IllegalArgumentException iae = assertIsInstanceOf(IllegalArgumentException.class, e.getCause().getCause());
+        assertEquals("OpenApi api-doc does not contain operation for get:/api/hello/unknown/{name}", iae.getMessage());
     }
 
     @Test
@@ -64,12 +62,10 @@ public class JettyRestProducerInvalidApiDocTest extends CamelTestSupport {
 
             }
         });
-        try {
-            context.start();
-            fail("Should fail");
-        } catch (Exception e) {
-            IllegalArgumentException iae = assertIsInstanceOf(IllegalArgumentException.class, e.getCause().getCause());
-            assertEquals("OpenApi api-doc does not contain operation for get:/api/bye", iae.getMessage());
-        }
+
+        Exception e = assertThrows(Exception.class, () -> context.start(), "Should fail");
+
+        IllegalArgumentException iae = assertIsInstanceOf(IllegalArgumentException.class, e.getCause().getCause());
+        assertEquals("OpenApi api-doc does not contain operation for get:/api/bye", iae.getMessage());
     }
 }

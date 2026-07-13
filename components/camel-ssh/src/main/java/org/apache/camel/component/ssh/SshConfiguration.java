@@ -38,9 +38,9 @@ public class SshConfiguration implements Cloneable {
     private String host;
     @UriPath(defaultValue = "" + DEFAULT_SSH_PORT)
     private int port = DEFAULT_SSH_PORT;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String username;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String password;
     @UriParam(label = "consumer")
     private String pollCommand;
@@ -50,7 +50,7 @@ public class SshConfiguration implements Cloneable {
     private String keyType;
     @UriParam(label = "security")
     private String certResource;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String certResourcePassword;
     @UriParam(defaultValue = "30000")
     private long timeout = 30000;
@@ -74,6 +74,24 @@ public class SshConfiguration implements Cloneable {
     private String signatures;
     @UriParam(label = "advanced")
     private String compressions;
+    @UriParam(label = "advanced")
+    private long idleTimeout;
+    @UriParam(label = "advanced",
+              description = "Sets the heartbeat interval in milliseconds."
+                            + " If positive, the component will send keep-alive messages to prevent the SSH session from timing out.")
+    private long heartbeatInterval;
+    @UriParam(label = "advanced",
+              description = "Sets the maximum number of keep-alive messages without reply before the session is terminated.")
+    private int heartbeatReplyMaxWait;
+    @UriParam(label = "advanced",
+              description = "Sets the authentication timeout in milliseconds.")
+    private long authTimeout;
+    @UriParam(label = "advanced",
+              description = "Sets the socket connection timeout in milliseconds.")
+    private long connectTimeout;
+    @UriParam(label = "advanced",
+              description = "Sets the timeout in milliseconds for opening a channel.")
+    private long channelOpenTimeout;
     @UriParam
     @Metadata(label = "advanced", autowired = true)
     private ClientBuilder clientBuilder;
@@ -394,6 +412,86 @@ public class SshConfiguration implements Cloneable {
      */
     public void setCompressions(String compressions) {
         this.compressions = compressions;
+    }
+
+    public long getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    /**
+     * Sets the timeout in milliseconds to wait before the SSH session is closed due to inactivity. The default value is
+     * 0, which means no idle timeout is applied.
+     *
+     * @param idleTimeout long milliseconds to wait before the session is closed due to inactivity.
+     */
+    public void setIdleTimeout(long idleTimeout) {
+        this.idleTimeout = idleTimeout;
+    }
+
+    public long getHeartbeatInterval() {
+        return heartbeatInterval;
+    }
+
+    /**
+     * Sets the heartbeat interval in milliseconds. If positive, the component will send keep-alive messages to prevent
+     * the SSH session from timing out.
+     *
+     * @param heartbeatInterval long milliseconds between heartbeat messages.
+     */
+    public void setHeartbeatInterval(long heartbeatInterval) {
+        this.heartbeatInterval = heartbeatInterval;
+    }
+
+    public int getHeartbeatReplyMaxWait() {
+        return heartbeatReplyMaxWait;
+    }
+
+    /**
+     * Sets the maximum number of keep-alive messages without reply before the session is terminated.
+     *
+     * @param heartbeatReplyMaxWait int maximum number of heartbeat messages without reply.
+     */
+    public void setHeartbeatReplyMaxWait(int heartbeatReplyMaxWait) {
+        this.heartbeatReplyMaxWait = heartbeatReplyMaxWait;
+    }
+
+    public long getAuthTimeout() {
+        return authTimeout;
+    }
+
+    /**
+     * Sets the authentication timeout in milliseconds.
+     *
+     * @param authTimeout long milliseconds to wait for authentication.
+     */
+    public void setAuthTimeout(long authTimeout) {
+        this.authTimeout = authTimeout;
+    }
+
+    public long getConnectTimeout() {
+        return connectTimeout;
+    }
+
+    /**
+     * Sets the socket connection timeout in milliseconds.
+     *
+     * @param connectTimeout long milliseconds to wait for the socket connection.
+     */
+    public void setConnectTimeout(long connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
+
+    public long getChannelOpenTimeout() {
+        return channelOpenTimeout;
+    }
+
+    /**
+     * Sets the timeout in milliseconds for opening a channel.
+     *
+     * @param channelOpenTimeout long milliseconds to wait for opening a channel.
+     */
+    public void setChannelOpenTimeout(long channelOpenTimeout) {
+        this.channelOpenTimeout = channelOpenTimeout;
     }
 
     public ClientBuilder getClientBuilder() {

@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.CamelException;
+import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.as2.api.AS2AsynchronousMDNManager;
@@ -81,9 +82,8 @@ import org.apache.hc.core5.http.protocol.HttpCoreContext;
 import org.apache.hc.core5.http.protocol.HttpDateGenerator;
 import org.bouncycastle.cms.jcajce.ZlibExpanderProvider;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,32 +115,34 @@ public class AS2ClientManagerIT extends AbstractAS2ITSupport {
     private static final String MDN_SUBJECT_PREFIX = "MDN Response:";
     private static final String MDN_MESSAGE_TEMPLATE = "TBD";
 
-    private static final String EDI_MESSAGE = "UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'\n"
-                                              + "UNH+00000000000117+INVOIC:D:97B:UN'\n"
-                                              + "BGM+380+342459+9'\n"
-                                              + "DTM+3:20060515:102'\n"
-                                              + "RFF+ON:521052'\n"
-                                              + "NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'\n"
-                                              + "NAD+SE+005435656::16++GENERAL WIDGET COMPANY'\n"
-                                              + "CUX+1:USD'\n"
-                                              + "LIN+1++157870:IN'\n"
-                                              + "IMD+F++:::WIDGET'\n"
-                                              + "QTY+47:1020:EA'\n"
-                                              + "ALI+US'\n"
-                                              + "MOA+203:1202.58'\n"
-                                              + "PRI+INV:1.179'\n"
-                                              + "LIN+2++157871:IN'\n"
-                                              + "IMD+F++:::DIFFERENT WIDGET'\n"
-                                              + "QTY+47:20:EA'\n"
-                                              + "ALI+JP'\n"
-                                              + "MOA+203:410'\n"
-                                              + "PRI+INV:20.5'\n"
-                                              + "UNS+S'\n"
-                                              + "MOA+39:2137.58'\n"
-                                              + "ALC+C+ABG'\n"
-                                              + "MOA+8:525'\n"
-                                              + "UNT+23+00000000000117'\n"
-                                              + "UNZ+1+00000000000778'\n";
+    private static final String EDI_MESSAGE = """
+            UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'
+            UNH+00000000000117+INVOIC:D:97B:UN'
+            BGM+380+342459+9'
+            DTM+3:20060515:102'
+            RFF+ON:521052'
+            NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'
+            NAD+SE+005435656::16++GENERAL WIDGET COMPANY'
+            CUX+1:USD'
+            LIN+1++157870:IN'
+            IMD+F++:::WIDGET'
+            QTY+47:1020:EA'
+            ALI+US'
+            MOA+203:1202.58'
+            PRI+INV:1.179'
+            LIN+2++157871:IN'
+            IMD+F++:::DIFFERENT WIDGET'
+            QTY+47:20:EA'
+            ALI+JP'
+            MOA+203:410'
+            PRI+INV:20.5'
+            UNS+S'
+            MOA+39:2137.58'
+            ALC+C+ABG'
+            MOA+8:525'
+            UNT+23+00000000000117'
+            UNZ+1+00000000000778'
+            """;
 
     private static final String EDI_MESSAGE_CONTENT_TRANSFER_ENCODING = "7bit";
     private static final String EXPECTED_AS2_VERSION = AS2_VERSION;
@@ -148,20 +150,26 @@ public class AS2ClientManagerIT extends AbstractAS2ITSupport {
     private static final String SIGNED_RECEIPT_MIC_ALGORITHMS = "sha1,md5";
     private static final String DISPOSITION_NOTIFICATION_OPTIONS
             = "signed-receipt-protocol=optional,pkcs7-signature; signed-receipt-micalg=optional,sha1";
-    private static final int PARTNER_TARGET_PORT = 8889;
-    private static final int MDN_TARGET_PORT = AvailablePortFinder.getNextAvailable();
-    private static final String RECIPIENT_DELIVERY_ADDRESS = "http://localhost:" + MDN_TARGET_PORT + "/handle-receipts";
+    @RegisterExtension
+    AvailablePortFinder.Port partnerTargetPort = AvailablePortFinder.find();
+    @RegisterExtension
+    AvailablePortFinder.Port mdnTargetPort = AvailablePortFinder.find();
     private static final String REPORTING_UA = "Server Responding with MDN";
 
-    private static AS2ServerConnection serverConnection;
+    private AS2ServerConnection serverConnection;
     private static KeyPair serverKP;
     private static X509Certificate serverCert;
-    private static RequestHandler requestHandler;
+    private RequestHandler requestHandler;
 
     private static final HttpDateGenerator DATE_GENERATOR = HttpDateGenerator.INSTANCE;
 
     private static KeyPair clientKeyPair;
     private static X509Certificate clientCert;
+
+    @Override
+    protected void customizeConfiguration(AS2Configuration configuration) {
+        configuration.setTargetPortNumber(partnerTargetPort.getPort());
+    }
 
     @Test
     public void plainMessageSendTest() throws Exception {
@@ -884,18 +892,20 @@ public class AS2ClientManagerIT extends AbstractAS2ITSupport {
 
         // Send MDN
         @SuppressWarnings("unused")
-        HttpCoreContext httpContext = mdnManager.send(mdn, mdn.getMainMessageContentType(), RECIPIENT_DELIVERY_ADDRESS);
+        HttpCoreContext httpContext
+                = mdnManager.send(mdn, mdn.getMainMessageContentType(),
+                        "http://localhost:" + mdnTargetPort.getPort() + "/handle-receipts");
     }
 
-    @BeforeAll
-    public static void setupTest() throws Exception {
+    @Override
+    public void setupResources() throws Exception {
         setupServerKeysAndCertificates();
         setupClientKeysAndCertificates();
         receiveTestMessages();
     }
 
-    @AfterAll
-    public static void teardownTest() throws Exception {
+    @Override
+    public void cleanupResources() {
         if (serverConnection != null) {
             serverConnection.close();
         }
@@ -943,7 +953,7 @@ public class AS2ClientManagerIT extends AbstractAS2ITSupport {
         return new RouteBuilder() {
             public void configure() {
                 Processor proc = new Processor() {
-                    public void process(org.apache.camel.Exchange exchange) {
+                    public void process(Exchange exchange) {
                         HttpMessage message = exchange.getIn(HttpMessage.class);
                         @SuppressWarnings("unused")
                         String body = message.getBody(String.class);
@@ -960,7 +970,7 @@ public class AS2ClientManagerIT extends AbstractAS2ITSupport {
                                 AS2_NAME,
                                 AS2_NAME);
 
-                from("jetty:http://localhost:" + MDN_TARGET_PORT + "/handle-receipts").process(proc);
+                from("jetty:http://localhost:" + mdnTargetPort.getPort() + "/handle-receipts").process(proc);
 
             }
         };
@@ -974,12 +984,10 @@ public class AS2ClientManagerIT extends AbstractAS2ITSupport {
         //
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
 
-        kpg.initialize(1024, new SecureRandom());
+        kpg.initialize(2048, new SecureRandom());
 
         String issueDN = "O=Punkhorn Software, C=US";
         KeyPair issueKP = kpg.generateKeyPair();
-        X509Certificate issueCert = Utils.makeCertificate(
-                issueKP, issueDN, issueKP, issueDN);
 
         //
         // certificate we sign against
@@ -989,10 +997,10 @@ public class AS2ClientManagerIT extends AbstractAS2ITSupport {
         serverCert = Utils.makeCertificate(serverKP, signingDN, issueKP, issueDN);
     }
 
-    private static void receiveTestMessages() throws IOException {
+    private void receiveTestMessages() throws IOException {
         serverConnection = new AS2ServerConnection(
                 AS2_VERSION, ORIGIN_SERVER_NAME,
-                SERVER_FQDN, PARTNER_TARGET_PORT, AS2SignatureAlgorithm.SHA256WITHRSA,
+                SERVER_FQDN, partnerTargetPort.getPort(), AS2SignatureAlgorithm.SHA256WITHRSA,
                 new Certificate[] { serverCert }, serverKP.getPrivate(), null,
                 MDN_MESSAGE_TEMPLATE, null, null, null, null, null);
         requestHandler = new RequestHandler();
@@ -1005,12 +1013,10 @@ public class AS2ClientManagerIT extends AbstractAS2ITSupport {
         //
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
 
-        kpg.initialize(1024, new SecureRandom());
+        kpg.initialize(2048, new SecureRandom());
 
         String issueDN = "O=Punkhorn Software, C=US";
         KeyPair issueKP = kpg.generateKeyPair();
-        X509Certificate issueCert = Utils.makeCertificate(
-                issueKP, issueDN, issueKP, issueDN);
 
         //
         // certificate we sign against

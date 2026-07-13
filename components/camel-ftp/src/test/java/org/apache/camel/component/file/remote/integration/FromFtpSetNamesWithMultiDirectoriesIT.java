@@ -25,7 +25,7 @@ import org.apache.camel.Producer;
 import org.apache.camel.builder.NotifyBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.TestSupport;
+import org.apache.camel.test.junit6.TestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -101,7 +101,7 @@ public class FromFtpSetNamesWithMultiDirectoriesIT extends FtpServerTestSupport 
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
-                from(getFtpUrl()).routeId("foo").noAutoStartup().to(TestSupport.fileUri(testDirectory), "mock:result");
+                from(getFtpUrl()).routeId("foo").autoStartup(false).to(TestSupport.fileUri(testDirectory), "mock:result");
             }
         };
     }

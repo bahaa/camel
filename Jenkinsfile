@@ -14,15 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-def MAVEN_PARAMS = "-B -e -fae -V -Dnoassembly -Dmaven.compiler.fork=true -Dsurefire.rerunFailingTestsCount=2 -Dfailsafe.rerunFailingTestsCount=1"
-def MAVEN_TEST_PARAMS = env.MAVEN_TEST_PARAMS ?: "-Dkafka.instance.type=local-strimzi-container -Dci.env.name=apache.org"
+def MAVEN_PARAMS = "-B -e -fae -V -Dnoassembly -Dsurefire.rerunFailingTestsCount=2 -Dfailsafe.rerunFailingTestsCount=1"
+def MAVEN_TEST_PARAMS = env.MAVEN_TEST_PARAMS ?: "-Dci.env.name=apache.org"
 def MAVEN_TEST_PARAMS_UBUNTU = env.MAVEN_TEST_PARAMS ?: "-Dci.env.name=apache.org"
+def MAVEN_JDK_17_PARAMS = "-Denforcer.skip=true"
 /*
 Below parameters are required for camel/core/camel-core module's test cases to pass on ppc64 and s390x
-- xpathExprGrpLimit: limits the number of groups an Xpath expression can contain 
+- xpathExprGrpLimit: limits the number of groups an Xpath expression can contain
 - xpathExprOpLimit: limits the number of operators an Xpath expression can contain
+The Kafka parameter is because the apache/kafka image is not working on alternative OSes
 */
-def MAVEN_TEST_PARAMS_ALT_ARCHS = "-Djdk.xml.xpathExprGrpLimit=100 -Djdk.xml.xpathExprOpLimit=2000"
+def MAVEN_TEST_PARAMS_ALT_ARCHS = "-Djdk.xml.xpathExprGrpLimit=100 -Djdk.xml.xpathExprOpLimit=2000 -Dkafka.instance.type=local-strimzi-container"
 
 pipeline {
 
@@ -49,7 +51,7 @@ pipeline {
     parameters {
         booleanParam(name: 'VIRTUAL_THREAD', defaultValue: false, description: 'Perform the build using virtual threads')
         choice(name: 'PLATFORM_FILTER', choices: ['all', 'ppc64le', 's390x', 'ubuntu-avx'], description: 'Run on specific platform')
-        choice(name: 'JDK_FILTER', choices: ['all', 'jdk_17_latest', 'jdk_21_latest', 'jdk_25_latest'], description: 'Run on specific jdk')
+        choice(name: 'JDK_FILTER', choices: ['all', 'jdk_17_latest' ,'jdk_21_latest', 'jdk_25_latest'], description: 'Run on specific jdk')
     }
     agent none
     stages {
@@ -61,11 +63,15 @@ pipeline {
                 options {
                     throttle(['camel'])
                 }
-                when { anyOf {
-                    expression { params.PLATFORM_FILTER == 'all' }
-                    expression { params.PLATFORM_FILTER == env.PLATFORM }
-                    expression { params.JDK_FILTER == 'all' }
-                    expression { params.JDK_FILTER == env.JDK_NAME }
+                when { allOf {
+                    anyOf {
+                        expression { params.PLATFORM_FILTER == 'all' }
+                        expression { params.PLATFORM_FILTER == env.PLATFORM }
+                    }
+                    anyOf {
+                        expression { params.JDK_FILTER == 'all' }
+                        expression { params.JDK_FILTER == env.JDK_NAME }
+                    }
                 } }
                 axes {
                     axis {
@@ -81,7 +87,7 @@ pipeline {
                     exclude {
                         axis {
                             name 'JDK_NAME'
-                            values 'jdk_21_latest'
+                            values 'jdk_17_latest'
                         }
                         axis {
                             name 'PLATFORM'
@@ -91,7 +97,7 @@ pipeline {
                     exclude {
                         axis {
                             name 'JDK_NAME'
-                            values 'jdk_21_latest'
+                            values 'jdk_17_latest'
                         }
                         axis {
                             name 'PLATFORM'
@@ -126,52 +132,47 @@ pipeline {
                     stage('Clean workspace') {
                         steps {
                             cleanWs()
-                            sh 'rm -rv /home/jenkins/.m2/repository/org/apache/camel'
-                            checkout scm
-                        }
-                    }
-
-                    stage('Build') {
-                        steps {
-                            echo "Do Build for ${PLATFORM}-${JDK_NAME}"
-                            sh 'java -version'
-                            sh "./mvnw -U $MAVEN_PARAMS -Dskip.camel.maven.plugin.tests -Darchetype.test.skip -DskipTests clean install"
-                        }
-                    }
-
-                    stage('Code Quality Review') {
-                        steps {
+                            sh 'if [ -d /home/jenkins/.m2/repository/org/apache/camel ]; then rm -rf /home/jenkins/.m2/repository/org/apache/camel; fi'
                             script {
-                                if ("${PLATFORM}" == "ubuntu-avx") {
-                                    if ("${JDK_NAME}" == "jdk_17_latest") {
-                                        withCredentials([string(credentialsId: 'apache-camel-core', variable: 'SONAR_TOKEN')]) {
-                                            echo "Code quality review ENABLED for ${PLATFORM}"
-                                            sh "./mvnw $MAVEN_PARAMS -Dsonar.host.url=https://sonarcloud.io -Dsonar.java.experimental.batchModeSizeInKB=2048 -Dsonar.organization=apache -Dsonar.projectKey=apache_camel -Dsonar.branch.name=$BRANCH_NAME org.sonarsource.scanner.maven:sonar-maven-plugin:sonar"
-                                        }
-                                    } else {
-                                        echo "Code quality review disabled for ${PLATFORM} with JDK ${JDK_NAME}"
-                                    }
+                                // Use full clone for JDK 21 on ubuntu-avx (needed for Sonar analysis)
+                                // Use shallow clone for all other combinations
+                                if ("${PLATFORM}" == "ubuntu-avx" && "${JDK_NAME}" == "jdk_21_latest") {
+                                    echo "Using full clone for ${PLATFORM}-${JDK_NAME} (required for code coverage and Sonar)"
+                                    checkout scm
                                 } else {
-                                    echo "Code quality review disabled for ${PLATFORM} with JDK ${JDK_NAME}"
+                                    echo "Using shallow clone for ${PLATFORM}-${JDK_NAME}"
+                                    checkout([
+                                        $class: 'GitSCM',
+                                        branches: scm.branches,
+                                        extensions: [
+                                            [$class: 'CloneOption', depth: 1, noTags: true, shallow: true]
+                                        ],
+                                        userRemoteConfigs: scm.userRemoteConfigs
+                                    ])
                                 }
                             }
                         }
-                    }   
+                    }
 
-                    stage('Test') {
+                    stage('Build and test') {
                         steps {
-                            echo "Do Test for ${PLATFORM}-${JDK_NAME}"
-                            timeout(unit: 'HOURS', time: 7) {
+                            echo "Do Build and test for ${PLATFORM}-${JDK_NAME}"
+                            sh 'java -version'
+                            timeout(unit: 'MINUTES', time: 450) {
                                 script {
                                     if ("${PLATFORM}" == "ubuntu-avx") {
                                         if ("${JDK_NAME}" == "jdk_21_latest") {
-                                            sh "./mvnw $MAVEN_PARAMS $MAVEN_TEST_PARAMS_UBUNTU -Darchetype.test.skip -Dmaven.test.failure.ignore=true -Dcheckstyle.skip=true verify -Dcamel.threads.virtual.enabled=${params.VIRTUAL_THREAD}"
+                                            // Enable virtual threads and coverage required later by Sonar check
+                                            sh "./mvnw $MAVEN_PARAMS $MAVEN_TEST_PARAMS_UBUNTU -Darchetype.test.skip -Dmaven.test.failure.ignore=true -Dcheckstyle.skip=true install -Dcamel.threads.virtual.enabled=${params.VIRTUAL_THREAD} -Pcoverage"
+                                        } else if ("${JDK_NAME}" == "jdk_17_latest") {
+                                            sh "./mvnw $MAVEN_PARAMS $MAVEN_TEST_PARAMS $MAVEN_JDK_17_PARAMS -Darchetype.test.skip -Dmaven.test.failure.ignore=true -Dcheckstyle.skip=true install"
                                         } else {
-                                            sh "./mvnw $MAVEN_PARAMS $MAVEN_TEST_PARAMS -Darchetype.test.skip -Dmaven.test.failure.ignore=true -Dcheckstyle.skip=true verify"
+                                            sh "./mvnw $MAVEN_PARAMS $MAVEN_TEST_PARAMS -Darchetype.test.skip -Dmaven.test.failure.ignore=true -Dcheckstyle.skip=true install"
                                         }
                                     } else {
                                         // Skip the test case execution of modules which are either not supported on ppc64le or vendor images are not available for ppc64le.
-                                        sh "./mvnw $MAVEN_PARAMS $MAVEN_TEST_PARAMS $MAVEN_TEST_PARAMS_ALT_ARCHS -Darchetype.test.skip -Dmaven.test.failure.ignore=true -Dcheckstyle.skip=true verify -pl '!docs'"
+                                        sh "./mvnw $MAVEN_PARAMS $MAVEN_TEST_PARAMS $MAVEN_TEST_PARAMS_ALT_ARCHS -Darchetype.test.skip -Dmaven.test.failure.ignore=true -Dcheckstyle.skip=true install -pl '!docs'"
+                                        echo "Code quality review disabled for ${PLATFORM} with JDK ${JDK_NAME}"
                                     }
                                 }
                             }
@@ -180,6 +181,23 @@ pipeline {
                             always {
                                 junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml', skipPublishingChecks: true
                                 junit allowEmptyResults: true, testResults: '**/target/failsafe-reports/*.xml', skipPublishingChecks: true
+                            }
+                        }
+                    }
+
+                    stage('Static code analysis') {
+                        steps {
+                            script {
+                                echo "Do Static code analysis for ${PLATFORM}-${JDK_NAME}"
+                                // We only execute this on the main PLATFORM/JDK target
+                                if ("${PLATFORM}" == "ubuntu-avx" && "${JDK_NAME}" == "jdk_21_latest") {
+                                    withCredentials([string(credentialsId: 'apache-camel-core', variable: 'SONAR_TOKEN')]) {
+                                        echo "Code quality review ENABLED for ${PLATFORM} with ${JDK_NAME}"
+                                        sh "./mvnw $MAVEN_PARAMS -Dsonar.host.url=https://sonarcloud.io -Dsonar.java.experimental.batchModeSizeInKB=2048 -Dsonar.organization=apache -Dsonar.projectKey=apache_camel -Dsonar.branch.name=$BRANCH_NAME org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.coverage.exclusions=test-infra/**,tooling/**"
+                                    }
+                                } else {
+                                    echo "Code quality review DISABLED for ${PLATFORM} with ${JDK_NAME}"
+                                }
                             }
                         }
                     }
@@ -192,6 +210,15 @@ pipeline {
                             body: '${DEFAULT_CONTENT}',
                             recipientProviders: [[$class: 'DevelopersRecipientProvider']]
                         )
+                        cleanWs(
+                            cleanWhenNotBuilt: false,
+                            cleanWhenUnstable: false,
+                            cleanWhenFailure: false,
+                            cleanWhenAborted: false,
+                            cleanWhenSuccess: true,
+                            deleteDirs: true,
+                            disableDeferredWipeout: true,
+                            notFailBuild: true)
                     }
                 }
             }

@@ -1,0 +1,43 @@
+== Examples
+
+Run a simple Java DSL route:
+
+[source,bash]
+----
+camel run hello.java
+----
+
+Run with live reload enabled (dev mode):
+
+[source,bash]
+----
+camel run hello.java --dev
+----
+
+Run a YAML route:
+
+[source,bash]
+----
+camel run my-route.yaml
+----
+
+Run with additional dependencies:
+
+[source,bash]
+----
+camel run hello.java --dep=camel-jackson
+----
+
+Run with custom JVM memory settings (init and max heap):
+
+[source,bash]
+----
+camel run hello.java --jvm-args="-Xms128m -Xmx256m"
+----
+
+Run with max heap only:
+
+[source,bash]
+----
+camel run hello.java --jvm-args="-Xmx512m"
+----

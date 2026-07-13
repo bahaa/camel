@@ -26,7 +26,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MimeMultipartAlternativeWithContentTypeTest extends CamelTestSupport {
-    private static final MailboxUser sachin = Mailbox.getOrCreateUser("sachin", "secret");
+    private static final MailboxUser sachin
+            = Mailbox.getOrCreateUser("MimeMultipartAlternativeWithContentTypeTest-sachin", "secret");
     private Logger log = LoggerFactory.getLogger(getClass());
     private String alternativeBody = "hello world! (plain text)";
     private String htmlBody = "<html><body><h1>Hello</h1>World</body></html>";

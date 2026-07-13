@@ -28,7 +28,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -40,14 +40,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Tests if post process action is called if it is set
  */
 public class MailPostProcessActionTest extends CamelTestSupport {
-    private static final MailboxUser bill = Mailbox.getOrCreateUser("bill", "secret");
+    private static final MailboxUser bill = Mailbox.getOrCreateUser("MailPostProcessActionTest-bill", "secret");
     private static final Logger LOG = LoggerFactory.getLogger(MailPostProcessActionTest.class);
 
     @BindToRegistry("postProcessAction")
     private TestPostProcessAction action = new TestPostProcessAction();
 
     @Override
-    public void doPreSetup() throws Exception {
+    public void setupResources() throws Exception {
         prepareMailbox();
     }
 

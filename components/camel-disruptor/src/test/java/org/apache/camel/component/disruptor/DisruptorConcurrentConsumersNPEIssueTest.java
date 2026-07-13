@@ -20,7 +20,7 @@ import org.apache.camel.FailedToStartRouteException;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.spi.RouteController;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,12 +72,12 @@ public class DisruptorConcurrentConsumersNPEIssueTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from("disruptor:foo?concurrentConsumers=5").routeId("first").noAutoStartup()
+                from("disruptor:foo?concurrentConsumers=5").routeId("first").autoStartup(false)
                         .to("mock:result");
 
                 from("disruptor:foo?concurrentConsumers=5").routeId("second").to("mock:result");
 
-                from("direct:foo").routeId("third").noAutoStartup().to("mock:result");
+                from("direct:foo").routeId("third").autoStartup(false).to("mock:result");
             }
         };
     }

@@ -28,7 +28,7 @@ import org.apache.camel.component.cxf.jaxrs.simplebinding.testbean.Customer;
 import org.apache.camel.component.cxf.jaxrs.simplebinding.testbean.CustomerList;
 import org.apache.camel.component.cxf.jaxrs.simplebinding.testbean.Order;
 import org.apache.camel.component.cxf.jaxrs.simplebinding.testbean.Product;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -68,7 +68,7 @@ public class CxfRsConsumerSimpleBindingImplTest extends CamelTestSupport {
             @Override
             public void configure() {
                 from(CXF_RS_ENDPOINT_URI)
-                        .recipientList(simple("direct:${header.operationName}"));
+                        .recipientList(simple("direct:${header.CamelCxfOperationName}"));
 
                 from("direct:getCustomer").process(new Processor() {
                     @Override

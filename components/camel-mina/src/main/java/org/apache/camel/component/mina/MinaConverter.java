@@ -24,6 +24,7 @@ import java.io.ObjectInputStream;
 import org.apache.camel.Converter;
 import org.apache.camel.Exchange;
 import org.apache.camel.StreamCache;
+import org.apache.camel.support.DeserializationFilterHelper;
 import org.apache.mina.core.buffer.IoBuffer;
 
 /**
@@ -59,7 +60,9 @@ public final class MinaConverter {
     @Converter
     public static ObjectInput toObjectInput(IoBuffer buffer) throws IOException {
         InputStream is = toInputStream(buffer);
-        return new ObjectInputStream(is);
+        ObjectInputStream ois = new ObjectInputStream(is);
+        ois.setObjectInputFilter(DeserializationFilterHelper.resolveDeserializationFilter(null));
+        return ois;
     }
 
     @Converter

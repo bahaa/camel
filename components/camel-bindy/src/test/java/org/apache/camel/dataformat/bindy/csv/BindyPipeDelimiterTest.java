@@ -22,7 +22,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.bindy.model.simple.pipeline.MyData;
 import org.apache.camel.model.dataformat.BindyType;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -89,12 +89,12 @@ public class BindyPipeDelimiterTest extends CamelTestSupport {
             @Override
             public void configure() {
                 from("direct:unmarshal")
-                        .unmarshal().bindy(BindyType.Csv, org.apache.camel.dataformat.bindy.model.simple.pipeline.MyData.class)
+                        .unmarshal().bindy(BindyType.Csv, MyData.class)
                         .to("log:after.unmarshal")
                         .to("mock:result");
 
                 from("direct:marshal")
-                        .marshal().bindy(BindyType.Csv, org.apache.camel.dataformat.bindy.model.simple.pipeline.MyData.class)
+                        .marshal().bindy(BindyType.Csv, MyData.class)
                         .to("log:after.marshal")
                         .to("mock:result");
             }

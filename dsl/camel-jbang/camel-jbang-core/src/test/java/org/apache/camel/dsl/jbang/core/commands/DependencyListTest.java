@@ -19,8 +19,6 @@ package org.apache.camel.dsl.jbang.core.commands;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -42,8 +40,7 @@ class DependencyListTest extends CamelCommandBaseTestSupport {
     @BeforeEach
     public void setup() throws Exception {
         super.setup();
-        Path base = Paths.get("target");
-        workingDir = Files.createTempDirectory(base, "camel-export").toFile();
+        workingDir = Files.createTempDirectory("camel-export").toFile();
     }
 
     @AfterEach
@@ -57,7 +54,8 @@ class DependencyListTest extends CamelCommandBaseTestSupport {
     public void shouldDependencyList(RuntimeType rt) throws Exception {
         DependencyList command = createCommand(rt, new String[] { "classpath:route.yaml" },
                 "--gav=examples:route:1.0.0", "--dir=" + workingDir, "--quiet", "--camel-version=4.11.0",
-                "--quarkus-version=3.22.2", "--spring-boot-version=3.4.5");
+                "--quarkus-version=3.22.2", "--spring-boot-version=3.4.5",
+                CamelCommandBaseTestSupport.quarkusExtRegistry());
         int exit = command.doCall();
         Assertions.assertEquals(0, exit);
 
@@ -77,7 +75,8 @@ class DependencyListTest extends CamelCommandBaseTestSupport {
     private DependencyList createCommand(RuntimeType rt, String[] files, String... args) {
         DependencyList command = new DependencyList(new CamelJBangMain().withPrinter(printer));
         CommandLine.populateCommand(command, "--gav=examples:route:1.0.0", "--dir=" + workingDir, "--quiet",
-                "--runtime=%s".formatted(rt.runtime()));
+                "--runtime=%s".formatted(rt.runtime()),
+                CamelCommandBaseTestSupport.quarkusExtRegistry());
         if (args != null) {
             CommandLine.populateCommand(command, args);
         }
@@ -86,10 +85,14 @@ class DependencyListTest extends CamelCommandBaseTestSupport {
     }
 
     private static Stream<Arguments> runtimeProvider() {
-        return Stream.of(
-                Arguments.of(RuntimeType.quarkus),
-                Arguments.of(RuntimeType.springBoot),
-                Arguments.of(RuntimeType.main));
+        Stream.Builder<Arguments> builder = Stream.builder();
+        builder.add(Arguments.of(RuntimeType.quarkus));
+        // camel-spring-boot 4.19+ requires JDK 21 (Spring Boot 4)
+        if (Runtime.version().feature() >= 21) {
+            builder.add(Arguments.of(RuntimeType.springBoot));
+        }
+        builder.add(Arguments.of(RuntimeType.main));
+        return builder.build();
     }
 
 }

@@ -31,10 +31,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.camel.tooling.model.ArtifactModel;
 import org.apache.camel.tooling.model.ComponentModel;
 import org.apache.camel.tooling.model.DataFormatModel;
+import org.apache.camel.tooling.model.EipModel;
+import org.apache.camel.tooling.model.JsonMapper;
 import org.apache.camel.tooling.model.Kind;
 import org.apache.camel.tooling.model.LanguageModel;
 import org.apache.camel.tooling.model.PojoBeanModel;
 import org.apache.camel.tooling.model.ReleaseModel;
+import org.apache.camel.tooling.model.SecurityAdvisoryModel;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -106,7 +109,7 @@ public class CamelCatalogTest {
     public void testFindOtherNames() {
         List<String> names = catalog.findOtherNames();
 
-        assertTrue(names.contains("test-spring-junit5"));
+        assertTrue(names.contains("test-spring-junit6"));
 
         assertFalse(names.contains("http-common"));
         assertFalse(names.contains("kura"));
@@ -179,6 +182,73 @@ public class CamelCatalogTest {
     }
 
     @Test
+    public void testEipModelAliases() {
+        // verify aliases are present in the EIP model
+        EipModel multicast = catalog.eipModel("multicast");
+        assertNotNull(multicast);
+        assertNotNull(multicast.getAliases());
+        assertTrue(multicast.getAliases().contains("fan-out"));
+        assertTrue(multicast.getAliases().contains("broadcast"));
+
+        EipModel aggregate = catalog.eipModel("aggregate");
+        assertNotNull(aggregate);
+        assertTrue(aggregate.getAliases().contains("fan-in"));
+        assertTrue(aggregate.getAliases().contains("reduce"));
+
+        EipModel choice = catalog.eipModel("choice");
+        assertNotNull(choice);
+        assertTrue(choice.getAliases().contains("router"));
+        assertTrue(choice.getAliases().contains("dispatch"));
+    }
+
+    @Test
+    public void testFindModelNamesByAlias() {
+        // searching by alias should find the EIP
+        List<String> names = catalog.findModelNames("fan-out");
+        assertTrue(names.contains("multicast"), "fan-out should find multicast");
+
+        names = catalog.findModelNames("fan-in");
+        assertTrue(names.contains("aggregate"), "fan-in should find aggregate");
+
+        names = catalog.findModelNames("circuit-breaker");
+        assertTrue(names.contains("circuitBreaker"), "circuit-breaker should find circuitBreaker");
+
+        names = catalog.findModelNames("dedup");
+        assertTrue(names.contains("idempotentConsumer"), "dedup should find idempotentConsumer");
+
+        names = catalog.findModelNames("sink");
+        assertTrue(names.contains("to"), "sink should find to");
+        assertTrue(names.contains("toD"), "sink should find toD");
+    }
+
+    @Test
+    public void testFindModelNamesByAliasDashNormalized() {
+        // fan-out, fanout, fanOut should all match
+        List<String> names1 = catalog.findModelNames("fan-out");
+        List<String> names2 = catalog.findModelNames("fanout");
+        List<String> names3 = catalog.findModelNames("fanOut");
+        assertTrue(names1.contains("multicast"));
+        assertTrue(names2.contains("multicast"));
+        assertTrue(names3.contains("multicast"));
+
+        // circuit-breaker, circuitbreaker, circuitBreaker
+        names1 = catalog.findModelNames("circuit-breaker");
+        names2 = catalog.findModelNames("circuitbreaker");
+        names3 = catalog.findModelNames("circuitBreaker");
+        assertTrue(names1.contains("circuitBreaker"));
+        assertTrue(names2.contains("circuitBreaker"));
+        assertTrue(names3.contains("circuitBreaker"));
+
+        // rate-limit, ratelimit, rateLimit
+        names1 = catalog.findModelNames("rate-limit");
+        names2 = catalog.findModelNames("ratelimit");
+        names3 = catalog.findModelNames("rateLimit");
+        assertTrue(names1.contains("throttle"));
+        assertTrue(names2.contains("throttle"));
+        assertTrue(names3.contains("throttle"));
+    }
+
+    @Test
     public void testJsonSchema() {
         String schema = catalog.componentJSonSchema("docker");
         assertNotNull(schema);
@@ -197,15 +267,26 @@ public class CamelCatalogTest {
         assertNotNull(schema);
         schema = catalog.modelJSonSchema("bean");
         assertNotNull(schema);
+
+        schema = catalog.modelJSonSchema("a2aSubTask");
+        assertNotNull(schema);
+        assertTrue(schema.contains("\"name\": \"a2aSubTask\""));
+        assertTrue(schema.contains("\"failIfNoTaskContext\""));
     }
 
     @Test
     public void testXmlSchema() {
         String schema = catalog.springSchemaAsXml();
         assertNotNull(schema, "Spring XML Schema");
+        assertTrue(schema.contains("targetNamespace=\"http://camel.apache.org/schema/spring\""));
+        assertTrue(schema.contains("name=\"a2aSubTask\""));
+        assertTrue(schema.contains("name=\"failIfNoTaskContext\""));
 
         schema = catalog.xmlIoSchemaAsXml();
         assertNotNull(schema, "XML-IO XML Schema");
+        assertTrue(schema.contains("targetNamespace=\"http://camel.apache.org/schema/xml-io\""));
+        assertTrue(schema.contains("name=\"a2aSubTask\""));
+        assertTrue(schema.contains("name=\"failIfNoTaskContext\""));
     }
 
     @Test
@@ -1133,6 +1214,15 @@ public class CamelCatalogTest {
         result = catalog.validateLanguagePredicate(null, "simple", "${body.length} =!= 12");
         assertFalse(result.isSuccess());
         assertEquals("Unexpected token =", result.getShortError());
+
+        result = catalog.validateLanguageExpression(null, "simple", "${int:body}");
+        assertTrue(result.isSuccess());
+        assertEquals("${int:body}", result.getText());
+
+        result = catalog.validateLanguageExpression(null, "simple", "${unknown:body}");
+        assertFalse(result.isSuccess());
+        assertEquals("${unknown:body}", result.getText());
+        assertEquals("Unknown function: unknown:body", result.getShortError());
     }
 
     @Test
@@ -1600,7 +1690,7 @@ public class CamelCatalogTest {
 
         am = catalog.modelFromMavenGAV("org.apache.camel", "camel-ognl", catalog.getCatalogVersion());
         Assertions.assertInstanceOf(LanguageModel.class, am);
-        Assertions.assertEquals("Evaluates an OGNL expression (Apache Commons OGNL).", am.getDescription());
+        Assertions.assertEquals("Evaluates an OGNL expression (Apache Commons OGNL)", am.getDescription());
 
         am = catalog.modelFromMavenGAV("org.apache.camel", "camel-bindy", catalog.getCatalogVersion());
         Assertions.assertInstanceOf(DataFormatModel.class, am);
@@ -1641,6 +1731,12 @@ public class CamelCatalogTest {
         Assertions.assertEquals("2023-01-07", rel.getDate());
         Assertions.assertEquals("2023-12-21", rel.getEol());
         Assertions.assertEquals("lts", rel.getKind());
+
+        rel = list.get(0);
+        Assertions.assertEquals("1.0.0", rel.getVersion());
+        Assertions.assertEquals("2007-07-02", rel.getDate());
+        Assertions.assertEquals("legacy", rel.getKind());
+        Assertions.assertEquals("1.5", rel.getJdk());
     }
 
     @Test
@@ -1655,6 +1751,25 @@ public class CamelCatalogTest {
         Assertions.assertEquals("2023-07-06", rel.getEol());
         Assertions.assertEquals("lts", rel.getKind());
         Assertions.assertEquals("11", rel.getJdk());
+    }
+
+    @Test
+    public void camelSecurityAdvisories() {
+        List<SecurityAdvisoryModel> list = catalog.camelSecurityAdvisories();
+        Assertions.assertTrue(list.size() > 70);
+
+        // oldest advisory first
+        SecurityAdvisoryModel advisory = list.get(0);
+        Assertions.assertEquals("CVE-2013-4330", advisory.getCve());
+        Assertions.assertEquals("CRITICAL", advisory.getSeverity());
+
+        advisory = list.stream().filter(a -> a.getCve().equals("CVE-2025-27636")).findFirst().orElse(null);
+        Assertions.assertNotNull(advisory);
+        Assertions.assertEquals("MEDIUM", advisory.getSeverity());
+        Assertions.assertTrue(advisory.getAffected().contains("4.10.0 before 4.10.2"));
+        Assertions.assertTrue(advisory.getFixed().contains("4.10.2"));
+        Assertions.assertEquals("https://camel.apache.org/security/CVE-2025-27636.html", advisory.getUrl());
+        Assertions.assertTrue(advisory.getComponents().contains("camel-bean"));
     }
 
     @Test
@@ -1681,19 +1796,188 @@ public class CamelCatalogTest {
         LanguageModel model = catalog.languageModel("simple");
         assertNotNull(model);
 
-        assertTrue(model.getFunctions().size() > 50);
+        assertTrue(model.getFunctions().size() > 80);
 
-        assertEquals("body", model.getFunctions().get(0).getConstantName());
-        assertEquals("${", model.getFunctions().get(0).getPrefix());
-        assertEquals("}", model.getFunctions().get(0).getSuffix());
-        assertEquals("The message body", model.getFunctions().get(0).getDescription());
+        var f = model.getFunctions().stream().filter(m -> m.getConstantName().equals("body")).findFirst().orElseThrow();
+        assertEquals("body", f.getConstantName());
+        assertEquals("${", f.getPrefix());
+        assertEquals("}", f.getSuffix());
+        assertEquals("The message body", f.getDescription());
 
-        assertEquals("pretty(exp)", model.getFunctions().get(36).getConstantName());
-        assertEquals("${", model.getFunctions().get(36).getPrefix());
-        assertEquals("}", model.getFunctions().get(36).getSuffix());
+        f = model.getFunctions().stream().filter(m -> m.getConstantName().equals("pretty(exp)")).findFirst().orElseThrow();
+        assertEquals("pretty(exp)", f.getConstantName());
+        assertEquals("${", f.getPrefix());
+        assertEquals("}", f.getSuffix());
         assertEquals(
                 "Converts the expression to a String, and attempts to pretty print if JSon or XML, otherwise the expression is returned as the String value.",
-                model.getFunctions().get(36).getDescription());
+                f.getDescription());
+    }
+
+    @Test
+    public void testDefaultCatalogVersionMatchesLoadedVersion() {
+        // Default catalog: getCatalogVersion() and getLoadedVersion() should return the same value
+        CamelCatalog cat = new DefaultCamelCatalog();
+        String catalogVersion = cat.getCatalogVersion();
+        String loadedVersion = cat.getLoadedVersion();
+        assertNotNull(catalogVersion);
+        assertNotNull(loadedVersion);
+        assertEquals(catalogVersion, loadedVersion);
+    }
+
+    @Test
+    public void testCatalogVersionRespectsCustomVersionManager() {
+        // When a custom VersionManager reports a different loaded version,
+        // getCatalogVersion() should return that version (not the built-in one)
+        CamelCatalog cat = new DefaultCamelCatalog();
+        String builtInVersion = cat.getCatalogVersion();
+
+        cat.setVersionManager(new VersionManager() {
+            @Override
+            public void setClassLoader(ClassLoader classLoader) {
+            }
+
+            @Override
+            public ClassLoader getClassLoader() {
+                return CamelCatalogTest.class.getClassLoader();
+            }
+
+            @Override
+            public String getLoadedVersion() {
+                return "4.10.0";
+            }
+
+            @Override
+            public boolean loadVersion(String version) {
+                return "4.10.0".equals(version);
+            }
+
+            @Override
+            public String getRuntimeProviderLoadedVersion() {
+                return null;
+            }
+
+            @Override
+            public boolean loadRuntimeProviderVersion(String groupId, String artifactId, String version) {
+                return false;
+            }
+
+            @Override
+            public InputStream getResourceAsStream(String name) {
+                return CamelCatalogTest.class.getClassLoader().getResourceAsStream(name);
+            }
+        });
+
+        assertEquals("4.10.0", cat.getCatalogVersion());
+        assertEquals("4.10.0", cat.getLoadedVersion());
+        // Sanity: verify we're not accidentally matching the built-in version
+        assertFalse("4.10.0".equals(builtInVersion), "Test is only meaningful if 4.10.0 differs from built-in version");
+    }
+
+    @Test
+    public void testSummaryJsonUsesLoadedVersion() {
+        // summaryAsJson() uses getLoadedVersion() — verify it reflects the custom version
+        CamelCatalog cat = new DefaultCamelCatalog();
+
+        cat.setVersionManager(new VersionManager() {
+            @Override
+            public void setClassLoader(ClassLoader classLoader) {
+            }
+
+            @Override
+            public ClassLoader getClassLoader() {
+                return CamelCatalogTest.class.getClassLoader();
+            }
+
+            @Override
+            public String getLoadedVersion() {
+                return "99.0.0-test";
+            }
+
+            @Override
+            public boolean loadVersion(String version) {
+                return "99.0.0-test".equals(version);
+            }
+
+            @Override
+            public String getRuntimeProviderLoadedVersion() {
+                return null;
+            }
+
+            @Override
+            public boolean loadRuntimeProviderVersion(String groupId, String artifactId, String version) {
+                return false;
+            }
+
+            @Override
+            public InputStream getResourceAsStream(String name) {
+                return CamelCatalogTest.class.getClassLoader().getResourceAsStream(name);
+            }
+        });
+
+        String json = cat.summaryAsJson();
+        assertNotNull(json);
+        assertTrue(json.contains("99.0.0-test"), "summaryAsJson should contain the custom version");
+    }
+
+    @Test
+    public void testSimpleValidatorJsExists() throws Exception {
+        try (InputStream is = getClass().getClassLoader()
+                .getResourceAsStream("org/apache/camel/catalog/simple/camel-simple-validator.js")) {
+            assertNotNull(is, "camel-simple-validator.js should exist in catalog");
+            String js = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+
+            // Verify catalog data sections are present
+            assertTrue(js.contains("const FUNCTIONS = {"), "JS should contain FUNCTIONS object");
+            assertTrue(js.contains("const OPERATORS = {"), "JS should contain OPERATORS object");
+
+            // Verify key functions are present (from simple.json)
+            assertTrue(js.contains("'body': true"), "JS should contain body function");
+            assertTrue(js.contains("'header': true"), "JS should contain header function");
+            assertTrue(js.contains("'exchangeProperty': true"), "JS should contain exchangeProperty function");
+
+            // Verify operators are present
+            assertTrue(js.contains("'==':"), "JS should contain == operator");
+            assertTrue(js.contains("'contains':"), "JS should contain contains operator");
+            assertTrue(js.contains("'regex':"), "JS should contain regex operator");
+
+            // Verify API functions are present
+            assertTrue(js.contains("function validate("), "JS should contain validate function");
+            assertTrue(js.contains("function complete("), "JS should contain complete function");
+
+            // Verify the function count matches simple.json
+            String langJson = catalog.languageJSonSchema("simple");
+            assertNotNull(langJson, "simple language JSON should exist");
+            LanguageModel model = JsonMapper.generateLanguageModel(langJson);
+            long expectedFunctions = model.getFunctions().stream()
+                    .map(f -> {
+                        String name = f.getName();
+                        for (char ch : new char[] { '(', '.', ':' }) {
+                            int pos = name.indexOf(ch);
+                            if (pos != -1) {
+                                name = name.substring(0, pos);
+                            }
+                        }
+                        return name;
+                    })
+                    .distinct()
+                    .count();
+            long actualFunctions = js.lines()
+                    .filter(line -> line.matches("\\s+'[^']+': true.*"))
+                    .count();
+            assertEquals(expectedFunctions, actualFunctions,
+                    "JS FUNCTIONS count should match unique base names from simple.json");
+        }
+    }
+
+    @Test
+    public void testSimpleValidatorHtmlExists() throws Exception {
+        try (InputStream is = getClass().getClassLoader()
+                .getResourceAsStream("org/apache/camel/catalog/simple/camel-simple-validator.html")) {
+            assertNotNull(is, "camel-simple-validator.html should exist in catalog");
+            String html = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            assertTrue(html.contains("Simple Language Validator"), "HTML should contain title");
+            assertTrue(html.contains("camel-simple-validator.js"), "HTML should reference the JS file");
+        }
     }
 
 }

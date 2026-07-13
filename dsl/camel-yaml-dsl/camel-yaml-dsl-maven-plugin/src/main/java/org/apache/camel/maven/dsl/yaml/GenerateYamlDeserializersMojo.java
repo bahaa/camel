@@ -37,13 +37,13 @@ import javax.lang.model.element.Modifier;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeSpec;
 import org.apache.camel.CamelContext;
 import org.apache.camel.catalog.CamelCatalog;
 import org.apache.camel.catalog.DefaultCamelCatalog;
@@ -141,7 +141,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                 }
                 Files.createDirectories(outputDirectory);
             }
-            FileUtil.updateFile(outputDirectory.resolve(typeSpec.name + ".java"), sw.toString());
+            FileUtil.updateFile(outputDirectory.resolve(typeSpec.name() + ".java"), sw.toString());
         }
     }
 
@@ -339,18 +339,18 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                             && !implementType(ci, ERROR_HANDLER_BUILDER_CLASS);
                 })
                 .map(this::generateParser)
-                .sorted(Comparator.comparing(o -> o.type.name))
+                .sorted(Comparator.comparing(o -> o.type.name()))
                 .forEach(holder -> {
                     // add inner classes
                     deserializers.addType(holder.type);
 
                     if (holder.attributes.containsKey("node")) {
                         holder.attributes.get("node").forEach(node -> constructors.addStatement(
-                                "case $S: return new ModelDeserializers.$L()", node, holder.type.name));
+                                "case $S: return new ModelDeserializers.$L()", node, holder.type.name()));
                     }
                     if (holder.attributes.containsKey("type")) {
                         holder.attributes.get("type").forEach(type -> constructors.addStatement(
-                                "case $S: return new ModelDeserializers.$L()", type, holder.type.name));
+                                "case $S: return new ModelDeserializers.$L()", type, holder.type.name()));
                     }
                 });
 
@@ -424,6 +424,15 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
         if (info.name().toString().equals("org.apache.camel.model.rest.RestConfigurationDefinition")) {
             builder.addAnnotation(CN_YAML_IN);
         }
+        if (info.name().toString().equals("org.apache.camel.model.transformer.TransformersDefinition")) {
+            builder.addAnnotation(CN_YAML_IN);
+        }
+        if (info.name().toString().equals("org.apache.camel.model.validator.ValidatorsDefinition")) {
+            builder.addAnnotation(CN_YAML_IN);
+        }
+        if (info.name().toString().equals("org.apache.camel.model.app.SSLContextParametersDefinition")) {
+            builder.addAnnotation(CN_YAML_IN);
+        }
 
         final AtomicReference<String> modelName = new AtomicReference<>();
         annotationValue(info, XML_ROOT_ELEMENT_ANNOTATION_CLASS, "name")
@@ -434,6 +443,14 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                     modelName.set(value);
                     TypeSpecHolder.put(attributes, "node", value);
                 });
+        // SSLContextParametersDefinition uses @XmlType instead of @XmlRootElement
+        // to avoid conflicting with Spring's sslContextParameters element
+        if (modelName.get() == null
+                && info.name().toString().equals("org.apache.camel.model.app.SSLContextParametersDefinition")) {
+            yamlTypeAnnotation.addMember("nodes", "$S", "sslContextParameters");
+            modelName.set("sslContextParameters");
+            TypeSpecHolder.put(attributes, "node", "sslContextParameters");
+        }
 
         //
         // Constructors
@@ -644,8 +661,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                 info.name().toString());
         yamlTypeAnnotation.addMember(
                 "order",
-                "org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1",
-                info.name().toString());
+                "org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1");
 
         JsonNode yamlTypeDisplayName = descriptor.meta.at("/title");
         if (!yamlTypeDisplayName.isMissingNode() && yamlTypeDisplayName.isTextual()) {
@@ -672,7 +688,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                     yamlTypeDeprecated.booleanValue());
         }
 
-        properties.stream().sorted(Comparator.comparing(a -> a.members.get("name").toString())).forEach(spec -> {
+        properties.stream().sorted(Comparator.comparing(a -> a.members().get("name").toString())).forEach(spec -> {
             yamlTypeAnnotation.addMember("properties", "$L", spec);
         });
 
@@ -893,7 +909,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                                             .withDescription(descriptor.description(name))
                                             .withDisplayName(descriptor.displayName(name))
                                             .withDefaultValue(descriptor.defaultValue(name))
-                                            .withIsSecret(descriptor.defaultValue(name))
+                                            .withIsSecret(descriptor.isSecret(name))
                                             .build());
                         }
                         return true;
@@ -932,7 +948,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                                             .withDescription(descriptor.description(name))
                                             .withDisplayName(descriptor.displayName(name))
                                             .withDefaultValue(descriptor.defaultValue(name))
-                                            .withIsSecret(descriptor.defaultValue(name))
+                                            .withIsSecret(descriptor.isSecret(name))
                                             .build());
                         }
                         return true;
@@ -946,6 +962,10 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
         if ("expression".equals(fieldName) && !expressionRequired(modelName)) {
             // special for some language models which does not have required expression
             // which should be skipped
+            return true;
+        }
+        // we want to skip pattern from wiretap
+        if ("pattern".equals(fieldName) && "wireTap".equals(modelName)) {
             return true;
         }
 
@@ -1004,7 +1024,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
             annotations.add(
                     YamlProperties.annotation(fieldName, "enum:" + String.join(",", values))
                             .withRequired(isRequired(field))
-                            .withRequired(isDeprecated(field))
+                            .withDeprecated(isDeprecated(field))
                             .withDescription(descriptor.description(fieldName))
                             .withDisplayName(descriptor.displayName(fieldName))
                             .withDefaultValue(descriptor.defaultValue(fieldName))
@@ -1019,7 +1039,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
             annotations.add(
                     YamlProperties.annotation(fieldName, "enum:" + getEnums(field))
                             .withRequired(isRequired(field))
-                            .withRequired(isDeprecated(field))
+                            .withDeprecated(isDeprecated(field))
                             .withDescription(descriptor.description(fieldName))
                             .withDisplayName(descriptor.displayName(fieldName))
                             .withDefaultValue(descriptor.defaultValue(fieldName))
@@ -1037,11 +1057,9 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                             YamlProperties.annotation(fieldName, "string")
                                     .withFormat("binary")
                                     .withRequired(isRequired(field))
-                                    .withRequired(isDeprecated(field))
+                                    .withDeprecated(isDeprecated(field))
                                     .withDescription(descriptor.description(fieldName))
                                     .withDisplayName(descriptor.displayName(fieldName))
-                                    .withDefaultValue(descriptor.defaultValue(fieldName))
-                                    .withIsSecret(descriptor.isSecret(fieldName))
                                     .withDefaultValue(descriptor.defaultValue(fieldName))
                                     .withIsSecret(descriptor.isSecret(fieldName))
                                     .build());
@@ -1055,7 +1073,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                     annotations.add(
                             YamlProperties.annotation(fieldName, "boolean")
                                     .withRequired(isRequired(field))
-                                    .withRequired(isDeprecated(field))
+                                    .withDeprecated(isDeprecated(field))
                                     .withDescription(descriptor.description(fieldName))
                                     .withDisplayName(descriptor.displayName(fieldName))
                                     .withDefaultValue(descriptor.defaultValue(fieldName))
@@ -1071,7 +1089,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                     annotations.add(
                             YamlProperties.annotation(fieldName, "number")
                                     .withRequired(isRequired(field))
-                                    .withRequired(isDeprecated(field))
+                                    .withDeprecated(isDeprecated(field))
                                     .withDescription(descriptor.description(fieldName))
                                     .withDisplayName(descriptor.displayName(fieldName))
                                     .withDefaultValue(descriptor.defaultValue(fieldName))
@@ -1087,7 +1105,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                     annotations.add(
                             YamlProperties.annotation(fieldName, "number")
                                     .withRequired(isRequired(field))
-                                    .withRequired(isDeprecated(field))
+                                    .withDeprecated(isDeprecated(field))
                                     .withDescription(descriptor.description(fieldName))
                                     .withDisplayName(descriptor.displayName(fieldName))
                                     .withDefaultValue(descriptor.defaultValue(fieldName))
@@ -1103,7 +1121,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                     annotations.add(
                             YamlProperties.annotation(fieldName, "number")
                                     .withRequired(isRequired(field))
-                                    .withRequired(isDeprecated(field))
+                                    .withDeprecated(isDeprecated(field))
                                     .withDescription(descriptor.description(fieldName))
                                     .withDisplayName(descriptor.displayName(fieldName))
                                     .withDefaultValue(descriptor.defaultValue(fieldName))
@@ -1167,7 +1185,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                     annotations.add(
                             YamlProperties.annotation(fieldName, "string")
                                     .withRequired(isRequired(field))
-                                    .withRequired(isDeprecated(field))
+                                    .withDeprecated(isDeprecated(field))
                                     .withDescription(descriptor.description(fieldName))
                                     .withDisplayName(descriptor.displayName(fieldName))
                                     .withDefaultValue(descriptor.defaultValue(fieldName))
@@ -1193,7 +1211,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                     annotations.add(
                             YamlProperties.annotation(fieldName, "number")
                                     .withRequired(isRequired(field))
-                                    .withRequired(isDeprecated(field))
+                                    .withDeprecated(isDeprecated(field))
                                     .withDescription(descriptor.description(fieldName))
                                     .withDisplayName(descriptor.displayName(fieldName))
                                     .withDefaultValue(descriptor.defaultValue(fieldName))
@@ -1209,7 +1227,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                     annotations.add(
                             YamlProperties.annotation(fieldName, "boolean")
                                     .withRequired(isRequired(field))
-                                    .withRequired(isDeprecated(field))
+                                    .withDeprecated(isDeprecated(field))
                                     .withDescription(descriptor.description(fieldName))
                                     .withDisplayName(descriptor.displayName(fieldName))
                                     .withDefaultValue(descriptor.defaultValue(fieldName))
@@ -1227,7 +1245,7 @@ public class GenerateYamlDeserializersMojo extends GenerateYamlSupportMojo {
                                 YamlProperties.annotation(fieldName, "object")
                                         .withSubType(field.type().name().toString())
                                         .withRequired(isRequired(field))
-                                        .withRequired(isDeprecated(field))
+                                        .withDeprecated(isDeprecated(field))
                                         .withDescription(descriptor.description(fieldName))
                                         .withDisplayName(descriptor.displayName(fieldName))
                                         .withDefaultValue(descriptor.defaultValue(fieldName))

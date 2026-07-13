@@ -27,7 +27,7 @@ import javax.xml.transform.OutputKeys;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.converter.jaxp.XmlConverter;
 import org.apache.camel.support.jsse.KeyStoreParameters;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.xml.security.encryption.XMLCipher;
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +47,7 @@ public class EncryptionAlgorithmTest extends CamelTestSupport {
             Class<?> c = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
             cons = c.getConstructor(new Class[] {});
 
-            Provider provider = (java.security.Provider) cons.newInstance();
+            Provider provider = (Provider) cons.newInstance();
             Security.insertProviderAt(provider, 2);
         }
     }

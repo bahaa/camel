@@ -31,8 +31,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.UserInfo;
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.common.kex.KeyExchangeFactory;
 import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
@@ -44,19 +43,16 @@ import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.sftp.server.SftpSubsystemFactory;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.camel.test.junit5.TestSupport.createDirectory;
-import static org.apache.camel.test.junit5.TestSupport.deleteDirectory;
+import static org.apache.camel.test.junit6.TestSupport.createDirectory;
+import static org.apache.camel.test.junit6.TestSupport.deleteDirectory;
 
 public abstract class ScpServerTestSupport extends CamelTestSupport {
     protected static final Logger LOG = LoggerFactory.getLogger(ScpServerTestSupport.class);
     protected static final String SCP_ROOT_DIR = "target/test-classes/scp";
     protected static final String KNOWN_HOSTS = "known_hosts";
-    protected static int port;
 
     protected Consumer<SshServer> serverConfigurer;
 
@@ -75,20 +71,14 @@ public abstract class ScpServerTestSupport extends CamelTestSupport {
     }
 
     protected int getPort() {
-        return port;
+        return sshd != null ? sshd.getPort() : 0;
     }
 
     protected SshServer getSshd() {
         return sshd;
     }
 
-    @BeforeAll
-    public static void initPort() {
-        port = AvailablePortFinder.getNextAvailable();
-    }
-
     @Override
-    @BeforeEach
     public void doPreSetup() throws Exception {
         deleteDirectory(getScpPath());
         createDirectory(getScpPath());
@@ -123,7 +113,7 @@ public abstract class ScpServerTestSupport extends CamelTestSupport {
 
     protected boolean startSshd() {
         sshd = SshServer.setUpDefaultServer();
-        sshd.setPort(getPort());
+        sshd.setPort(0);
         sshd.setKeyPairProvider(new FileKeyPairProvider(Paths.get("src/test/resources/hostkey.pem")));
         sshd.setSubsystemFactories(Arrays.asList(new SftpSubsystemFactory()));
         sshd.setCommandFactory(new ScpCommandFactory());

@@ -32,7 +32,6 @@ import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
 import org.apache.camel.RuntimeCamelException;
-import org.apache.camel.Service;
 import org.apache.camel.component.cxf.common.NullFaultListener;
 import org.apache.camel.component.cxf.common.message.CxfConstants;
 import org.apache.camel.http.base.cookie.CookieHandler;
@@ -76,7 +75,7 @@ import static org.apache.camel.component.cxf.common.message.CxfConstants.SCHEME_
 @Metadata(annotations = {
         "protocol=http",
 })
-public class CxfRsEndpoint extends DefaultEndpoint implements HeaderFilterStrategyAware, Service {
+public class CxfRsEndpoint extends DefaultEndpoint implements HeaderFilterStrategyAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(CxfRsEndpoint.class);
 
@@ -121,7 +120,10 @@ public class CxfRsEndpoint extends DefaultEndpoint implements HeaderFilterStrate
     private boolean ignoreDeleteMethodMessageBody;
     @UriParam(label = "producer", defaultValue = "true")
     private boolean throwExceptionOnFailure = true;
-    @UriParam(label = "producer,advanced", defaultValue = "10")
+    @UriParam(label = "producer,advanced", defaultValue = "10",
+              description = "This option allows you to configure the maximum size of the cache."
+                            + " The implementation caches CXF clients or ClientFactoryBean in CxfProvider and CxfRsProvider."
+                            + " The value must be greater than 0.")
     private int maxClientCacheSize = 10;
     @UriParam(label = "producer")
     private SSLContextParameters sslContextParameters;
@@ -574,6 +576,9 @@ public class CxfRsEndpoint extends DefaultEndpoint implements HeaderFilterStrate
      * ClientFactoryBean in CxfProvider and CxfRsProvider.
      */
     public void setMaxClientCacheSize(int maxClientCacheSize) {
+        if (maxClientCacheSize <= 0) {
+            throw new IllegalArgumentException("maxClientCacheSize must be greater than 0, was: " + maxClientCacheSize);
+        }
         this.maxClientCacheSize = maxClientCacheSize;
     }
 
@@ -787,8 +792,8 @@ public class CxfRsEndpoint extends DefaultEndpoint implements HeaderFilterStrate
             binding = new DefaultCxfRsBinding();
         }
 
-        if (binding instanceof HeaderFilterStrategyAware) {
-            ((HeaderFilterStrategyAware) binding).setHeaderFilterStrategy(getHeaderFilterStrategy());
+        if (binding instanceof HeaderFilterStrategyAware headerFilterStrategyAware) {
+            headerFilterStrategyAware.setHeaderFilterStrategy(getHeaderFilterStrategy());
         }
 
         if (providersRef != null) {

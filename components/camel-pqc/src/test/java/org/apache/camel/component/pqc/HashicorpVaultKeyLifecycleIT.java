@@ -19,6 +19,7 @@ package org.apache.camel.component.pqc;
 import java.security.KeyPair;
 import java.security.Security;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import org.apache.camel.CamelContext;
@@ -30,7 +31,7 @@ import org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager;
 import org.apache.camel.component.pqc.lifecycle.KeyMetadata;
 import org.apache.camel.test.infra.hashicorp.vault.services.HashicorpServiceFactory;
 import org.apache.camel.test.infra.hashicorp.vault.services.HashicorpVaultService;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider;
 import org.bouncycastle.pqc.jcajce.spec.DilithiumParameterSpec;
@@ -153,7 +154,7 @@ public class HashicorpVaultKeyLifecycleIT extends CamelTestSupport {
 
         // Simulate old key by setting next rotation time in the past
         KeyMetadata metadata = keyManager.getKeyMetadata("rotation-check-key");
-        metadata.setNextRotationAt(java.time.Instant.now().minusSeconds(1));
+        metadata.setNextRotationAt(Instant.now().minusSeconds(1));
         keyManager.updateKeyMetadata("rotation-check-key", metadata);
 
         // Now it should need rotation

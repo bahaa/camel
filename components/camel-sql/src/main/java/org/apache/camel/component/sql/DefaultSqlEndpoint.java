@@ -142,10 +142,10 @@ public abstract class DefaultSqlEndpoint extends DefaultPollingEndpoint implemen
               description = "Factory for creating RowMapper")
     private RowMapperFactory rowMapperFactory;
 
-    public DefaultSqlEndpoint() {
+    protected DefaultSqlEndpoint() {
     }
 
-    public DefaultSqlEndpoint(String endpointUri, Component component) {
+    protected DefaultSqlEndpoint(String endpointUri, Component component) {
         super(endpointUri, component);
     }
 
@@ -154,8 +154,8 @@ public abstract class DefaultSqlEndpoint extends DefaultPollingEndpoint implemen
     }
 
     /**
-     * Whether to detect the network address location of the JMS broker on startup. This information is gathered via
-     * reflection on the ConnectionFactory, and is vendor specific. This option can be used to turn this off.
+     * Whether to detect the network address location of the database on startup. This information is gathered via
+     * reflection on the DataSource, and is vendor specific. This option can be used to turn this off.
      */
     public void setServiceLocationEnabled(boolean serviceLocationEnabled) {
         this.serviceLocationEnabled = serviceLocationEnabled;

@@ -23,7 +23,7 @@ import org.apache.camel.CamelAuthorizationException;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.RoutesBuilder;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -97,6 +97,17 @@ public class KeycloakSecurityPolicyTest extends CamelTestSupport {
             template.sendBody("direct:protected", "test message");
         });
         assertTrue(ex.getCause() instanceof CamelAuthorizationException);
+    }
+
+    @Test
+    void testKeycloakSecurityPolicyWithExpectedAudience() {
+        KeycloakSecurityPolicy policy = new KeycloakSecurityPolicy();
+        assertTrue(policy.getExpectedAudienceAsList().isEmpty(), "Audience validation is disabled by default");
+
+        policy.setExpectedAudience("my-client,my-other-client");
+
+        assertEquals("my-client,my-other-client", policy.getExpectedAudience());
+        assertEquals(Arrays.asList("my-client", "my-other-client"), policy.getExpectedAudienceAsList());
     }
 
     @Test

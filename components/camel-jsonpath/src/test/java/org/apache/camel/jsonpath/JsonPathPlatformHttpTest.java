@@ -23,8 +23,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.platform.http.vertx.VertxPlatformHttpServer;
 import org.apache.camel.component.platform.http.vertx.VertxPlatformHttpServerConfiguration;
 import org.apache.camel.model.ProcessorDefinition;
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,12 +34,12 @@ class JsonPathPlatformHttpTest extends CamelTestSupport {
     public static final String JSON_PATH = "$.room[?(@.temperature > 20)]";
     public static final String RESULT = "HOT";
 
-    private static final int PORT = AvailablePortFinder.getNextAvailable();
+    private VertxPlatformHttpServer server;
 
     @Test
     public void testWithPlatformHttp() {
         String result = RestAssured.given()
-                .port(PORT)
+                .port(server.getPort())
                 .contentType(ContentType.JSON)
                 .body(BODY)
                 .post("/getTemperature")
@@ -63,9 +62,10 @@ class JsonPathPlatformHttpTest extends CamelTestSupport {
         CamelContext context = super.createCamelContext();
 
         VertxPlatformHttpServerConfiguration conf = new VertxPlatformHttpServerConfiguration();
-        conf.setBindPort(PORT);
+        conf.setBindPort(0);
 
-        context.addService(new VertxPlatformHttpServer(conf));
+        server = new VertxPlatformHttpServer(conf);
+        context.addService(server);
 
         return context;
 

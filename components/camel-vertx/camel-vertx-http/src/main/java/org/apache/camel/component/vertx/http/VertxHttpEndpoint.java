@@ -108,8 +108,13 @@ public class VertxHttpEndpoint extends DefaultEndpoint implements EndpointServic
             WebClientOptions options = configuration.getWebClientOptions();
             if (options == null) {
                 options = new WebClientOptions();
-                options.setTryUseCompression(configuration.isUseCompression());
+                options.setDecompressionSupported(configuration.isUseCompression());
                 options.setConnectTimeout(configuration.getConnectTimeout());
+
+                if (configuration.getTracingPolicy() != null) {
+                    options.setTracingPolicy(configuration.getTracingPolicy());
+                }
+
                 configureProxyOptionsIfRequired(options);
             }
 

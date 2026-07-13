@@ -33,7 +33,7 @@ import org.apache.camel.component.azure.eventhubs.EventHubsConstants;
 import org.apache.camel.component.azure.eventhubs.TestUtils;
 import org.apache.camel.component.azure.eventhubs.client.EventHubsClientFactory;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -71,7 +71,7 @@ class EventHubsProducerIT extends CamelTestSupport {
     @Test
     public void testSendEventWithSpecificPartition() throws InterruptedException {
 
-        final String messageBody = RandomStringUtils.randomAlphabetic(30);
+        final String messageBody = RandomStringUtils.secure().nextAlphabetic(30);
         final String firstPartition = "0";
 
         final AtomicBoolean eventExists = new AtomicBoolean();
@@ -106,7 +106,7 @@ class EventHubsProducerIT extends CamelTestSupport {
     @Test
     public void testSendingNonValidData() throws InterruptedException {
 
-        final String messageBody = RandomStringUtils.randomAlphabetic(30);
+        final String messageBody = RandomStringUtils.secure().nextAlphabetic(30);
         final String firstPartition = "0";
 
         final AtomicReference<Exchange> resultExchange = new AtomicReference<>();

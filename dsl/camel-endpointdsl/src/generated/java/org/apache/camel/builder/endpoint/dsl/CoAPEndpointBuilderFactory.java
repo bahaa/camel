@@ -510,6 +510,38 @@ public interface CoAPEndpointBuilderFactory {
             doSetProperty("exchangePattern", exchangePattern);
             return this;
         }
+        /**
+         * To use a custom HeaderFilterStrategy to filter header to and from
+         * Camel message.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.spi.HeaderFilterStrategy</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param headerFilterStrategy the value to set
+         * @return the dsl builder
+         */
+        default AdvancedCoAPEndpointConsumerBuilder headerFilterStrategy(org.apache.camel.spi.HeaderFilterStrategy headerFilterStrategy) {
+            doSetProperty("headerFilterStrategy", headerFilterStrategy);
+            return this;
+        }
+        /**
+         * To use a custom HeaderFilterStrategy to filter header to and from
+         * Camel message.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.spi.HeaderFilterStrategy</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param headerFilterStrategy the value to set
+         * @return the dsl builder
+         */
+        default AdvancedCoAPEndpointConsumerBuilder headerFilterStrategy(String headerFilterStrategy) {
+            doSetProperty("headerFilterStrategy", headerFilterStrategy);
+            return this;
+        }
     }
 
     /**
@@ -830,6 +862,36 @@ public interface CoAPEndpointBuilderFactory {
         }
 
         /**
+         * To use a shared client for the producers.
+         * 
+         * The option is a: <code>org.eclipse.californium.core.CoapClient</code>
+         * type.
+         * 
+         * Group: producer (advanced)
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default AdvancedCoAPEndpointProducerBuilder client(org.eclipse.californium.core.CoapClient client) {
+            doSetProperty("client", client);
+            return this;
+        }
+        /**
+         * To use a shared client for the producers.
+         * 
+         * The option will be converted to a
+         * <code>org.eclipse.californium.core.CoapClient</code> type.
+         * 
+         * Group: producer (advanced)
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default AdvancedCoAPEndpointProducerBuilder client(String client) {
+            doSetProperty("client", client);
+            return this;
+        }
+        /**
          * Whether the producer should be started lazy (on the first message).
          * By starting lazy you can use this to allow CamelContext and routes to
          * startup in situations where a producer may otherwise fail during
@@ -873,6 +935,38 @@ public interface CoAPEndpointBuilderFactory {
          */
         default AdvancedCoAPEndpointProducerBuilder lazyStartProducer(String lazyStartProducer) {
             doSetProperty("lazyStartProducer", lazyStartProducer);
+            return this;
+        }
+        /**
+         * To use a custom HeaderFilterStrategy to filter header to and from
+         * Camel message.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.spi.HeaderFilterStrategy</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param headerFilterStrategy the value to set
+         * @return the dsl builder
+         */
+        default AdvancedCoAPEndpointProducerBuilder headerFilterStrategy(org.apache.camel.spi.HeaderFilterStrategy headerFilterStrategy) {
+            doSetProperty("headerFilterStrategy", headerFilterStrategy);
+            return this;
+        }
+        /**
+         * To use a custom HeaderFilterStrategy to filter header to and from
+         * Camel message.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.spi.HeaderFilterStrategy</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param headerFilterStrategy the value to set
+         * @return the dsl builder
+         */
+        default AdvancedCoAPEndpointProducerBuilder headerFilterStrategy(String headerFilterStrategy) {
+            doSetProperty("headerFilterStrategy", headerFilterStrategy);
             return this;
         }
     }
@@ -1164,6 +1258,38 @@ public interface CoAPEndpointBuilderFactory {
             return (CoAPEndpointBuilder) this;
         }
 
+        /**
+         * To use a custom HeaderFilterStrategy to filter header to and from
+         * Camel message.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.spi.HeaderFilterStrategy</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param headerFilterStrategy the value to set
+         * @return the dsl builder
+         */
+        default AdvancedCoAPEndpointBuilder headerFilterStrategy(org.apache.camel.spi.HeaderFilterStrategy headerFilterStrategy) {
+            doSetProperty("headerFilterStrategy", headerFilterStrategy);
+            return this;
+        }
+        /**
+         * To use a custom HeaderFilterStrategy to filter header to and from
+         * Camel message.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.spi.HeaderFilterStrategy</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param headerFilterStrategy the value to set
+         * @return the dsl builder
+         */
+        default AdvancedCoAPEndpointBuilder headerFilterStrategy(String headerFilterStrategy) {
+            doSetProperty("headerFilterStrategy", headerFilterStrategy);
+            return this;
+        }
     }
 
     public interface CoAPBuilders {
@@ -1293,7 +1419,7 @@ public interface CoAPEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final CoAPHeaderNameBuilder INSTANCE = new CoAPHeaderNameBuilder();
+        public static final CoAPHeaderNameBuilder INSTANCE = new CoAPHeaderNameBuilder();
 
         /**
          * The CoAP ETag for the response.

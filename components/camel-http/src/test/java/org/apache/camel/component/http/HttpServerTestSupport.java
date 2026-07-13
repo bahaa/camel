@@ -18,7 +18,7 @@ package org.apache.camel.component.http;
 
 import javax.net.ssl.SSLContext;
 
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.ConnectionReuseStrategy;
 import org.apache.hc.core5.http.HttpResponseFactory;
@@ -30,7 +30,7 @@ import org.apache.hc.core5.http.protocol.HttpProcessor;
 public abstract class HttpServerTestSupport extends CamelTestSupport {
 
     /**
-     * Returns the org.apache.http.protocol.BasicHttpProcessor which should be used by the server.
+     * Returns the org.apache.hc.core5.http.protocol.HttpProcessor which should be used by the server.
      *
      * @return HttpProcessor
      */

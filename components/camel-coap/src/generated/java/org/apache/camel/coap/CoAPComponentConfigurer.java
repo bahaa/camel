@@ -27,8 +27,11 @@ public class CoAPComponentConfigurer extends PropertyConfigurerSupport implement
         case "autowiredEnabled": target.setAutowiredEnabled(property(camelContext, boolean.class, value)); return true;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
+        case "client": target.setClient(property(camelContext, org.eclipse.californium.core.CoapClient.class, value)); return true;
         case "configurationfile":
         case "configurationFile": target.setConfigurationFile(property(camelContext, java.lang.String.class, value)); return true;
+        case "headerfilterstrategy":
+        case "headerFilterStrategy": target.setHeaderFilterStrategy(property(camelContext, org.apache.camel.spi.HeaderFilterStrategy.class, value)); return true;
         case "lazystartproducer":
         case "lazyStartProducer": target.setLazyStartProducer(property(camelContext, boolean.class, value)); return true;
         default: return false;
@@ -42,8 +45,11 @@ public class CoAPComponentConfigurer extends PropertyConfigurerSupport implement
         case "autowiredEnabled": return boolean.class;
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
+        case "client": return org.eclipse.californium.core.CoapClient.class;
         case "configurationfile":
         case "configurationFile": return java.lang.String.class;
+        case "headerfilterstrategy":
+        case "headerFilterStrategy": return org.apache.camel.spi.HeaderFilterStrategy.class;
         case "lazystartproducer":
         case "lazyStartProducer": return boolean.class;
         default: return null;
@@ -58,8 +64,11 @@ public class CoAPComponentConfigurer extends PropertyConfigurerSupport implement
         case "autowiredEnabled": return target.isAutowiredEnabled();
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
+        case "client": return target.getClient();
         case "configurationfile":
         case "configurationFile": return target.getConfigurationFile();
+        case "headerfilterstrategy":
+        case "headerFilterStrategy": return target.getHeaderFilterStrategy();
         case "lazystartproducer":
         case "lazyStartProducer": return target.isLazyStartProducer();
         default: return null;

@@ -890,11 +890,13 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
                 nodeId,
                 (nId, message) -> new DefaultBacklogTracerEventMessage(
                         camelContext,
-                        false, false, message.getUid(), message.getTimestamp(), message.getLocation(), message.getRouteId(),
+                        false, false, message.getUid(), message.getTimestamp(), message.getLocation(), message.getFromRouteId(),
+                        message.getRouteId(),
                         message.getToNode(), message.getToNodeParentId(), message.getToNodeParentWhenId(),
                         message.getToNodeParentWhenLabel(),
                         message.getToNodeShortName(), message.getToNodeLabel(),
                         message.getToNodeLevel(), message.getExchangeId(), message.getCorrelationExchangeId(),
+                        message.getBreadcrumbId(),
                         false, false,
                         dumpAsJSonObject(suspendedExchange.getExchange())));
     }
@@ -934,9 +936,11 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             String toNodeShortName = definition.getShortName();
             // avoid label is too large
             String toNodeLabel = StringHelper.limitLength(definition.getLabel(), 50);
+            String fromRouteId = exchange.getFromRouteId();
             String routeId = CamelContextHelper.getRouteId(definition);
             String exchangeId = exchange.getExchangeId();
             String correlationExchangeId = exchange.getProperty(ExchangePropertyKey.CORRELATION_ID, String.class);
+            String breadcrumbId = exchange.getIn().getHeader(Exchange.BREADCRUMB_ID, String.class);
             int level = definition.getLevel();
             long uid = debugCounter.incrementAndGet();
             String source = LoggerHelper.getLineNumberLoggerName(definition);
@@ -945,8 +949,8 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             BacklogTracerEventMessage msg
                     = new DefaultBacklogTracerEventMessage(
                             camelContext,
-                            first, false, uid, timestamp, source, routeId, toNode, toNodeParentId, null, null,
-                            toNodeShortName, toNodeLabel, level, exchangeId, correlationExchangeId,
+                            first, false, uid, timestamp, source, fromRouteId, routeId, toNode, toNodeParentId, null, null,
+                            toNodeShortName, toNodeLabel, level, exchangeId, correlationExchangeId, breadcrumbId,
                             false, false, data);
             suspendedBreakpointMessages.put(nodeId, msg);
 
@@ -1024,9 +1028,11 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             String toNodeShortName = definition.getShortName();
             // avoid label is too large
             String toNodeLabel = StringHelper.limitLength(definition.getLabel(), 50);
+            String fromRouteId = exchange.getFromRouteId();
             String routeId = CamelContextHelper.getRouteId(definition);
             String exchangeId = exchange.getExchangeId();
             String correlationExchangeId = exchange.getProperty(ExchangePropertyKey.CORRELATION_ID, String.class);
+            String breadcrumbId = exchange.getIn().getHeader(Exchange.BREADCRUMB_ID, String.class);
             int level = definition.getLevel();
             long uid = debugCounter.incrementAndGet();
             String source = LoggerHelper.getLineNumberLoggerName(definition);
@@ -1034,9 +1040,9 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             BacklogTracerEventMessage msg
                     = new DefaultBacklogTracerEventMessage(
                             camelContext,
-                            false, false, uid, timestamp, source, routeId, toNode, toNodeParentId, null, null,
+                            false, false, uid, timestamp, source, fromRouteId, routeId, toNode, toNodeParentId, null, null,
                             toNodeShortName, toNodeLabel, level,
-                            exchangeId, correlationExchangeId,
+                            exchangeId, correlationExchangeId, breadcrumbId,
                             false, false, data);
             suspendedBreakpointMessages.put(toNode, msg);
 
@@ -1133,9 +1139,11 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             long timestamp = System.currentTimeMillis();
             String toNode = CamelContextHelper.getRouteId(definition);
             String toNodeParentId = definition.getParentId();
+            String fromRouteId = exchange.getFromRouteId();
             String routeId = route != null ? route.getRouteId() : toNode;
             String exchangeId = exchange.getExchangeId();
             String correlationExchangeId = exchange.getProperty(ExchangePropertyKey.CORRELATION_ID, String.class);
+            String breadcrumbId = exchange.getIn().getHeader(Exchange.BREADCRUMB_ID, String.class);
             int level = definition.getLevel();
             long uid = debugCounter.incrementAndGet();
             String source = LoggerHelper.getLineNumberLoggerName(route != null ? route : definition);
@@ -1143,8 +1151,8 @@ public final class DefaultBacklogDebugger extends ServiceSupport implements Back
             BacklogTracerEventMessage msg
                     = new DefaultBacklogTracerEventMessage(
                             camelContext,
-                            false, true, uid, timestamp, source, routeId, toNode, toNodeParentId,
-                            null, null, null, null, level, exchangeId, correlationExchangeId,
+                            false, true, uid, timestamp, source, fromRouteId, routeId, toNode, toNodeParentId,
+                            null, null, null, null, level, exchangeId, correlationExchangeId, breadcrumbId,
                             false, false, data);
             // we want to capture if there was an exception
             if (cause != null) {

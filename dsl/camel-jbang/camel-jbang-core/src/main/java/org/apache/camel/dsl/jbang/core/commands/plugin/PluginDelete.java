@@ -21,7 +21,10 @@ import org.apache.camel.util.json.JsonObject;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "delete",
-                     description = "Removes a plugin", sortOptions = false, showDefaultValues = true)
+                     description = "Removes a plugin", sortOptions = false, showDefaultValues = true,
+                     footer = {
+                             "%nExamples:",
+                             "  camel plugin delete my-cmd" })
 public class PluginDelete extends PluginBaseCommand {
 
     @CommandLine.Parameters(description = "The Camel plugin to remove",
@@ -42,7 +45,8 @@ public class PluginDelete extends PluginBaseCommand {
             printer().printf("Plugin %s removed%n", name);
             saveConfig(pluginConfig);
         } else {
-            printer().printf("Plugin %s not found in configuration%n", name);
+            printer().printErr("Plugin %s not found in configuration".formatted(name));
+            return 1;
         }
 
         return 0;

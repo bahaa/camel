@@ -27,13 +27,13 @@ import org.apache.camel.builder.NotifyBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.file.remote.sftp.integration.SftpServerTestSupport;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.TestSupport;
+import org.apache.camel.test.junit6.TestSupport;
 import org.apache.camel.util.FileUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import static org.apache.camel.test.junit5.TestSupport.assertFileExists;
-import static org.apache.camel.test.junit5.TestSupport.assertFileNotExists;
+import static org.apache.camel.test.junit6.TestSupport.assertFileExists;
+import static org.apache.camel.test.junit6.TestSupport.assertFileNotExists;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -92,7 +92,7 @@ public class SftpConsumerLocalWorkDirectoryIT extends SftpServerTestSupport {
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
-                from(getFtpUrl()).routeId("myRoute").noAutoStartup().process(new Processor() {
+                from(getFtpUrl()).routeId("myRoute").autoStartup(false).process(new Processor() {
                     public void process(Exchange exchange) {
                         File body = exchange.getIn().getBody(File.class);
                         assertNotNull(body);

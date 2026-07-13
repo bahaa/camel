@@ -106,6 +106,8 @@ public class ConfigFluentImplConfigurer extends org.apache.camel.support.compone
         case "requestTimeout": target.withRequestTimeout(property(camelContext, java.lang.Integer.class, value)); return true;
         case "scaletimeout":
         case "scaleTimeout": target.withScaleTimeout(property(camelContext, java.lang.Long.class, value)); return true;
+        case "tlsservername":
+        case "tlsServerName": target.withTlsServerName(property(camelContext, java.lang.String.class, value)); return true;
         case "tlsversions":
         case "tlsVersions": target.withTlsVersions(property(camelContext, io.fabric8.kubernetes.client.http.TlsVersion[].class, value)); return true;
         case "trustcerts":
@@ -119,6 +121,8 @@ public class ConfigFluentImplConfigurer extends org.apache.camel.support.compone
         case "useragent":
         case "userAgent": target.withUserAgent(property(camelContext, java.lang.String.class, value)); return true;
         case "username": target.withUsername(property(camelContext, java.lang.String.class, value)); return true;
+        case "watchlist":
+        case "watchList": target.withWatchList(property(camelContext, java.lang.Boolean.class, value)); return true;
         case "watchreconnectinterval":
         case "watchReconnectInterval": target.withWatchReconnectInterval(property(camelContext, java.lang.Integer.class, value)); return true;
         case "watchreconnectlimit":
@@ -215,6 +219,8 @@ public class ConfigFluentImplConfigurer extends org.apache.camel.support.compone
         case "requestTimeout": return java.lang.Integer.class;
         case "scaletimeout":
         case "scaleTimeout": return java.lang.Long.class;
+        case "tlsservername":
+        case "tlsServerName": return java.lang.String.class;
         case "tlsversions":
         case "tlsVersions": return io.fabric8.kubernetes.client.http.TlsVersion[].class;
         case "trustcerts":
@@ -228,6 +234,8 @@ public class ConfigFluentImplConfigurer extends org.apache.camel.support.compone
         case "useragent":
         case "userAgent": return java.lang.String.class;
         case "username": return java.lang.String.class;
+        case "watchlist":
+        case "watchList": return java.lang.Boolean.class;
         case "watchreconnectinterval":
         case "watchReconnectInterval": return java.lang.Integer.class;
         case "watchreconnectlimit":
@@ -325,6 +333,8 @@ public class ConfigFluentImplConfigurer extends org.apache.camel.support.compone
         case "requestTimeout": return target.getRequestTimeout();
         case "scaletimeout":
         case "scaleTimeout": return target.getScaleTimeout();
+        case "tlsservername":
+        case "tlsServerName": return target.getTlsServerName();
         case "tlsversions":
         case "tlsVersions": return target.getTlsVersions();
         case "trustcerts":
@@ -338,6 +348,8 @@ public class ConfigFluentImplConfigurer extends org.apache.camel.support.compone
         case "useragent":
         case "userAgent": return target.getUserAgent();
         case "username": return target.getUsername();
+        case "watchlist":
+        case "watchList": return target.getWatchList();
         case "watchreconnectinterval":
         case "watchReconnectInterval": return target.getWatchReconnectInterval();
         case "watchreconnectlimit":

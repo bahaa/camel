@@ -37,7 +37,8 @@ import org.apache.camel.spi.ResourceAware;
 /**
  * Configure data formats.
  */
-@Metadata(label = "dataformat,transformation", title = "Data formats")
+@Metadata(label = "dataformat,transformation", title = "Data formats",
+          description = "Container for defining data format configurations")
 @XmlRootElement(name = "dataFormats")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class DataFormatsDefinition implements CopyableDefinition<DataFormatsDefinition>, ResourceAware {
@@ -60,6 +61,7 @@ public class DataFormatsDefinition implements CopyableDefinition<DataFormatsDefi
             @XmlElement(name = "flatpack", type = FlatpackDataFormat.class),
             @XmlElement(name = "fory", type = ForyDataFormat.class),
             @XmlElement(name = "grok", type = GrokDataFormat.class),
+            @XmlElement(name = "groovyJson", type = GroovyJSonDataFormat.class),
             @XmlElement(name = "groovyXml", type = GroovyXmlDataFormat.class),
             @XmlElement(name = "gzipDeflater", type = GzipDeflaterDataFormat.class),
             @XmlElement(name = "hl7", type = HL7DataFormat.class),
@@ -71,8 +73,10 @@ public class DataFormatsDefinition implements CopyableDefinition<DataFormatsDefi
             @XmlElement(name = "jsonApi", type = JsonApiDataFormat.class),
             @XmlElement(name = "lzf", type = LZFDataFormat.class),
             @XmlElement(name = "mimeMultipart", type = MimeMultipartDataFormat.class),
+            @XmlElement(name = "ocsf", type = OcsfDataFormat.class),
             @XmlElement(name = "parquetAvro", type = ParquetAvroDataFormat.class),
             @XmlElement(name = "pgp", type = PGPDataFormat.class),
+            @XmlElement(name = "pqc", type = PQCDataFormat.class),
             @XmlElement(name = "protobuf", type = ProtobufDataFormat.class),
             @XmlElement(name = "rss", type = RssDataFormat.class),
             @XmlElement(name = "smooks", type = SmooksDataFormat.class),
@@ -89,6 +93,7 @@ public class DataFormatsDefinition implements CopyableDefinition<DataFormatsDefi
             @XmlElement(name = "yaml", type = YAMLDataFormat.class),
             @XmlElement(name = "zipDeflater", type = ZipDeflaterDataFormat.class),
             @XmlElement(name = "zipFile", type = ZipFileDataFormat.class) })
+    @Metadata(description = "The configured data formats.")
     private List<DataFormatDefinition> dataFormats;
     @XmlTransient
     private Resource resource;
@@ -105,9 +110,6 @@ public class DataFormatsDefinition implements CopyableDefinition<DataFormatsDefi
         return new DataFormatsDefinition(this);
     }
 
-    /**
-     * A list holding the configured data formats
-     */
     public void setDataFormats(List<DataFormatDefinition> dataFormats) {
         this.dataFormats = dataFormats;
     }

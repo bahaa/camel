@@ -35,7 +35,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.camel.test.junit5.TestSupport.body;
+import static org.apache.camel.test.junit6.TestSupport.body;
 
 public class AsyncJmsInOutTest extends AbstractJMSTest {
 
@@ -85,10 +85,10 @@ public class AsyncJmsInOutTest extends AbstractJMSTest {
                 from("seda:start")
                         // we can only send at fastest the 100 msg in 5 sec due the delay
                         .delay(50)
-                        .to(ExchangePattern.InOut, "activemq:queue:bar")
+                        .to(ExchangePattern.InOut, "activemq:queue:bar.AsyncJmsInOutTest")
                         .to("mock:result");
 
-                from("activemq:queue:bar")
+                from("activemq:queue:bar.AsyncJmsInOutTest")
                         .log("Using ${threadName} to process ${body}")
                         // we can only process at fastest the 100 msg in 5 sec due the delay
                         .delay(50)

@@ -170,6 +170,8 @@ public class DebeziumMongodbEndpointConfigurer extends PropertyConfigurerSupport
         case "snapshotIncludeCollectionList": target.getConfiguration().setSnapshotIncludeCollectionList(property(camelContext, java.lang.String.class, value)); return true;
         case "snapshotmaxthreads":
         case "snapshotMaxThreads": target.getConfiguration().setSnapshotMaxThreads(property(camelContext, int.class, value)); return true;
+        case "snapshotmaxthreadsmultiplier":
+        case "snapshotMaxThreadsMultiplier": target.getConfiguration().setSnapshotMaxThreadsMultiplier(property(camelContext, int.class, value)); return true;
         case "snapshotmode":
         case "snapshotMode": target.getConfiguration().setSnapshotMode(property(camelContext, java.lang.String.class, value)); return true;
         case "snapshotmodeconfigurationbasedsnapshotdata":
@@ -186,6 +188,8 @@ public class DebeziumMongodbEndpointConfigurer extends PropertyConfigurerSupport
         case "snapshotModeCustomName": target.getConfiguration().setSnapshotModeCustomName(property(camelContext, java.lang.String.class, value)); return true;
         case "sourceinfostructmaker":
         case "sourceinfoStructMaker": target.getConfiguration().setSourceinfoStructMaker(property(camelContext, java.lang.String.class, value)); return true;
+        case "statisticsmetricsenabled":
+        case "statisticsMetricsEnabled": target.getConfiguration().setStatisticsMetricsEnabled(property(camelContext, boolean.class, value)); return true;
         case "streamingdelayms":
         case "streamingDelayMs": target.getConfiguration().setStreamingDelayMs(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "tombstonesondelete":
@@ -350,6 +354,8 @@ public class DebeziumMongodbEndpointConfigurer extends PropertyConfigurerSupport
         case "snapshotIncludeCollectionList": return java.lang.String.class;
         case "snapshotmaxthreads":
         case "snapshotMaxThreads": return int.class;
+        case "snapshotmaxthreadsmultiplier":
+        case "snapshotMaxThreadsMultiplier": return int.class;
         case "snapshotmode":
         case "snapshotMode": return java.lang.String.class;
         case "snapshotmodeconfigurationbasedsnapshotdata":
@@ -366,6 +372,8 @@ public class DebeziumMongodbEndpointConfigurer extends PropertyConfigurerSupport
         case "snapshotModeCustomName": return java.lang.String.class;
         case "sourceinfostructmaker":
         case "sourceinfoStructMaker": return java.lang.String.class;
+        case "statisticsmetricsenabled":
+        case "statisticsMetricsEnabled": return boolean.class;
         case "streamingdelayms":
         case "streamingDelayMs": return long.class;
         case "tombstonesondelete":
@@ -531,6 +539,8 @@ public class DebeziumMongodbEndpointConfigurer extends PropertyConfigurerSupport
         case "snapshotIncludeCollectionList": return target.getConfiguration().getSnapshotIncludeCollectionList();
         case "snapshotmaxthreads":
         case "snapshotMaxThreads": return target.getConfiguration().getSnapshotMaxThreads();
+        case "snapshotmaxthreadsmultiplier":
+        case "snapshotMaxThreadsMultiplier": return target.getConfiguration().getSnapshotMaxThreadsMultiplier();
         case "snapshotmode":
         case "snapshotMode": return target.getConfiguration().getSnapshotMode();
         case "snapshotmodeconfigurationbasedsnapshotdata":
@@ -547,6 +557,8 @@ public class DebeziumMongodbEndpointConfigurer extends PropertyConfigurerSupport
         case "snapshotModeCustomName": return target.getConfiguration().getSnapshotModeCustomName();
         case "sourceinfostructmaker":
         case "sourceinfoStructMaker": return target.getConfiguration().getSourceinfoStructMaker();
+        case "statisticsmetricsenabled":
+        case "statisticsMetricsEnabled": return target.getConfiguration().isStatisticsMetricsEnabled();
         case "streamingdelayms":
         case "streamingDelayMs": return target.getConfiguration().getStreamingDelayMs();
         case "tombstonesondelete":

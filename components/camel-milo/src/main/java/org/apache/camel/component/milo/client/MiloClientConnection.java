@@ -19,10 +19,13 @@ package org.apache.camel.component.milo.client;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.component.milo.client.internal.SubscriptionManager;
+import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.stack.core.Stack;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.ExpandedNodeId;
@@ -37,6 +40,7 @@ import static java.util.Objects.requireNonNull;
 
 public class MiloClientConnection implements AutoCloseable {
 
+    private final Lock lock = new ReentrantLock();
     private final MiloClientConfiguration configuration;
     private SubscriptionManager manager;
     private volatile boolean initialized;
@@ -55,6 +59,29 @@ public class MiloClientConnection implements AutoCloseable {
         return configuration;
     }
 
+    /**
+     * Returns the underlying Eclipse Milo {@link OpcUaClient} backing this connection.
+     * <p>
+     * This is intended for advanced scenarios that the component does not cover directly, most notably encoding and
+     * decoding of custom (server-defined) OPC UA data types: the returned client exposes the
+     * {@link OpcUaClient#getStaticEncodingContext() static} and {@link OpcUaClient#getDynamicEncodingContext() dynamic}
+     * encoding contexts required to encode/decode {@code ExtensionObject} values.
+     * <p>
+     * Notes:
+     * <ul>
+     * <li>The connection is established lazily and asynchronously, so this method may return {@code null} until the
+     * client is connected, and again briefly while a connection is being re-established.</li>
+     * <li>The client is owned and managed by Camel. Callers must not connect, disconnect or otherwise alter its
+     * lifecycle. A reconnect replaces the instance, so fetch it on demand rather than caching the reference.</li>
+     * </ul>
+     *
+     * @return the active milo client, or {@code null} if the connection is not currently established
+     */
+    public OpcUaClient getOpcUaClient() {
+        checkInit();
+        return this.manager.getOpcUaClient();
+    }
+
     protected void init() {
         this.manager = new SubscriptionManager(this.configuration, Stack.sharedScheduledExecutor(), 10_000);
     }
@@ -67,17 +94,22 @@ public class MiloClientConnection implements AutoCloseable {
         }
     }
 
-    protected synchronized void checkInit() {
-        if (this.initialized) {
-            return;
-        }
-
+    protected void checkInit() {
+        lock.lock();
         try {
-            init();
-        } catch (final Exception e) {
-            throw new RuntimeCamelException(e);
+            if (this.initialized) {
+                return;
+            }
+
+            try {
+                init();
+            } catch (final Exception e) {
+                throw new RuntimeCamelException(e);
+            }
+            this.initialized = true;
+        } finally {
+            lock.unlock();
         }
-        this.initialized = true;
     }
 
     @FunctionalInterface
@@ -133,11 +165,11 @@ public class MiloClientConnection implements AutoCloseable {
             return new Variant[0];
         }
 
-        if (value instanceof Variant[]) {
-            return (Variant[]) value;
+        if (value instanceof Variant[] variants) {
+            return variants;
         }
-        if (value instanceof Variant) {
-            return new Variant[] { (Variant) value };
+        if (value instanceof Variant variant) {
+            return new Variant[] { variant };
         }
 
         return new Variant[] { new Variant(value) };
@@ -150,11 +182,11 @@ public class MiloClientConnection implements AutoCloseable {
      * @return       the outgoing value
      */
     private DataValue mapWriteValue(final Object value) {
-        if (value instanceof DataValue) {
-            return (DataValue) value;
+        if (value instanceof DataValue dataValue) {
+            return dataValue;
         }
-        if (value instanceof Variant) {
-            return new DataValue((Variant) value, StatusCode.GOOD, null, null);
+        if (value instanceof Variant variant) {
+            return new DataValue(variant, StatusCode.GOOD, null, null);
         }
         return new DataValue(new Variant(value), StatusCode.GOOD, null, null);
     }

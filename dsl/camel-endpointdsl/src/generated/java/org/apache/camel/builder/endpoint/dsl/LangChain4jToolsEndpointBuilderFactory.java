@@ -73,6 +73,40 @@ public interface LangChain4jToolsEndpointBuilderFactory {
             return this;
         }
         /**
+         * Whether the tool is automatically exposed to the LLM. When false, the
+         * tool is added to a searchable list and can be discovered via the
+         * tool-search-tool.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: consumer
+         * 
+         * @param exposed the value to set
+         * @return the dsl builder
+         */
+        default LangChain4jToolsEndpointConsumerBuilder exposed(boolean exposed) {
+            doSetProperty("exposed", exposed);
+            return this;
+        }
+        /**
+         * Whether the tool is automatically exposed to the LLM. When false, the
+         * tool is added to a searchable list and can be discovered via the
+         * tool-search-tool.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: true
+         * Group: consumer
+         * 
+         * @param exposed the value to set
+         * @return the dsl builder
+         */
+        default LangChain4jToolsEndpointConsumerBuilder exposed(String exposed) {
+            doSetProperty("exposed", exposed);
+            return this;
+        }
+        /**
          * Tool name.
          * 
          * The option is a: <code>java.lang.String</code> type.
@@ -87,8 +121,13 @@ public interface LangChain4jToolsEndpointBuilderFactory {
             return this;
         }
         /**
-         * List of Tool parameters in the form of parameter.=. This is a
-         * multi-value option with prefix: parameter.
+         * List of Tool parameters with optional metadata. Format: parameter.=,
+         * parameter..description=, parameter..required=, parameter..enum=.
+         * Example: parameter.location=string,
+         * parameter.location.description=The city and state,
+         * parameter.location.required=true,
+         * parameter.unit.enum=celsius,fahrenheit. This is a multi-value option
+         * with prefix: parameter.
          * 
          * The option is a: <code>java.util.Map&lt;java.lang.String,
          * java.lang.String&gt;</code> type.
@@ -107,8 +146,13 @@ public interface LangChain4jToolsEndpointBuilderFactory {
             return this;
         }
         /**
-         * List of Tool parameters in the form of parameter.=. This is a
-         * multi-value option with prefix: parameter.
+         * List of Tool parameters with optional metadata. Format: parameter.=,
+         * parameter..description=, parameter..required=, parameter..enum=.
+         * Example: parameter.location=string,
+         * parameter.location.description=The city and state,
+         * parameter.location.required=true,
+         * parameter.unit.enum=celsius,fahrenheit. This is a multi-value option
+         * with prefix: parameter.
          * 
          * The option is a: <code>java.util.Map&lt;java.lang.String,
          * java.lang.String&gt;</code> type.
@@ -510,6 +554,19 @@ public interface LangChain4jToolsEndpointBuilderFactory {
          * Since: 4.8
          * Maven coordinates: org.apache.camel:camel-langchain4j-tools
          * 
+         * @return the dsl builder for the headers' name.
+         */
+        default LangChain4jToolsHeaderNameBuilder langchain4jTools() {
+            return LangChain4jToolsHeaderNameBuilder.INSTANCE;
+        }
+        /**
+         * LangChain4j Tools (camel-langchain4j-tools)
+         * LangChain4j Tools and Function Calling Features
+         * 
+         * Category: ai
+         * Since: 4.8
+         * Maven coordinates: org.apache.camel:camel-langchain4j-tools
+         * 
          * Syntax: <code>langchain4j-tools:toolId</code>
          * 
          * Path parameter: toolId (required)
@@ -543,6 +600,69 @@ public interface LangChain4jToolsEndpointBuilderFactory {
             return LangChain4jToolsEndpointBuilderFactory.endpointBuilder(componentName, path);
         }
 
+    }
+    /**
+     * The builder of headers' name for the LangChain4j Tools component.
+     */
+    public static class LangChain4jToolsHeaderNameBuilder {
+        /**
+         * The internal instance of the builder used to access to all the
+         * methods representing the name of headers.
+         */
+        public static final LangChain4jToolsHeaderNameBuilder INSTANCE = new LangChain4jToolsHeaderNameBuilder();
+
+        /**
+         * The Finish Reason.
+         * 
+         * The option is a: {@code dev.langchain4j.model.output.FinishReason}
+         * type.
+         * 
+         * Group: common
+         * 
+         * @return the name of the header {@code LangChain4jToolsFinishReason}.
+         */
+        public String langChain4jToolsFinishReason() {
+            return "CamelLangChain4jToolsFinishReason";
+        }
+        /**
+         * The Input Token Count.
+         * 
+         * The option is a: {@code int} type.
+         * 
+         * Group: common
+         * 
+         * @return the name of the header {@code
+         * LangChain4jToolsInputTokenCount}.
+         */
+        public String langChain4jToolsInputTokenCount() {
+            return "CamelLangChain4jToolsInputTokenCount";
+        }
+        /**
+         * The Output Token Count.
+         * 
+         * The option is a: {@code int} type.
+         * 
+         * Group: common
+         * 
+         * @return the name of the header {@code
+         * LangChain4jToolsOutputTokenCount}.
+         */
+        public String langChain4jToolsOutputTokenCount() {
+            return "CamelLangChain4jToolsOutputTokenCount";
+        }
+        /**
+         * The Total Token Count.
+         * 
+         * The option is a: {@code int} type.
+         * 
+         * Group: common
+         * 
+         * @return the name of the header {@code
+         * LangChain4jToolsTotalTokenCount}.
+         */
+        public String langChain4jToolsTotalTokenCount() {
+            return "CamelLangChain4jToolsTotalTokenCount";
+        }
     }
     static LangChain4jToolsEndpointBuilder endpointBuilder(String componentName, String path) {
         class LangChain4jToolsEndpointBuilderImpl extends AbstractEndpointBuilder implements LangChain4jToolsEndpointBuilder, AdvancedLangChain4jToolsEndpointBuilder {

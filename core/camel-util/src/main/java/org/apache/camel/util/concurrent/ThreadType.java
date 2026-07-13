@@ -16,15 +16,54 @@
  */
 package org.apache.camel.util.concurrent;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
- * Defines the existing type of threads. The virtual threads can only be used with JDK 21+ and the system property
- * {@code camel.threads.virtual.enabled} set to {@code true}.
+ * Defines the existing type of threads. The virtual threads can be enabled with the system property
+ * {@code camel.threads.virtual.enabled} set to {@code true}, or via the Camel Main configuration property
+ * {@code camel.main.virtualThreadsEnabled}. The default value is {@code false} which means that platform threads are
+ * used by default.
+ * <p>
+ * The thread type is resolved lazily on first access, allowing configuration properties to set the system property
+ * before the type is determined.
  */
 public enum ThreadType {
     PLATFORM,
     VIRTUAL;
 
+    private static final Logger LOG = LoggerFactory.getLogger(ThreadType.class);
+    private static volatile ThreadType current;
+
     public static ThreadType current() {
-        return PLATFORM;
+        ThreadType type = current;
+        if (type == null) {
+            synchronized (ThreadType.class) {
+                type = current;
+                if (type == null) {
+                    type = Boolean.getBoolean("camel.threads.virtual.enabled") ? VIRTUAL : PLATFORM;
+                    current = type;
+                    if (type == VIRTUAL) {
+                        LOG.info("The type of thread detected is: {}", type);
+                    } else {
+                        LOG.debug("The type of thread detected is: {}", type);
+                    }
+                }
+            }
+        }
+        return type;
+    }
+
+    /**
+     * Directly enables virtual threads by setting the cached type to {@code VIRTUAL}.
+     * <p>
+     * This must be called before any thread pools are created, ideally during early bootstrap, to ensure the cached
+     * value reflects the configured intent regardless of the order in which {@link #current()} was previously invoked.
+     */
+    public static void enable() {
+        synchronized (ThreadType.class) {
+            current = VIRTUAL;
+        }
+        LOG.info("The type of thread enabled is: {}", VIRTUAL);
     }
 }

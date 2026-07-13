@@ -29,10 +29,10 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.body;
+import static org.apache.camel.test.junit6.TestSupport.body;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,8 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Mail producer concurrent test.
  */
 public class MailProducerConcurrentTest extends CamelTestSupport {
-    private static final MailboxUser camel = Mailbox.getOrCreateUser("camel", "secret");
-    private static final MailboxUser someone = Mailbox.getOrCreateUser("someone", "secret");
+    private static final MailboxUser camel = Mailbox.getOrCreateUser("MailProducerConcurrentTest-camel", "secret");
+    private static final MailboxUser someone = Mailbox.getOrCreateUser("MailProducerConcurrentTest-someone", "secret");
 
     @Test
     public void testNoConcurrentProducers() throws Exception {
@@ -98,7 +98,7 @@ public class MailProducerConcurrentTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from("direct:start").to(camel.uriPrefix(Protocol.smtp), "mock:result");
+                from("direct:start").to(camel.uriPrefix(Protocol.smtp) + "&useHeaderRecipients=true", "mock:result");
             }
         };
     }

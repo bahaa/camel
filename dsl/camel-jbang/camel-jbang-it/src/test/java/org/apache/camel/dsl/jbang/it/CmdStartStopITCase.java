@@ -20,8 +20,13 @@ import java.io.IOException;
 
 import org.apache.camel.dsl.jbang.it.support.JBangTestSupport;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
+
+@DisabledOnOs(WINDOWS)
 public class CmdStartStopITCase extends JBangTestSupport {
 
     @Test
@@ -31,8 +36,8 @@ public class CmdStartStopITCase extends JBangTestSupport {
         executeBackground(String.format("run --source-dir=%s", mountPoint()));
         checkLogContains("Hello world!");
         execute("cmd stop-route --id=route1");
-        checkCommandOutputsPattern("get route",
-                "route1\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Stopped.*\\n.*route2\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Started",
+        checkCommandOutputsPattern("get route --wide-uri",
+                "(?s)route1\\s+timer.*?Stopped.*?route2\\s+timer.*?Started",
                 ASSERTION_WAIT_SECONDS);
     }
 
@@ -40,12 +45,12 @@ public class CmdStartStopITCase extends JBangTestSupport {
     public void testCmdStopByPID() throws IOException {
         copyResourceInDataFolder(TestResources.DIR_ROUTE);
         copyResourceInDataFolder(TestResources.ROUTE2);
-        String PID = executeBackground(String.format("run %s/FromDirectoryRoute.java", mountPoint()));
+        String process = executeBackground(String.format("run %s/FromDirectoryRoute.java", mountPoint()));
         executeBackground(String.format("run %s/route2.yaml", mountPoint()));
         checkLogContains("Hello world!");
-        execute("cmd stop-route " + PID);
-        checkCommandOutputsPattern("get route",
-                "route1\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Stopped.*\\n.*route2.*timer:\\/\\/(yaml|java)\\?period=1000\\s+Started",
+        execute("cmd stop-route " + process);
+        checkCommandOutputsPattern("get route --wide-uri",
+                "(?s)route1\\s+timer.*?Stopped.*?route2.*?timer.*?Started",
                 ASSERTION_WAIT_SECONDS);
     }
 
@@ -56,8 +61,8 @@ public class CmdStartStopITCase extends JBangTestSupport {
         executeBackground(String.format("run --source-dir=%s", mountPoint()));
         checkLogContains("Hello world!");
         execute("cmd stop-route");
-        checkCommandOutputsPattern("get route",
-                "route1\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Stopped.*\\n.*route2\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Stopped",
+        checkCommandOutputsPattern("get route --wide-uri",
+                "(?s)route1\\s+timer.*?Stopped.*?route2\\s+timer.*?Stopped",
                 ASSERTION_WAIT_SECONDS);
     }
 
@@ -69,8 +74,8 @@ public class CmdStartStopITCase extends JBangTestSupport {
         checkLogContains("Hello world!");
         execute("cmd stop-route");
         execute("cmd start-route --id=route1");
-        checkCommandOutputsPattern("get route",
-                "route1\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Started.*\\n.*route2\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Stopped",
+        checkCommandOutputsPattern("get route --wide-uri",
+                "(?s)route1\\s+timer.*?Started.*?route2\\s+timer.*?Stopped",
                 ASSERTION_WAIT_SECONDS);
     }
 
@@ -78,13 +83,13 @@ public class CmdStartStopITCase extends JBangTestSupport {
     public void testCmdStartByPID() throws IOException {
         copyResourceInDataFolder(TestResources.DIR_ROUTE);
         copyResourceInDataFolder(TestResources.ROUTE2);
-        String PID = executeBackground(String.format("run %s/FromDirectoryRoute.java", mountPoint()));
+        String process = executeBackground(String.format("run %s/FromDirectoryRoute.java", mountPoint()));
         executeBackground(String.format("run %s/route2.yaml", mountPoint()));
         checkLogContains("Hello world!");
         execute("cmd stop-route");
-        execute("cmd start-route " + PID);
-        checkCommandOutputsPattern("get route",
-                "route1\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Started.*\\n.*route2.*timer:\\/\\/(yaml|java)\\?period=1000\\s+Stopped",
+        execute("cmd start-route " + process);
+        checkCommandOutputsPattern("get route --wide-uri",
+                "(?s)route1\\s+timer.*?Started.*?route2.*?timer.*?Stopped",
                 ASSERTION_WAIT_SECONDS);
     }
 
@@ -96,22 +101,23 @@ public class CmdStartStopITCase extends JBangTestSupport {
         checkLogContains("Hello world!");
         execute("cmd stop-route");
         execute("cmd start-route");
-        checkCommandOutputsPattern("get route",
-                "route1\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Started.*\\n.*route2\\s+timer:\\/\\/(yaml|java)\\?period=1000\\s+Started",
+        checkCommandOutputsPattern("get route --wide-uri",
+                "(?s)route1\\s+timer.*?Started.*?route2\\s+timer.*?Started",
                 ASSERTION_WAIT_SECONDS);
     }
 
     @Test
+    @Tag("container-only")
     public void testCamelWatch() throws IOException {
         copyResourceInDataFolder(TestResources.ROUTE2);
-        String PID = executeBackground(String.format("run %s/route2.yaml", mountPoint()));
-        newFileInDataFolder("watch-sleep", "nohup camel ps --watch&\n" +
+        String process = executeBackground(String.format("run %s/route2.yaml", mountPoint()));
+        newFileInDataFolder("watch-sleep", "nohup " + getMainCommand() + " ps --watch&\n" +
                                            "sleep 5\n" +
                                            "echo \"q\"\n");
         execInContainer(String.format("chmod +x %s/watch-sleep", mountPoint()));
         Assertions.assertThat(
                 execInContainer(String.format("%s/watch-sleep", mountPoint())))
-                .as("watch command should output PID" + PID)
-                .contains(PID);
+                .as("watch command should output PID" + process)
+                .contains(process);
     }
 }

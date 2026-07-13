@@ -27,7 +27,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -48,8 +48,8 @@ public class ExecOutFileTest {
 
     private static final File FILE = new File("target/outfiletest.xml");
 
-    @Produce("direct:input")
-    private ProducerTemplate producerTemplate;
+    @Produce("direct:input2")
+    private ProducerTemplate producerTemplate2;
 
     @BeforeEach
     public void setUp() throws IOException {
@@ -106,7 +106,7 @@ public class ExecOutFileTest {
     }
 
     private Exchange sendWithMockedExecutor() {
-        Exchange e = producerTemplate.send(new Processor() {
+        Exchange e = producerTemplate2.send(new Processor() {
             public void process(Exchange exchange) {
                 exchange.getIn().setHeader(EXEC_COMMAND_OUT_FILE, FILE.getPath());
                 exchange.getIn().setBody(FILE_CONTENT);

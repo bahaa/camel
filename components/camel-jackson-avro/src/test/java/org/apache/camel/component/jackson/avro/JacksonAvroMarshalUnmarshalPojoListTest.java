@@ -27,7 +27,7 @@ import org.apache.camel.component.jackson.SchemaResolver;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.spi.DataFormat;
 import org.apache.camel.spi.Registry;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,16 +69,17 @@ public class JacksonAvroMarshalUnmarshalPojoListTest extends CamelTestSupport {
 
     @Override
     protected void bindToRegistry(Registry registry) {
-        String schemaJson = "{\n" +
-                            "  \"type\": \"array\",  \n" +
-                            "  \"items\":{\n" +
-                            "    \"name\":\"Pojo\",\n" +
-                            "    \"type\":\"record\",\n" +
-                            "    \"fields\":[\n" +
-                            "      {\"name\":\"text\", \"type\":\"string\"}\n" +
-                            "    ]\n" +
-                            "  }\n" +
-                            "}";
+        String schemaJson = """
+                {
+                  "type": "array",\s\s
+                  "items":{
+                    "name":"Pojo",
+                    "type":"record",
+                    "fields":[
+                      {"name":"text", "type":"string"}
+                    ]
+                  }
+                }""";
         Schema raw = new Schema.Parser(NameValidator.UTF_VALIDATOR).parse(schemaJson);
         AvroSchema schema = new AvroSchema(raw);
         SchemaResolver resolver = ex -> schema;

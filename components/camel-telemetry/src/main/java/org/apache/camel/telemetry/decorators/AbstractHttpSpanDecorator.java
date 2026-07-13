@@ -19,6 +19,7 @@ package org.apache.camel.telemetry.decorators;
 import org.apache.camel.Endpoint;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
+import org.apache.camel.telemetry.Op;
 import org.apache.camel.telemetry.Span;
 import org.apache.camel.telemetry.TagConstants;
 
@@ -30,10 +31,10 @@ public abstract class AbstractHttpSpanDecorator extends AbstractSpanDecorator {
     public String getHttpMethod(Exchange exchange, Endpoint endpoint) {
         // 1. Use method provided in header.
         Object method = exchange.getIn().getHeader(Exchange.HTTP_METHOD);
-        if (method instanceof String) {
-            return (String) method;
-        } else if (method instanceof Enum) {
-            return ((Enum<?>) method).name();
+        if (method instanceof String str) {
+            return str;
+        } else if (method instanceof Enum<?> enumValue) {
+            return enumValue.name();
         } else if (method != null) {
             return exchange.getContext().getTypeConverter().tryConvertTo(String.class, exchange, method);
         }
@@ -76,12 +77,12 @@ public abstract class AbstractHttpSpanDecorator extends AbstractSpanDecorator {
 
     protected String getHttpURL(Exchange exchange, Endpoint endpoint) {
         Object url = exchange.getIn().getHeader(Exchange.HTTP_URL);
-        if (url instanceof String) {
-            return (String) url;
+        if (url instanceof String str) {
+            return str;
         } else {
             Object uri = exchange.getIn().getHeader(Exchange.HTTP_URI);
-            if (uri instanceof String) {
-                return (String) uri;
+            if (uri instanceof String str) {
+                return str;
             } else {
                 // Try to obtain from endpoint
                 int index = endpoint.getEndpointUri().lastIndexOf("http:");
@@ -103,6 +104,17 @@ public abstract class AbstractHttpSpanDecorator extends AbstractSpanDecorator {
             if (responseCode != null) {
                 span.setTag(TagConstants.HTTP_STATUS, responseCode.toString());
             }
+        }
+    }
+
+    @Override
+    public String getSpanKind(String operationName) {
+        if (Op.EVENT_RECEIVED.name().equals(operationName)) {
+            return "SERVER";
+        } else if (Op.EVENT_SENT.name().equals(operationName)) {
+            return "CLIENT";
+        } else {
+            return "INTERNAL";
         }
     }
 }

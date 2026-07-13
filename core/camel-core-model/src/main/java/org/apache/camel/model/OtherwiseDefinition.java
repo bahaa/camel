@@ -26,12 +26,14 @@ import jakarta.xml.bind.annotation.XmlElementRef;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 
+import org.apache.camel.NamedNode;
 import org.apache.camel.spi.Metadata;
 
 /**
  * Route to be executed when all other choices evaluate to false
  */
-@Metadata(label = "eip,routing")
+@Metadata(label = "eip,routing",
+          description = "Defines the default branch within a Choice EIP that executes when no When condition matches")
 @XmlRootElement(name = "otherwise")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class OtherwiseDefinition extends OptionalIdentifiedDefinition<OtherwiseDefinition>
@@ -44,6 +46,7 @@ public class OtherwiseDefinition extends OptionalIdentifiedDefinition<OtherwiseD
               description = "Disables this EIP from the route.")
     private String disabled;
     @XmlElementRef
+    @Metadata(description = "The processing steps to execute when all other choices evaluate to false.")
     private List<ProcessorDefinition<?>> outputs = new ArrayList<>();
 
     public OtherwiseDefinition() {
@@ -58,6 +61,11 @@ public class OtherwiseDefinition extends OptionalIdentifiedDefinition<OtherwiseD
     @Override
     public OtherwiseDefinition copyDefinition() {
         return new OtherwiseDefinition(this);
+    }
+
+    @Override
+    public List<NamedNode> getChildren() {
+        return new ArrayList<>(outputs);
     }
 
     public List<ProcessorDefinition<?>> getOutputs() {

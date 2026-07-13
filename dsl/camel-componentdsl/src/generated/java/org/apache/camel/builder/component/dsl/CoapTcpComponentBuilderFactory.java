@@ -121,6 +121,23 @@ public interface CoapTcpComponentBuilderFactory {
             return this;
         }
     
+        /**
+         * To use a shared client for the producers.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.eclipse.californium.core.CoapClient&lt;/code&gt;
+         * type.
+         * 
+         * Group: producer (advanced)
+         * 
+         * @param client the value to set
+         * @return the dsl builder
+         */
+        default CoapTcpComponentBuilder client(org.eclipse.californium.core.CoapClient client) {
+            doSetProperty("client", client);
+            return this;
+        }
+    
         
         /**
          * Whether autowiring is enabled. This is used for automatic autowiring
@@ -142,6 +159,24 @@ public interface CoapTcpComponentBuilderFactory {
             doSetProperty("autowiredEnabled", autowiredEnabled);
             return this;
         }
+    
+        /**
+         * To use a custom org.apache.camel.spi.HeaderFilterStrategy to filter
+         * header to and from Camel message.
+         * 
+         * The option is a:
+         * &lt;code&gt;org.apache.camel.spi.HeaderFilterStrategy&lt;/code&gt;
+         * type.
+         * 
+         * Group: filter
+         * 
+         * @param headerFilterStrategy the value to set
+         * @return the dsl builder
+         */
+        default CoapTcpComponentBuilder headerFilterStrategy(org.apache.camel.spi.HeaderFilterStrategy headerFilterStrategy) {
+            doSetProperty("headerFilterStrategy", headerFilterStrategy);
+            return this;
+        }
     }
 
     class CoapTcpComponentBuilderImpl
@@ -160,7 +195,9 @@ public interface CoapTcpComponentBuilderFactory {
             case "configurationFile": ((CoAPComponent) component).setConfigurationFile((java.lang.String) value); return true;
             case "bridgeErrorHandler": ((CoAPComponent) component).setBridgeErrorHandler((boolean) value); return true;
             case "lazyStartProducer": ((CoAPComponent) component).setLazyStartProducer((boolean) value); return true;
+            case "client": ((CoAPComponent) component).setClient((org.eclipse.californium.core.CoapClient) value); return true;
             case "autowiredEnabled": ((CoAPComponent) component).setAutowiredEnabled((boolean) value); return true;
+            case "headerFilterStrategy": ((CoAPComponent) component).setHeaderFilterStrategy((org.apache.camel.spi.HeaderFilterStrategy) value); return true;
             default: return false;
             }
         }

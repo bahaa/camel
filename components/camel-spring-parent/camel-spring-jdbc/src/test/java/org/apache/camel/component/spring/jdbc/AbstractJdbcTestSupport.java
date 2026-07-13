@@ -17,7 +17,7 @@
 package org.apache.camel.component.spring.jdbc;
 
 import org.apache.camel.BindToRegistry;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
@@ -34,7 +34,7 @@ public abstract class AbstractJdbcTestSupport extends CamelTestSupport {
     public void setupResources() {
         db = new EmbeddedDatabaseBuilder()
                 .setName(getClass().getSimpleName())
-                .setType(EmbeddedDatabaseType.DERBY)
+                .setType(EmbeddedDatabaseType.H2)
                 .addScript("sql/init.sql").build();
     }
 

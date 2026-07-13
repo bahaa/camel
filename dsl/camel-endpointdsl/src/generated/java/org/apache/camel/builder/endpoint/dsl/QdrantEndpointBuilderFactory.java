@@ -348,7 +348,7 @@ public interface QdrantEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final QdrantHeaderNameBuilder INSTANCE = new QdrantHeaderNameBuilder();
+        public static final QdrantHeaderNameBuilder INSTANCE = new QdrantHeaderNameBuilder();
 
         /**
          * The action to be performed.
@@ -473,6 +473,18 @@ public interface QdrantEndpointBuilderFactory {
          */
         public String qdrantPointId() {
             return "CamelQdrantPointId";
+        }
+        /**
+         * The maximum number of results to return from a similarity search.
+         * 
+         * The option is a: {@code int} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code QdrantMaxResults}.
+         */
+        public String qdrantMaxResults() {
+            return "CamelQdrantMaxResults";
         }
     }
     static QdrantEndpointBuilder endpointBuilder(String componentName, String path) {

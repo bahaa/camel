@@ -30,7 +30,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 @InfraService(service = DoclingInfraService.class,
-              description = "Document processing and conversion service",
+              description = "Docling is a document processing and conversion toolkit",
               serviceAlias = { "docling" })
 public class DoclingLocalContainerInfraService implements DoclingInfraService, ContainerService<GenericContainer<?>> {
 
@@ -65,13 +65,10 @@ public class DoclingLocalContainerInfraService implements DoclingInfraService, C
             public TestInfraDoclingContainer(boolean fixedPort) {
                 super(DockerImageName.parse(doclingImage));
 
-                withExposedPorts(DOCLING_PORT)
-                        .waitingFor(Wait.forListeningPorts(DOCLING_PORT))
+                waitingFor(Wait.forListeningPorts(DOCLING_PORT))
                         .withStartupTimeout(Duration.ofMinutes(3L));
 
-                if (fixedPort) {
-                    addFixedExposedPort(DOCLING_PORT, DOCLING_PORT);
-                }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, DOCLING_PORT);
             }
         }
 

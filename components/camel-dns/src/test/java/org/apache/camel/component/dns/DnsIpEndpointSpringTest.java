@@ -20,14 +20,14 @@ import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * A series of tests to check the IP lookup operation.
@@ -43,24 +43,20 @@ public class DnsIpEndpointSpringTest extends CamelSpringTestSupport {
     @Test
     void testNullIPRequests() throws Exception {
         resultEndpoint.expectedMessageCount(0);
-        try {
-            template.sendBodyAndHeader("hello", "dns.domain", null);
-            fail("Should have thrown exception");
-        } catch (Exception t) {
-            assertTrue(t.getCause() instanceof IllegalArgumentException);
-        }
+        Exception e = assertThrows(Exception.class, () -> {
+            template.sendBodyAndHeader("hello", DnsConstants.DNS_DOMAIN, null);
+        });
+        assertTrue(e.getCause() instanceof IllegalArgumentException);
         resultEndpoint.assertIsSatisfied();
     }
 
     @Test
     void testEmptyIPRequests() throws Exception {
         resultEndpoint.expectedMessageCount(0);
-        try {
-            template.sendBodyAndHeader("hello", "dns.domain", "");
-            fail("Should have thrown exception");
-        } catch (Exception t) {
-            assertTrue(t.getCause() instanceof IllegalArgumentException);
-        }
+        Exception e = assertThrows(Exception.class, () -> {
+            template.sendBodyAndHeader("hello", DnsConstants.DNS_DOMAIN, "");
+        });
+        assertTrue(e.getCause() instanceof IllegalArgumentException);
         resultEndpoint.assertIsSatisfied();
     }
 
@@ -71,7 +67,7 @@ public class DnsIpEndpointSpringTest extends CamelSpringTestSupport {
 
         resultEndpoint.expectedBodiesReceived("40.79.78.1");
 
-        template.sendBodyAndHeader("hello", "dns.domain", "www.apache.org");
+        template.sendBodyAndHeader("hello", DnsConstants.DNS_DOMAIN, "www.apache.org");
         resultEndpoint.assertIsSatisfied();
     }
 

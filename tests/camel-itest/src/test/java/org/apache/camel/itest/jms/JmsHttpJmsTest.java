@@ -24,7 +24,7 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.itest.utils.extensions.JmsServiceExtension;
 import org.apache.camel.spi.Registry;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -41,7 +41,9 @@ public class JmsHttpJmsTest extends CamelTestSupport {
     @RegisterExtension
     public static JmsServiceExtension jmsServiceExtension = JmsServiceExtension.createExtension();
 
-    private int port;
+    @RegisterExtension
+    static AvailablePortFinder.Port portFinder = AvailablePortFinder.find();
+    private int port = portFinder.getPort();
 
     @Test
     void testJmsHttpJms() throws Exception {
@@ -67,7 +69,6 @@ public class JmsHttpJmsTest extends CamelTestSupport {
 
     @Override
     protected RouteBuilder createRouteBuilder() {
-        port = AvailablePortFinder.getNextAvailable();
 
         return new RouteBuilder() {
             public void configure() {

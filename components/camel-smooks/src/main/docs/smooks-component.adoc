@@ -4,11 +4,9 @@
 :artifactid: camel-smooks
 :description: Use Smooks to transform, route, and bind both XML and non-XML data, including EDI, CSV, JSON, and YAML.
 :since: 4.7
-:supportlevel: Preview
+:supportlevel: Stable
 :tabs-sync-option:
 :component-header: Only producer is supported
-//Manually maintained attributes
-:camel-spring-boot-name: smooks
 
 *Since Camel {since}*
 
@@ -69,11 +67,16 @@ YAML::
 +
 [source,yaml]
 ----
-- from:
-    uri: file:inputDir?noop=true
+- route:
+    from:
+      uri: file:inputDir
+      parameters:
+        noop: true
     steps:
-      - to: smooks:smooks-config.xml
-      - to: jms:queue:order
+      - to:
+          uri: smooks:smooks-config.xml
+      - to:
+          uri: jms:queue:order
 ----
 ====
 

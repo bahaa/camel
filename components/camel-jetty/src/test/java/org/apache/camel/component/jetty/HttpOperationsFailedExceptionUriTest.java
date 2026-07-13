@@ -23,22 +23,21 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HttpOperationsFailedExceptionUriTest extends BaseJettyTest {
 
     @Test
     public void testHttpOperationsFailedExceptionUri() {
-        try {
-            template.requestBodyAndHeader("http://localhost:{{port}}/foo?bar=123", null, "foo", 123);
-            fail("Should have thrown an exception");
-        } catch (RuntimeCamelException e) {
-            HttpOperationFailedException cause = assertIsInstanceOf(HttpOperationFailedException.class, e.getCause());
-            assertEquals(500, cause.getStatusCode());
-            assertEquals("http://localhost:" + getPort() + "/foo?bar=123", cause.getUri());
-        }
+        RuntimeCamelException e = assertThrows(RuntimeCamelException.class,
+                () -> template.requestBodyAndHeader("http://localhost:{{port}}/foo?bar=123", null, "foo", 123),
+                "Should have thrown an exception");
+
+        HttpOperationFailedException cause = assertIsInstanceOf(HttpOperationFailedException.class, e.getCause());
+        assertEquals(500, cause.getStatusCode());
+        assertEquals("http://localhost:" + getPort() + "/foo?bar=123", cause.getUri());
     }
 
     @Override

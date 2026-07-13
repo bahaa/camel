@@ -4,7 +4,7 @@
 :artifactid: camel-test-junit6
 :description: Camel unit testing with JUnit 6
 :since: 4.17
-:supportlevel: Preview
+:supportlevel: Stable
 :tabs-sync-option:
 
 *Since Camel {since}*
@@ -21,6 +21,7 @@ for build the routes to be tested. Then the methods with `@Test` annotations are
 will be executed. The base class `CamelTestSupport` has a number of helper methods to configure testing,
 see more at the Javadoc of this class.
 
+._Java-only: CamelTestSupport unit test example_
 [source,java]
 ----
 import org.apache.camel.RoutesBuilder;

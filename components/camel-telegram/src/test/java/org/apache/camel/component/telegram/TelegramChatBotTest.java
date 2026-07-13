@@ -30,7 +30,7 @@ import org.apache.camel.component.telegram.util.TelegramTestUtil;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertCollectionSize;
+import static org.apache.camel.test.junit6.TestSupport.assertCollectionSize;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -101,7 +101,7 @@ public class TelegramChatBotTest extends TelegramTestSupport {
         request2.getUpdates().get(0).getMessage().setText("intercept");
         request2.getUpdates().get(0).getMessage().getChat().setId("my-chat-id");
 
-        return new TelegramMockRoutes(port)
+        return new TelegramMockRoutes(port.getPort())
                 .addEndpoint(
                         "getUpdates",
                         "GET",

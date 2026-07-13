@@ -16,11 +16,11 @@
  */
 package org.apache.camel.component.file;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.ContextTestSupport;
@@ -31,9 +31,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 class FileProducerCharsetUTFtoISOConvertBodyToTest extends ContextTestSupport {
 
@@ -46,20 +46,21 @@ class FileProducerCharsetUTFtoISOConvertBodyToTest extends ContextTestSupport {
 
     @BeforeEach
     void writeTestData() {
-        try (OutputStream fos = Files.newOutputStream(testFile(INPUT_FILE))) {
-            fos.write(DATA.getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            fail("The test cannot run due to: " + e.getMessage());
-        }
+        // Write to a temp file and atomically rename so the file consumer never
+        // sees a 0-byte file between newOutputStream() and close().
+        assertDoesNotThrow(() -> {
+            Path tmp = testFile(INPUT_FILE + ".tmp");
+            try (OutputStream fos = Files.newOutputStream(tmp)) {
+                fos.write(DATA.getBytes(StandardCharsets.UTF_8));
+            }
+            Files.move(tmp, testFile(INPUT_FILE), StandardCopyOption.ATOMIC_MOVE);
+        }, "The test cannot run due to an I/O error");
     }
 
     @AfterEach
     void cleanupFile() {
-        try {
-            Files.delete(testFile(OUTPUT_FILE));
-        } catch (IOException e) {
-            fail("The test cannot run due to an error cleaning up: " + e.getMessage());
-        }
+        assertDoesNotThrow(() -> Files.deleteIfExists(testFile(OUTPUT_FILE)),
+                "The test cannot run due to an error cleaning up");
     }
 
     @Test

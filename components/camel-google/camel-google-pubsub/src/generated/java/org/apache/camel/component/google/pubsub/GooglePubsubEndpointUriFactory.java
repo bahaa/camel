@@ -21,9 +21,10 @@ public class GooglePubsubEndpointUriFactory extends org.apache.camel.support.com
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(20);
+        Set<String> props = new HashSet<>(21);
         props.add("ackMode");
         props.add("authenticate");
         props.add("bridgeErrorHandler");
@@ -36,6 +37,7 @@ public class GooglePubsubEndpointUriFactory extends org.apache.camel.support.com
         props.add("lazyStartProducer");
         props.add("loggerId");
         props.add("maxAckExtensionPeriod");
+        props.add("maxDeliveryAttempts");
         props.add("maxMessagesPerPoll");
         props.add("messageOrderingEnabled");
         props.add("projectId");
@@ -46,6 +48,7 @@ public class GooglePubsubEndpointUriFactory extends org.apache.camel.support.com
         props.add("synchronousPull");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
         SECRET_PROPERTY_NAMES = Collections.emptySet();
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
@@ -75,6 +78,11 @@ public class GooglePubsubEndpointUriFactory extends org.apache.camel.support.com
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

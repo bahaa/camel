@@ -23,7 +23,7 @@ import java.util.Map;
 import org.apache.camel.Endpoint;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
@@ -163,7 +163,6 @@ public class SqlGeneratedKeysTest extends CamelTestSupport {
         List<Map<String, Object>> generatedKeys = out.getMessage().getHeader(SqlConstants.SQL_GENERATED_KEYS_DATA, List.class);
         assertNotNull(generatedKeys, "out body could not be converted to a List - was: " + out.getMessage().getBody());
 
-        // it seems not to work with Derby...
         assertEquals(4, generatedKeys.size());
 
         int id = 3;

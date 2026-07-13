@@ -22,7 +22,7 @@ import org.apache.camel.component.cxf.common.message.CxfConstants;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.itest.utils.extensions.JmsServiceExtension;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -41,11 +41,12 @@ public class CxfToJmsInOutTest {
     @RegisterExtension
     public static JmsServiceExtension jmsServiceExtension = JmsServiceExtension.createExtension();
 
-    private static int port = AvailablePortFinder.getNextAvailable();
+    @RegisterExtension
+    static AvailablePortFinder.Port port = AvailablePortFinder.find();
     static {
         //set them as system properties so Spring can use the property place holder
         //things to set them into the URL's in the spring contexts
-        System.setProperty("CxfToJmsInOutTest.port", Integer.toString(port));
+        System.setProperty("CxfToJmsInOutTest.port", Integer.toString(port.getPort()));
     }
 
     @Autowired

@@ -16,11 +16,14 @@
  */
 package org.apache.camel.component.jms.issues.error.ncd;
 
+import jakarta.jms.ConnectionFactory;
+
 import org.apache.camel.CamelContext;
 import org.apache.camel.ConsumerTemplate;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.jms.AbstractJMSTest;
+import org.apache.camel.component.jms.JmsComponent;
 import org.apache.camel.support.ExceptionHelper;
 import org.apache.camel.test.infra.core.CamelContextExtension;
 import org.apache.camel.test.infra.core.DefaultCamelContextExtension;
@@ -29,8 +32,8 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class NoClassDefFoundErrorWrapExceptionTest extends AbstractJMSTest {
 
@@ -43,15 +46,15 @@ public class NoClassDefFoundErrorWrapExceptionTest extends AbstractJMSTest {
 
     @Test
     public void testNoClassDef() {
-        try {
-            template.requestBody("activemq:NoClassDefFoundErrorWrapExceptionTest?transferException=true", "Hello World");
-            fail("Should throw exception");
-        } catch (Exception e) {
-            final String s = ExceptionHelper.stackTraceToString(e);
-            assertTrue(s.contains("java.lang.LinkageError"));
-            assertTrue(s.contains("Cannot do this"));
-            assertTrue(s.contains("org.apache.camel.component.jms.issues.error.ncd.ProcessorFail.process"));
-        }
+        Exception e = assertThrows(Exception.class,
+                () -> template.requestBody("activemq:NoClassDefFoundErrorWrapExceptionTest?transferException=true",
+                        "Hello World"),
+                "Should throw exception");
+
+        final String s = ExceptionHelper.stackTraceToString(e);
+        assertTrue(s.contains("java.lang.LinkageError"));
+        assertTrue(s.contains("Cannot do this"));
+        assertTrue(s.contains("org.apache.camel.component.jms.issues.error.ncd.ProcessorFail.process"));
     }
 
     @Override
@@ -70,6 +73,14 @@ public class NoClassDefFoundErrorWrapExceptionTest extends AbstractJMSTest {
     @Override
     protected String getComponentName() {
         return "activemq";
+    }
+
+    @Override
+    protected JmsComponent setupComponent(
+            CamelContext camelContext, ConnectionFactory connectionFactory, String componentName) {
+        JmsComponent component = super.setupComponent(camelContext, connectionFactory, componentName);
+        component.setObjectMessageEnabled(true);
+        return component;
     }
 
     @Override

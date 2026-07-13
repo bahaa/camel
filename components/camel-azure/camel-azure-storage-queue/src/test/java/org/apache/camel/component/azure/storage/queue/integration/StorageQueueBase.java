@@ -24,7 +24,7 @@ import org.apache.camel.test.infra.azure.common.AzureConfigs;
 import org.apache.camel.test.infra.azure.common.services.AzureService;
 import org.apache.camel.test.infra.azure.storage.queue.clients.AzureStorageClientUtils;
 import org.apache.camel.test.infra.azure.storage.queue.services.AzureStorageQueueServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -72,7 +72,7 @@ public class StorageQueueBase extends CamelTestSupport {
 
     @BeforeAll
     public void initProperties() {
-        queueName = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+        queueName = RandomStringUtils.secure().nextAlphabetic(5).toLowerCase();
 
         configuration = new QueueConfiguration();
         configuration.setCredentials(new StorageSharedKeyCredential(

@@ -17,7 +17,6 @@
 package org.apache.camel.test.infra.qdrant.services;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
@@ -44,6 +43,14 @@ public interface QdrantInfraService extends InfrastructureService {
 
     int port();
 
+    default String collection() {
+        return "testcollection";
+    }
+
+    default String apiKey() {
+        return "";
+    }
+
     default HttpResponse<byte[]> put(String path, Map<Object, Object> body) throws Exception {
         final String reqPath = !path.startsWith("/") ? "/" + path : path;
         final String reqUrl = String.format("http://%s:%d%s", getHttpHost(), getHttpPort(), reqPath);
@@ -58,6 +65,8 @@ public interface QdrantInfraService extends InfrastructureService {
                 .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
-        return HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofByteArray());
+        try (CloseableHttpClient hc = new CloseableHttpClient()) {
+            return hc.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        }
     }
 }

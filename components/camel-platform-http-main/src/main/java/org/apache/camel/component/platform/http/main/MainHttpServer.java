@@ -19,13 +19,11 @@ package org.apache.camel.component.platform.http.main;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.util.Optional;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.impl.MimeMapping;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.impl.BlockingHandlerDecorator;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.StaticService;
@@ -132,7 +130,7 @@ public class MainHttpServer extends ServiceSupport implements CamelContextAware,
 
     @ManagedAttribute(description = "HTTP server port number")
     public int getPort() {
-        return configuration.getBindPort();
+        return server != null ? server.getPort() : configuration.getBindPort();
     }
 
     public void setPort(int port) {
@@ -206,6 +204,9 @@ public class MainHttpServer extends ServiceSupport implements CamelContextAware,
     @Override
     protected void doInit() throws Exception {
         ObjectHelper.notNull(camelContext, "CamelContext");
+
+        // Mark this as the main server (not management) so the engine can identify it
+        configuration.setServerType(VertxPlatformHttpRouter.SERVER_TYPE_SERVER);
 
         server = new VertxPlatformHttpServer(configuration);
         // adding server to camel-context which will manage shutdown the server, so we should not do this here
@@ -295,18 +296,17 @@ public class MainHttpServer extends ServiceSupport implements CamelContextAware,
         };
 
         // use blocking handler as the task can take longer time to complete
-        web.handler(new BlockingHandlerDecorator(handler, true));
+        web.blockingHandler(handler);
 
         platformHttpComponent.addHttpEndpoint(staticContextPath, null, null, null, null);
     }
 
     protected PlatformHttpPluginRegistry resolvePlatformHttpPluginRegistry() {
-        Optional<PlatformHttpPluginRegistry> result = ResolverHelper.resolveService(
+        return ResolverHelper.resolveMandatoryService(
                 getCamelContext(),
                 PlatformHttpPluginRegistry.FACTORY,
-                PlatformHttpPluginRegistry.class);
-        return result.orElseThrow(() -> new IllegalArgumentException(
-                "Cannot create PlatformHttpPluginRegistry. Make sure camel-platform-http JAR is on classpath."));
+                PlatformHttpPluginRegistry.class,
+                "camel-platform-http");
     }
 
     protected void setupStartupSummary() throws Exception {
@@ -314,6 +314,7 @@ public class MainHttpServer extends ServiceSupport implements CamelContextAware,
                 camelContext,
                 platformHttpComponent.getHttpEndpoints(),
                 (server != null ? server.getPort() : getPort()),
+                configuration.isUseGlobalSslContextParameters(),
                 "HTTP endpoints summary");
     }
 

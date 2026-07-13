@@ -54,6 +54,7 @@ public class AS2EndpointConfigurer extends PropertyConfigurerSupport implements 
         map.put("UserAgent", java.lang.String.class);
         map.put("ExceptionHandler", org.apache.camel.spi.ExceptionHandler.class);
         map.put("ExchangePattern", org.apache.camel.ExchangePattern.class);
+        map.put("ExpectContinue", boolean.class);
         map.put("LazyStartProducer", boolean.class);
         map.put("AccessToken", java.lang.String.class);
         map.put("DecryptingPrivateKey", java.security.PrivateKey.class);
@@ -64,6 +65,7 @@ public class AS2EndpointConfigurer extends PropertyConfigurerSupport implements 
         map.put("MdnPassword", java.lang.String.class);
         map.put("MdnUserName", java.lang.String.class);
         map.put("Password", java.lang.String.class);
+        map.put("SignatureVerificationRequired", boolean.class);
         map.put("SignedReceiptMicAlgorithms", java.lang.String.class);
         map.put("SigningAlgorithm", org.apache.camel.component.as2.api.AS2SignatureAlgorithm.class);
         map.put("SigningCertificateChain", java.security.cert.Certificate[].class);
@@ -114,6 +116,8 @@ public class AS2EndpointConfigurer extends PropertyConfigurerSupport implements 
         case "exceptionHandler": target.setExceptionHandler(property(camelContext, org.apache.camel.spi.ExceptionHandler.class, value)); return true;
         case "exchangepattern":
         case "exchangePattern": target.setExchangePattern(property(camelContext, org.apache.camel.ExchangePattern.class, value)); return true;
+        case "expectcontinue":
+        case "expectContinue": target.getConfiguration().setExpectContinue(property(camelContext, boolean.class, value)); return true;
         case "from": target.getConfiguration().setFrom(property(camelContext, java.lang.String.class, value)); return true;
         case "hostnameverifier":
         case "hostnameVerifier": target.getConfiguration().setHostnameVerifier(property(camelContext, javax.net.ssl.HostnameVerifier.class, value)); return true;
@@ -147,6 +151,8 @@ public class AS2EndpointConfigurer extends PropertyConfigurerSupport implements 
         case "serverFqdn": target.getConfiguration().setServerFqdn(property(camelContext, java.lang.String.class, value)); return true;
         case "serverportnumber":
         case "serverPortNumber": target.getConfiguration().setServerPortNumber(property(camelContext, java.lang.Integer.class, value)); return true;
+        case "signatureverificationrequired":
+        case "signatureVerificationRequired": target.getConfiguration().setSignatureVerificationRequired(property(camelContext, boolean.class, value)); return true;
         case "signedreceiptmicalgorithms":
         case "signedReceiptMicAlgorithms": target.getConfiguration().setSignedReceiptMicAlgorithms(property(camelContext, java.lang.String.class, value)); return true;
         case "signingalgorithm":
@@ -216,6 +222,8 @@ public class AS2EndpointConfigurer extends PropertyConfigurerSupport implements 
         case "exceptionHandler": return org.apache.camel.spi.ExceptionHandler.class;
         case "exchangepattern":
         case "exchangePattern": return org.apache.camel.ExchangePattern.class;
+        case "expectcontinue":
+        case "expectContinue": return boolean.class;
         case "from": return java.lang.String.class;
         case "hostnameverifier":
         case "hostnameVerifier": return javax.net.ssl.HostnameVerifier.class;
@@ -249,6 +257,8 @@ public class AS2EndpointConfigurer extends PropertyConfigurerSupport implements 
         case "serverFqdn": return java.lang.String.class;
         case "serverportnumber":
         case "serverPortNumber": return java.lang.Integer.class;
+        case "signatureverificationrequired":
+        case "signatureVerificationRequired": return boolean.class;
         case "signedreceiptmicalgorithms":
         case "signedReceiptMicAlgorithms": return java.lang.String.class;
         case "signingalgorithm":
@@ -314,6 +324,8 @@ public class AS2EndpointConfigurer extends PropertyConfigurerSupport implements 
         case "exceptionHandler": return target.getExceptionHandler();
         case "exchangepattern":
         case "exchangePattern": return target.getExchangePattern();
+        case "expectcontinue":
+        case "expectContinue": return target.getConfiguration().isExpectContinue();
         case "from": return target.getConfiguration().getFrom();
         case "hostnameverifier":
         case "hostnameVerifier": return target.getConfiguration().getHostnameVerifier();
@@ -347,6 +359,8 @@ public class AS2EndpointConfigurer extends PropertyConfigurerSupport implements 
         case "serverFqdn": return target.getConfiguration().getServerFqdn();
         case "serverportnumber":
         case "serverPortNumber": return target.getConfiguration().getServerPortNumber();
+        case "signatureverificationrequired":
+        case "signatureVerificationRequired": return target.getConfiguration().isSignatureVerificationRequired();
         case "signedreceiptmicalgorithms":
         case "signedReceiptMicAlgorithms": return target.getConfiguration().getSignedReceiptMicAlgorithms();
         case "signingalgorithm":

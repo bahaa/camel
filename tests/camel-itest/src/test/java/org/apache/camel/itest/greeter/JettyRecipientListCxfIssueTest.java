@@ -20,8 +20,9 @@ import java.io.File;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.AbstractApplicationContext;
@@ -34,15 +35,18 @@ public class JettyRecipientListCxfIssueTest extends CamelSpringTestSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(JettyRecipientListCxfIssueTest.class);
 
-    private static int port1 = AvailablePortFinder.getNextAvailable();
-    private static int port2 = AvailablePortFinder.getNextAvailable();
-    private static int port3 = AvailablePortFinder.getNextAvailable();
+    @RegisterExtension
+    static AvailablePortFinder.Port port1 = AvailablePortFinder.find();
+    @RegisterExtension
+    static AvailablePortFinder.Port port2 = AvailablePortFinder.find();
+    @RegisterExtension
+    static AvailablePortFinder.Port port3 = AvailablePortFinder.find();
     static {
         //set them as system properties so Spring can use the property placeholder
         //things to set them into the URL's in the spring contexts
-        System.setProperty("RecipientListCxfTest.port1", Integer.toString(port1));
-        System.setProperty("RecipientListCxfTest.port2", Integer.toString(port2));
-        System.setProperty("RecipientListCxfTest.port3", Integer.toString(port3));
+        System.setProperty("RecipientListCxfTest.port1", Integer.toString(port1.getPort()));
+        System.setProperty("RecipientListCxfTest.port2", Integer.toString(port2.getPort()));
+        System.setProperty("RecipientListCxfTest.port3", Integer.toString(port3.getPort()));
     }
 
     @Override
@@ -57,6 +61,9 @@ public class JettyRecipientListCxfIssueTest extends CamelSpringTestSupport {
 
         // send a message to jetty
         Exchange out = template.request("http://0.0.0.0:{{RecipientListCxfTest.port3}}/myapp", exchange -> {
+            // Use the non-Camel-prefixed carrier header convention so it survives
+            // the HTTP transport boundary; the receiver maps it to the renamed
+            // CxfConstants.OPERATION_NAME value before any cxf: call.
             exchange.getIn().setHeader("operationName", "greetMe");
             exchange.getIn().setBody(request);
         });

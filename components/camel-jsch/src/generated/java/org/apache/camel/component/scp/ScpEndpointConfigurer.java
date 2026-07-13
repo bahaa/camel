@@ -27,8 +27,18 @@ public class ScpEndpointConfigurer extends PropertyConfigurerSupport implements 
         case "allowNullBody": target.setAllowNullBody(property(camelContext, boolean.class, value)); return true;
         case "browselimit":
         case "browseLimit": target.setBrowseLimit(property(camelContext, int.class, value)); return true;
+        case "casignaturealgorithms":
+        case "caSignatureAlgorithms": target.getConfiguration().setCaSignatureAlgorithms(property(camelContext, java.lang.String.class, value)); return true;
+        case "certbytes":
+        case "certBytes": target.getConfiguration().setCertBytes(property(camelContext, byte[].class, value)); return true;
+        case "certfile":
+        case "certFile": target.getConfiguration().setCertFile(property(camelContext, java.lang.String.class, value)); return true;
+        case "certuri":
+        case "certUri": target.getConfiguration().setCertUri(property(camelContext, java.lang.String.class, value)); return true;
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": target.setChecksumFileAlgorithm(property(camelContext, java.lang.String.class, value)); return true;
+        case "checksumwritefile":
+        case "checksumWriteFile": target.setChecksumWriteFile(property(camelContext, boolean.class, value)); return true;
         case "chmod": target.getConfiguration().setChmod(property(camelContext, java.lang.String.class, value)); return true;
         case "ciphers": target.getConfiguration().setCiphers(property(camelContext, java.lang.String.class, value)); return true;
         case "connecttimeout":
@@ -75,8 +85,18 @@ public class ScpEndpointConfigurer extends PropertyConfigurerSupport implements 
         case "allowNullBody": return boolean.class;
         case "browselimit":
         case "browseLimit": return int.class;
+        case "casignaturealgorithms":
+        case "caSignatureAlgorithms": return java.lang.String.class;
+        case "certbytes":
+        case "certBytes": return byte[].class;
+        case "certfile":
+        case "certFile": return java.lang.String.class;
+        case "certuri":
+        case "certUri": return java.lang.String.class;
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": return java.lang.String.class;
+        case "checksumwritefile":
+        case "checksumWriteFile": return boolean.class;
         case "chmod": return java.lang.String.class;
         case "ciphers": return java.lang.String.class;
         case "connecttimeout":
@@ -124,8 +144,18 @@ public class ScpEndpointConfigurer extends PropertyConfigurerSupport implements 
         case "allowNullBody": return target.isAllowNullBody();
         case "browselimit":
         case "browseLimit": return target.getBrowseLimit();
+        case "casignaturealgorithms":
+        case "caSignatureAlgorithms": return target.getConfiguration().getCaSignatureAlgorithms();
+        case "certbytes":
+        case "certBytes": return target.getConfiguration().getCertBytes();
+        case "certfile":
+        case "certFile": return target.getConfiguration().getCertFile();
+        case "certuri":
+        case "certUri": return target.getConfiguration().getCertUri();
         case "checksumfilealgorithm":
         case "checksumFileAlgorithm": return target.getChecksumFileAlgorithm();
+        case "checksumwritefile":
+        case "checksumWriteFile": return target.isChecksumWriteFile();
         case "chmod": return target.getConfiguration().getChmod();
         case "ciphers": return target.getConfiguration().getCiphers();
         case "connecttimeout":

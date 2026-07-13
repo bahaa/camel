@@ -27,7 +27,7 @@ import org.apache.camel.component.cxf.common.CxfPayload;
 import org.apache.camel.language.xpath.XPathBuilder;
 import org.apache.camel.support.DefaultExchange;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.binding.soap.SoapHeader;
 import org.junit.jupiter.api.Test;
@@ -241,9 +241,12 @@ public class CxfConsumerPayloadXPathTest extends CamelTestSupport {
         }
     }
 
+    // Keep a reference to the port to prevent it from being reused before CXF binds to it
+    private AvailablePortFinder.Port availablePort;
+
     private String getAvailableUrl(String pathEnd) {
-        int availablePort = AvailablePortFinder.getNextAvailable();
-        String url = "http://localhost:" + availablePort
+        availablePort = AvailablePortFinder.find();
+        String url = "http://localhost:" + availablePort.getPort()
                      + "/" + getClass().getSimpleName();
         return url + "/" + pathEnd;
     }

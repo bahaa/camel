@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-cxf-parent</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-cxf-spring-rest</artifactId>
@@ -93,7 +93,7 @@
 
         <dependency>
             <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-spring-junit5</artifactId>
+            <artifactId>camel-test-spring-junit6</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -130,8 +130,8 @@
                     <artifactId>undertow-servlet</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>io.undertow</groupId>
-                    <artifactId>undertow-servlet-jakarta</artifactId>
+                    <groupId>io.undertow.ee</groupId>
+                    <artifactId>undertow-servlet</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>io.undertow</groupId>
@@ -185,13 +185,6 @@
             <version>${mockito-version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>cglib</groupId>
-            <artifactId>cglib-nodep</artifactId>
-            <version>${cglib-version}</version>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>commons-net</groupId>
             <artifactId>commons-net</artifactId>

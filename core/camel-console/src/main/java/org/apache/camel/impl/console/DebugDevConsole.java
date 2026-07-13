@@ -28,6 +28,7 @@ import org.apache.camel.NamedRoute;
 import org.apache.camel.Route;
 import org.apache.camel.spi.BacklogDebugger;
 import org.apache.camel.spi.BacklogTracerEventMessage;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.Resource;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.CamelContextHelper;
@@ -43,10 +44,17 @@ import org.apache.camel.util.json.Jsoner;
 @DevConsole(name = "debug", description = "Camel route debugger")
 public class DebugDevConsole extends AbstractDevConsole {
 
+    @Metadata(label = "query", description = "Action command to execute on the debugger", javaType = "java.lang.String")
     public static final String COMMAND = "command";
+    @Metadata(label = "query", description = "The breakpoint node id", javaType = "java.lang.String")
     public static final String BREAKPOINT = "breakpoint";
+    @Metadata(label = "query", description = "The position to step to", javaType = "java.lang.Integer")
     public static final String POSITION = "position";
+    @Metadata(label = "query", description = "Number of source code lines around the breakpoint to include",
+              javaType = "java.lang.Integer", defaultValue = "5")
     public static final String CODE_LIMIT = "codeLimit";
+    @Metadata(label = "query", description = "Whether to include message history", javaType = "java.lang.Boolean",
+              defaultValue = "true")
     public static final String HISTORY = "history";
 
     public DebugDevConsole() {
@@ -55,10 +63,9 @@ public class DebugDevConsole extends AbstractDevConsole {
 
     @Override
     protected String doCallText(Map<String, Object> options) {
-        String command = (String) options.get(COMMAND);
-        String breakpoint = (String) options.get(BREAKPOINT);
-        String position = (String) options.get(POSITION);
-        int num = position == null || position.isBlank() ? 0 : Integer.parseInt(position);
+        String command = optionString(options, COMMAND);
+        String breakpoint = optionString(options, BREAKPOINT);
+        int num = optionInt(options, POSITION, 0);
 
         if (ObjectHelper.isNotEmpty(command)) {
             doCommand(command, breakpoint, num);
@@ -70,30 +77,30 @@ public class DebugDevConsole extends AbstractDevConsole {
         BacklogDebugger backlog = getCamelContext().hasService(BacklogDebugger.class);
         if (backlog != null) {
             sb.append("Settings:");
-            sb.append(String.format("\n    Enabled: %s", backlog.isEnabled()));
-            sb.append(String.format("\n    Standby: %s", backlog.isStandby()));
-            sb.append(String.format("\n    Suspended Mode: %s", backlog.isSuspendMode()));
-            sb.append(String.format("\n    Fallback Timeout: %ss", backlog.getFallbackTimeout())); // is in seconds
-            sb.append(String.format("\n    Logging Level: %s", backlog.getLoggingLevel()));
-            sb.append(String.format("\n    Include Exchange Properties: %s", backlog.isIncludeExchangeProperties()));
-            sb.append(String.format("\n    Include Files: %s", backlog.isBodyIncludeFiles()));
-            sb.append(String.format("\n    Include Streams: %s", backlog.isBodyIncludeStreams()));
-            sb.append(String.format("\n    Max Chars: %s", backlog.getBodyMaxChars()));
+            sb.append(String.format("%n    Enabled: %s", backlog.isEnabled()));
+            sb.append(String.format("%n    Standby: %s", backlog.isStandby()));
+            sb.append(String.format("%n    Suspended Mode: %s", backlog.isSuspendMode()));
+            sb.append(String.format("%n    Fallback Timeout: %ss", backlog.getFallbackTimeout())); // is in seconds
+            sb.append(String.format("%n    Logging Level: %s", backlog.getLoggingLevel()));
+            sb.append(String.format("%n    Include Exchange Properties: %s", backlog.isIncludeExchangeProperties()));
+            sb.append(String.format("%n    Include Files: %s", backlog.isBodyIncludeFiles()));
+            sb.append(String.format("%n    Include Streams: %s", backlog.isBodyIncludeStreams()));
+            sb.append(String.format("%n    Max Chars: %s", backlog.getBodyMaxChars()));
 
             sb.append("\n\nBreakpoints:");
-            sb.append(String.format("\n    Debug Counter: %s", backlog.getDebugCounter()));
-            sb.append(String.format("\n    Single Step Mode: %s", backlog.isSingleStepMode()));
+            sb.append(String.format("%n    Debug Counter: %s", backlog.getDebugCounter()));
+            sb.append(String.format("%n    Single Step Mode: %s", backlog.isSingleStepMode()));
             for (String n : backlog.getBreakpoints()) {
                 boolean suspended = backlog.getSuspendedBreakpointNodeIds().contains(n);
                 if (suspended) {
-                    sb.append(String.format("\n    Breakpoint: %s (suspended)", n));
+                    sb.append(String.format("%n    Breakpoint: %s (suspended)", n));
                 } else {
-                    sb.append(String.format("\n    Breakpoint: %s", n));
+                    sb.append(String.format("%n    Breakpoint: %s", n));
                 }
             }
             sb.append("\n\nSuspended:");
             for (String n : backlog.getSuspendedBreakpointNodeIds()) {
-                sb.append(String.format("\n    Node: %s (suspended)", n));
+                sb.append(String.format("%n    Node: %s (suspended)", n));
                 BacklogTracerEventMessage trace = backlog.getSuspendedBreakpointMessage(n);
                 if (trace != null) {
                     sb.append("\n");
@@ -204,12 +211,11 @@ public class DebugDevConsole extends AbstractDevConsole {
     protected Map<String, Object> doCallJson(Map<String, Object> options) {
         JsonObject root = new JsonObject();
 
-        String command = (String) options.get(COMMAND);
-        String breakpoint = (String) options.get(BREAKPOINT);
-        String codeLimit = (String) options.getOrDefault(CODE_LIMIT, "5");
-        boolean history = "true".equals(options.getOrDefault(HISTORY, "true"));
-        String repeat = (String) options.get(POSITION);
-        int num = repeat == null || repeat.isBlank() ? 0 : Integer.parseInt(repeat);
+        String command = optionString(options, COMMAND);
+        String breakpoint = optionString(options, BREAKPOINT);
+        int codeLimit = optionInt(options, CODE_LIMIT, 5);
+        boolean history = optionBoolean(options, HISTORY, true);
+        int num = optionInt(options, POSITION, 0);
 
         if (ObjectHelper.isNotEmpty(command)) {
             doCommand(command, breakpoint, num);
@@ -251,12 +257,12 @@ public class DebugDevConsole extends AbstractDevConsole {
                     arr.add(to);
 
                     // enrich with source code +/- lines around location
-                    int limit = Integer.parseInt(codeLimit);
+                    int limit = codeLimit;
                     if (limit > 0) {
                         String rid = to.getString("routeId");
                         String loc = to.getString("location");
                         if (rid != null) {
-                            List<JsonObject> code = enrichSourceCode(rid, loc, limit);
+                            JsonArray code = enrichSourceCode(rid, loc, limit);
                             if (code != null && !code.isEmpty()) {
                                 to.put("code", code);
                             }
@@ -340,7 +346,7 @@ public class DebugDevConsole extends AbstractDevConsole {
         return arr;
     }
 
-    private List<JsonObject> enrichSourceCode(String routeId, String location, int lines) {
+    private JsonArray enrichSourceCode(String routeId, String location, int lines) {
         Route route = getCamelContext().getRoute(routeId);
         if (route == null) {
             return null;
@@ -350,7 +356,7 @@ public class DebugDevConsole extends AbstractDevConsole {
             return null;
         }
 
-        List<JsonObject> code = new ArrayList<>();
+        JsonArray code = new JsonArray();
 
         location = StringHelper.afterLast(location, ":");
         int line = 0;

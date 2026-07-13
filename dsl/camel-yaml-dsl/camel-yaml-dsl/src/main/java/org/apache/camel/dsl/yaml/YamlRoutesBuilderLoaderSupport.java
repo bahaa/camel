@@ -47,7 +47,7 @@ public abstract class YamlRoutesBuilderLoaderSupport extends RouteBuilderLoaderS
     // need to use shared bean deserializer
     final BeansDeserializer beansDeserializer = new BeansDeserializer();
 
-    public YamlRoutesBuilderLoaderSupport(String extension) {
+    protected YamlRoutesBuilderLoaderSupport(String extension) {
         super(extension);
     }
 
@@ -56,8 +56,18 @@ public abstract class YamlRoutesBuilderLoaderSupport extends RouteBuilderLoaderS
 
         ctx.setResource(resource);
         ctx.setCamelContext(getCamelContext());
-        ctx.addResolvers(new CustomResolver(beansDeserializer));
-        ctx.addResolvers(new ModelDeserializersResolver());
+        ctx.addBuiltinResolver(new CustomResolver(beansDeserializer));
+        ctx.addBuiltinResolver(new ModelDeserializersResolver());
+        ctx.start();
+        // check if compact notation warning is disabled
+        try {
+            String v = getCamelContext().resolvePropertyPlaceholders("{{?camel.main.yamlDslCompactNotationWarn}}");
+            if (v != null && "false".equalsIgnoreCase(v)) {
+                ctx.setCompactNotationWarn(false);
+            }
+        } catch (Exception e) {
+            // ignore
+        }
         return ctx;
     }
 

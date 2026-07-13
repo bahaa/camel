@@ -59,6 +59,8 @@ public class PulsarEndpointConfigurer extends PropertyConfigurerSupport implemen
         case "consumerQueueSize": target.getPulsarConfiguration().setConsumerQueueSize(property(camelContext, int.class, value)); return true;
         case "deadlettertopic":
         case "deadLetterTopic": target.getPulsarConfiguration().setDeadLetterTopic(property(camelContext, java.lang.String.class, value)); return true;
+        case "enablebatchindexacknowledgment":
+        case "enableBatchIndexAcknowledgment": target.getPulsarConfiguration().setEnableBatchIndexAcknowledgment(property(camelContext, boolean.class, value)); return true;
         case "enableretry":
         case "enableRetry": target.getPulsarConfiguration().setEnableRetry(property(camelContext, boolean.class, value)); return true;
         case "exceptionhandler":
@@ -105,6 +107,8 @@ public class PulsarEndpointConfigurer extends PropertyConfigurerSupport implemen
         case "serviceUrl": target.getPulsarConfiguration().setServiceUrl(property(camelContext, java.lang.String.class, value)); return true;
         case "subscriptioninitialposition":
         case "subscriptionInitialPosition": target.getPulsarConfiguration().setSubscriptionInitialPosition(property(camelContext, org.apache.camel.component.pulsar.utils.consumers.SubscriptionInitialPosition.class, value)); return true;
+        case "subscriptionmode":
+        case "subscriptionMode": target.getPulsarConfiguration().setSubscriptionMode(property(camelContext, org.apache.camel.component.pulsar.utils.consumers.SubscriptionMode.class, value)); return true;
         case "subscriptionname":
         case "subscriptionName": target.getPulsarConfiguration().setSubscriptionName(property(camelContext, java.lang.String.class, value)); return true;
         case "subscriptiontopicsmode":
@@ -156,6 +160,8 @@ public class PulsarEndpointConfigurer extends PropertyConfigurerSupport implemen
         case "consumerQueueSize": return int.class;
         case "deadlettertopic":
         case "deadLetterTopic": return java.lang.String.class;
+        case "enablebatchindexacknowledgment":
+        case "enableBatchIndexAcknowledgment": return boolean.class;
         case "enableretry":
         case "enableRetry": return boolean.class;
         case "exceptionhandler":
@@ -202,6 +208,8 @@ public class PulsarEndpointConfigurer extends PropertyConfigurerSupport implemen
         case "serviceUrl": return java.lang.String.class;
         case "subscriptioninitialposition":
         case "subscriptionInitialPosition": return org.apache.camel.component.pulsar.utils.consumers.SubscriptionInitialPosition.class;
+        case "subscriptionmode":
+        case "subscriptionMode": return org.apache.camel.component.pulsar.utils.consumers.SubscriptionMode.class;
         case "subscriptionname":
         case "subscriptionName": return java.lang.String.class;
         case "subscriptiontopicsmode":
@@ -254,6 +262,8 @@ public class PulsarEndpointConfigurer extends PropertyConfigurerSupport implemen
         case "consumerQueueSize": return target.getPulsarConfiguration().getConsumerQueueSize();
         case "deadlettertopic":
         case "deadLetterTopic": return target.getPulsarConfiguration().getDeadLetterTopic();
+        case "enablebatchindexacknowledgment":
+        case "enableBatchIndexAcknowledgment": return target.getPulsarConfiguration().isEnableBatchIndexAcknowledgment();
         case "enableretry":
         case "enableRetry": return target.getPulsarConfiguration().isEnableRetry();
         case "exceptionhandler":
@@ -300,6 +310,8 @@ public class PulsarEndpointConfigurer extends PropertyConfigurerSupport implemen
         case "serviceUrl": return target.getPulsarConfiguration().getServiceUrl();
         case "subscriptioninitialposition":
         case "subscriptionInitialPosition": return target.getPulsarConfiguration().getSubscriptionInitialPosition();
+        case "subscriptionmode":
+        case "subscriptionMode": return target.getPulsarConfiguration().getSubscriptionMode();
         case "subscriptionname":
         case "subscriptionName": return target.getPulsarConfiguration().getSubscriptionName();
         case "subscriptiontopicsmode":

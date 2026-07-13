@@ -35,7 +35,6 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.support.DefaultTransactionStatus;
 
 import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class JdbcRemoveConfirmOrderAggregateTest extends AbstractJdbcAggregationTestSupport {
 
@@ -47,9 +46,9 @@ public class JdbcRemoveConfirmOrderAggregateTest extends AbstractJdbcAggregation
             if ("main".equals(Thread.currentThread().getName()) && ++count == 2) {
                 try {
                     LOG.debug("sleeping while committing...");
-                    Thread.sleep(300);
+                    TimeUnit.MILLISECONDS.sleep(300);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
                 }
             }
             super.doCommit(status);
@@ -63,9 +62,9 @@ public class JdbcRemoveConfirmOrderAggregateTest extends AbstractJdbcAggregation
             try {
                 // The recovery thread has an initial delay of 1 sec
                 LOG.debug("Delaying during aggregate");
-                Thread.sleep(500);
+                TimeUnit.MILLISECONDS.sleep(500);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
             return super.aggregate(oldExchange, newExchange);
         }
@@ -111,8 +110,7 @@ public class JdbcRemoveConfirmOrderAggregateTest extends AbstractJdbcAggregation
                     .executeQuery("SELECT * FROM aggregationRepo1_completed");
             return !rs.next();
         } catch (SQLException e) {
-            fail(e);
-            return false;
+            throw new AssertionError(e);
         }
 
     }

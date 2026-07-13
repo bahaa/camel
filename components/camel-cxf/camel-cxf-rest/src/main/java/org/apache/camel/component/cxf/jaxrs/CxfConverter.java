@@ -16,11 +16,17 @@
  */
 package org.apache.camel.component.cxf.jaxrs;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
+import java.util.TreeMap;
 
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import jakarta.xml.soap.SOAPException;
 import jakarta.xml.soap.SOAPMessage;
@@ -35,6 +41,7 @@ import org.apache.camel.component.cxf.common.DataFormat;
 import org.apache.camel.converter.stream.CachedOutputStream;
 import org.apache.camel.spi.TypeConverterRegistry;
 import org.apache.camel.support.ExchangeHelper;
+import org.apache.cxf.message.Message;
 import org.apache.cxf.message.MessageContentsList;
 
 import static org.apache.camel.TypeConverter.MISS_VALUE;
@@ -109,9 +116,9 @@ public final class CxfConverter {
             return null;
         }
 
-        if (obj instanceof InputStream) {
+        if (obj instanceof InputStream inputStream) {
             // short circuit the lookup
-            return (InputStream) obj;
+            return inputStream;
         }
 
         TypeConverterRegistry registry = exchange.getContext().getTypeConverterRegistry();
@@ -138,8 +145,39 @@ public final class CxfConverter {
             exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, status);
         }
 
+        // Preserve response metadata headers (e.g. Content-Type) before the Response object
+        // is consumed by the conversion. Without this, headers set via Response.type() or
+        // Response.header() are lost when the body becomes a StreamCache (CAMEL-23249).
+        MediaType mediaType = response.getMediaType();
+        if (mediaType != null) {
+            exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, mediaType.toString());
+        }
+        // Save other response headers (e.g. custom headers) into the PROTOCOL_HEADERS map
+        // so they are propagated to the CXF outMessage by populateViaResponse.
+        MultivaluedMap<String, Object> metadata = response.getMetadata();
+        if (metadata != null && !metadata.isEmpty()) {
+            Map<String, Object> protocolHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            for (String headerName : metadata.keySet()) {
+                if ("Content-Type".equalsIgnoreCase(headerName)) {
+                    continue;
+                }
+                String headerValue = response.getHeaderString(headerName);
+                if (headerValue != null) {
+                    protocolHeaders.put(headerName, Arrays.asList(headerValue));
+                }
+            }
+            if (!protocolHeaders.isEmpty()) {
+                exchange.getMessage().setHeader(Message.PROTOCOL_HEADERS, protocolHeaders);
+            }
+        }
+
         // Convert the body (entity) to an InputStream
         InputStream is = toInputStream(response, exchange);
+        //If there is no entity body, provide an empty stream
+        // to ensure we return a valid StreamCache instead of null (which would be wrapped as Void.class).
+        if (is == null) {
+            is = new ByteArrayInputStream(new byte[0]);
+        }
 
         // Find the appropriate TypeConverter for StreamCache
         TypeConverterRegistry registry = exchange.getContext().getTypeConverterRegistry();

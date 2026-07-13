@@ -22,15 +22,15 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class MailCollectionHeaderTest extends CamelTestSupport {
-    private static final MailboxUser james = Mailbox.getOrCreateUser("james", "secret");
+    private static final MailboxUser james = Mailbox.getOrCreateUser("MailCollectionHeaderTest-james", "secret");
 
     @Test
     public void testMailHeaderWithCollection() throws Exception {
@@ -60,7 +60,7 @@ public class MailCollectionHeaderTest extends CamelTestSupport {
                 from("direct:a").to(james.uriPrefix(Protocol.smtp));
 
                 from("pop3://localhost:" + Mailbox.getPort(Protocol.pop3)
-                     + "?username=james&password=secret&initialDelay=100&delay=100").to("mock:result");
+                     + "?username=" + james.getLogin() + "&password=secret&initialDelay=100&delay=100").to("mock:result");
             }
         };
     }

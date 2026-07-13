@@ -35,4 +35,24 @@ public class Headers {
     @Metadata(description = "The media type (MIME type) of the file content. Overrides auto-detection from file extension.",
               javaType = "String")
     public static final String MEDIA_TYPE = "CamelLangChain4jAgentMediaType";
+
+    @Metadata(description = "Comma-separated list of Camel tool tags to exclude from this agent invocation.",
+              javaType = "String")
+    public static final String EXCLUDE_TAGS = "CamelLangChain4jAgentExcludeTags";
+
+    @Metadata(description = "Comma-separated list of MCP server names (keys) to exclude from this agent invocation.",
+              javaType = "String")
+    public static final String EXCLUDE_MCP_SERVERS = "CamelLangChain4jAgentExcludeMcpServers";
+
+    @Metadata(description = "The Finish Reason.", javaType = "dev.langchain4j.model.output.FinishReason")
+    public static final String FINISH_REASON = "CamelLangChain4jAgentFinishReason";
+
+    @Metadata(description = "The Input Token Count.", javaType = "int")
+    public static final String INPUT_TOKEN_COUNT = "CamelLangChain4jAgentInputTokenCount";
+
+    @Metadata(description = "The Output Token Count.", javaType = "int")
+    public static final String OUTPUT_TOKEN_COUNT = "CamelLangChain4jAgentOutputTokenCount";
+
+    @Metadata(description = "The Total Token Count.", javaType = "int")
+    public static final String TOTAL_TOKEN_COUNT = "CamelLangChain4jAgentTotalTokenCount";
 }

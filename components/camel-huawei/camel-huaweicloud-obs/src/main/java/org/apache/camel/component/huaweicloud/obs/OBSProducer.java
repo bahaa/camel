@@ -18,7 +18,6 @@ package org.apache.camel.component.huaweicloud.obs;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +39,7 @@ import com.obs.services.model.ObsBucket;
 import com.obs.services.model.ObsObject;
 import com.obs.services.model.PutObjectResult;
 import org.apache.camel.Exchange;
+import org.apache.camel.WrappedFile;
 import org.apache.camel.component.huaweicloud.obs.constants.OBSConstants;
 import org.apache.camel.component.huaweicloud.obs.constants.OBSOperations;
 import org.apache.camel.component.huaweicloud.obs.constants.OBSProperties;
@@ -108,9 +108,14 @@ public class OBSProducer extends DefaultProducer {
         }
     }
 
-    private void putObject(Exchange exchange, ClientConfigurations clientConfigurations) throws IOException {
+    private void putObject(Exchange exchange, ClientConfigurations clientConfigurations) throws Exception {
 
         Object body = exchange.getMessage().getBody();
+
+        // Handle WrappedFile (e.g., from SFTP, FTP) by extracting the underlying file/stream
+        if (body instanceof WrappedFile<?> wf) {
+            body = wf.getFile();
+        }
 
         // if body doesn't contain File, then user must pass object name. Bucket name is mandatory in all case
         if ((ObjectHelper.isEmpty(clientConfigurations.getBucketName()) ||
@@ -160,7 +165,10 @@ public class OBSProducer extends DefaultProducer {
                     clientConfigurations.getObjectName(), (InputStream) body);
 
         } else {
-            throw new IllegalArgumentException("Body should be of type file, string or an input stream");
+            // fallback: convert via the exchange (e.g., GenericFile from SFTP/FTP)
+            InputStream is = exchange.getMessage().getMandatoryBody(InputStream.class);
+            putObjectResult = obsClient.putObject(clientConfigurations.getBucketName(),
+                    clientConfigurations.getObjectName(), is);
         }
         exchange.getMessage().setBody(gson.toJson(putObjectResult));
     }

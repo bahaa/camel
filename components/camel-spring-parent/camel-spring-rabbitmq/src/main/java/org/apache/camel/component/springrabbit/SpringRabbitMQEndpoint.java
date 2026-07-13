@@ -43,11 +43,11 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate;
+import org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptor;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.retry.interceptor.RetryOperationsInterceptor;
 
 import static org.apache.camel.component.springrabbit.SpringRabbitMQConstants.DIRECT_MESSAGE_LISTENER_CONTAINER;
 
@@ -79,13 +79,13 @@ public class SpringRabbitMQEndpoint extends DefaultEndpoint implements AsyncEndp
     @UriParam(label = "consumer", defaultValue = "direct", enums = "direct,fanout,headers,topic",
               description = "The type of the exchange")
     private String exchangeType = "direct";
-    @UriParam(label = "common",
+    @UriParam(label = "common", endpointIdentity = true,
               description = "The value of a routing key to use. Default is empty which is not helpful when using the default (or any direct) exchange, but fine if the exchange is a headers exchange for instance.")
     private String routingKey = "";
     @UriParam(label = "common",
               description = "The connection factory to be use. A connection factory must be configured either on the component or endpoint.")
     private ConnectionFactory connectionFactory;
-    @UriParam(label = "common",
+    @UriParam(label = "common", endpointIdentity = true,
               description = "The queue(s) to use for consuming or producing messages. Multiple queue names can be separated by comma."
                             + " If none has been configured then Camel will generate an unique id as the queue name.")
     private String queues;
@@ -192,7 +192,7 @@ public class SpringRabbitMQEndpoint extends DefaultEndpoint implements AsyncEndp
     private Integer maxConcurrentConsumers;
     @UriParam(label = "consumer,advanced", description = "Custom retry configuration to use. "
                                                          + "If this is configured then the other settings such as maximumRetryAttempts for retry are not in use.")
-    private RetryOperationsInterceptor retry;
+    private StatelessRetryOperationsInterceptor retry;
     @UriParam(label = "consumer", defaultValue = "5",
               description = "How many times a Rabbitmq consumer will try the same message if Camel failed to process the message (The number of attempts includes the initial try)")
     private int maximumRetryAttempts = 5;
@@ -520,11 +520,11 @@ public class SpringRabbitMQEndpoint extends DefaultEndpoint implements AsyncEndp
         this.maxConcurrentConsumers = maxConcurrentConsumers;
     }
 
-    public RetryOperationsInterceptor getRetry() {
+    public StatelessRetryOperationsInterceptor getRetry() {
         return retry;
     }
 
-    public void setRetry(RetryOperationsInterceptor retry) {
+    public void setRetry(StatelessRetryOperationsInterceptor retry) {
         this.retry = retry;
     }
 
@@ -686,8 +686,8 @@ public class SpringRabbitMQEndpoint extends DefaultEndpoint implements AsyncEndp
     }
 
     public void declareElements(AbstractMessageListenerContainer container) {
-        if (container instanceof MessageListenerContainer) {
-            AmqpAdmin admin = ((MessageListenerContainer) container).getAmqpAdmin();
+        if (container instanceof MessageListenerContainer messageListenerContainer) {
+            AmqpAdmin admin = messageListenerContainer.getAmqpAdmin();
             declareElements(container, admin);
         }
     }
@@ -819,32 +819,32 @@ public class SpringRabbitMQEndpoint extends DefaultEndpoint implements AsyncEndp
     private void prepareArgs(Map<String, Object> args) {
         // some arguments must be in numeric values so we need to fix this
         Object arg = args.get(SpringRabbitMQConstants.MAX_LENGTH);
-        if (arg instanceof String) {
-            args.put(SpringRabbitMQConstants.MAX_LENGTH, Long.parseLong((String) arg));
+        if (arg instanceof String str) {
+            args.put(SpringRabbitMQConstants.MAX_LENGTH, Long.parseLong(str));
         }
         arg = args.get(SpringRabbitMQConstants.MAX_LENGTH_BYTES);
-        if (arg instanceof String) {
-            args.put(SpringRabbitMQConstants.MAX_LENGTH_BYTES, Long.parseLong((String) arg));
+        if (arg instanceof String str) {
+            args.put(SpringRabbitMQConstants.MAX_LENGTH_BYTES, Long.parseLong(str));
         }
         arg = args.get(SpringRabbitMQConstants.MAX_PRIORITY);
-        if (arg instanceof String) {
-            args.put(SpringRabbitMQConstants.MAX_PRIORITY, Integer.parseInt((String) arg));
+        if (arg instanceof String str) {
+            args.put(SpringRabbitMQConstants.MAX_PRIORITY, Integer.parseInt(str));
         }
         arg = args.get(SpringRabbitMQConstants.DELIVERY_LIMIT);
-        if (arg instanceof String) {
-            args.put(SpringRabbitMQConstants.DELIVERY_LIMIT, Integer.parseInt((String) arg));
+        if (arg instanceof String str) {
+            args.put(SpringRabbitMQConstants.DELIVERY_LIMIT, Integer.parseInt(str));
         }
         arg = args.get(SpringRabbitMQConstants.MESSAGE_TTL);
-        if (arg instanceof String) {
-            args.put(SpringRabbitMQConstants.MESSAGE_TTL, Long.parseLong((String) arg));
+        if (arg instanceof String str) {
+            args.put(SpringRabbitMQConstants.MESSAGE_TTL, Long.parseLong(str));
         }
         arg = args.get(SpringRabbitMQConstants.EXPIRES);
-        if (arg instanceof String) {
-            args.put(SpringRabbitMQConstants.EXPIRES, Long.parseLong((String) arg));
+        if (arg instanceof String str) {
+            args.put(SpringRabbitMQConstants.EXPIRES, Long.parseLong(str));
         }
         arg = args.get(SpringRabbitMQConstants.SINGLE_ACTIVE_CONSUMER);
-        if (arg instanceof String) {
-            args.put(SpringRabbitMQConstants.SINGLE_ACTIVE_CONSUMER, Boolean.parseBoolean((String) arg));
+        if (arg instanceof String str) {
+            args.put(SpringRabbitMQConstants.SINGLE_ACTIVE_CONSUMER, Boolean.parseBoolean(str));
         }
     }
 

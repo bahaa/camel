@@ -18,25 +18,37 @@ package org.apache.camel.component.openai;
 
 import java.util.Map;
 
+import com.openai.core.ClientOptions;
 import org.apache.camel.Endpoint;
+import org.apache.camel.SSLContextParametersAware;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.Component;
 import org.apache.camel.support.DefaultComponent;
 
 /**
- * OpenAI component for chat completion.
+ * OpenAI component for chat completion, embeddings, and audio transcription.
  */
 @Component("openai")
-public class OpenAIComponent extends DefaultComponent {
+public class OpenAIComponent extends DefaultComponent implements SSLContextParametersAware {
 
-    @Metadata(description = "Default API key for all endpoints")
+    @Metadata(description = "Default API key for all endpoints", security = "secret")
     private String apiKey;
 
-    @Metadata(description = "Default base URL for all endpoints")
-    private String baseUrl;
+    @Metadata(description = "Default base URL for all endpoints", defaultValue = ClientOptions.PRODUCTION_URL)
+    private String baseUrl = ClientOptions.PRODUCTION_URL;
 
-    @Metadata(description = "Default model for all endpoints")
+    @Metadata(description = "Default model for chat completion endpoints")
     private String model;
+
+    @Metadata(description = "Default model for embeddings endpoints")
+    private String embeddingModel;
+
+    @Metadata(description = "Default model for audio transcription endpoints")
+    private String audioModel;
+
+    @Metadata(label = "security", defaultValue = "false",
+              description = "Enable usage of global SSL context parameters")
+    private boolean useGlobalSslContextParameters;
 
     @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
@@ -51,11 +63,21 @@ public class OpenAIComponent extends DefaultComponent {
         if (model != null) {
             configuration.setModel(model);
         }
+        if (embeddingModel != null) {
+            configuration.setEmbeddingModel(embeddingModel);
+        }
+        if (audioModel != null) {
+            configuration.setAudioModel(audioModel);
+        }
 
         OpenAIEndpoint endpoint = new OpenAIEndpoint(uri, this, configuration);
         // set the operation from the URI path (e.g., chat-completion)
-        endpoint.setOperation(remaining);
+        endpoint.setOperation(OpenAIOperations.fromValue(remaining));
         setProperties(endpoint, parameters);
+
+        if (configuration.getSslContextParameters() == null) {
+            configuration.setSslContextParameters(retrieveGlobalSslContextParameters());
+        }
 
         return endpoint;
     }
@@ -82,5 +104,31 @@ public class OpenAIComponent extends DefaultComponent {
 
     public void setModel(String model) {
         this.model = model;
+    }
+
+    public String getEmbeddingModel() {
+        return embeddingModel;
+    }
+
+    public void setEmbeddingModel(String embeddingModel) {
+        this.embeddingModel = embeddingModel;
+    }
+
+    public String getAudioModel() {
+        return audioModel;
+    }
+
+    public void setAudioModel(String audioModel) {
+        this.audioModel = audioModel;
+    }
+
+    @Override
+    public boolean isUseGlobalSslContextParameters() {
+        return useGlobalSslContextParameters;
+    }
+
+    @Override
+    public void setUseGlobalSslContextParameters(boolean useGlobalSslContextParameters) {
+        this.useGlobalSslContextParameters = useGlobalSslContextParameters;
     }
 }

@@ -17,13 +17,18 @@
 package org.apache.camel.component.mongodb;
 
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.StreamSupport;
 
+import javax.net.ssl.SSLContext;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.ReadPreference;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoClient;
@@ -37,11 +42,13 @@ import org.apache.camel.Processor;
 import org.apache.camel.Producer;
 import org.apache.camel.spi.EndpointServiceLocation;
 import org.apache.camel.spi.Metadata;
+import org.apache.camel.spi.StateRepository;
 import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.CamelContextHelper;
 import org.apache.camel.support.DefaultEndpoint;
+import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.camel.util.ObjectHelper;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -72,18 +79,18 @@ public class MongoDbEndpoint extends DefaultEndpoint implements EndpointServiceL
     @Metadata(required = true)
     private String connectionBean;
 
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String username;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String password;
     @UriParam
     private String hosts;
     //Authentication configuration
     @UriParam(label = "security")
     private String authSource;
-    @UriParam
+    @UriParam(endpointIdentity = true)
     private String database;
-    @UriParam
+    @UriParam(endpointIdentity = true)
     private String collection;
     @UriParam
     private String collectionIndex;
@@ -134,6 +141,8 @@ public class MongoDbEndpoint extends DefaultEndpoint implements EndpointServiceL
     private boolean tls;
     @UriParam(label = "security", defaultValue = "false")
     private boolean tlsAllowInvalidHostnames;
+    @UriParam(label = "security")
+    private SSLContextParameters sslContextParameters;
     @UriParam(label = "advanced", defaultValue = "10000")
     private Integer connectTimeoutMS = 10000;
     @UriParam(label = "advanced", defaultValue = "0")
@@ -187,6 +196,10 @@ public class MongoDbEndpoint extends DefaultEndpoint implements EndpointServiceL
     @UriParam(label = "advanced")
     private boolean loadBalanced;
     //additional properties
+    @UriParam(label = "consumer")
+    private StateRepository<String, String> changeStreamTokenRepository;
+    @UriParam(label = "consumer")
+    private String changeStreamToken;
     @UriParam(description = "Set the whole Connection String/Uri for mongodb endpoint.",
               label = "common")
     private String connectionUriString;
@@ -438,10 +451,14 @@ public class MongoDbEndpoint extends DefaultEndpoint implements EndpointServiceL
                 credentials += this.password == null ? "@" : ":" + password + "@";
             }
             String connectionOptions = authSource == null ? "" : "/?authSource=" + authSource;
-            if (connectionUriString != null) {
-                mongoClient = MongoClients.create(connectionUriString);
+            String connectionUri = connectionUriString != null
+                    ? connectionUriString
+                    : String.format("mongodb://%s%s%s", credentials, hosts, connectionOptions);
+
+            if (sslContextParameters != null) {
+                mongoClient = createMongoClientWithSslContext(connectionUri);
             } else {
-                mongoClient = MongoClients.create(String.format("mongodb://%s%s%s", credentials, hosts, connectionOptions));
+                mongoClient = MongoClients.create(connectionUri);
             }
             LOG.debug("Connection created using provided credentials");
         } else {
@@ -454,6 +471,25 @@ public class MongoDbEndpoint extends DefaultEndpoint implements EndpointServiceL
         }
 
         return mongoClient;
+    }
+
+    private MongoClient createMongoClientWithSslContext(String connectionUri) {
+        try {
+            SSLContext sslContext = sslContextParameters.createSSLContext(getCamelContext());
+            MongoClientSettings settings = MongoClientSettings.builder()
+                    .applyConnectionString(new ConnectionString(connectionUri))
+                    .applyToSslSettings(builder -> {
+                        builder.enabled(true);
+                        builder.context(sslContext);
+                        if (tlsAllowInvalidHostnames) {
+                            builder.invalidHostNameAllowed(true);
+                        }
+                    })
+                    .build();
+            return MongoClients.create(settings);
+        } catch (GeneralSecurityException | IOException e) {
+            throw new CamelMongoDbException("Error creating SSLContext from SSLContextParameters", e);
+        }
     }
 
     public String getConnectionBean() {
@@ -905,6 +941,18 @@ public class MongoDbEndpoint extends DefaultEndpoint implements EndpointServiceL
         return tlsAllowInvalidHostnames;
     }
 
+    public SSLContextParameters getSslContextParameters() {
+        return sslContextParameters;
+    }
+
+    /**
+     * SSL configuration using a Camel {@link SSLContextParameters} object. When configured, TLS is automatically
+     * enabled on the connection.
+     */
+    public void setSslContextParameters(SSLContextParameters sslContextParameters) {
+        this.sslContextParameters = sslContextParameters;
+    }
+
     /**
      * Specifies the maximum amount of time, in milliseconds, the Java driver waits for a connection to open before
      * timing out. A value of 0 instructs the driver to never time out while waiting for a connection to open. Default:
@@ -1134,6 +1182,28 @@ public class MongoDbEndpoint extends DefaultEndpoint implements EndpointServiceL
 
     public boolean isLoadBalanced() {
         return loadBalanced;
+    }
+
+    /**
+     * The repository to store change stream tokens.
+     */
+    public void setChangeStreamTokenRepository(StateRepository<String, String> changeStreamTokenRepository) {
+        this.changeStreamTokenRepository = changeStreamTokenRepository;
+    }
+
+    public StateRepository<String, String> getChangeStreamTokenRepository() {
+        return changeStreamTokenRepository;
+    }
+
+    /**
+     * A change stream token as a serialized BSON document JSON string.
+     */
+    public void setChangeStreamToken(String changeStreamToken) {
+        this.changeStreamToken = changeStreamToken;
+    }
+
+    public String getChangeStreamToken() {
+        return changeStreamToken;
     }
 
     /**

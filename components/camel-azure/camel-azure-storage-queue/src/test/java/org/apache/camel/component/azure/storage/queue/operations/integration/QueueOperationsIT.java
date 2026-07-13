@@ -34,7 +34,7 @@ import org.apache.camel.component.azure.storage.queue.client.QueueServiceClientW
 import org.apache.camel.component.azure.storage.queue.operations.QueueOperationResponse;
 import org.apache.camel.component.azure.storage.queue.operations.QueueOperations;
 import org.apache.camel.support.DefaultExchange;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -72,7 +72,7 @@ class QueueOperationsIT extends CamelTestSupport {
 
     @Test
     public void testCreateDeleteQueue() {
-        final String queueName = RandomStringUtils.randomAlphabetic(10).toLowerCase();
+        final String queueName = RandomStringUtils.secure().nextAlphabetic(10).toLowerCase();
         final QueueClientWrapper clientWrapper = serviceClientWrapper.getQueueClientWrapper(queueName);
         final QueueOperations operations = new QueueOperations(configuration, clientWrapper);
 
@@ -102,7 +102,7 @@ class QueueOperationsIT extends CamelTestSupport {
 
     @Test
     public void testSendMessageAndClearQueue() {
-        final String queueName = RandomStringUtils.randomAlphabetic(10).toLowerCase();
+        final String queueName = RandomStringUtils.secure().nextAlphabetic(10).toLowerCase();
         final QueueClientWrapper clientWrapper = serviceClientWrapper.getQueueClientWrapper(queueName);
         final QueueOperations operations = new QueueOperations(configuration, clientWrapper);
 
@@ -248,7 +248,7 @@ class QueueOperationsIT extends CamelTestSupport {
     }
 
     private QueueOperations getQueueOperations() {
-        final String queueName = RandomStringUtils.randomAlphabetic(10).toLowerCase();
+        final String queueName = RandomStringUtils.secure().nextAlphabetic(10).toLowerCase();
         final QueueClientWrapper clientWrapper = serviceClientWrapper.getQueueClientWrapper(queueName);
         return new QueueOperations(configuration, clientWrapper);
     }

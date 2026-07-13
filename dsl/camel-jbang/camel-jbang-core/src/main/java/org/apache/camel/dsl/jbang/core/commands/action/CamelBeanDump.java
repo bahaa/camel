@@ -28,13 +28,19 @@ import com.github.freva.asciitable.HorizontalAlign;
 import com.github.freva.asciitable.OverflowBehaviour;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.PathUtils;
+import org.apache.camel.dsl.jbang.core.common.TerminalWidthHelper;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "bean", description = "List beans in a running Camel integration", sortOptions = false,
-         showDefaultValues = true)
+         showDefaultValues = true,
+         footer = {
+                 "%nExamples:",
+                 "  camel cmd bean",
+                 "  camel cmd bean --filter=myBean",
+                 "  camel cmd bean --scope=user" })
 public class CamelBeanDump extends ActionBaseCommand {
 
     public static class NameTypeCompletionCandidates implements Iterable<String> {
@@ -49,16 +55,28 @@ public class CamelBeanDump extends ActionBaseCommand {
 
     }
 
+    public static class ScopeCompletionCandidates implements Iterable<String> {
+
+        public ScopeCompletionCandidates() {
+        }
+
+        @Override
+        public Iterator<String> iterator() {
+            return List.of("all", "user", "camel", "spring", "quarkus").iterator();
+        }
+
+    }
+
     @CommandLine.Parameters(description = "Name or pid of running Camel integration", arity = "0..1")
     String name = "*";
 
     @CommandLine.Option(names = { "--sort" }, completionCandidates = NameTypeCompletionCandidates.class,
                         description = "Sort by name or type", defaultValue = "name")
-    String sort;
+    String sort = "name";
 
     @CommandLine.Option(names = { "--filter" },
                         description = "Filter beans names (use all to include all beans)", defaultValue = "all")
-    String filter;
+    String filter = "all";
 
     @CommandLine.Option(names = { "--properties" },
                         description = "Show bean properties", defaultValue = "true")
@@ -67,6 +85,11 @@ public class CamelBeanDump extends ActionBaseCommand {
     @CommandLine.Option(names = { "--nulls" },
                         description = "Include null values", defaultValue = "true")
     boolean nulls;
+
+    @CommandLine.Option(names = { "--scope" }, completionCandidates = ScopeCompletionCandidates.class,
+                        description = "Filter beans by scope: all, user (excludes Camel/Spring/Quarkus/JDK), camel, spring, quarkus",
+                        defaultValue = "all")
+    String scope = "all";
 
     @CommandLine.Option(names = { "--internal" },
                         description = "Include internal Camel beans", defaultValue = "false")
@@ -88,11 +111,11 @@ public class CamelBeanDump extends ActionBaseCommand {
 
         List<Long> pids = findPids(name);
         if (pids.isEmpty()) {
-            return 0;
+            return 1;
         } else if (pids.size() > 1) {
             printer().println("Name or pid " + name + " matches " + pids.size()
                               + " running Camel integrations. Specify a name or PID that matches exactly one.");
-            return 0;
+            return 1;
         }
 
         this.pid = pids.get(0);
@@ -108,7 +131,7 @@ public class CamelBeanDump extends ActionBaseCommand {
         }
         root.put("properties", properties);
         root.put("nulls", nulls);
-        root.put("internal", internal);
+        root.put("internal", !"all".equals(scope) || internal);
         Path f = getActionFile(Long.toString(pid));
         PathUtils.writeTextSafely(root.toJson(), f);
 
@@ -148,8 +171,13 @@ public class CamelBeanDump extends ActionBaseCommand {
                 rows.add(row);
             }
         } else {
-            printer().printErr("Response from running Camel with PID " + pid + " not received within 5 seconds");
+            printer().printErr("Response from running Camel with PID " + pid + " not received within 10 seconds");
             return 1;
+        }
+
+        // filter by scope
+        if (!"all".equals(scope)) {
+            rows.removeIf(r -> !matchesScope(r, scope));
         }
 
         // sort rows
@@ -175,23 +203,41 @@ public class CamelBeanDump extends ActionBaseCommand {
     }
 
     protected void singleTable(List<Row> rows) {
+        int tw = terminalWidth();
+        int borderOverhead = TerminalWidthHelper.noBorderOverhead(2);
+        int nameWidth = TerminalWidthHelper.flexWidth(tw, 100, borderOverhead, 20, 60);
+        int typeWidth = TerminalWidthHelper.flexWidth(tw, nameWidth, borderOverhead, 20, 100);
+
         printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
-                new Column().header("NAME").dataAlign(HorizontalAlign.LEFT).maxWidth(60, OverflowBehaviour.ELLIPSIS_RIGHT)
+                new Column().header("NAME").dataAlign(HorizontalAlign.LEFT)
+                        .maxWidth(nameWidth, OverflowBehaviour.ELLIPSIS_RIGHT)
                         .with(r -> r.name),
-                new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(100, OverflowBehaviour.CLIP_LEFT)
+                new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(typeWidth, OverflowBehaviour.CLIP_LEFT)
                         .with(r -> r.type))));
     }
 
     protected void propertiesTable(List<PropertyRow> rows) {
+        int tw = terminalWidth();
+        int colCount = dsl ? 4 : 3;
+        int borderOverhead = TerminalWidthHelper.noBorderOverhead(colCount);
+        int propWidth = TerminalWidthHelper.flexWidth(tw, 40 + 80 + (dsl ? 80 : 0), borderOverhead, 15, 40);
+        int propTypeWidth = TerminalWidthHelper.flexWidth(tw, propWidth + 80 + (dsl ? 80 : 0), borderOverhead, 15, 40);
+        int valueWidth = TerminalWidthHelper.flexWidth(tw, propWidth + propTypeWidth + (dsl ? 80 : 0), borderOverhead, 20, 80);
+        int configWidth = dsl
+                ? TerminalWidthHelper.flexWidth(tw, propWidth + propTypeWidth + valueWidth, borderOverhead, 20, 80)
+                : 80;
+
         printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
-                new Column().header("PROPERTY").dataAlign(HorizontalAlign.LEFT).maxWidth(40, OverflowBehaviour.ELLIPSIS_RIGHT)
+                new Column().header("PROPERTY").dataAlign(HorizontalAlign.LEFT)
+                        .maxWidth(propWidth, OverflowBehaviour.ELLIPSIS_RIGHT)
                         .with(r -> r.name),
-                new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT).maxWidth(40, OverflowBehaviour.ELLIPSIS_RIGHT)
+                new Column().header("TYPE").dataAlign(HorizontalAlign.LEFT)
+                        .maxWidth(propTypeWidth, OverflowBehaviour.ELLIPSIS_RIGHT)
                         .with(r -> r.type),
                 new Column().header("CONFIGURATION").visible(dsl).dataAlign(HorizontalAlign.LEFT)
-                        .maxWidth(80, OverflowBehaviour.NEWLINE)
+                        .maxWidth(configWidth, OverflowBehaviour.NEWLINE)
                         .with(r -> r.configValue),
-                new Column().header("VALUE").dataAlign(HorizontalAlign.LEFT).maxWidth(80, OverflowBehaviour.NEWLINE)
+                new Column().header("VALUE").dataAlign(HorizontalAlign.LEFT).maxWidth(valueWidth, OverflowBehaviour.NEWLINE)
                         .with(this::getValue))));
     }
 
@@ -200,6 +246,44 @@ public class CamelBeanDump extends ActionBaseCommand {
             return r.value.toString();
         }
         return "null";
+    }
+
+    private static boolean matchesScope(Row r, String scope) {
+        return switch (scope) {
+            case "user" -> !isFrameworkBean(r);
+            case "camel" -> isCamelBean(r);
+            case "spring" -> isSpringBean(r);
+            case "quarkus" -> isQuarkusBean(r);
+            default -> true;
+        };
+    }
+
+    private static boolean isFrameworkBean(Row r) {
+        if (isCamelBean(r) || isSpringBean(r) || isQuarkusBean(r)) {
+            return true;
+        }
+        return r.type != null && r.type.startsWith("java.");
+    }
+
+    private static boolean isCamelBean(Row r) {
+        if (r.name != null && (r.name.startsWith("camel-") || r.name.startsWith("org.apache.camel"))) {
+            return true;
+        }
+        return r.type != null && r.type.startsWith("org.apache.camel");
+    }
+
+    private static boolean isSpringBean(Row r) {
+        if (r.name != null && r.name.startsWith("org.springframework")) {
+            return true;
+        }
+        return r.type != null && r.type.startsWith("org.springframework");
+    }
+
+    private static boolean isQuarkusBean(Row r) {
+        if (r.name != null && r.name.startsWith("io.quarkus")) {
+            return true;
+        }
+        return r.type != null && r.type.startsWith("io.quarkus");
     }
 
     protected int sortRow(Row o1, Row o2) {

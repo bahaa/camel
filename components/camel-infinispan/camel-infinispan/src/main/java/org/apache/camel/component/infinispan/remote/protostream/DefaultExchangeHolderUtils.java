@@ -23,6 +23,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import org.apache.camel.support.DefaultExchangeHolder;
+import org.apache.camel.support.DeserializationFilterHelper;
 import org.apache.camel.util.ClassLoadingAwareObjectInputStream;
 
 /**
@@ -46,6 +47,7 @@ final class DefaultExchangeHolderUtils {
     static DefaultExchangeHolder deserialize(byte[] bytes) {
         try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
              ObjectInputStream ois = new ClassLoadingAwareObjectInputStream(bais)) {
+            ois.setObjectInputFilter(DeserializationFilterHelper.resolveDeserializationFilter(null));
             return (DefaultExchangeHolder) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);

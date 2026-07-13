@@ -26,7 +26,7 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -49,7 +49,7 @@ public class SmbProducerFileExistFailIT extends SmbServerTestSupport {
         MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedBodiesReceived("Hello World");
 
-        await().atMost(3, TimeUnit.SECONDS)
+        await().atMost(15, TimeUnit.SECONDS)
                 .untilAsserted(() -> assertEquals("Hello World",
                         new String(copyFileContentFromContainer("/data/rw/existfail/hello.txt"))));
 

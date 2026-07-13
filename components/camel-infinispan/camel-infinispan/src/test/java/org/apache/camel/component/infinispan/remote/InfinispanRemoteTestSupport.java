@@ -26,11 +26,13 @@ import org.apache.camel.support.task.ForegroundTask;
 import org.apache.camel.support.task.Tasks;
 import org.apache.camel.support.task.budget.Budgets;
 import org.apache.camel.support.task.budget.IterationBoundedBudget;
+import org.apache.camel.test.infra.infinispan.common.InfinispanProperties;
 import org.apache.camel.test.infra.infinispan.services.InfinispanService;
 import org.apache.camel.test.infra.infinispan.services.InfinispanServiceFactory;
-import org.apache.commons.lang3.SystemUtils;
+import org.awaitility.Awaitility;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
+import org.infinispan.client.hotrod.exceptions.RemoteIllegalLifecycleStateException;
 import org.infinispan.commons.api.BasicCache;
 import org.infinispan.configuration.cache.CacheMode;
 import org.junit.jupiter.api.Assumptions;
@@ -119,15 +121,17 @@ public class InfinispanRemoteTestSupport extends InfinispanTestSupport {
 
         // add security info
         clientBuilder
+                .socketTimeout(15000)
+                .connectionTimeout(15000)
                 .security()
                 .authentication()
                 .username(service.username())
                 .password(service.password())
                 .serverName("infinispan")
-                .saslMechanism("DIGEST-MD5")
+                .saslMechanism("SCRAM-SHA-512")
                 .realm("default");
 
-        if (SystemUtils.IS_OS_MAC) {
+        if (!Boolean.getBoolean(InfinispanProperties.INFINISPAN_CONTAINER_NETWORK_MODE_HOST)) {
             Properties properties = new Properties();
             properties.put("infinispan.client.hotrod.client_intelligence", "BASIC");
             clientBuilder.withProperties(properties);
@@ -140,5 +144,23 @@ public class InfinispanRemoteTestSupport extends InfinispanTestSupport {
         return ComponentCustomizer.forType(
                 InfinispanRemoteComponent.class,
                 component -> component.getConfiguration().setCacheContainer(cacheContainer));
+    }
+
+    public static void waitForCacheReady(RemoteCacheManager manager, String cacheName, int timeoutMs) {
+        Awaitility.await()
+                .atMost(Duration.ofMillis(timeoutMs))
+                .pollInterval(Duration.ofMillis(250))
+                .ignoreExceptionsMatching(e -> e instanceof RemoteIllegalLifecycleStateException)
+                .until(() -> {
+                    // Attempt to create/get the cache
+                    manager.administration()
+                            .getOrCreateCache(
+                                    cacheName,
+                                    new org.infinispan.configuration.cache.ConfigurationBuilder()
+                                            .clustering()
+                                            .cacheMode(CacheMode.DIST_SYNC)
+                                            .build());
+                    return true; // success means cache is ready
+                });
     }
 }

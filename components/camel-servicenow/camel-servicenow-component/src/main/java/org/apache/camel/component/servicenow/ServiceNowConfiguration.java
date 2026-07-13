@@ -46,17 +46,17 @@ import org.apache.cxf.transports.http.configuration.HTTPClientPolicy;
 
 @UriParams
 public class ServiceNowConfiguration implements Cloneable {
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     @Metadata(required = true)
     private String userName;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     @Metadata(required = true)
     private String password;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String oauthClientId;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String oauthClientSecret;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String oauthTokenUrl;
     @UriParam(label = "security")
     private String apiUrl;
@@ -126,7 +126,7 @@ public class ServiceNowConfiguration implements Cloneable {
     private Integer proxyPort;
     @UriParam(label = "proxy,security")
     private String proxyUserName;
-    @UriParam(label = "proxy,security")
+    @UriParam(label = "proxy,security", security = "secret")
     private String proxyPassword;
     @UriParam(label = "advanced", defaultValue = ServiceNowConstants.DEFAULT_DATE_FORMAT)
     private String dateFormat = ServiceNowConstants.DEFAULT_DATE_FORMAT;

@@ -48,10 +48,14 @@ public class MetricsConfigurationProperties implements BootstrapCloseable {
     private boolean clearOnReload = true;
     @Metadata(defaultValue = "false")
     private boolean skipCamelInfo = false;
+    @Metadata(defaultValue = "false")
+    private boolean logMetricsOnShutdown = false;
     @Metadata(defaultValue = "0.0.4", enums = "0.0.4,1.0.0")
     private String textFormatVersion = "0.0.4";
     @Metadata
     private String binders;
+    @Metadata
+    private String logMetricsOnShutdownFilters;
     @Metadata(defaultValue = "/observe/metrics")
     private String path = "/observe/metrics";
 
@@ -180,7 +184,7 @@ public class MetricsConfigurationProperties implements BootstrapCloseable {
     }
 
     /**
-     * Clear the captured metrics data when Camel is reloading routes such as when using Camel JBang.
+     * Clear the captured metrics data when Camel is reloading routes such as when using Camel CLI.
      */
     public void setClearOnReload(boolean clearOnReload) {
         this.clearOnReload = clearOnReload;
@@ -195,6 +199,17 @@ public class MetricsConfigurationProperties implements BootstrapCloseable {
      */
     public void setSkipCamelInfo(boolean skipCamelInfo) {
         this.skipCamelInfo = skipCamelInfo;
+    }
+
+    public boolean isLogMetricsOnShutdown() {
+        return logMetricsOnShutdown;
+    }
+
+    /**
+     * Log metrics when application is shutting down. (default, `false`).
+     */
+    public void setLogMetricsOnShutdown(boolean logMetricsOnShutdown) {
+        this.logMetricsOnShutdown = logMetricsOnShutdown;
     }
 
     public String getTextFormatVersion() {
@@ -225,6 +240,18 @@ public class MetricsConfigurationProperties implements BootstrapCloseable {
      */
     public void setBinders(String binders) {
         this.binders = binders;
+    }
+
+    public String getLogMetricsOnShutdownFilters() {
+        return logMetricsOnShutdownFilters;
+    }
+
+    /**
+     * List of metrics (comma separated) to log when application is shutting down. You can use `*` character to log any
+     * metrics containing the wildcard, for example `camel.exchanges.*` (default to all metrics available).
+     */
+    public void setLogMetricsOnShutdownFilters(String logMetricsOnShutdownFilters) {
+        this.logMetricsOnShutdownFilters = logMetricsOnShutdownFilters;
     }
 
     public String getPath() {
@@ -316,7 +343,7 @@ public class MetricsConfigurationProperties implements BootstrapCloseable {
     }
 
     /**
-     * Clear the captured metrics data when Camel is reloading routes such as when using Camel JBang.
+     * Clear the captured metrics data when Camel is reloading routes such as when using Camel CLI.
      */
     public MetricsConfigurationProperties withClearOnReload(boolean clearOnReload) {
         this.clearOnReload = clearOnReload;
@@ -328,6 +355,14 @@ public class MetricsConfigurationProperties implements BootstrapCloseable {
      */
     public MetricsConfigurationProperties withSkipCamelInfo(boolean skipCamelInfo) {
         this.skipCamelInfo = skipCamelInfo;
+        return this;
+    }
+
+    /**
+     * Log metrics when application is shutting down. (default, `false`).
+     */
+    public MetricsConfigurationProperties withLogMetricsOnShutdown(boolean logMetricsOnShutdown) {
+        this.logMetricsOnShutdown = logMetricsOnShutdown;
         return this;
     }
 
@@ -352,6 +387,15 @@ public class MetricsConfigurationProperties implements BootstrapCloseable {
      */
     public MetricsConfigurationProperties withBinders(String binders) {
         this.binders = binders;
+        return this;
+    }
+
+    /**
+     * List of metrics (comma separated) to log when application is shutting down. You can use `*` character to log any
+     * metrics containing the wildcard, for example `camel.exchanges.*` (default to all metrics available).
+     */
+    public MetricsConfigurationProperties withLogMetricsOnShutdownFilters(String logMetricsOnShutdownFilters) {
+        this.logMetricsOnShutdownFilters = logMetricsOnShutdownFilters;
         return this;
     }
 

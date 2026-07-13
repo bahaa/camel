@@ -144,8 +144,8 @@ public final class SmppUtils {
         byte[] body = deliverSm.getShortMessage();
         if (body == null || body.length == 0) {
             OptionalParameter param = deliverSm.getOptionalParameter(Tag.MESSAGE_PAYLOAD);
-            if (param instanceof OctetString) {
-                body = ((OctetString) param).getValue();
+            if (param instanceof OctetString octetString) {
+                body = octetString.getValue();
             }
         }
         return body;
@@ -315,7 +315,8 @@ public final class SmppUtils {
             ExecutorServiceManager manager = endpoint.getCamelContext().getExecutorServiceManager();
             return manager.newSingleThreadScheduledExecutor(service, taskName);
         } else {
-            LOG.warn("Not using the Camel scheduled thread executor");
+            LOG.warn("CamelContext or ExecutorServiceManager not available. "
+                     + "Using fallback executor which does not support virtual threads.");
             return Executors.newSingleThreadScheduledExecutor();
         }
     }

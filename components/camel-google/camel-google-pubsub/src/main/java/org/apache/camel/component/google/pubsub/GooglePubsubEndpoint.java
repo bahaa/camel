@@ -26,6 +26,7 @@ import org.apache.camel.Consumer;
 import org.apache.camel.ExchangePattern;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
+import org.apache.camel.component.google.common.GoogleCommonConfiguration;
 import org.apache.camel.component.google.pubsub.serializer.DefaultGooglePubsubSerializer;
 import org.apache.camel.component.google.pubsub.serializer.GooglePubsubSerializer;
 import org.apache.camel.spi.*;
@@ -42,7 +43,8 @@ import org.slf4j.LoggerFactory;
 @UriEndpoint(firstVersion = "2.19.0", scheme = "google-pubsub", title = "Google Pubsub",
              syntax = "google-pubsub:projectId:destinationName", category = { Category.CLOUD, Category.MESSAGING },
              headersClass = GooglePubsubConstants.class)
-public class GooglePubsubEndpoint extends DefaultEndpoint implements EndpointServiceLocation, HeaderFilterStrategyAware {
+public class GooglePubsubEndpoint extends DefaultEndpoint
+        implements EndpointServiceLocation, HeaderFilterStrategyAware, GoogleCommonConfiguration {
 
     private Logger log;
 
@@ -81,6 +83,17 @@ public class GooglePubsubEndpoint extends DefaultEndpoint implements EndpointSer
               description = "Set the maximum period a message ack deadline will be extended. Value in seconds",
               defaultValue = "3600")
     private int maxAckExtensionPeriod = 3600;
+    @UriParam(label = "consumer,advanced", name = "maxDeliveryAttempts",
+              description = "The maximum number of delivery attempts for each message. "
+                            + "When set to a positive value, the consumer will automatically nack any message whose delivery attempt count "
+                            + "is greater than or equal to this value, allowing Pub/Sub to route it to the dead-letter topic "
+                            + "without processing it. This prevents infinite redelivery loops when short retry delays are configured. "
+                            + "If not explicitly set and the subscription has a dead-letter policy, "
+                            + "the value is automatically fetched from the subscription configuration at consumer startup. "
+                            + "Set to 0 to disable enforcement.",
+              defaultValue = "0")
+    private int maxDeliveryAttempts;
+    private boolean maxDeliveryAttemptsExplicitlySet;
     @UriParam(label = "producer,advanced",
               description = "Should message ordering be enabled")
     private boolean messageOrderingEnabled;
@@ -174,6 +187,7 @@ public class GooglePubsubEndpoint extends DefaultEndpoint implements EndpointSer
         this.loggerId = loggerId;
     }
 
+    @Override
     public boolean isAuthenticate() {
         return authenticate;
     }
@@ -182,6 +196,7 @@ public class GooglePubsubEndpoint extends DefaultEndpoint implements EndpointSer
         this.authenticate = authenticate;
     }
 
+    @Override
     public String getServiceAccountKey() {
         return serviceAccountKey;
     }
@@ -236,6 +251,19 @@ public class GooglePubsubEndpoint extends DefaultEndpoint implements EndpointSer
 
     public void setMaxAckExtensionPeriod(int maxAckExtensionPeriod) {
         this.maxAckExtensionPeriod = maxAckExtensionPeriod;
+    }
+
+    public int getMaxDeliveryAttempts() {
+        return maxDeliveryAttempts;
+    }
+
+    public void setMaxDeliveryAttempts(int maxDeliveryAttempts) {
+        this.maxDeliveryAttempts = maxDeliveryAttempts;
+        this.maxDeliveryAttemptsExplicitlySet = true;
+    }
+
+    public boolean isMaxDeliveryAttemptsExplicitlySet() {
+        return maxDeliveryAttemptsExplicitlySet;
     }
 
     public GooglePubsubSerializer getSerializer() {

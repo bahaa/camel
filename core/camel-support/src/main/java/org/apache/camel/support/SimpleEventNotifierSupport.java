@@ -38,6 +38,7 @@ public abstract class SimpleEventNotifierSupport extends ServiceSupport implemen
     boolean ignoreExchangeEvents;
     boolean ignoreExchangeCreatedEvent;
     boolean ignoreExchangeCompletedEvent;
+    @Deprecated(since = "4.19.0")
     boolean ignoreExchangeAsyncProcessingStartedEvents = true; // special need for camel-tracing/camel-opentelemetry
     boolean ignoreExchangeFailedEvents;
     boolean ignoreExchangeRedeliveryEvents;
@@ -45,7 +46,7 @@ public abstract class SimpleEventNotifierSupport extends ServiceSupport implemen
     boolean ignoreExchangeSentEvents;
     boolean ignoreStepEvents;
 
-    public SimpleEventNotifierSupport() {
+    protected SimpleEventNotifierSupport() {
         setupIgnore(true);
     }
 
@@ -191,11 +192,13 @@ public abstract class SimpleEventNotifierSupport extends ServiceSupport implemen
     }
 
     @Override
+    @Deprecated(since = "4.19.0")
     public boolean isIgnoreExchangeAsyncProcessingStartedEvents() {
         return ignoreExchangeAsyncProcessingStartedEvents;
     }
 
     @Override
+    @Deprecated(since = "4.19.0")
     public void setIgnoreExchangeAsyncProcessingStartedEvents(boolean ignoreExchangeAsyncProcessingStartedEvents) {
         this.ignoreExchangeAsyncProcessingStartedEvents = ignoreExchangeAsyncProcessingStartedEvents;
     }

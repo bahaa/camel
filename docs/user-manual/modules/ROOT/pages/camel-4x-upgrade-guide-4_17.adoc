@@ -20,6 +20,7 @@ works across all DSLs (Java, XML and YAML).
 
 For Java DSL that means code should be changed
 
+._Java-only: Old transform with DataType_
 [source,java]
 ----
 from("direct:start")
@@ -29,6 +30,7 @@ from("direct:start")
 
 to:
 
+._Java-only: New transformDataType EIP_
 [source,java]
 ----
 from("direct:start")
@@ -48,6 +50,18 @@ to initialize headers must now add the following method:
         return true;
     }
 ----
+
+=== camel-cluster
+
+The cluster locking components has been made more tooling friendly for configuration by exposing all their options as metadata.
+
+- camel-file
+- camel-consul
+- camel-infinispan
+- camel-jgroups-kraft
+- camel-kubernetes
+- camel-master
+- camel-zookeeper
 
 === camel-jbang
 
@@ -76,8 +90,8 @@ to not use the newly introduced checks in `camel-ftp` to have same behavior as p
 `camel-infinispan` has been upgraded to https://infinispan.org/blog/2025/11/10/infinispan-16-0[Infinispan 16].
 Virtual threads are enabled by default for embedded mode with `camel-infinispan-embedded`.
 
-If you choose to listen for cache events on the `infinispan-embedded` consumer, it is possible that events are not processed in a predicatable order.
-Disabling virtual threads by setting system property `org.infinispan.threads.virtual` to `false` leads to more predicatable event order processing.
+If you choose to listen for cache events on the `infinispan-embedded` consumer, it is possible that events are not processed in a predictable order.
+Disabling virtual threads by setting system property `org.infinispan.threads.virtual` to `false` leads to more predictable event order processing.
 
 === camel-tika
 
@@ -87,6 +101,10 @@ Upgraded to Tika v3, and removed `textMain` from `tikaParseOutputFormat` option.
 
 This component will not skip headers that has invalid characters in key names (UT10052), implemented
 in the `UndertowHeaderFilterStrategy` class.
+
+=== camel-docling
+
+There is a regression related to `EXTRACT_METADATA` operation. Only filename, filesize and filepath are still extracted.
 
 === Component deprecation
 
@@ -116,3 +134,8 @@ If you are a developer running or contributing to the Salesforce component integ
 * **Legacy directory removed**: `it/resources/salesforce/` has been removed; metadata is now in `it/resources/sfdx-project/salesforce-source/`
 
 See `components/camel-salesforce/it/resources/README.md` for detailed setup instructions.
+
+=== Maven Archetypes
+
+The `camel-archetype-spring` maven archetype is deprecated. This archetype is generating classic old-fashioned Spring XML `<beans>`
+projects. Use Spring Boot instead.

@@ -156,6 +156,41 @@ public interface KafkaEndpointBuilderFactory {
             return this;
         }
         /**
+         * The period of time in milliseconds after which we force a refresh of
+         * metadata even if we haven't seen any partition leadership changes to
+         * proactively discover any new brokers or partitions.
+         * 
+         * The option is a: <code>java.lang.Integer</code> type.
+         * 
+         * Default: 300000
+         * Group: common
+         * 
+         * @param metadataMaxAgeMs the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder metadataMaxAgeMs(Integer metadataMaxAgeMs) {
+            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
+            return this;
+        }
+        /**
+         * The period of time in milliseconds after which we force a refresh of
+         * metadata even if we haven't seen any partition leadership changes to
+         * proactively discover any new brokers or partitions.
+         * 
+         * The option will be converted to a <code>java.lang.Integer</code>
+         * type.
+         * 
+         * Default: 300000
+         * Group: common
+         * 
+         * @param metadataMaxAgeMs the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder metadataMaxAgeMs(String metadataMaxAgeMs) {
+            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
+            return this;
+        }
+        /**
          * The maximum amount of time in milliseconds to wait when reconnecting
          * to a broker that has repeatedly failed to connect. If provided, the
          * backoff per host will increase exponentially for each consecutive
@@ -865,6 +900,43 @@ public interface KafkaEndpointBuilderFactory {
          */
         default KafkaEndpointConsumerBuilder groupInstanceId(String groupInstanceId) {
             doSetProperty("groupInstanceId", groupInstanceId);
+            return this;
+        }
+        /**
+         * The consumer group protocol to use. The classic protocol uses the
+         * traditional partition assignment and rebalancing mechanism. The
+         * consumer protocol enables the new KIP-848 consumer rebalance protocol
+         * which provides faster and more efficient rebalancing. When set to
+         * consumer, classic-only properties (heartbeatIntervalMs,
+         * sessionTimeoutMs, partitionAssignor) are automatically excluded from
+         * the consumer configuration.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Default: classic
+         * Group: consumer
+         * 
+         * @param groupProtocol the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder groupProtocol(String groupProtocol) {
+            doSetProperty("groupProtocol", groupProtocol);
+            return this;
+        }
+        /**
+         * The name of the server-side assignor to use when group.protocol is
+         * set to consumer. If not specified, the group coordinator will use the
+         * default assignor configured on the broker (group.consumer.assignors).
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: consumer
+         * 
+         * @param groupRemoteAssignor the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder groupRemoteAssignor(String groupRemoteAssignor) {
+            doSetProperty("groupRemoteAssignor", groupRemoteAssignor);
             return this;
         }
         /**
@@ -1579,6 +1651,104 @@ public interface KafkaEndpointBuilderFactory {
             return this;
         }
         /**
+         * OAuth client ID. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthClientId the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder oauthClientId(String oauthClientId) {
+            doSetProperty("oauthClientId", oauthClientId);
+            return this;
+        }
+        /**
+         * OAuth client secret. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthClientSecret the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder oauthClientSecret(String oauthClientSecret) {
+            doSetProperty("oauthClientSecret", oauthClientSecret);
+            return this;
+        }
+        /**
+         * OAuth scope. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthScope the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder oauthScope(String oauthScope) {
+            doSetProperty("oauthScope", oauthScope);
+            return this;
+        }
+        /**
+         * OAuth token endpoint URI. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthTokenEndpointUri the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder oauthTokenEndpointUri(String oauthTokenEndpointUri) {
+            doSetProperty("oauthTokenEndpointUri", oauthTokenEndpointUri);
+            return this;
+        }
+        /**
+         * Simplified authentication type to use. This provides an easier way to
+         * configure Kafka authentication without manually setting
+         * securityProtocol, saslMechanism, and saslJaasConfig. When set, the
+         * appropriate security settings are automatically derived. Note: This
+         * is optional. You can still use the traditional approach with explicit
+         * securityProtocol, saslMechanism, and saslJaasConfig properties.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.component.kafka.security.KafkaAuthType</code>
+         * type.
+         * 
+         * Group: security
+         * 
+         * @param saslAuthType the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder saslAuthType(org.apache.camel.component.kafka.security.KafkaAuthType saslAuthType) {
+            doSetProperty("saslAuthType", saslAuthType);
+            return this;
+        }
+        /**
+         * Simplified authentication type to use. This provides an easier way to
+         * configure Kafka authentication without manually setting
+         * securityProtocol, saslMechanism, and saslJaasConfig. When set, the
+         * appropriate security settings are automatically derived. Note: This
+         * is optional. You can still use the traditional approach with explicit
+         * securityProtocol, saslMechanism, and saslJaasConfig properties.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.component.kafka.security.KafkaAuthType</code>
+         * type.
+         * 
+         * Group: security
+         * 
+         * @param saslAuthType the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder saslAuthType(String saslAuthType) {
+            doSetProperty("saslAuthType", saslAuthType);
+            return this;
+        }
+        /**
          * Expose the kafka sasl.jaas.config parameter Example:
          * org.apache.kafka.common.security.plain.PlainLoginModule required
          * username=USERNAME password=PASSWORD;.
@@ -1624,6 +1794,36 @@ public interface KafkaEndpointBuilderFactory {
          */
         default KafkaEndpointConsumerBuilder saslMechanism(String saslMechanism) {
             doSetProperty("saslMechanism", saslMechanism);
+            return this;
+        }
+        /**
+         * Password for SASL authentication. Used when saslAuthType is set to
+         * PLAIN, SCRAM_SHA_256, or SCRAM_SHA_512.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param saslPassword the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder saslPassword(String saslPassword) {
+            doSetProperty("saslPassword", saslPassword);
+            return this;
+        }
+        /**
+         * Username for SASL authentication. Used when saslAuthType is set to
+         * PLAIN, SCRAM_SHA_256, or SCRAM_SHA_512.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param saslUsername the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointConsumerBuilder saslUsername(String saslUsername) {
+            doSetProperty("saslUsername", saslUsername);
             return this;
         }
         /**
@@ -2306,6 +2506,41 @@ public interface KafkaEndpointBuilderFactory {
             return this;
         }
         /**
+         * The period of time in milliseconds after which we force a refresh of
+         * metadata even if we haven't seen any partition leadership changes to
+         * proactively discover any new brokers or partitions.
+         * 
+         * The option is a: <code>java.lang.Integer</code> type.
+         * 
+         * Default: 300000
+         * Group: common
+         * 
+         * @param metadataMaxAgeMs the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder metadataMaxAgeMs(Integer metadataMaxAgeMs) {
+            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
+            return this;
+        }
+        /**
+         * The period of time in milliseconds after which we force a refresh of
+         * metadata even if we haven't seen any partition leadership changes to
+         * proactively discover any new brokers or partitions.
+         * 
+         * The option will be converted to a <code>java.lang.Integer</code>
+         * type.
+         * 
+         * Default: 300000
+         * Group: common
+         * 
+         * @param metadataMaxAgeMs the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder metadataMaxAgeMs(String metadataMaxAgeMs) {
+            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
+            return this;
+        }
+        /**
          * The maximum amount of time in milliseconds to wait when reconnecting
          * to a broker that has repeatedly failed to connect. If provided, the
          * backoff per host will increase exponentially for each consecutive
@@ -2776,7 +3011,7 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * The option is a: <code>java.lang.Integer</code> type.
          * 
-         * Default: 0
+         * Default: 5
          * Group: producer
          * 
          * @param lingerMs the value to set
@@ -2809,7 +3044,7 @@ public interface KafkaEndpointBuilderFactory {
          * The option will be converted to a <code>java.lang.Integer</code>
          * type.
          * 
-         * Default: 0
+         * Default: 5
          * Group: producer
          * 
          * @param lingerMs the value to set
@@ -2942,41 +3177,6 @@ public interface KafkaEndpointBuilderFactory {
          */
         default KafkaEndpointProducerBuilder maxRequestSize(String maxRequestSize) {
             doSetProperty("maxRequestSize", maxRequestSize);
-            return this;
-        }
-        /**
-         * The period of time in milliseconds after which we force a refresh of
-         * metadata even if we haven't seen any partition leadership changes to
-         * proactively discover any new brokers or partitions.
-         * 
-         * The option is a: <code>java.lang.Integer</code> type.
-         * 
-         * Default: 300000
-         * Group: producer
-         * 
-         * @param metadataMaxAgeMs the value to set
-         * @return the dsl builder
-         */
-        default KafkaEndpointProducerBuilder metadataMaxAgeMs(Integer metadataMaxAgeMs) {
-            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
-            return this;
-        }
-        /**
-         * The period of time in milliseconds after which we force a refresh of
-         * metadata even if we haven't seen any partition leadership changes to
-         * proactively discover any new brokers or partitions.
-         * 
-         * The option will be converted to a <code>java.lang.Integer</code>
-         * type.
-         * 
-         * Default: 300000
-         * Group: producer
-         * 
-         * @param metadataMaxAgeMs the value to set
-         * @return the dsl builder
-         */
-        default KafkaEndpointProducerBuilder metadataMaxAgeMs(String metadataMaxAgeMs) {
-            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
             return this;
         }
         /**
@@ -3850,6 +4050,104 @@ public interface KafkaEndpointBuilderFactory {
             return this;
         }
         /**
+         * OAuth client ID. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthClientId the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder oauthClientId(String oauthClientId) {
+            doSetProperty("oauthClientId", oauthClientId);
+            return this;
+        }
+        /**
+         * OAuth client secret. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthClientSecret the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder oauthClientSecret(String oauthClientSecret) {
+            doSetProperty("oauthClientSecret", oauthClientSecret);
+            return this;
+        }
+        /**
+         * OAuth scope. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthScope the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder oauthScope(String oauthScope) {
+            doSetProperty("oauthScope", oauthScope);
+            return this;
+        }
+        /**
+         * OAuth token endpoint URI. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthTokenEndpointUri the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder oauthTokenEndpointUri(String oauthTokenEndpointUri) {
+            doSetProperty("oauthTokenEndpointUri", oauthTokenEndpointUri);
+            return this;
+        }
+        /**
+         * Simplified authentication type to use. This provides an easier way to
+         * configure Kafka authentication without manually setting
+         * securityProtocol, saslMechanism, and saslJaasConfig. When set, the
+         * appropriate security settings are automatically derived. Note: This
+         * is optional. You can still use the traditional approach with explicit
+         * securityProtocol, saslMechanism, and saslJaasConfig properties.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.component.kafka.security.KafkaAuthType</code>
+         * type.
+         * 
+         * Group: security
+         * 
+         * @param saslAuthType the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder saslAuthType(org.apache.camel.component.kafka.security.KafkaAuthType saslAuthType) {
+            doSetProperty("saslAuthType", saslAuthType);
+            return this;
+        }
+        /**
+         * Simplified authentication type to use. This provides an easier way to
+         * configure Kafka authentication without manually setting
+         * securityProtocol, saslMechanism, and saslJaasConfig. When set, the
+         * appropriate security settings are automatically derived. Note: This
+         * is optional. You can still use the traditional approach with explicit
+         * securityProtocol, saslMechanism, and saslJaasConfig properties.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.component.kafka.security.KafkaAuthType</code>
+         * type.
+         * 
+         * Group: security
+         * 
+         * @param saslAuthType the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder saslAuthType(String saslAuthType) {
+            doSetProperty("saslAuthType", saslAuthType);
+            return this;
+        }
+        /**
          * Expose the kafka sasl.jaas.config parameter Example:
          * org.apache.kafka.common.security.plain.PlainLoginModule required
          * username=USERNAME password=PASSWORD;.
@@ -3895,6 +4193,36 @@ public interface KafkaEndpointBuilderFactory {
          */
         default KafkaEndpointProducerBuilder saslMechanism(String saslMechanism) {
             doSetProperty("saslMechanism", saslMechanism);
+            return this;
+        }
+        /**
+         * Password for SASL authentication. Used when saslAuthType is set to
+         * PLAIN, SCRAM_SHA_256, or SCRAM_SHA_512.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param saslPassword the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder saslPassword(String saslPassword) {
+            doSetProperty("saslPassword", saslPassword);
+            return this;
+        }
+        /**
+         * Username for SASL authentication. Used when saslAuthType is set to
+         * PLAIN, SCRAM_SHA_256, or SCRAM_SHA_512.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param saslUsername the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointProducerBuilder saslUsername(String saslUsername) {
+            doSetProperty("saslUsername", saslUsername);
             return this;
         }
         /**
@@ -4475,6 +4803,41 @@ public interface KafkaEndpointBuilderFactory {
             return this;
         }
         /**
+         * The period of time in milliseconds after which we force a refresh of
+         * metadata even if we haven't seen any partition leadership changes to
+         * proactively discover any new brokers or partitions.
+         * 
+         * The option is a: <code>java.lang.Integer</code> type.
+         * 
+         * Default: 300000
+         * Group: common
+         * 
+         * @param metadataMaxAgeMs the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder metadataMaxAgeMs(Integer metadataMaxAgeMs) {
+            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
+            return this;
+        }
+        /**
+         * The period of time in milliseconds after which we force a refresh of
+         * metadata even if we haven't seen any partition leadership changes to
+         * proactively discover any new brokers or partitions.
+         * 
+         * The option will be converted to a <code>java.lang.Integer</code>
+         * type.
+         * 
+         * Default: 300000
+         * Group: common
+         * 
+         * @param metadataMaxAgeMs the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder metadataMaxAgeMs(String metadataMaxAgeMs) {
+            doSetProperty("metadataMaxAgeMs", metadataMaxAgeMs);
+            return this;
+        }
+        /**
          * The maximum amount of time in milliseconds to wait when reconnecting
          * to a broker that has repeatedly failed to connect. If provided, the
          * backoff per host will increase exponentially for each consecutive
@@ -4817,6 +5180,104 @@ public interface KafkaEndpointBuilderFactory {
             return this;
         }
         /**
+         * OAuth client ID. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthClientId the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder oauthClientId(String oauthClientId) {
+            doSetProperty("oauthClientId", oauthClientId);
+            return this;
+        }
+        /**
+         * OAuth client secret. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthClientSecret the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder oauthClientSecret(String oauthClientSecret) {
+            doSetProperty("oauthClientSecret", oauthClientSecret);
+            return this;
+        }
+        /**
+         * OAuth scope. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthScope the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder oauthScope(String oauthScope) {
+            doSetProperty("oauthScope", oauthScope);
+            return this;
+        }
+        /**
+         * OAuth token endpoint URI. Used when saslAuthType is set to OAUTH.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthTokenEndpointUri the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder oauthTokenEndpointUri(String oauthTokenEndpointUri) {
+            doSetProperty("oauthTokenEndpointUri", oauthTokenEndpointUri);
+            return this;
+        }
+        /**
+         * Simplified authentication type to use. This provides an easier way to
+         * configure Kafka authentication without manually setting
+         * securityProtocol, saslMechanism, and saslJaasConfig. When set, the
+         * appropriate security settings are automatically derived. Note: This
+         * is optional. You can still use the traditional approach with explicit
+         * securityProtocol, saslMechanism, and saslJaasConfig properties.
+         * 
+         * The option is a:
+         * <code>org.apache.camel.component.kafka.security.KafkaAuthType</code>
+         * type.
+         * 
+         * Group: security
+         * 
+         * @param saslAuthType the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder saslAuthType(org.apache.camel.component.kafka.security.KafkaAuthType saslAuthType) {
+            doSetProperty("saslAuthType", saslAuthType);
+            return this;
+        }
+        /**
+         * Simplified authentication type to use. This provides an easier way to
+         * configure Kafka authentication without manually setting
+         * securityProtocol, saslMechanism, and saslJaasConfig. When set, the
+         * appropriate security settings are automatically derived. Note: This
+         * is optional. You can still use the traditional approach with explicit
+         * securityProtocol, saslMechanism, and saslJaasConfig properties.
+         * 
+         * The option will be converted to a
+         * <code>org.apache.camel.component.kafka.security.KafkaAuthType</code>
+         * type.
+         * 
+         * Group: security
+         * 
+         * @param saslAuthType the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder saslAuthType(String saslAuthType) {
+            doSetProperty("saslAuthType", saslAuthType);
+            return this;
+        }
+        /**
          * Expose the kafka sasl.jaas.config parameter Example:
          * org.apache.kafka.common.security.plain.PlainLoginModule required
          * username=USERNAME password=PASSWORD;.
@@ -4862,6 +5323,36 @@ public interface KafkaEndpointBuilderFactory {
          */
         default KafkaEndpointBuilder saslMechanism(String saslMechanism) {
             doSetProperty("saslMechanism", saslMechanism);
+            return this;
+        }
+        /**
+         * Password for SASL authentication. Used when saslAuthType is set to
+         * PLAIN, SCRAM_SHA_256, or SCRAM_SHA_512.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param saslPassword the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder saslPassword(String saslPassword) {
+            doSetProperty("saslPassword", saslPassword);
+            return this;
+        }
+        /**
+         * Username for SASL authentication. Used when saslAuthType is set to
+         * PLAIN, SCRAM_SHA_256, or SCRAM_SHA_512.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param saslUsername the value to set
+         * @return the dsl builder
+         */
+        default KafkaEndpointBuilder saslUsername(String saslUsername) {
+            doSetProperty("saslUsername", saslUsername);
             return this;
         }
         /**
@@ -5307,7 +5798,7 @@ public interface KafkaEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final KafkaHeaderNameBuilder INSTANCE = new KafkaHeaderNameBuilder();
+        public static final KafkaHeaderNameBuilder INSTANCE = new KafkaHeaderNameBuilder();
 
         /**
          * Explicitly specify the partition.
@@ -5316,10 +5807,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: producer
          * 
-         * @return the name of the header {@code kafka.PARTITION_KEY}.
+         * @return the name of the header {@code KafkaPartitionKey}.
          */
         public String kafkaPartitionKey() {
-            return "kafka.PARTITION_KEY";
+            return "CamelKafkaPartitionKey";
         }
         /**
          * The partition where the message was stored.
@@ -5328,10 +5819,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: consumer
          * 
-         * @return the name of the header {@code kafka.PARTITION}.
+         * @return the name of the header {@code KafkaPartition}.
          */
         public String kafkaPartition() {
-            return "kafka.PARTITION";
+            return "CamelKafkaPartition";
         }
         /**
          * Producer: The key of the message in order to ensure that all related
@@ -5343,10 +5834,10 @@ public interface KafkaEndpointBuilderFactory {
          * Required: true
          * Group: common
          * 
-         * @return the name of the header {@code kafka.KEY}.
+         * @return the name of the header {@code KafkaKey}.
          */
         public String kafkaKey() {
-            return "kafka.KEY";
+            return "CamelKafkaKey";
         }
         /**
          * The topic from where the message originated.
@@ -5355,10 +5846,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: consumer
          * 
-         * @return the name of the header {@code kafka.TOPIC}.
+         * @return the name of the header {@code KafkaTopic}.
          */
         public String kafkaTopic() {
-            return "kafka.TOPIC";
+            return "CamelKafkaTopic";
         }
         /**
          * The topic to which send the message (override and takes precedence),
@@ -5368,10 +5859,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: producer
          * 
-         * @return the name of the header {@code kafka.OVERRIDE_TOPIC}.
+         * @return the name of the header {@code KafkaOverrideTopic}.
          */
         public String kafkaOverrideTopic() {
-            return "kafka.OVERRIDE_TOPIC";
+            return "CamelKafkaOverrideTopic";
         }
         /**
          * The offset of the message.
@@ -5380,10 +5871,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: consumer
          * 
-         * @return the name of the header {@code kafka.OFFSET}.
+         * @return the name of the header {@code KafkaOffset}.
          */
         public String kafkaOffset() {
-            return "kafka.OFFSET";
+            return "CamelKafkaOffset";
         }
         /**
          * The record headers.
@@ -5392,10 +5883,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: consumer
          * 
-         * @return the name of the header {@code kafka.HEADERS}.
+         * @return the name of the header {@code KafkaHeaders}.
          */
         public String kafkaHeaders() {
-            return "kafka.HEADERS";
+            return "CamelKafkaHeaders";
         }
         /**
          * Whether or not it's the last record before commit (only available if
@@ -5405,11 +5896,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: consumer
          * 
-         * @return the name of the header {@code
-         * kafka.LAST_RECORD_BEFORE_COMMIT}.
+         * @return the name of the header {@code KafkaLastRecordBeforeCommit}.
          */
         public String kafkaLastRecordBeforeCommit() {
-            return "kafka.LAST_RECORD_BEFORE_COMMIT";
+            return "CamelKafkaLastRecordBeforeCommit";
         }
         /**
          * Indicates the last record within the current poll request (only
@@ -5420,10 +5910,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: consumer
          * 
-         * @return the name of the header {@code kafka.LAST_POLL_RECORD}.
+         * @return the name of the header {@code KafkaLastPollRecord}.
          */
         public String kafkaLastPollRecord() {
-            return "kafka.LAST_POLL_RECORD";
+            return "CamelKafkaLastPollRecord";
         }
         /**
          * The timestamp of the message.
@@ -5432,10 +5922,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: consumer
          * 
-         * @return the name of the header {@code kafka.TIMESTAMP}.
+         * @return the name of the header {@code KafkaTimestamp}.
          */
         public String kafkaTimestamp() {
-            return "kafka.TIMESTAMP";
+            return "CamelKafkaTimestamp";
         }
         /**
          * The ProducerRecord also has an associated timestamp. If the user did
@@ -5446,10 +5936,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: producer
          * 
-         * @return the name of the header {@code kafka.OVERRIDE_TIMESTAMP}.
+         * @return the name of the header {@code KafkaOverrideTimestamp}.
          */
         public String kafkaOverrideTimestamp() {
-            return "kafka.OVERRIDE_TIMESTAMP";
+            return "CamelKafkaOverrideTimestamp";
         }
         /**
          * The metadata (only configured if recordMetadata endpoint parameter is
@@ -5459,10 +5949,10 @@ public interface KafkaEndpointBuilderFactory {
          * 
          * Group: producer
          * 
-         * @return the name of the header {@code kafka.RECORD_META}.
+         * @return the name of the header {@code KafkaRecordMeta}.
          */
         public String kafkaRecordMeta() {
-            return "kafka.RECORD_META";
+            return "CamelKafkaRecordMeta";
         }
         /**
          * Can be used for forcing manual offset commit when using Kafka

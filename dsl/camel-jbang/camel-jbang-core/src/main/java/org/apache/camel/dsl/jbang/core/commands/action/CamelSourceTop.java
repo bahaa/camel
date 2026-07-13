@@ -31,7 +31,11 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "source", description = "List top processors (source) in a running Camel integration", sortOptions = false,
-         showDefaultValues = true)
+         showDefaultValues = true,
+         footer = {
+                 "%nExamples:",
+                 "  camel top source",
+                 "  camel top source --limit=5" })
 public class CamelSourceTop extends ActionWatchCommand {
 
     @CommandLine.Parameters(description = "Name or pid of running Camel integration", arity = "0..1")
@@ -57,11 +61,11 @@ public class CamelSourceTop extends ActionWatchCommand {
 
         List<Long> pids = findPids(name);
         if (pids.isEmpty()) {
-            return 0;
+            return 1;
         } else if (pids.size() > 1) {
             printer().println("Name or pid " + name + " matches " + pids.size()
                               + " running Camel integrations. Specify a name or PID that matches exactly one.");
-            return 0;
+            return 1;
         }
 
         this.pid = pids.get(0);
@@ -82,6 +86,10 @@ public class CamelSourceTop extends ActionWatchCommand {
         JsonObject jo = waitForOutputFile(outputFile);
         if (jo != null) {
             JsonArray arr = (JsonArray) jo.get("processors");
+            if (arr == null) {
+                printer().printErr("Source top data not available from the running integration");
+                return 0;
+            }
             for (int i = 0; i < arr.size(); i++) {
                 JsonObject o = (JsonObject) arr.get(i);
                 Row row = new Row();
@@ -132,7 +140,7 @@ public class CamelSourceTop extends ActionWatchCommand {
                 }
             }
         } else {
-            printer().println("Response from running Camel with PID " + pid + " not received within 5 seconds");
+            printer().println("Response from running Camel with PID " + pid + " not received within 10 seconds");
             return 1;
         }
 

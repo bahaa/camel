@@ -23,12 +23,12 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>components</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-irc</artifactId>
     <packaging>jar</packaging>
-    <name>Camel :: IRC</name>
+    <name>Camel :: IRC (deprecated)</name>
     <description>Camel IRC support</description>
 
     <dependencies>
@@ -46,7 +46,7 @@
         <!-- testing -->
         <dependency>
             <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-junit5</artifactId>
+            <artifactId>camel-test-junit6</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

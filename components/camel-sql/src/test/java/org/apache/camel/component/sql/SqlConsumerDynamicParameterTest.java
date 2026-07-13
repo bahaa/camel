@@ -23,7 +23,7 @@ import org.apache.camel.BindToRegistry;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
@@ -87,7 +87,7 @@ public class SqlConsumerDynamicParameterTest extends CamelTestSupport {
                 getContext().getComponent("sql", SqlComponent.class).setDataSource(db);
 
                 from("sql:select * from projects where id = :#${bean:myIdGenerator.nextId}?initialDelay=0&delay=50")
-                        .routeId("foo").autoStartup("false")
+                        .routeId("foo").autoStartup(false)
                         .to("mock:result");
             }
         };

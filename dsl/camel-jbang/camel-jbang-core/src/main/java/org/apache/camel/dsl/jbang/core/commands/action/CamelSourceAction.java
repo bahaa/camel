@@ -33,7 +33,11 @@ import picocli.CommandLine.Command;
 
 import static org.apache.camel.support.LoggerHelper.stripSourceLocationLineNumber;
 
-@Command(name = "source", description = "Display Camel route source code", sortOptions = false, showDefaultValues = true)
+@Command(name = "source", description = "Display Camel route source code", sortOptions = false, showDefaultValues = true,
+         footer = {
+                 "%nExamples:",
+                 "  camel cmd source",
+                 "  camel cmd source --filter=myRoute" })
 public class CamelSourceAction extends ActionBaseCommand {
 
     @CommandLine.Parameters(description = "Name or pid of running Camel integration", arity = "0..1")
@@ -59,11 +63,11 @@ public class CamelSourceAction extends ActionBaseCommand {
 
         List<Long> pids = findPids(name);
         if (pids.isEmpty()) {
-            return 0;
+            return 1;
         } else if (pids.size() > 1) {
             printer().println("Name or pid " + name + " matches " + pids.size()
                               + " running Camel integrations. Specify a name or PID that matches exactly one.");
-            return 0;
+            return 1;
         }
 
         this.pid = pids.get(0);
@@ -115,7 +119,7 @@ public class CamelSourceAction extends ActionBaseCommand {
                 }
             }
         } else {
-            printer().println("Response from running Camel with PID " + pid + " not received within 5 seconds");
+            printer().println("Response from running Camel with PID " + pid + " not received within 10 seconds");
             return 1;
         }
 

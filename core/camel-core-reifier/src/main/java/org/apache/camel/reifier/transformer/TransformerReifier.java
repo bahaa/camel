@@ -27,7 +27,6 @@ import org.apache.camel.model.transformer.EndpointTransformerDefinition;
 import org.apache.camel.model.transformer.LoadTransformerDefinition;
 import org.apache.camel.model.transformer.TransformerDefinition;
 import org.apache.camel.reifier.AbstractReifier;
-import org.apache.camel.spi.ReifierStrategy;
 import org.apache.camel.spi.Transformer;
 
 public abstract class TransformerReifier<T> extends AbstractReifier {
@@ -38,7 +37,7 @@ public abstract class TransformerReifier<T> extends AbstractReifier {
 
     protected final T definition;
 
-    public TransformerReifier(CamelContext camelContext, T definition) {
+    protected TransformerReifier(CamelContext camelContext, T definition) {
         super(camelContext);
         this.definition = definition;
     }
@@ -46,9 +45,6 @@ public abstract class TransformerReifier<T> extends AbstractReifier {
     public static void registerReifier(
             Class<?> processorClass,
             BiFunction<CamelContext, TransformerDefinition, TransformerReifier<? extends TransformerDefinition>> creator) {
-        if (TRANSFORMERS.isEmpty()) {
-            ReifierStrategy.addReifierClearer(TransformerReifier::clearReifiers);
-        }
         TRANSFORMERS.put(processorClass, creator);
     }
 

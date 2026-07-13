@@ -21,6 +21,8 @@ import java.security.KeyPair;
 import java.security.Security;
 import java.security.Signature;
 
+import javax.crypto.KeyGenerator;
+
 import org.apache.camel.BindToRegistry;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
@@ -30,7 +32,7 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.component.pqc.lifecycle.FileBasedKeyLifecycleManager;
 import org.apache.camel.component.pqc.lifecycle.KeyLifecycleManager;
 import org.apache.camel.component.pqc.lifecycle.KeyMetadata;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider;
 import org.bouncycastle.pqc.jcajce.spec.DilithiumParameterSpec;
@@ -406,8 +408,8 @@ public class PQCEndToEndIntegrationTest extends CamelTestSupport {
     }
 
     @BindToRegistry("KeyGenerator")
-    public javax.crypto.KeyGenerator getKeyGenerator() throws Exception {
-        return javax.crypto.KeyGenerator.getInstance(PQCKeyEncapsulationAlgorithms.NTRU.getAlgorithm(),
+    public KeyGenerator getKeyGenerator() throws Exception {
+        return KeyGenerator.getInstance(PQCKeyEncapsulationAlgorithms.NTRU.getAlgorithm(),
                 PQCKeyEncapsulationAlgorithms.NTRU.getBcProvider());
     }
 }

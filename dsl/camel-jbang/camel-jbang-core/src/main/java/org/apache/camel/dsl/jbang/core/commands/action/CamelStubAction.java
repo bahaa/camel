@@ -36,11 +36,15 @@ import org.apache.camel.support.PatternHelper;
 import org.apache.camel.util.URISupport;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
-import org.fusesource.jansi.Ansi;
+import org.jline.jansi.Ansi;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Command(name = "stub", description = "Browse stub endpoints", sortOptions = false, showDefaultValues = true)
+@Command(name = "stub", description = "Browse stub endpoints", sortOptions = false, showDefaultValues = true,
+         footer = {
+                 "%nExamples:",
+                 "  camel cmd stub",
+                 "  camel cmd stub --browse" })
 public class CamelStubAction extends ActionWatchCommand {
 
     @CommandLine.Parameters(description = "Name or pid of running Camel integration", arity = "0..1")
@@ -100,6 +104,8 @@ public class CamelStubAction extends ActionWatchCommand {
 
     private volatile long pid;
     String findAnsi;
+    Pattern[] grepPatterns;
+    Pattern[] findPatterns;
     private MessageTableHelper tableHelper;
     private final Map<String, Ansi.Color> exchangeIdColors = new HashMap<>();
     private int exchangeIdColorsIndex = 1;
@@ -127,19 +133,24 @@ public class CamelStubAction extends ActionWatchCommand {
             }
             return color;
         });
-        if (find != null || grep != null) {
+        if (find != null) {
             findAnsi = Ansi.ansi().fg(Ansi.Color.BLACK).bg(Ansi.Color.YELLOW).a("$0").reset().toString();
+            findPatterns = quoteAndCompilePatterns(find);
+        }
+        if (grep != null) {
+            findAnsi = Ansi.ansi().fg(Ansi.Color.BLACK).bg(Ansi.Color.YELLOW).a("$0").reset().toString();
+            grepPatterns = quoteAndCompilePatterns(grep);
         }
 
         List<Row> rows = new ArrayList<>();
 
         List<Long> pids = findPids(name);
         if (pids.isEmpty()) {
-            return 0;
+            return 1;
         } else if (pids.size() > 1) {
             printer().println("Name or pid " + name + " matches " + pids.size()
                               + " running Camel integrations. Specify a name or PID that matches exactly one.");
-            return 0;
+            return 1;
         }
 
         this.pid = pids.get(0);
@@ -216,7 +227,7 @@ public class CamelStubAction extends ActionWatchCommand {
                 }
             }
         } else {
-            printer().println("Response from running Camel with PID " + pid + " not received within 5 seconds");
+            printer().println("Response from running Camel with PID " + pid + " not received within 10 seconds");
             return 1;
         }
 
@@ -245,7 +256,9 @@ public class CamelStubAction extends ActionWatchCommand {
         }
         switch (s) {
             case "name":
-                return o1.name.compareToIgnoreCase(o2.name) * negate;
+                String q1 = o1.queue != null ? o1.queue : "";
+                String q2 = o2.queue != null ? o2.queue : "";
+                return q1.compareToIgnoreCase(q2) * negate;
             case "total":
                 return Integer.compare(o1.size, o2.size) * negate;
             default:
@@ -257,9 +270,8 @@ public class CamelStubAction extends ActionWatchCommand {
         if (grep == null) {
             return true;
         }
-        for (String g : grep) {
-            boolean m = Pattern.compile("(?i)" + g).matcher(line).find();
-            if (m) {
+        for (Pattern p : grepPatterns) {
+            if (p.matcher(line).find()) {
                 return true;
             }
         }
@@ -308,14 +320,14 @@ public class CamelStubAction extends ActionWatchCommand {
                                     printer().println();
                                 }
                                 for (String line : lines) {
-                                    if (find != null) {
-                                        for (String f : find) {
-                                            line = line.replaceAll("(?i)" + f, findAnsi);
+                                    if (findPatterns != null) {
+                                        for (Pattern p : findPatterns) {
+                                            line = p.matcher(line).replaceAll(findAnsi);
                                         }
                                     }
-                                    if (grep != null) {
-                                        for (String g : grep) {
-                                            line = line.replaceAll("(?i)" + g, findAnsi);
+                                    if (grepPatterns != null) {
+                                        for (Pattern p : grepPatterns) {
+                                            line = p.matcher(line).replaceAll(findAnsi);
                                         }
                                     }
                                     printer().print(" ");

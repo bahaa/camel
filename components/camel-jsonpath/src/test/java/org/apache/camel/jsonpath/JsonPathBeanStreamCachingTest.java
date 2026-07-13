@@ -21,7 +21,7 @@ import java.io.ByteArrayInputStream;
 import com.jayway.jsonpath.Option;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 public class JsonPathBeanStreamCachingTest extends CamelTestSupport {
@@ -41,7 +41,7 @@ public class JsonPathBeanStreamCachingTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from("direct:start").streamCaching()
+                from("direct:start").streamCache(true)
                         .bean(FullNameBean.class).to("mock:result");
             }
         };

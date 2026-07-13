@@ -17,10 +17,10 @@
 package org.apache.camel.processor;
 
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -102,6 +102,17 @@ public class SamplingThrottlerTest extends ContextTestSupport {
     }
 
     @Test
+    public void testSamplingWithPropertyPlaceholder() throws Exception {
+        MockEndpoint mock = getMockEndpoint("mock:result");
+        mock.expectedMinimumMessageCount(1);
+        mock.setResultWaitTime(3000);
+
+        template.sendBody("direct:sample-placeholder", "<message>placeholder test</message>");
+
+        mock.assertIsSatisfied();
+    }
+
+    @Test
     public void testSamplingUsingMessageFrequency() throws Exception {
         long totalMessages = 100;
         MockEndpoint mock = getMockEndpoint("mock:result");
@@ -158,6 +169,13 @@ public class SamplingThrottlerTest extends ContextTestSupport {
     }
 
     @Override
+    protected Properties useOverridePropertiesWithPropertiesComponent() {
+        Properties props = new Properties();
+        props.put("sample.period", "1000");
+        return props;
+    }
+
+    @Override
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
@@ -166,11 +184,13 @@ public class SamplingThrottlerTest extends ContextTestSupport {
 
                 from("direct:sample-configured").sample("1000").to("mock:result");
 
-                from("direct:sample-configured-via-dsl").sample(Duration.of(1, ChronoUnit.SECONDS)).to("mock:result");
+                from("direct:sample-configured-via-dsl").sample(Duration.ofSeconds(1)).to("mock:result");
 
                 from("direct:sample-messageFrequency").sample(10).to("mock:result");
 
                 from("direct:sample-messageFrequency-via-dsl").sample().sampleMessageFrequency(5).to("mock:result");
+
+                from("direct:sample-placeholder").sample("{{sample.period}}").to("mock:result");
 
                 // END SNIPPET: e1
             }

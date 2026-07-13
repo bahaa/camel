@@ -21,7 +21,7 @@ import java.util.List;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,7 +69,11 @@ public class CsvUnmarshalTwoCsvDataFormatConcurrentTest extends CamelTestSupport
         return new RouteBuilder() {
             @Override
             public void configure() {
+                @SuppressWarnings("resource")
+                // resource will be managed by framework lifecyle
                 CsvDataFormat csv = new CsvDataFormat().setDelimiter('|');
+                @SuppressWarnings("resource")
+                // resource will be managed by framework lifecyle
                 CsvDataFormat csv2 = new CsvDataFormat().setDelimiter(';');
 
                 from("direct:start")

@@ -21,7 +21,7 @@ import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.builder.RouteBuilder;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -60,12 +60,12 @@ public class MinaInOutWithForcedNoResponseTest extends BaseMinaTest {
                         .when(body().isEqualTo("Woodbine"))
                         .transform(constant("Hello Chad"))
                         .otherwise()
-                        .transform(constant(null));
+                        .transform(constant((Object) null));
 
                 fromF("mina:tcp://localhost:%d?sync=true&disconnectOnNoReply=false&noReplyLogLevel=OFF", port2).choice()
                         .when(body().isEqualTo("Woodbine"))
                         .transform(constant("Hello Chad")).otherwise()
-                        .transform(constant(null));
+                        .transform(constant((Object) null));
             }
         };
     }

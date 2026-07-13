@@ -32,7 +32,7 @@ public class MainHttpServerUtil {
     private static final Logger LOG = LoggerFactory.getLogger(MainHttpServerUtil.class);
 
     protected static void setupStartupSummary(
-            CamelContext camelContext, Set<HttpEndpointModel> endpoints, int serverPort, String header)
+            CamelContext camelContext, Set<HttpEndpointModel> endpoints, int serverPort, boolean ssl, String header)
             throws Exception {
         camelContext.addStartupListener(new StartupListener() {
             private volatile Set<HttpEndpointModel> last;
@@ -47,7 +47,7 @@ public class MainHttpServerUtil {
                     int longestEndpoint = 0;
                     int longestVerbs = 0;
                     for (HttpEndpointModel u : endpoints) {
-                        String endpoint = getEndpoint(u);
+                        String endpoint = getEndpoint(u, ssl);
                         if (endpoint.length() > longestEndpoint) {
                             longestEndpoint = endpoint.length();
                         }
@@ -62,7 +62,7 @@ public class MainHttpServerUtil {
                     longestVerbs = Math.max(8, longestVerbs); // minimum length
                     String formatTemplate = "%-" + longestEndpoint + "s %-" + longestVerbs + "s %s";
                     for (HttpEndpointModel u : endpoints) {
-                        String endpoint = getEndpoint(u);
+                        String endpoint = getEndpoint(u, ssl);
                         String formattedVerbs = "";
                         if (u.getVerbs() != null) {
                             formattedVerbs = "(" + u.getVerbs() + ")";
@@ -82,8 +82,8 @@ public class MainHttpServerUtil {
                 last = new HashSet<>(endpoints);
             }
 
-            private String getEndpoint(HttpEndpointModel httpEndpointModel) {
-                return "http://0.0.0.0:" + serverPort + httpEndpointModel.getUri();
+            private String getEndpoint(HttpEndpointModel httpEndpointModel, boolean ssl) {
+                return (ssl ? "https" : "http") + "://0.0.0.0:" + serverPort + httpEndpointModel.getUri();
             }
 
             @Override
@@ -95,6 +95,7 @@ public class MainHttpServerUtil {
                     @Override
                     public boolean isEnabled(CamelEvent event) {
                         return event instanceof CamelEvent.CamelContextStartedEvent
+                                || event instanceof CamelEvent.CamelContextRoutesStartedEvent
                                 || event instanceof CamelEvent.RouteReloadedEvent;
                     }
 
@@ -102,8 +103,7 @@ public class MainHttpServerUtil {
                     public void notify(CamelEvent event) {
                         // when reloading then there may be more routes in the same batch, so we only want
                         // to log the summary at the end
-                        if (event instanceof CamelEvent.RouteReloadedEvent) {
-                            CamelEvent.RouteReloadedEvent re = (CamelEvent.RouteReloadedEvent) event;
+                        if (event instanceof CamelEvent.RouteReloadedEvent re) {
                             if (re.getIndex() < re.getTotal()) {
                                 return;
                             }

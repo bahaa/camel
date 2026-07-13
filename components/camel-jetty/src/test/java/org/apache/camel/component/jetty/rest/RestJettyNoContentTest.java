@@ -16,6 +16,8 @@
  */
 package org.apache.camel.component.jetty.rest;
 
+import java.util.ArrayList;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
@@ -53,8 +55,10 @@ public class RestJettyNoContentTest extends BaseJettyTest {
         });
 
         assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-        assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
-                     "<address:address xmlns:address=\"http://www.camel.apache.org/jaxb/example/address/1\"/>\n",
+        assertEquals("""
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <address:address xmlns:address="http://www.camel.apache.org/jaxb/example/address/1"/>
+                """,
                 MessageHelper.extractBodyAsString(exchange.getMessage()));
     }
 
@@ -120,13 +124,15 @@ public class RestJettyNoContentTest extends BaseJettyTest {
         });
 
         assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-        assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
-                     "<address:address xmlns:address=\"http://www.camel.apache.org/jaxb/example/address/1\">\n" +
-                     "    <address:street>Main Street</address:street>\n" +
-                     "    <address:streetNumber>3a</address:streetNumber>\n" +
-                     "    <address:zip>65843</address:zip>\n" +
-                     "    <address:city>Sulzbach</address:city>\n" +
-                     "</address:address>\n",
+        assertEquals("""
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <address:address xmlns:address="http://www.camel.apache.org/jaxb/example/address/1">
+                    <address:street>Main Street</address:street>
+                    <address:streetNumber>3a</address:streetNumber>
+                    <address:zip>65843</address:zip>
+                    <address:city>Sulzbach</address:city>
+                </address:address>
+                """,
                 MessageHelper.extractBodyAsString(exchange.getMessage()));
     }
 
@@ -153,9 +159,9 @@ public class RestJettyNoContentTest extends BaseJettyTest {
                         .get("/country").to("direct:v4country")
                         .get("/address").to("direct:v3address").produces("application/xml").type(Address.class);
 
-                from("direct:v1country").transform().constant(new java.util.ArrayList<CountryPojo>());
-                from("direct:v2country").transform().constant(new java.util.ArrayList<CountryPojo>());
-                from("direct:v3country").transform().constant(new java.util.ArrayList<CountryPojo>());
+                from("direct:v1country").transform().constant(new ArrayList<CountryPojo>());
+                from("direct:v2country").transform().constant(new ArrayList<CountryPojo>());
+                from("direct:v3country").transform().constant(new ArrayList<CountryPojo>());
 
                 CountryPojo country = new CountryPojo();
                 country.setIso("EN");

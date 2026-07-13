@@ -19,12 +19,12 @@ package org.apache.camel.component.disruptor;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.ExchangeTimedOutException;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DisruptorNoConsumerTest extends CamelTestSupport {
     @Test
@@ -35,12 +35,10 @@ public class DisruptorNoConsumerTest extends CamelTestSupport {
 
     @Test
     void testInOut() {
-        try {
+        CamelExecutionException e = assertThrows(CamelExecutionException.class, () -> {
             template.requestBody("direct:start", "Hello World");
-            fail("Should throw an exception");
-        } catch (CamelExecutionException e) {
-            assertIsInstanceOf(ExchangeTimedOutException.class, e.getCause());
-        }
+        });
+        assertIsInstanceOf(ExchangeTimedOutException.class, e.getCause());
     }
 
     @Override

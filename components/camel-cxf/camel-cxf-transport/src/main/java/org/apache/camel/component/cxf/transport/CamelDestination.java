@@ -151,10 +151,10 @@ public class CamelDestination extends AbstractDestination implements Configurabl
         this.camelContext = camelContext;
     }
 
-    protected void incoming(org.apache.camel.Exchange camelExchange) {
+    protected void incoming(Exchange camelExchange) {
         LOG.debug("server received request: {}", camelExchange);
         DefaultCxfMessageMapper beanBinding = new DefaultCxfMessageMapper();
-        org.apache.cxf.message.Message inMessage
+        Message inMessage
                 = beanBinding.createCxfMessageFromCamelExchange(camelExchange, headerFilterStrategy);
 
         inMessage.put(CamelTransportConstants.CAMEL_EXCHANGE, camelExchange);
@@ -288,8 +288,8 @@ public class CamelDestination extends AbstractDestination implements Configurabl
                 camelExchange.setException(exception);
             }
             OutputStream outputStream = outMessage.getContent(OutputStream.class);
-            if (outputStream instanceof CachedOutputStream) {
-                camelExchange.getOut().setBody(((CachedOutputStream) outputStream).getInputStream());
+            if (outputStream instanceof CachedOutputStream cachedOutputStream) {
+                camelExchange.getOut().setBody(cachedOutputStream.getInputStream());
             } else {
                 camelExchange.getOut().setBody(outputStream);
             }

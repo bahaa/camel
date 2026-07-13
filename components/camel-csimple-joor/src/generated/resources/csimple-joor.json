@@ -4,12 +4,12 @@
     "name": "csimple-joor",
     "title": "CSimple jOOR",
     "description": "jOOR compiler for csimple language",
-    "deprecated": false,
+    "deprecated": true,
     "firstVersion": "3.7.0",
     "label": "language,java",
     "supportLevel": "Stable",
     "groupId": "org.apache.camel",
     "artifactId": "camel-csimple-joor",
-    "version": "4.17.0-SNAPSHOT"
+    "version": "4.22.0-SNAPSHOT"
   }
 }

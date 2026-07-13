@@ -56,9 +56,9 @@ public class MailConfiguration implements Cloneable {
     private String host;
     @UriPath
     private int port = -1;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String username;
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String password;
     @UriParam
     @Metadata(label = "producer")
@@ -112,6 +112,16 @@ public class MailConfiguration implements Cloneable {
     private boolean useInlineAttachments;
     @UriParam(label = "advanced")
     private boolean ignoreUnsupportedCharset;
+    @UriParam(label = "producer,advanced,security", security = "insecure:ssl")
+    private boolean useJavaMailSessionPropertiesFromHeaders;
+    @UriParam(label = "producer")
+    private boolean useHeaderRecipients;
+    @UriParam(label = "producer")
+    private boolean useHeaderFrom;
+    @UriParam(label = "producer")
+    private boolean useHeaderSubject;
+    @UriParam(label = "producer")
+    private boolean useHeaderReplyTo;
     @UriParam
     @Metadata(label = "consumer")
     private boolean disconnect;
@@ -205,65 +215,76 @@ public class MailConfiguration implements Cloneable {
     }
 
     protected JavaMailSender createJavaMailSender(CamelContext context) {
-        JavaMailSender answer = new DefaultJavaMailSender();
+        return new DefaultJavaMailSender();
+    }
 
-        if (javaMailProperties != null) {
-            answer.setJavaMailProperties(javaMailProperties);
-        } else {
-            // set default properties if none provided
-            answer.setJavaMailProperties(createJavaMailProperties(context));
-            // add additional properties if provided
-            if (additionalJavaMailProperties != null) {
-                answer.getJavaMailProperties().putAll(additionalJavaMailProperties);
+    protected void configureJavaMailSender(CamelContext context, JavaMailSender answer) {
+        if (answer.getJavaMailProperties() == null || answer.getJavaMailProperties().isEmpty()) {
+            if (javaMailProperties != null) {
+                answer.setJavaMailProperties(javaMailProperties);
+            } else {
+                // set default properties if none provided
+                answer.setJavaMailProperties(createJavaMailProperties(context));
+                // add additional properties if provided
+                if (additionalJavaMailProperties != null) {
+                    answer.getJavaMailProperties().putAll(additionalJavaMailProperties);
+                }
             }
         }
 
-        if (host != null) {
+        if (answer.getHost() == null && host != null) {
             answer.setHost(host);
         }
-        if (port >= 0) {
+        if (answer.getPort() <= 0 && port >= 0) {
             answer.setPort(port);
         }
-        if (username != null) {
+        if (answer.getUsername() == null && username != null) {
             answer.setUsername(username);
         }
-        if (password != null) {
+        if (answer.getPassword() == null && password != null) {
             answer.setPassword(password);
         }
-        if (authenticator != null) {
+        if (answer.getAuthenticator() == null && authenticator != null) {
             answer.setAuthenticator(authenticator);
         }
-        if (protocol != null) {
+        if (answer.getProtocol() == null && protocol != null) {
             answer.setProtocol(protocol);
         }
-        if (session != null) {
-            answer.setSession(session);
-            String hostPropertyValue = session.getProperty("mail.smtp.host");
-            if (hostPropertyValue != null && !hostPropertyValue.isEmpty()) {
-                answer.setHost(hostPropertyValue);
-            }
-            String portPropertyValue = session.getProperty("mail.smtp.port");
-            if (portPropertyValue != null && !portPropertyValue.isEmpty()) {
-                answer.setPort(Integer.parseInt(portPropertyValue));
-            }
-        } else {
-            ClassLoader tccl = Thread.currentThread().getContextClassLoader();
-            try {
-                if (applicationClassLoader != null) {
-                    Thread.currentThread().setContextClassLoader(applicationClassLoader);
+        if (answer.getSession() == null) {
+            if (session != null) {
+                answer.setSession(session);
+                String hostPropertyValue = session.getProperty("mail.smtp.host");
+                if (hostPropertyValue == null || hostPropertyValue.isEmpty()) {
+                    hostPropertyValue = session.getProperty("mail.smtps.host");
                 }
-                // use our authenticator that does not live user interaction but returns the already configured username and password
-                Session sessionInstance = Session.getInstance(answer.getJavaMailProperties(),
-                        authenticator == null ? new DefaultAuthenticator(getUsername(), getPassword()) : authenticator);
-                // sets the debug mode of the underlying mail framework
-                sessionInstance.setDebug(debugMode);
-                answer.setSession(sessionInstance);
-            } finally {
-                Thread.currentThread().setContextClassLoader(tccl);
+                if (hostPropertyValue != null && !hostPropertyValue.isEmpty()) {
+                    answer.setHost(hostPropertyValue);
+                }
+                String portPropertyValue = session.getProperty("mail.smtp.port");
+                if (portPropertyValue == null || portPropertyValue.isEmpty()) {
+                    portPropertyValue = session.getProperty("mail.smtps.port");
+                }
+                if (portPropertyValue != null && !portPropertyValue.isEmpty()) {
+                    answer.setPort(Integer.parseInt(portPropertyValue));
+                }
+            } else {
+                ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+                try {
+                    if (applicationClassLoader != null) {
+                        Thread.currentThread().setContextClassLoader(applicationClassLoader);
+                    }
+                    // use our authenticator that does not live user interaction but returns the already configured username and password
+                    Session sessionInstance = Session.getInstance(answer.getJavaMailProperties(),
+                            authenticator == null
+                                    ? new DefaultAuthenticator(answer.getUsername(), answer.getPassword()) : authenticator);
+                    // sets the debug mode of the underlying mail framework
+                    sessionInstance.setDebug(debugMode);
+                    answer.setSession(sessionInstance);
+                } finally {
+                    Thread.currentThread().setContextClassLoader(tccl);
+                }
             }
         }
-
-        return answer;
     }
 
     private Properties createJavaMailProperties(CamelContext context) {
@@ -684,6 +705,71 @@ public class MailConfiguration implements Cloneable {
      */
     public void setUseInlineAttachments(boolean useInlineAttachments) {
         this.useInlineAttachments = useInlineAttachments;
+    }
+
+    public boolean isUseJavaMailSessionPropertiesFromHeaders() {
+        return useJavaMailSessionPropertiesFromHeaders;
+    }
+
+    /**
+     * Whether to allow dynamic JavaMail session properties (message headers whose key starts with <tt>mail.smtp.</tt>
+     * or <tt>mail.smtps.</tt>) to override the endpoint configuration on a per-message basis.
+     *
+     * This is disabled by default. Only enable it when these headers originate exclusively from trusted route logic,
+     * never from data crossing a trust boundary (for example HTTP query parameters, or JMS/Kafka messages from
+     * untrusted producers). When enabled, an attacker able to set these headers could weaken transport security (such
+     * as <tt>mail.smtp.ssl.trust</tt> or <tt>mail.smtp.starttls.enable</tt>) or redirect the SMTP connection.
+     */
+    public void setUseJavaMailSessionPropertiesFromHeaders(boolean useJavaMailSessionPropertiesFromHeaders) {
+        this.useJavaMailSessionPropertiesFromHeaders = useJavaMailSessionPropertiesFromHeaders;
+    }
+
+    public boolean isUseHeaderRecipients() {
+        return useHeaderRecipients;
+    }
+
+    /**
+     * Whether message headers To, CC, and BCC override the recipients pre-configured in the endpoint URI. Defaults to
+     * true. Set to false to always use the endpoint URI recipients, ignoring any recipient headers from the message.
+     */
+    public void setUseHeaderRecipients(boolean useHeaderRecipients) {
+        this.useHeaderRecipients = useHeaderRecipients;
+    }
+
+    public boolean isUseHeaderFrom() {
+        return useHeaderFrom;
+    }
+
+    /**
+     * Whether message headers From and Sender override the sender pre-configured in the endpoint URI. Defaults to true.
+     * Set to false to always use the endpoint URI sender, ignoring any From or Sender headers from the message.
+     */
+    public void setUseHeaderFrom(boolean useHeaderFrom) {
+        this.useHeaderFrom = useHeaderFrom;
+    }
+
+    public boolean isUseHeaderSubject() {
+        return useHeaderSubject;
+    }
+
+    /**
+     * Whether message header Subject overrides the subject pre-configured in the endpoint URI. Defaults to true. Set to
+     * false to always use the endpoint URI subject, ignoring any Subject header from the message.
+     */
+    public void setUseHeaderSubject(boolean useHeaderSubject) {
+        this.useHeaderSubject = useHeaderSubject;
+    }
+
+    public boolean isUseHeaderReplyTo() {
+        return useHeaderReplyTo;
+    }
+
+    /**
+     * Whether message header Reply-To overrides the replyTo pre-configured in the endpoint URI. Defaults to true. Set
+     * to false to always use the endpoint URI replyTo, ignoring any Reply-To header from the message.
+     */
+    public void setUseHeaderReplyTo(boolean useHeaderReplyTo) {
+        this.useHeaderReplyTo = useHeaderReplyTo;
     }
 
     public boolean isIgnoreUnsupportedCharset() {

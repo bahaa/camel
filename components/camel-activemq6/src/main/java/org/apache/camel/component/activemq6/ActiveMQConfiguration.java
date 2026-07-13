@@ -148,8 +148,8 @@ public class ActiveMQConfiguration extends JmsConfiguration {
         if (target instanceof DelegatingConnectionFactory dcf) {
             target = dcf.getTargetConnectionFactory();
         }
-        if (target instanceof ActiveMQConnectionFactory) {
-            acf = (ActiveMQConnectionFactory) target;
+        if (target instanceof ActiveMQConnectionFactory activeMQConnectionFactory) {
+            acf = activeMQConnectionFactory;
         }
 
         if (acf != null) {
@@ -168,8 +168,8 @@ public class ActiveMQConfiguration extends JmsConfiguration {
 
     @Override
     protected ConnectionFactory createConnectionFactory() {
-        org.apache.activemq.ActiveMQConnectionFactory answer
-                = new org.apache.activemq.ActiveMQConnectionFactory();
+        ActiveMQConnectionFactory answer
+                = new ActiveMQConnectionFactory();
         answer.setTrustAllPackages(trustAllPackages);
         if (getUsername() != null) {
             answer.setUserName(getUsername());

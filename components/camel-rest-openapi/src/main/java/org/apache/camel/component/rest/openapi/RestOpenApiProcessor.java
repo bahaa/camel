@@ -19,7 +19,6 @@ package org.apache.camel.component.rest.openapi;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -27,7 +26,9 @@ import org.apache.camel.*;
 import org.apache.camel.component.platform.http.spi.PlatformHttpConsumerAware;
 import org.apache.camel.http.base.HttpHelper;
 import org.apache.camel.spi.RestConfiguration;
+import org.apache.camel.spi.RestRegistry;
 import org.apache.camel.support.AsyncProcessorSupport;
+import org.apache.camel.support.PluginHelper;
 import org.apache.camel.support.RestConsumerContextPathMatcher;
 import org.apache.camel.support.processor.RestBindingAdvice;
 import org.apache.camel.support.processor.RestBindingAdviceFactory;
@@ -49,6 +50,7 @@ public class RestOpenApiProcessor extends AsyncProcessorSupport implements Camel
     private PlatformHttpConsumerAware platformHttpConsumer;
     private Consumer consumer;
     private OpenApiUtils openApiUtils;
+    private RestRegistry restRegistry;
 
     public RestOpenApiProcessor(RestOpenApiEndpoint endpoint, OpenAPI openAPI, String basePath, String apiContextPath,
                                 RestOpenapiProcessorStrategy restOpenapiProcessorStrategy) {
@@ -110,6 +112,10 @@ public class RestOpenApiProcessor extends AsyncProcessorSupport implements Camel
             // map path-parameters from operation to camel headers
             HttpHelper.evalPlaceholders(exchange.getMessage().getHeaders(), path, consumerPath);
 
+            if (restRegistry != null) {
+                restRegistry.hit(verb, basePath, consumerPath);
+            }
+
             // process the incoming request
             return restOpenapiProcessorStrategy.process(openAPI, o, verb, path, rcp.getBinding(), exchange, callback);
         }
@@ -149,6 +155,7 @@ public class RestOpenApiProcessor extends AsyncProcessorSupport implements Camel
         // this is required to build the paths with all the details
 
         this.openApiUtils = new OpenApiUtils(camelContext, endpoint.getBindingPackageScan(), openAPI.getComponents());
+        this.restRegistry = PluginHelper.getRestRegistry(camelContext);
         // register all openapi paths
         for (var e : openAPI.getPaths().entrySet()) {
             String path = e.getKey(); // path
@@ -166,12 +173,15 @@ public class RestOpenApiProcessor extends AsyncProcessorSupport implements Camel
                 if (desc != null && desc.isBlank()) {
                     desc = null;
                 }
+                String operationId = o.getValue().getOperationId();
                 String routeId = null;
                 if (consumer instanceof RouteAware ra) {
                     routeId = ra.getRoute().getRouteId();
                 }
-                camelContext.getRestRegistry().addRestService(consumer, true, url, path, basePath, null, v, bc.getConsumes(),
-                        bc.getProduces(), bc.getType(), bc.getOutType(), routeId, desc);
+                RestRegistry restRegistry = PluginHelper.getRestRegistry(camelContext);
+                restRegistry.addRestService(consumer, true, url, path, basePath, null, v, bc.getConsumes(),
+                        bc.getProduces(), bc.getType(), bc.getOutType(), routeId, operationId,
+                        endpoint.getSpecificationUri(), desc);
 
                 try {
                     RestBindingAdvice binding = RestBindingAdviceFactory.build(camelContext, bc);
@@ -183,6 +193,21 @@ public class RestOpenApiProcessor extends AsyncProcessorSupport implements Camel
             }
         }
         openApiUtils.clear(); // no longer needed
+
+        // register api-doc in rest registry
+        if (endpoint.getSpecificationUri() != null && apiContextPath != null) {
+            String url = basePath + apiContextPath;
+            String produces = null;
+            if (endpoint.getSpecificationUri().endsWith("json")) {
+                produces = "application/json";
+            } else if (endpoint.getSpecificationUri().endsWith("yaml") || endpoint.getSpecificationUri().endsWith("yml")) {
+                produces = "text/yaml";
+            }
+            // register api-doc
+            RestRegistry restRegistry = PluginHelper.getRestRegistry(camelContext);
+            restRegistry.addRestSpecification(consumer, true, url, apiContextPath, basePath, "GET", produces,
+                    null);
+        }
 
         for (var p : paths) {
             if (p instanceof RestOpenApiConsumerPath rcp) {
@@ -216,15 +241,9 @@ public class RestOpenApiProcessor extends AsyncProcessorSupport implements Camel
         bc.setClientResponseValidation(config.isClientResponseValidation() || endpoint.isClientResponseValidation());
         bc.setEnableNoContentResponse(config.isEnableNoContentResponse());
         bc.setSkipBindingOnErrorCode(config.isSkipBindingOnErrorCode());
-
-        String consumes = Optional.ofNullable(openApiUtils.getConsumes(o)).orElse(endpoint.getConsumes());
-        String produces = Optional.ofNullable(openApiUtils.getProduces(o)).orElse(endpoint.getProduces());
-
-        bc.setConsumes(consumes);
-        bc.setProduces(produces);
-
+        bc.setConsumes(openApiUtils.getConsumes(o));
+        bc.setProduces(openApiUtils.getProduces(o));
         bc.setRequiredBody(openApiUtils.isRequiredBody(o));
-
         bc.setRequiredQueryParameters(openApiUtils.getRequiredQueryParameters(o));
         bc.setRequiredHeaders(openApiUtils.getRequiredHeaders(o));
         bc.setQueryDefaultValues(openApiUtils.getQueryParametersDefaultValue(o));

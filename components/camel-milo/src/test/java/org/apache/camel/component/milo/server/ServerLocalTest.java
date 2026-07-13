@@ -22,13 +22,15 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.milo.converter.ConverterTest;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
+import org.apache.camel.test.junit6.TestSupport;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +45,9 @@ public class ServerLocalTest extends CamelTestSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(ConverterTest.class);
 
+    @RegisterExtension
+    AvailablePortFinder.Port port = AvailablePortFinder.find();
+
     @EndpointInject(MOCK_TEST)
     protected MockEndpoint testEndpoint;
 
@@ -53,7 +58,7 @@ public class ServerLocalTest extends CamelTestSupport {
         LOG.info(displayName);
         LOG.info("********************************************************************************");
         final MiloServerComponent component = context().getComponent("milo-server", MiloServerComponent.class);
-        component.setPort(AvailablePortFinder.getNextAvailable());
+        component.setPort(port.getPort());
     }
 
     @Override
@@ -72,31 +77,31 @@ public class ServerLocalTest extends CamelTestSupport {
 
     @Test
     public void testAcceptVariantString() {
-        Assertions.assertDoesNotThrow(() -> sendBody(MILO_ITEM_1, new Variant("Foo")));
+        Assertions.assertDoesNotThrow(() -> TestSupport.sendBody(template, MILO_ITEM_1, new Variant("Foo")));
     }
 
     @Test
     public void testAcceptVariantDouble() {
-        Assertions.assertDoesNotThrow(() -> sendBody(MILO_ITEM_1, new Variant(0.0)));
+        Assertions.assertDoesNotThrow(() -> TestSupport.sendBody(template, MILO_ITEM_1, new Variant(0.0)));
     }
 
     @Test
     public void testAcceptString() {
-        Assertions.assertDoesNotThrow(() -> sendBody(MILO_ITEM_1, "Foo"));
+        Assertions.assertDoesNotThrow(() -> TestSupport.sendBody(template, MILO_ITEM_1, "Foo"));
     }
 
     @Test
     public void testAcceptDouble() {
-        Assertions.assertDoesNotThrow(() -> sendBody(MILO_ITEM_1, 0.0));
+        Assertions.assertDoesNotThrow(() -> TestSupport.sendBody(template, MILO_ITEM_1, 0.0));
     }
 
     @Test
     public void testAcceptDataValueString() {
-        Assertions.assertDoesNotThrow(() -> sendBody(MILO_ITEM_1, new DataValue(new Variant("Foo"))));
+        Assertions.assertDoesNotThrow(() -> TestSupport.sendBody(template, MILO_ITEM_1, new DataValue(new Variant("Foo"))));
     }
 
     @Test
     public void testAcceptDataValueDouble() {
-        Assertions.assertDoesNotThrow(() -> sendBody(MILO_ITEM_1, new DataValue(new Variant(0.0))));
+        Assertions.assertDoesNotThrow(() -> TestSupport.sendBody(template, MILO_ITEM_1, new DataValue(new Variant(0.0))));
     }
 }

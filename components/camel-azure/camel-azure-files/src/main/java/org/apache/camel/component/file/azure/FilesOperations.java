@@ -47,11 +47,13 @@ import org.apache.camel.component.file.FileComponent;
 import org.apache.camel.component.file.GenericFile;
 import org.apache.camel.component.file.GenericFileEndpoint;
 import org.apache.camel.component.file.GenericFileExist;
+import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.RemoteFile;
 import org.apache.camel.component.file.remote.RemoteFileConfiguration;
 import org.apache.camel.util.FileUtil;
 import org.apache.camel.util.IOHelper;
+import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.TimeUtils;
 import org.slf4j.Logger;
@@ -254,7 +256,7 @@ public class FilesOperations extends NormalizedOperations {
         boolean success;
         GenericFile<ShareFileItem> target = (GenericFile<ShareFileItem>) exchange
                 .getProperty(FileComponent.FILE_EXCHANGE_FILE);
-        org.apache.camel.util.ObjectHelper.notNull(target,
+        ObjectHelper.notNull(target,
                 "Exchange should have the " + FileComponent.FILE_EXCHANGE_FILE + " set");
 
         String path = FileUtil.onlyPath(name);
@@ -297,12 +299,19 @@ public class FilesOperations extends NormalizedOperations {
             // use relative filename in local work directory
             GenericFile<ShareFileItem> target = (GenericFile<ShareFileItem>) exchange
                     .getProperty(FileComponent.FILE_EXCHANGE_FILE);
-            org.apache.camel.util.ObjectHelper.notNull(target,
+            ObjectHelper.notNull(target,
                     "Exchange should have the " + FileComponent.FILE_EXCHANGE_FILE + " set");
             String relativeName = target.getRelativeFilePath();
 
+            File localWorkDir = local;
             inProgress = new File(local, relativeName + ".inprogress");
             local = new File(local, relativeName);
+
+            // ensure the local work file stays within the local work directory (CAMEL-23765)
+            if (endpoint.isJailStartingDirectory()) {
+                GenericFileHelper.jailToLocalWorkDirectory(inProgress, localWorkDir);
+                GenericFileHelper.jailToLocalWorkDirectory(local, localWorkDir);
+            }
 
             // create directory to local work file
             boolean result = local.mkdirs();
@@ -512,6 +521,21 @@ public class FilesOperations extends NormalizedOperations {
             throw new GenericFileOperationFailedException("Cannot store file: " + name, e);
         } finally {
             IOHelper.close(is, "store: " + name, log);
+        }
+    }
+
+    @Override
+    public boolean storeFileDirectly(String name, String payload) throws GenericFileOperationFailedException {
+        ByteArrayInputStream bis = new ByteArrayInputStream(payload.getBytes());
+        try {
+            var cwd = cwd();
+            var file = cwd.getFileClient(name);
+            storeRemote(file, bis);
+            return true;
+        } catch (IOException e) {
+            throw new GenericFileOperationFailedException("Cannot store file: " + name, e);
+        } finally {
+            IOHelper.close(bis);
         }
     }
 

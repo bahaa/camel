@@ -31,7 +31,7 @@ import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.infra.artemis.services.ArtemisService;
 import org.apache.camel.test.infra.artemis.services.ArtemisServiceFactory;
 import org.apache.camel.test.junit.rule.mllp.MllpClientResource;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.test.mllp.Hl7TestMessageGenerator;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -42,6 +42,9 @@ public class MllpTcpServerConsumerTransactionTest extends CamelTestSupport {
 
     @RegisterExtension
     public static ArtemisService service = ArtemisServiceFactory.createVMService();
+
+    @RegisterExtension
+    AvailablePortFinder.Port mllpClientPort = AvailablePortFinder.find();
 
     @RegisterExtension
     public MllpClientResource mllpClient = new MllpClientResource();
@@ -55,6 +58,7 @@ public class MllpTcpServerConsumerTransactionTest extends CamelTestSupport {
     @EndpointInject("mock://on-failure-only")
     MockEndpoint failure;
 
+    @SuppressWarnings("deprecation")
     @Override
     protected CamelContext createCamelContext() throws Exception {
         DefaultCamelContext context = (DefaultCamelContext) super.createCamelContext();
@@ -78,7 +82,7 @@ public class MllpTcpServerConsumerTransactionTest extends CamelTestSupport {
     protected RouteBuilder createRouteBuilder() {
 
         mllpClient.setMllpHost("localhost");
-        mllpClient.setMllpPort(AvailablePortFinder.getNextAvailable());
+        mllpClient.setMllpPort(mllpClientPort.getPort());
 
         return new RouteBuilder() {
             int connectTimeout = 500;

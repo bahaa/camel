@@ -25,7 +25,7 @@ import java.util.List;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.camel.dataformat.csv.TestUtils.LS;
@@ -103,6 +103,8 @@ public class CsvUnmarshalStreamTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
+                @SuppressWarnings("resource")
+                // resource will be managed by framework lifecyle
                 CsvDataFormat csv = new CsvDataFormat()
                         .setLazyLoad(true)
                         .setDelimiter('|');

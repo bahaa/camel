@@ -20,7 +20,7 @@ import ca.uhn.fhir.parser.DataFormatException;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.Exchange;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.AbstractApplicationContext;
@@ -28,8 +28,8 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class FhirJsonDataformatErrorHandlerSpringTest extends CamelSpringTestSupport {
 
@@ -44,12 +44,10 @@ public class FhirJsonDataformatErrorHandlerSpringTest extends CamelSpringTestSup
 
     @Test
     public void unmarshalParserErrorHandler() {
-        try {
-            template.sendBody("direct:unmarshalErrorHandlerStrict", INPUT);
-            fail("Expected a DataFormatException");
-        } catch (CamelExecutionException e) {
-            assertTrue(e.getCause() instanceof DataFormatException);
-        }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.sendBody("direct:unmarshalErrorHandlerStrict", INPUT),
+                "Expected a DataFormatException");
+        assertTrue(e.getCause() instanceof DataFormatException);
     }
 
     @Test

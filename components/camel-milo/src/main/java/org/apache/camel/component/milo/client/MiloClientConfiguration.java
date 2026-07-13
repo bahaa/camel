@@ -95,10 +95,10 @@ public class MiloClientConfiguration implements Cloneable {
     @UriParam(label = "client")
     private String keyAlias;
 
-    @UriParam(label = "client", secret = true)
+    @UriParam(label = "client", security = "secret")
     private String keyStorePassword;
 
-    @UriParam(label = "client", secret = true)
+    @UriParam(label = "client", security = "secret")
     private String keyPassword;
 
     @UriParam(label = "client", javaType = "java.lang.String")
@@ -107,8 +107,17 @@ public class MiloClientConfiguration implements Cloneable {
     @UriParam(label = "client")
     private boolean overrideHost;
 
+    @UriParam(label = "client")
+    private boolean overridePort;
+
     @UriParam(label = "client", defaultValue = "1_000.0")
     private Double requestedPublishingInterval = DEFAULT_REQUESTED_PUBLISHING_INTERVAL;
+
+    @UriParam(label = "security")
+    private String username;
+
+    @UriParam(label = "security", security = "secret")
+    private String password;
 
     public MiloClientConfiguration() {
     }
@@ -133,7 +142,10 @@ public class MiloClientConfiguration implements Cloneable {
         this.keyPassword = other.keyPassword;
         this.allowedSecurityPolicies = new HashSet<>(other.allowedSecurityPolicies);
         this.overrideHost = other.overrideHost;
+        this.overridePort = other.overridePort;
         this.requestedPublishingInterval = other.requestedPublishingInterval;
+        this.username = other.username;
+        this.password = other.password;
     }
 
     /**
@@ -394,10 +406,45 @@ public class MiloClientConfiguration implements Cloneable {
     }
 
     /**
+     * Override the server reported endpoint port with the port from the endpoint URI.
+     */
+    public void setOverridePort(boolean overridePort) {
+        this.overridePort = overridePort;
+    }
+
+    public boolean isOverridePort() {
+        return overridePort;
+    }
+
+    /**
      * The requested publishing interval in milliseconds
      */
     public void setRequestedPublishingInterval(Double requestedPublishingInterval) {
         this.requestedPublishingInterval = requestedPublishingInterval;
+    }
+
+    /**
+     * The username for authentication. Use this instead of embedding credentials in the endpoint URI when the username
+     * contains special characters (such as {@code ?}, {@code /}, {@code @}, {@code &}).
+     */
+    public void setUsername(final String username) {
+        this.username = username;
+    }
+
+    public String getUsername() {
+        return this.username;
+    }
+
+    /**
+     * The password for authentication. Use this instead of embedding credentials in the endpoint URI when the password
+     * contains special characters (such as {@code ?}, {@code /}, {@code @}, {@code &}).
+     */
+    public void setPassword(final String password) {
+        this.password = password;
+    }
+
+    public String getPassword() {
+        return this.password;
     }
 
     public Double getRequestedPublishingInterval() {
@@ -406,7 +453,14 @@ public class MiloClientConfiguration implements Cloneable {
 
     @Override
     public MiloClientConfiguration clone() {
-        return new MiloClientConfiguration(this);
+        try {
+            MiloClientConfiguration copy = (MiloClientConfiguration) super.clone();
+            copy.allowedSecurityPolicies
+                    = this.allowedSecurityPolicies != null ? new HashSet<>(this.allowedSecurityPolicies) : null;
+            return copy;
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeCamelException(e);
+        }
     }
 
     public String toCacheId() {
@@ -446,7 +500,7 @@ public class MiloClientConfiguration implements Cloneable {
         }
 
         if (configuration.getMaxResponseMessageSize() != null) {
-            builder.setMaxResponseMessageSize(UInteger.valueOf(configuration.getMaxPendingPublishRequests()));
+            builder.setMaxResponseMessageSize(UInteger.valueOf(configuration.getMaxResponseMessageSize()));
         }
 
         if (configuration.getKeyStoreUrl() != null) {
@@ -480,6 +534,7 @@ public class MiloClientConfiguration implements Cloneable {
         }
 
         builder.setCertificate(result.getCertificate());
+        builder.setCertificateChain(result.getCertificateChain());
         builder.setKeyPair(result.getKeyPair());
     }
 

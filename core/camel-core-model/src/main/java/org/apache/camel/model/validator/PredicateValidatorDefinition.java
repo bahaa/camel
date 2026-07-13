@@ -29,12 +29,13 @@ import org.apache.camel.spi.Metadata;
 /**
  * To use a predicate to perform validation on the route level.
  */
-@Metadata(label = "validation")
+@Metadata(label = "validation", description = "Uses a predicate expression to validate message data types at the route level")
 @XmlRootElement(name = "predicateValidator")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PredicateValidatorDefinition extends ValidatorDefinition {
 
     @XmlElementRef
+    @Metadata(description = "The predicate expression to use for validation.")
     private ExpressionDefinition expression;
 
     public PredicateValidatorDefinition() {

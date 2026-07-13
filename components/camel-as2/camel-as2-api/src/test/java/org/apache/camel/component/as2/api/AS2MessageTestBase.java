@@ -43,7 +43,6 @@ import com.helger.as2lib.crypto.ECryptoAlgorithmSign;
 import com.helger.mail.cte.EContentTransferEncoding;
 import com.helger.security.keystore.EKeyStoreType;
 import org.apache.camel.component.as2.api.entity.ApplicationEntity;
-import org.apache.camel.test.AvailablePortFinder;
 import org.apache.hc.core5.http.protocol.HttpDateGenerator;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.AfterAll;
@@ -55,42 +54,43 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class AS2MessageTestBase {
 
-    protected static final String EDI_MESSAGE = "UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'\n"
-                                                + "UNH+00000000000117+INVOIC:D:97B:UN'\n"
-                                                + "BGM+380+342459+9'\n"
-                                                + "DTM+3:20060515:102'\n"
-                                                + "RFF+ON:521052'\n"
-                                                + "NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'\n"
-                                                + "NAD+SE+005435656::16++GENERAL WIDGET COMPANY'\n"
-                                                + "CUX+1:USD'\n"
-                                                + "LIN+1++157870:IN'\n"
-                                                + "IMD+F++:::WIDGET'\n"
-                                                + "QTY+47:1020:EA'\n"
-                                                + "ALI+US'\n"
-                                                + "MOA+203:1202.58'\n"
-                                                + "PRI+INV:1.179'\n"
-                                                + "LIN+2++157871:IN'\n"
-                                                + "IMD+F++:::DIFFERENT WIDGET'\n"
-                                                + "QTY+47:20:EA'\n"
-                                                + "ALI+JP'\n"
-                                                + "MOA+203:410'\n"
-                                                + "PRI+INV:20.5'\n"
-                                                + "UNS+S'\n"
-                                                + "MOA+39:2137.58'\n"
-                                                + "ALC+C+ABG'\n"
-                                                + "MOA+8:525'\n"
-                                                + "UNT+23+00000000000117'\n"
-                                                + "UNZ+1+00000000000778'";
+    protected static final String EDI_MESSAGE = """
+            UNB+UNOA:1+005435656:1+006415160:1+060515:1434+00000000000778'
+            UNH+00000000000117+INVOIC:D:97B:UN'
+            BGM+380+342459+9'
+            DTM+3:20060515:102'
+            RFF+ON:521052'
+            NAD+BY+792820524::16++CUMMINS MID-RANGE ENGINE PLANT'
+            NAD+SE+005435656::16++GENERAL WIDGET COMPANY'
+            CUX+1:USD'
+            LIN+1++157870:IN'
+            IMD+F++:::WIDGET'
+            QTY+47:1020:EA'
+            ALI+US'
+            MOA+203:1202.58'
+            PRI+INV:1.179'
+            LIN+2++157871:IN'
+            IMD+F++:::DIFFERENT WIDGET'
+            QTY+47:20:EA'
+            ALI+JP'
+            MOA+203:410'
+            PRI+INV:20.5'
+            UNS+S'
+            MOA+39:2137.58'
+            ALC+C+ABG'
+            MOA+8:525'
+            UNT+23+00000000000117'
+            UNZ+1+00000000000778'""";
 
     protected static final String METHOD = "POST";
     protected static final String TARGET_HOST = "localhost";
-    protected static final int TARGET_PORT = AvailablePortFinder.getNextAvailable();
+    protected static int targetPort;
     protected static final Duration HTTP_SOCKET_TIMEOUT = Duration.ofSeconds(5);
     protected static final Duration HTTP_CONNECTION_TIMEOUT = Duration.ofSeconds(5);
     protected static final Integer HTTP_CONNECTION_POOL_SIZE = 5;
     protected static final Duration HTTP_CONNECTION_POOL_TTL = Duration.ofMinutes(15);
     protected static final Certificate[] VALIDATE_SIGNING_CERTIFICATE_CHAIN = null;
-    protected static final String RECIPIENT_DELIVERY_ADDRESS = "http://localhost:" + TARGET_PORT + "/handle-receipts";
+    protected static String recipientDeliveryAddress;
     protected static final String AS2_VERSION = "1.1";
     protected static final String USER_AGENT = "Camel AS2 Endpoint";
     protected static final String REQUEST_URI = "/";
@@ -133,7 +133,7 @@ public class AS2MessageTestBase {
         // set up our certificates
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", "BC");
 
-        kpg.initialize(1024, new SecureRandom());
+        kpg.initialize(2048, new SecureRandom());
 
         String issueDN = "O=Punkhorn Software, C=US";
         issueKP = kpg.generateKeyPair();
@@ -171,7 +171,7 @@ public class AS2MessageTestBase {
         aSettings.setSenderData(AS2_NAME, FROM, "openas2a_alias");
 
         // Fixed receiver
-        aSettings.setReceiverData(AS2_NAME, "openas2b_alias", "http://" + TARGET_HOST + ":" + TARGET_PORT + "/");
+        aSettings.setReceiverData(AS2_NAME, "openas2b_alias", "http://" + TARGET_HOST + ":" + targetPort + "/");
         aSettings.setReceiverCertificate(issueCert);
 
         // AS2 stuff
@@ -217,7 +217,7 @@ public class AS2MessageTestBase {
         aSettings.setSenderData(AS2_NAME, FROM, "openas2a_alias");
 
         // Fixed receiver
-        aSettings.setReceiverData(AS2_NAME, "openas2b_alias", "http://" + TARGET_HOST + ":" + TARGET_PORT + "/");
+        aSettings.setReceiverData(AS2_NAME, "openas2b_alias", "http://" + TARGET_HOST + ":" + targetPort + "/");
         aSettings.setReceiverCertificate(issueCert);
 
         // AS2 stuff
@@ -252,7 +252,7 @@ public class AS2MessageTestBase {
     protected AS2ClientManager createDefaultClientManager() throws IOException {
         AS2ClientConnection clientConnection = new AS2ClientConnection(
                 AS2_VERSION, USER_AGENT, CLIENT_FQDN,
-                TARGET_HOST, TARGET_PORT, HTTP_SOCKET_TIMEOUT, HTTP_CONNECTION_TIMEOUT, HTTP_CONNECTION_POOL_SIZE,
+                TARGET_HOST, targetPort, HTTP_SOCKET_TIMEOUT, HTTP_CONNECTION_TIMEOUT, HTTP_CONNECTION_POOL_SIZE,
                 HTTP_CONNECTION_POOL_TTL, null, null);
         return new AS2ClientManager(clientConnection);
     }

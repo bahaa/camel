@@ -35,12 +35,12 @@ import org.apache.camel.component.solr.SolrOperation;
 import org.apache.camel.component.solr.SolrProducer;
 import org.apache.camel.component.solr.SolrUtils;
 import org.apache.camel.util.ObjectHelper;
-import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.beans.BindingException;
 import org.apache.solr.client.solrj.beans.DocumentObjectBinder;
 import org.apache.solr.client.solrj.request.ContentStreamUpdateRequest;
 import org.apache.solr.client.solrj.request.QueryRequest;
 import org.apache.solr.client.solrj.request.SolrPing;
+import org.apache.solr.client.solrj.request.SolrQuery;
 import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.util.ContentStreamBase;
@@ -138,7 +138,7 @@ public final class SolrRequestConverter {
             body = wrappedFile.getFile();
         }
         if (body instanceof File file) {
-            ContentStreamBase.FileStream stream = new ContentStreamBase.FileStream(file);
+            ContentStreamBase.FileStream stream = new ContentStreamBase.FileStream(file.toPath());
             if (ObjectHelper.isEmpty(contentType)) {
                 contentType = stream.getContentType();
             }
@@ -226,14 +226,14 @@ public final class SolrRequestConverter {
             docs.ifPresent(updateRequest::add);
             return updateRequest;
         }
-        // Map: gather solr fields from body and merge with solr fields from headers (gathered from SolrField.xxx headers)
+        // Map: gather solr fields from body and merge with solr fields from headers (gathered from CamelSolrField.xxx headers)
         //      The header solr fields have priority
         Map<String, Object> map = new LinkedHashMap<>(getMapFromBody(body));
         map.putAll(getMapFromHeaderSolrFields(exchange));
         if (!map.isEmpty()) {
             body = map;
         }
-        // Map: translate to SolrInputDocument (possibly gathered from SolrField.xxx headers
+        // Map: translate to SolrInputDocument (possibly gathered from CamelSolrField.xxx headers
         Optional<SolrInputDocument> doc = getOptionalSolrInputDocumentFromMap(body, exchange);
         if (doc.isPresent()) {
             updateRequest.add(doc.get());

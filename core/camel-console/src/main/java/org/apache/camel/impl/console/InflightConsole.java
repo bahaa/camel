@@ -16,27 +16,24 @@
  */
 package org.apache.camel.impl.console;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.spi.InflightRepository;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.console.AbstractDevConsole;
 import org.apache.camel.util.TimeUtils;
+import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 
 @DevConsole(name = "inflight", displayName = "Inflight Exchanges", description = "Display inflight exchanges")
 public class InflightConsole extends AbstractDevConsole {
 
-    /**
-     * Filters the routes matching by route id, route uri
-     */
+    @Metadata(label = "query", description = "Filters the routes matching by route id, route uri",
+              javaType = "java.lang.String")
     public static final String FILTER = "filter";
 
-    /**
-     * Limits the number of entries displayed
-     */
+    @Metadata(label = "query", description = "Limits the number of entries displayed", javaType = "java.lang.Integer")
     public static final String LIMIT = "limit";
 
     public InflightConsole() {
@@ -45,19 +42,18 @@ public class InflightConsole extends AbstractDevConsole {
 
     @Override
     protected String doCallText(Map<String, Object> options) {
-        String filter = (String) options.get(FILTER);
-        String limit = (String) options.get(LIMIT);
-        int max = limit == null ? Integer.MAX_VALUE : Integer.parseInt(limit);
+        String filter = optionString(options, FILTER);
+        int max = optionInt(options, LIMIT, Integer.MAX_VALUE);
 
         StringBuilder sb = new StringBuilder();
 
         InflightRepository repo = getCamelContext().getInflightRepository();
-        sb.append(String.format("\n    Inflight: %s", repo.size()));
-        sb.append(String.format("\n    InflightBrowseEnabled: %s", repo.isInflightBrowseEnabled()));
+        sb.append(String.format("%n    Inflight: %s", repo.size()));
+        sb.append(String.format("%n    InflightBrowseEnabled: %s", repo.isInflightBrowseEnabled()));
         if (repo.isInflightBrowseEnabled()) {
             for (InflightRepository.InflightExchange ie : repo.browse(filter, max, false)) {
                 String age = TimeUtils.printDuration(ie.getDuration(), true);
-                sb.append(String.format("\n    %s (from: %s at: %s/%s remote: %b age: %s)",
+                sb.append(String.format("%n    %s (from: %s at: %s/%s remote: %b age: %s)",
                         ie.getExchange().getExchangeId(), ie.getFromRouteId(), ie.getAtRouteId(), ie.getNodeId(),
                         ie.isFromRemoteEndpoint(), age));
             }
@@ -68,9 +64,8 @@ public class InflightConsole extends AbstractDevConsole {
 
     @Override
     protected JsonObject doCallJson(Map<String, Object> options) {
-        String filter = (String) options.get(FILTER);
-        String limit = (String) options.get(LIMIT);
-        int max = limit == null ? Integer.MAX_VALUE : Integer.parseInt(limit);
+        String filter = optionString(options, FILTER);
+        int max = optionInt(options, LIMIT, Integer.MAX_VALUE);
 
         JsonObject root = new JsonObject();
 
@@ -78,7 +73,7 @@ public class InflightConsole extends AbstractDevConsole {
         root.put("inflight", repo.size());
         root.put("inflightBrowseEnabled", repo.isInflightBrowseEnabled());
         if (repo.isInflightBrowseEnabled()) {
-            final List<JsonObject> list = new ArrayList<>();
+            final JsonArray list = new JsonArray();
             for (InflightRepository.InflightExchange ie : repo.browse(filter, max, false)) {
                 JsonObject props = new JsonObject();
                 props.put("exchangeId", ie.getExchange().getExchangeId());

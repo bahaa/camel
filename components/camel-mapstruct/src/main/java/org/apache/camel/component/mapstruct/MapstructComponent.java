@@ -21,12 +21,13 @@ import java.util.Map;
 import org.apache.camel.CamelContextAware;
 import org.apache.camel.Endpoint;
 import org.apache.camel.spi.Metadata;
+import org.apache.camel.spi.annotations.Component;
 import org.apache.camel.support.DefaultComponent;
 import org.apache.camel.support.service.ServiceHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@org.apache.camel.spi.annotations.Component("mapstruct")
+@Component("mapstruct")
 public class MapstructComponent extends DefaultComponent {
 
     private static final Logger LOG = LoggerFactory.getLogger(MapstructComponent.class);
@@ -60,7 +61,7 @@ public class MapstructComponent extends DefaultComponent {
     }
 
     /**
-     * Package name(s) where Camel should discover Mapstruct mapping classes. Multiple package names can be separated by
+     * Package name(s) where Camel should discover MapStruct mapping classes. Multiple package names can be separated by
      * comma.
      */
     public void setMapperPackageName(String mapperPackageName) {

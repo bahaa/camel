@@ -28,7 +28,7 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.junit.rule.mllp.MllpServerResource;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.test.mllp.Hl7TestMessageGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -68,7 +68,10 @@ public abstract class TcpClientProducerEndOfDataAndValidationTestSupport extends
                                       + '\n';
 
     @RegisterExtension
-    public MllpServerResource mllpServer = new MllpServerResource("localhost", AvailablePortFinder.getNextAvailable());
+    AvailablePortFinder.Port mllpServerPort = AvailablePortFinder.find();
+
+    @RegisterExtension
+    public MllpServerResource mllpServer = new MllpServerResource("localhost", mllpServerPort.getPort());
 
     @EndpointInject("direct://source")
     protected ProducerTemplate source;
@@ -107,6 +110,7 @@ public abstract class TcpClientProducerEndOfDataAndValidationTestSupport extends
 
     abstract boolean validatePayload();
 
+    @SuppressWarnings("deprecation")
     @Override
     protected CamelContext createCamelContext() throws Exception {
         DefaultCamelContext context = (DefaultCamelContext) super.createCamelContext();

@@ -26,7 +26,6 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
 public class PlatformHttpRestOpenApiConsumerRestDslBindingTest {
-
     @Test
     public void testRestOpenApiOutType() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -51,7 +50,7 @@ public class PlatformHttpRestOpenApiConsumerRestDslBindingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -87,7 +86,7 @@ public class PlatformHttpRestOpenApiConsumerRestDslBindingTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()

@@ -19,19 +19,21 @@ package org.apache.camel.dsl.yaml.deserializers;
 import java.util.List;
 
 import org.apache.camel.dsl.yaml.common.YamlDeserializerBase;
+import org.apache.camel.dsl.yaml.common.YamlDeserializerResolver;
 import org.apache.camel.model.BeanFactoryDefinition;
 import org.apache.camel.model.TemplatedRouteDefinition;
 import org.apache.camel.model.TemplatedRouteParameterDefinition;
 import org.apache.camel.spi.annotations.YamlIn;
 import org.apache.camel.spi.annotations.YamlProperty;
 import org.apache.camel.spi.annotations.YamlType;
+import org.apache.camel.util.StringHelper;
 import org.snakeyaml.engine.v2.nodes.Node;
 
 @YamlIn
 @YamlType(
           nodes = { "templatedRoute" },
           types = TemplatedRouteDefinition.class,
-          order = org.apache.camel.dsl.yaml.common.YamlDeserializerResolver.ORDER_LOWEST - 1,
+          order = YamlDeserializerResolver.ORDER_LOWEST - 1,
           properties = {
                   @YamlProperty(name = "routeId",
                                 type = "string"),
@@ -40,6 +42,8 @@ import org.snakeyaml.engine.v2.nodes.Node;
                   @YamlProperty(name = "routeTemplateRef",
                                 type = "string",
                                 required = true),
+                  @YamlProperty(name = "group",
+                                type = "string"),
                   @YamlProperty(name = "parameters",
                                 type = "array:org.apache.camel.model.TemplatedRouteParameterDefinition"),
                   @YamlProperty(name = "beans",
@@ -60,7 +64,7 @@ public class TemplatedRouteDefinitionDeserializer extends YamlDeserializerBase<T
     protected boolean setProperty(
             TemplatedRouteDefinition target, String propertyKey, String propertyName, Node node) {
 
-        propertyKey = org.apache.camel.util.StringHelper.dashToCamelCase(propertyKey);
+        propertyKey = StringHelper.dashToCamelCase(propertyKey);
         switch (propertyKey) {
             case "routeId": {
                 target.setRouteId(asText(node));
@@ -72,6 +76,10 @@ public class TemplatedRouteDefinitionDeserializer extends YamlDeserializerBase<T
             }
             case "routeTemplateRef": {
                 target.setRouteTemplateRef(asText(node));
+                break;
+            }
+            case "group": {
+                target.setGroup(asText(node));
                 break;
             }
             case "parameters": {

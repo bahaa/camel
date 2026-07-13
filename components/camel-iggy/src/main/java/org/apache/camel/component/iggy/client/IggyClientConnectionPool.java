@@ -16,14 +16,20 @@
  */
 package org.apache.camel.component.iggy.client;
 
+import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.iggy.client.blocking.IggyBaseClient;
 
 public class IggyClientConnectionPool {
+
     private final GenericObjectPool<IggyBaseClient> pool;
 
-    public IggyClientConnectionPool(String host, int port, String username, String password, String transport) {
-        IggyClientFactory factory = new IggyClientFactory(host, port, username, password, transport);
+    public IggyClientConnectionPool(String host, int port, String username, String password, String transport,
+                                    boolean tlsEnabled, String tlsCertificatePath,
+                                    SSLContextParameters sslContextParameters) {
+        IggyClientFactory factory = new IggyClientFactory(
+                host, port, username, password, transport,
+                tlsEnabled, tlsCertificatePath, sslContextParameters);
         this.pool = new GenericObjectPool<>(factory);
     }
 

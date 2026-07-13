@@ -21,7 +21,7 @@ import org.apache.camel.component.cxf.HelloService;
 import org.apache.camel.component.cxf.HelloServiceImpl;
 import org.apache.camel.component.cxf.common.CXFTestSupport;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.apache.cxf.endpoint.Server;
 import org.apache.cxf.frontend.ServerFactoryBean;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import static org.apache.camel.test.junit5.TestSupport.deleteDirectory;
+import static org.apache.camel.test.junit6.TestSupport.deleteDirectory;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -83,13 +83,14 @@ public class FileToCxfMessageDataFormatTest extends CamelSpringTestSupport {
     }
 
     private String createBody() throws Exception {
-        return "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:cxf=\"http://cxf.component.camel.apache.org/\">\n"
-               + "   <soapenv:Header/>\n"
-               + "   <soapenv:Body>\n"
-               + "      <cxf:echo>\n"
-               + "          <cxf:arg0>Camel</cxf:arg0>\n"
-               + "      </cxf:echo>\n"
-               + "   </soapenv:Body>\n"
-               + "</soapenv:Envelope>";
+        return """
+                <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:cxf="http://cxf.component.camel.apache.org/">
+                   <soapenv:Header/>
+                   <soapenv:Body>
+                      <cxf:echo>
+                          <cxf:arg0>Camel</cxf:arg0>
+                      </cxf:echo>
+                   </soapenv:Body>
+                </soapenv:Envelope>""";
     }
 }

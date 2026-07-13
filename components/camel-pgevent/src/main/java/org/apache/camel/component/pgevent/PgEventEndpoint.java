@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  * <p/>
  * This requires using PostgreSQL 8.3 or newer.
  */
-@UriEndpoint(firstVersion = "2.15.0", scheme = "pgevent", title = "PostgresSQL Event",
+@UriEndpoint(firstVersion = "2.15.0", scheme = "pgevent", title = "PostgreSQL Event",
              syntax = "pgevent:host:port/database/channel",
              category = { Category.DATABASE }, headersClass = PgEventConstants.class)
 public class PgEventEndpoint extends DefaultEndpoint implements EndpointServiceLocation {
@@ -65,9 +65,9 @@ public class PgEventEndpoint extends DefaultEndpoint implements EndpointServiceL
     @UriPath
     @Metadata(required = true)
     private String channel;
-    @UriParam(defaultValue = "postgres", label = "security", secret = true)
+    @UriParam(defaultValue = "postgres", label = "security", security = "secret")
     private String user = "postgres";
-    @UriParam(label = "security", secret = true)
+    @UriParam(label = "security", security = "secret")
     private String pass;
     @UriParam(label = "advanced")
     private DataSource datasource;

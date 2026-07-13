@@ -16,9 +16,13 @@
  */
 package org.apache.camel.component.openai.integration;
 
+import org.apache.camel.CamelContext;
+import org.apache.camel.component.openai.OpenAIComponent;
 import org.apache.camel.test.infra.ollama.services.OllamaService;
 import org.apache.camel.test.infra.ollama.services.OllamaServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
+import org.apache.camel.util.ObjectHelper;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class OpenAITestSupport extends CamelTestSupport {
 
@@ -26,29 +30,39 @@ public class OpenAITestSupport extends CamelTestSupport {
     protected String baseUrl;
     protected String model;
 
-    static OllamaService OLLAMA = hasEnvironmentConfiguration()
-            ? null
-            : OllamaServiceFactory.createSingletonService();
+    @RegisterExtension
+    static OllamaService OLLAMA = OllamaServiceFactory.createSingletonService();
 
     @Override
     protected void setupResources() throws Exception {
         super.setupResources();
 
-        if (OLLAMA != null) {
-            // Use Ollama service
-            baseUrl = OLLAMA.baseUrlV1();
-            model = OLLAMA.modelName();
-            apiKey = "dummy"; // Ollama doesn't require API key
-        } else {
-            // Use environment variables
-            apiKey = System.getenv("OPENAI_API_KEY");
-            baseUrl = System.getenv("OPENAI_BASE_URL"); // Optional
-            model = System.getenv("OPENAI_MODEL"); // Optional
+        baseUrl = OLLAMA.baseUrlV1();
+        model = OLLAMA.modelName();
+        apiKey = OLLAMA.apiKey();
+        if (apiKey == null || apiKey.isEmpty()) {
+            apiKey = "dummy";
         }
     }
 
-    protected static boolean hasEnvironmentConfiguration() {
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        return apiKey != null && !apiKey.trim().isEmpty();
+    @Override
+    protected CamelContext createCamelContext() throws Exception {
+        CamelContext camelContext = super.createCamelContext();
+        OpenAIComponent component = new OpenAIComponent();
+        if (ObjectHelper.isNotEmpty(apiKey)) {
+            component.setApiKey(apiKey);
+        }
+
+        if (ObjectHelper.isNotEmpty(model)) {
+            component.setModel(model);
+        }
+
+        if (ObjectHelper.isNotEmpty(baseUrl)) {
+            component.setBaseUrl(baseUrl);
+        }
+
+        camelContext.addComponent("openai", component);
+        return camelContext;
     }
+
 }

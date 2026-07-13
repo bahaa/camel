@@ -32,6 +32,7 @@ import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.component.kafka.integration.common.KafkaTestUtil;
 import org.apache.camel.component.kafka.integration.common.TestProducerUtil;
 import org.apache.camel.component.mock.MockEndpoint;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -40,6 +41,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -119,7 +121,7 @@ public class KafkaTransactionIT extends BaseKafkaTestSupport {
         }
 
         for (int i = 0; i < THREAD_NUM; i++) {
-            threads[i].join();
+            threads[i].join(30000);
         }
 
         createKafkaMessageConsumer(stringsConsumerConn, TOPIC_CONCURRENCY_TRANSACTION, messagesLatch);
@@ -175,16 +177,16 @@ public class KafkaTransactionIT extends BaseKafkaTestSupport {
     private static KafkaConsumer<String, String> createStringKafkaConsumer(final String groupId) {
         Properties stringsProps = new Properties();
 
-        stringsProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, getBootstrapServers());
-        stringsProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, groupId);
-        stringsProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
-        stringsProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
-        stringsProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
-        stringsProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+        stringsProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, getBootstrapServers());
+        stringsProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        stringsProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
+        stringsProps.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+        stringsProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
+        stringsProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
                 "org.apache.kafka.common.serialization.StringDeserializer");
-        stringsProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+        stringsProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
                 "org.apache.kafka.common.serialization.StringDeserializer");
-        stringsProps.put(org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        stringsProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         return new KafkaConsumer<>(stringsProps);
     }
@@ -193,17 +195,16 @@ public class KafkaTransactionIT extends BaseKafkaTestSupport {
             KafkaConsumer<String, String> consumerConn, String topic, CountDownLatch messagesLatch) {
 
         consumerConn.subscribe(Arrays.asList(topic));
-        boolean run = true;
 
-        while (run) {
-            ConsumerRecords<String, String> records = consumerConn.poll(Duration.ofMillis(100));
-            for (int i = 0; i < records.count(); i++) {
-                messagesLatch.countDown();
-                if (messagesLatch.getCount() == 0) {
-                    run = false;
-                }
-            }
-        }
+        await().atMost(20, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    ConsumerRecords<String, String> records = consumerConn.poll(Duration.ofMillis(100));
+                    for (int i = 0; i < records.count(); i++) {
+                        messagesLatch.countDown();
+                    }
+                    assertEquals(0, messagesLatch.getCount(), "All messages should have been consumed");
+                });
     }
 
 }

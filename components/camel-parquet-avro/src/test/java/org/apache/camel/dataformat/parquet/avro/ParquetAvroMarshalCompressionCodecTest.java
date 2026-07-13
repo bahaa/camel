@@ -22,15 +22,18 @@ import java.util.List;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.support.DefaultUuidGenerator;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.parquet.ParquetReadOptions;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import static org.apache.parquet.hadoop.metadata.CompressionCodecName.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@DisabledForJreRange(min = JRE.JAVA_22, disabledReason = "Hadoop does not support JDK 22+ - see HADOOP-19486")
 public class ParquetAvroMarshalCompressionCodecTest extends CamelTestSupport {
 
     Collection<Pojo> in = List.of(

@@ -16,9 +16,6 @@
  */
 package org.apache.camel.component.aws2.bedrock.agent;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.camel.Category;
 import org.apache.camel.Component;
 import org.apache.camel.Consumer;
@@ -72,7 +69,7 @@ public class BedrockAgentEndpoint extends ScheduledPollEndpoint implements Endpo
     public void doStart() throws Exception {
         super.doStart();
 
-        bedrockAgentClient = configuration.getBedrockAgentClient() != null
+        bedrockAgentClient = ObjectHelper.isNotEmpty(configuration.getBedrockAgentClient())
                 ? configuration.getBedrockAgentClient()
                 : BedrockAgentClientFactory.getBedrockAgentClient(configuration);
     }
@@ -80,7 +77,7 @@ public class BedrockAgentEndpoint extends ScheduledPollEndpoint implements Endpo
     @Override
     public void doStop() throws Exception {
         if (ObjectHelper.isEmpty(configuration.getBedrockAgentClient())) {
-            if (bedrockAgentClient != null) {
+            if (ObjectHelper.isNotEmpty(bedrockAgentClient)) {
                 bedrockAgentClient.close();
             }
         }
@@ -110,14 +107,5 @@ public class BedrockAgentEndpoint extends ScheduledPollEndpoint implements Endpo
     @Override
     public String getServiceProtocol() {
         return "bedrock-agent";
-    }
-
-    @Override
-    public Map<String, String> getServiceMetadata() {
-        HashMap<String, String> metadata = new HashMap<>();
-        if (configuration.getModelId() != null) {
-            metadata.put("modelId", configuration.getModelId());
-        }
-        return metadata;
     }
 }

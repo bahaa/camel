@@ -18,6 +18,7 @@ package org.apache.camel.component.keycloak.security;
 
 import java.io.IOException;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +32,7 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.ParseException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.message.BasicNameValuePair;
 import org.slf4j.Logger;
@@ -145,7 +147,7 @@ public class KeycloakTokenIntrospector {
 
         // Set request body with token
         NameValuePair tokenParam = new BasicNameValuePair("token", token);
-        request.setEntity(new UrlEncodedFormEntity(java.util.List.of(tokenParam)));
+        request.setEntity(new UrlEncodedFormEntity(List.of(tokenParam)));
 
         // Execute request
         try {
@@ -160,8 +162,8 @@ public class KeycloakTokenIntrospector {
 
             return result;
         } catch (Exception e) {
-            if (e instanceof IOException) {
-                throw (IOException) e;
+            if (e instanceof IOException ioException) {
+                throw ioException;
             }
             throw new IOException("Failed to introspect token", e);
         }
@@ -183,7 +185,7 @@ public class KeycloakTokenIntrospector {
 
             Map<String, Object> responseMap = OBJECT_MAPPER.readValue(responseBody, Map.class);
             return new IntrospectionResult(responseMap);
-        } catch (org.apache.hc.core5.http.ParseException e) {
+        } catch (ParseException e) {
             throw new IOException("Failed to parse HTTP response", e);
         }
     }
@@ -249,7 +251,7 @@ public class KeycloakTokenIntrospector {
          */
         public boolean isActive() {
             Object active = claims.get("active");
-            return active instanceof Boolean && (Boolean) active;
+            return active instanceof Boolean b && b;
         }
 
         /**
@@ -304,8 +306,8 @@ public class KeycloakTokenIntrospector {
          */
         public Long getExpiration() {
             Object exp = claims.get("exp");
-            if (exp instanceof Number) {
-                return ((Number) exp).longValue();
+            if (exp instanceof Number number) {
+                return number.longValue();
             }
             return null;
         }
@@ -317,8 +319,8 @@ public class KeycloakTokenIntrospector {
          */
         public Long getIssuedAt() {
             Object iat = claims.get("iat");
-            if (iat instanceof Number) {
-                return ((Number) iat).longValue();
+            if (iat instanceof Number number) {
+                return number.longValue();
             }
             return null;
         }

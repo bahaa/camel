@@ -19,6 +19,7 @@ package org.apache.camel.component.cxf;
 import jakarta.xml.ws.Endpoint;
 
 import org.apache.camel.Exchange;
+import org.apache.camel.Message;
 import org.apache.camel.Processor;
 import org.apache.camel.component.cxf.common.message.CxfConstants;
 import org.apache.camel.wsdl_first.PersonImpl;
@@ -27,7 +28,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import static org.apache.camel.test.junit5.TestSupport.assertStringContains;
+import static org.apache.camel.test.junit6.TestSupport.assertStringContains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -50,7 +51,7 @@ public class CxfPayloadWsdlWithoutSEITest extends AbstractCxfWsdlFirstTest {
     public void testInvokingServiceWithCamelProducer() {
         Exchange exchange = sendJaxWsMessage("hello");
         assertEquals(false, exchange.isFailed(), "The request should be handled sucessfully");
-        org.apache.camel.Message out = exchange.getMessage();
+        Message out = exchange.getMessage();
         String result = out.getBody(String.class);
         assertStringContains(result, "Bonjour");
 

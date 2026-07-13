@@ -16,10 +16,13 @@
  */
 package org.apache.camel.impl.console;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.camel.spi.PropertiesComponent;
+import org.apache.camel.spi.RuntimePropertiesProvider;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.console.AbstractDevConsole;
 import org.apache.camel.util.OrderedLocationProperties;
@@ -47,8 +50,8 @@ public class PropertiesDevConsole extends AbstractDevConsole {
 
         Properties p = pc.loadProperties();
         OrderedLocationProperties olp = null;
-        if (p instanceof OrderedLocationProperties) {
-            olp = (OrderedLocationProperties) p;
+        if (p instanceof OrderedLocationProperties orderedlocationproperties2) {
+            olp = orderedlocationproperties2;
         }
         for (var entry : p.entrySet()) {
             String k = entry.getKey().toString();
@@ -62,6 +65,23 @@ public class PropertiesDevConsole extends AbstractDevConsole {
         }
         sb.append("\n");
 
+        // include properties from runtime providers (Spring Boot, Quarkus, etc.)
+        Set<RuntimePropertiesProvider> providers
+                = getCamelContext().getRegistry().findByType(RuntimePropertiesProvider.class);
+        for (RuntimePropertiesProvider provider : providers) {
+            Collection<RuntimePropertiesProvider.Property> runtimeProps = provider.getProperties();
+            if (runtimeProps != null && !runtimeProps.isEmpty()) {
+                for (RuntimePropertiesProvider.Property prop : runtimeProps) {
+                    if (SensitiveUtils.containsSensitive(prop.key())) {
+                        sb.append(String.format("    %s %s = xxxxxx%n", prop.source(), prop.key()));
+                    } else {
+                        sb.append(String.format("    %s %s = %s%n", prop.source(), prop.key(), prop.value()));
+                    }
+                }
+                sb.append("\n");
+            }
+        }
+
         return sb.toString();
     }
 
@@ -74,47 +94,71 @@ public class PropertiesDevConsole extends AbstractDevConsole {
 
         JsonArray arr = new JsonArray();
         Properties p = pc.loadProperties();
-        OrderedLocationProperties olp = null;
-        if (p instanceof OrderedLocationProperties) {
-            olp = (OrderedLocationProperties) p;
-        }
+        OrderedLocationProperties olp = p instanceof OrderedLocationProperties o ? o : null;
         for (var entry : p.entrySet()) {
-            String k = entry.getKey().toString();
-            Object v = entry.getValue();
-            String loc = olp != null ? olp.getLocation(k) : null;
-            String originalValue = null;
-            String defaultValue = null;
-            String source = null;
-            var m = pc.getResolvedValue(k);
-            if (m.isPresent()) {
-                originalValue = m.get().originalValue();
-                defaultValue = m.get().defaultValue();
-                source = m.get().source();
-                v = m.get().value();
-            }
-            JsonObject jo = new JsonObject();
-            jo.put("key", k);
-            jo.put("value", v);
-            if (originalValue != null) {
-                jo.put("originalValue", originalValue);
-            }
-            if (defaultValue != null) {
-                jo.put("defaultValue", defaultValue);
-            }
-            if (source != null) {
-                jo.put("source", source);
-            }
-            if (loc != null) {
-                jo.put("location", loc);
-                jo.put("internal", isInternal(loc));
-            }
-            arr.add(jo);
+            arr.add(toPropertyJson(pc, olp, entry));
         }
         if (!arr.isEmpty()) {
             root.put("properties", arr);
         }
 
+        // include properties from runtime providers (Spring Boot, Quarkus, etc.)
+        Set<RuntimePropertiesProvider> providers
+                = getCamelContext().getRegistry().findByType(RuntimePropertiesProvider.class);
+        for (RuntimePropertiesProvider provider : providers) {
+            Collection<RuntimePropertiesProvider.Property> runtimeProps = provider.getProperties();
+            if (runtimeProps != null && !runtimeProps.isEmpty()) {
+                for (RuntimePropertiesProvider.Property prop : runtimeProps) {
+                    boolean sensitive = SensitiveUtils.containsSensitive(prop.key());
+                    JsonObject jo = new JsonObject();
+                    jo.put("key", prop.key());
+                    jo.put("value", sensitive ? "xxxxxx" : prop.value());
+                    jo.put("source", prop.source());
+                    arr.add(jo);
+                }
+                if (!root.containsKey("properties")) {
+                    root.put("properties", arr);
+                }
+            }
+        }
+
         return root;
+    }
+
+    private static JsonObject toPropertyJson(
+            PropertiesComponent pc, OrderedLocationProperties olp, Map.Entry<Object, Object> entry) {
+
+        String k = entry.getKey().toString();
+        Object v = entry.getValue();
+        String loc = olp != null ? olp.getLocation(k) : null;
+        String originalValue = null;
+        String defaultValue = null;
+        String source = null;
+        var m = pc.getResolvedValue(k);
+        if (m.isPresent()) {
+            originalValue = m.get().originalValue();
+            defaultValue = m.get().defaultValue();
+            source = m.get().source();
+            v = m.get().value();
+        }
+        boolean sensitive = SensitiveUtils.containsSensitive(k);
+        JsonObject jo = new JsonObject();
+        jo.put("key", k);
+        jo.put("value", sensitive ? "xxxxxx" : v);
+        if (originalValue != null) {
+            jo.put("originalValue", sensitive ? "xxxxxx" : originalValue);
+        }
+        if (defaultValue != null) {
+            jo.put("defaultValue", defaultValue);
+        }
+        if (source != null) {
+            jo.put("source", source);
+        }
+        if (loc != null) {
+            jo.put("location", loc);
+            jo.put("internal", isInternal(loc));
+        }
+        return jo;
     }
 
     private static boolean isInternal(String loc) {

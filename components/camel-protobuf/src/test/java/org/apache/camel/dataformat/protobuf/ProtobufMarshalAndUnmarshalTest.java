@@ -22,12 +22,12 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.protobuf.generated.AddressBookProtos;
 import org.apache.camel.dataformat.protobuf.generated.AddressBookProtos.Person;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ProtobufMarshalAndUnmarshalTest extends CamelTestSupport {
 
@@ -48,17 +48,15 @@ public class ProtobufMarshalAndUnmarshalTest extends CamelTestSupport {
 
     @Test
     public void testMarshalAndUnmarshalWithDSL3() {
-        try {
+        Exception ex = assertThrows(Exception.class, () -> {
             context.addRoutes(new RouteBuilder() {
                 @Override
                 public void configure() {
                     from("direct:unmarshalC").unmarshal().protobuf(new CamelException("wrong instance")).to("mock:reverse");
                 }
             });
-            fail("Expect the exception here");
-        } catch (Exception ex) {
-            assertTrue(ex instanceof FailedToCreateRouteException, "Expect FailedToCreateRouteException");
-        }
+        });
+        assertTrue(ex instanceof FailedToCreateRouteException, "Expect FailedToCreateRouteException");
     }
 
     private void marshalAndUnmarshal(String inURI, String outURI) throws Exception {

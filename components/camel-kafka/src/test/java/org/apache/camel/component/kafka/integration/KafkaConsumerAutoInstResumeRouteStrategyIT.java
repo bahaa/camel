@@ -54,19 +54,21 @@ public class KafkaConsumerAutoInstResumeRouteStrategyIT extends BaseKafkaTestSup
     public void before() {
         Properties props = KafkaTestUtil.getDefaultProperties(service);
         KafkaTestUtil.createTopic(service, TOPIC, 1);
-        KafkaProducer<Object, Object> producer = new KafkaProducer<>(props);
-
-        for (int i = 0; i < 10; i++) {
-            producer.send(new ProducerRecord<>(TOPIC, String.valueOf(i)));
+        try (KafkaProducer<Object, Object> producer = new KafkaProducer<>(props)) {
+            for (int i = 0; i < 10; i++) {
+                producer.send(new ProducerRecord<>(TOPIC, String.valueOf(i)));
+            }
+            producer.flush();
         }
     }
 
     @Test
     @Timeout(value = 30)
-    public void testOffsetIsBeingChecked() throws InterruptedException {
+    public void testOffsetIsBeingChecked() throws Exception {
         MockEndpoint mock = contextExtension.getMockEndpoint(KafkaTestUtil.MOCK_RESULT);
 
         mock.expectedMessageCount(10);
+        mock.setResultWaitTime(25000);
         mock.assertIsSatisfied();
     }
 

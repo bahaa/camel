@@ -20,9 +20,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.EndpointUriFactoryTestSupport;
+import org.apache.camel.test.junit6.EndpointUriFactoryTestSupport;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class NettyHttpEndpointUriFactoryTest extends EndpointUriFactoryTestSupport {
+
+    @RegisterExtension
+    AvailablePortFinder.Port port = AvailablePortFinder.find();
 
     @Override
     protected String scheme() {
@@ -34,7 +38,7 @@ public class NettyHttpEndpointUriFactoryTest extends EndpointUriFactoryTestSuppo
         Map<String, Object> params = new HashMap<>();
         params.put("protocol", "http");
         params.put("host", "localhost");
-        params.put("port", AvailablePortFinder.getNextAvailable());
+        params.put("port", port.getPort());
         params.put("path", "test");
         return params;
     }

@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.camel.AsyncCallback;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
@@ -49,9 +50,11 @@ import org.apache.camel.util.ReflectionHelper;
 import org.apache.camel.util.URISupport;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.NetworkClient;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.clients.producer.internals.Sender;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.slf4j.Logger;
@@ -64,7 +67,7 @@ public class KafkaProducer extends DefaultAsyncProducer implements RouteIdAware 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaProducer.class);
 
     @SuppressWarnings("rawtypes")
-    private org.apache.kafka.clients.producer.Producer kafkaProducer;
+    private Producer kafkaProducer;
     private KafkaProducerHealthCheck producerHealthCheck;
     private WritableHealthCheckRepository healthCheckRepository;
     private String clientId;
@@ -114,8 +117,8 @@ public class KafkaProducer extends DefaultAsyncProducer implements RouteIdAware 
                 // connections
                 org.apache.kafka.clients.producer.KafkaProducer kp
                         = (org.apache.kafka.clients.producer.KafkaProducer) kafkaProducer;
-                org.apache.kafka.clients.producer.internals.Sender sender
-                        = (org.apache.kafka.clients.producer.internals.Sender) ReflectionHelper
+                Sender sender
+                        = (Sender) ReflectionHelper
                                 .getField(kp.getClass().getDeclaredField("sender"), kp);
                 NetworkClient nc
                         = (NetworkClient) ReflectionHelper.getField(sender.getClass().getDeclaredField("client"), sender);
@@ -133,7 +136,7 @@ public class KafkaProducer extends DefaultAsyncProducer implements RouteIdAware 
     }
 
     @SuppressWarnings("rawtypes")
-    public org.apache.kafka.clients.producer.Producer getKafkaProducer() {
+    public Producer getKafkaProducer() {
         return kafkaProducer;
     }
 
@@ -141,7 +144,7 @@ public class KafkaProducer extends DefaultAsyncProducer implements RouteIdAware 
      * To use a custom {@link org.apache.kafka.clients.producer.KafkaProducer} instance.
      */
     @SuppressWarnings("rawtypes")
-    public void setKafkaProducer(org.apache.kafka.clients.producer.Producer kafkaProducer) {
+    public void setKafkaProducer(Producer kafkaProducer) {
         this.kafkaProducer = kafkaProducer;
     }
 
@@ -330,6 +333,10 @@ public class KafkaProducer extends DefaultAsyncProducer implements RouteIdAware 
     }
 
     private boolean isIterable(Object body) {
+        if (body instanceof JsonNode node) {
+            return node.isContainerNode();
+        }
+
         if (body instanceof Iterable || body instanceof Iterator) {
             return true;
         }

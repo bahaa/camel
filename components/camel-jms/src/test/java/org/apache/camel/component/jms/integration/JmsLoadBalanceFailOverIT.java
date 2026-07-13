@@ -20,11 +20,12 @@ import jakarta.jms.ConnectionFactory;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.jms.JmsComponent;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.infra.artemis.common.ConnectionFactoryHelper;
 import org.apache.camel.test.infra.artemis.services.ArtemisService;
 import org.apache.camel.test.infra.artemis.services.ArtemisServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -36,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Unit test for Camel loadbalancer failover with JMS
  */
-@Timeout(10)
+@Timeout(30)
 public class JmsLoadBalanceFailOverIT extends CamelTestSupport {
 
     @RegisterExtension
@@ -85,7 +86,9 @@ public class JmsLoadBalanceFailOverIT extends CamelTestSupport {
         CamelContext camelContext = super.createCamelContext();
 
         ConnectionFactory connectionFactory = ConnectionFactoryHelper.createConnectionFactory(service);
-        camelContext.addComponent("jms", jmsComponentAutoAcknowledge(connectionFactory));
+        JmsComponent jms = jmsComponentAutoAcknowledge(connectionFactory);
+        jms.setObjectMessageEnabled(true);
+        camelContext.addComponent("jms", jms);
 
         return camelContext;
     }

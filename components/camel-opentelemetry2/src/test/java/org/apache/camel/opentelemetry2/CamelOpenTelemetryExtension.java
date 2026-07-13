@@ -18,6 +18,7 @@ package org.apache.camel.opentelemetry2;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -200,12 +201,16 @@ final class CamelOpenTelemetryExtension implements BeforeEachCallback, AfterEach
         }
     }
 
-    class SpanComparator implements java.util.Comparator<SpanData> {
+    class SpanComparator implements Comparator<SpanData> {
         @Override
         public int compare(SpanData a, SpanData b) {
-            Long nanosA = a.getStartEpochNanos();
-            Long nanosB = b.getStartEpochNanos();
-            return (int) (nanosA - nanosB);
+            int cmp = Long.compare(a.getStartEpochNanos(), b.getStartEpochNanos());
+            if (cmp != 0) {
+                return cmp;
+            }
+            // When start times tie, sort by end time descending so that parent
+            // spans (which end after their children) come first.
+            return Long.compare(b.getEndEpochNanos(), a.getEndEpochNanos());
         }
     }
 }

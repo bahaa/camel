@@ -19,6 +19,7 @@ package org.apache.camel.component.debezium;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -32,7 +33,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.debezium.configuration.EmbeddedDebeziumConfiguration;
 import org.apache.camel.component.debezium.configuration.FileConnectorEmbeddedDebeziumConfiguration;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -190,7 +191,7 @@ public class DebeziumConsumerTest extends CamelTestSupport {
         for (int i = 0; i != numberOfLines; ++i) {
             lines[i] = generateLine(linesAdded + i + 1);
         }
-        java.nio.file.Files.write(inputFile.toPath(), Collect.arrayListOf(lines), StandardCharsets.UTF_8,
+        Files.write(inputFile.toPath(), Collect.arrayListOf(lines), StandardCharsets.UTF_8,
                 StandardOpenOption.APPEND);
         linesAdded += numberOfLines;
     }

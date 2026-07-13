@@ -33,6 +33,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -52,7 +54,7 @@ import org.eclipse.milo.opcua.sdk.client.identity.UsernameProvider;
 import org.eclipse.milo.opcua.sdk.client.subscriptions.OpcUaMonitoredItem;
 import org.eclipse.milo.opcua.sdk.client.subscriptions.OpcUaSubscription;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
-import org.eclipse.milo.opcua.stack.core.Identifiers;
+import org.eclipse.milo.opcua.stack.core.NodeIds0;
 import org.eclipse.milo.opcua.stack.core.StatusCodes;
 import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.ByteString;
@@ -277,14 +279,13 @@ public class SubscriptionManager {
             //                    = this.client.readValue(0, TimestampsToReturn.Neither, Identifiers.Server_NamespaceArray);
             CompletableFuture<DataValue> future = this.client
                     .readValuesAsync(0, TimestampsToReturn.Neither,
-                            Collections.singletonList(Identifiers.Server_NamespaceArray))
+                            Collections.singletonList(NodeIds0.Server_NamespaceArray))
                     .thenApply(r -> r.get(0));
 
             return future.thenApply(value -> {
                 final Object rawValue = value.getValue().getValue();
 
-                if (rawValue instanceof String[]) {
-                    final String[] namespaces = (String[]) rawValue;
+                if (rawValue instanceof String[] namespaces) {
                     for (int i = 0; i < namespaces.length; i++) {
                         if (namespaces[i].equals(namespaceUri)) {
                             final UShort result = Unsigned.ushort(i);
@@ -572,7 +573,7 @@ public class SubscriptionManager {
                                 .collect(Collectors.toList());
 
                         return completedFuture(nodeIds.stream().map(nodeId -> new BrowseDescription(
-                                nodeId, direction, Identifiers.References, includeSubTypes, uint(nodeClasses),
+                                nodeId, direction, NodeIds0.References, includeSubTypes, uint(nodeClasses),
                                 uint(BrowseResultMask.All.getValue()))).collect(Collectors.toList()));
                     })
 
@@ -583,6 +584,7 @@ public class SubscriptionManager {
     private final MiloClientConfiguration configuration;
     private final ScheduledExecutorService executor;
     private final long reconnectTimeout;
+    private final Lock lock = new ReentrantLock();
 
     private Connected connected;
     private boolean disposed;
@@ -599,31 +601,53 @@ public class SubscriptionManager {
         connect();
     }
 
-    private synchronized void handleConnectionFailure(final Throwable e) {
-        if (this.connected != null) {
-            this.connected.dispose();
-            this.connected = null;
+    /**
+     * Returns the milo {@link OpcUaClient} of the currently established connection, if any.
+     *
+     * @return the active client, or {@code null} if there is no current connection
+     */
+    public OpcUaClient getOpcUaClient() {
+        lock.lock();
+        try {
+            return this.connected != null ? this.connected.client : null;
+        } finally {
+            lock.unlock();
         }
+    }
 
-        // log
+    private void handleConnectionFailure(final Throwable e) {
+        lock.lock();
+        try {
+            if (this.connected != null) {
+                this.connected.dispose();
+                this.connected = null;
+            }
 
-        LOG.info("Connection failed", e);
+            // log
 
-        // always trigger re-connect
+            LOG.info("Connection failed", e);
 
-        triggerReconnect(true);
+            // always trigger re-connect
+
+            triggerReconnect(true);
+        } finally {
+            lock.unlock();
+        }
     }
 
     private void connect() {
         LOG.info("Starting connect");
 
-        synchronized (this) {
+        lock.lock();
+        try {
             this.reconnectJob = null;
 
             if (this.disposed) {
                 // we woke up disposed
                 return;
             }
+        } finally {
+            lock.unlock();
         }
 
         performAndEvalConnect();
@@ -633,7 +657,8 @@ public class SubscriptionManager {
         try {
             final Connected connected = performConnect();
             LOG.debug("Connect call done");
-            synchronized (this) {
+            lock.lock();
+            try {
                 if (this.disposed) {
                     // we got disposed during connect
                     return;
@@ -657,6 +682,8 @@ public class SubscriptionManager {
                     connected.dispose();
                     throw e;
                 }
+            } finally {
+                lock.unlock();
             }
         } catch (final Exception e) {
             LOG.info("Failed to connect", e);
@@ -667,18 +694,17 @@ public class SubscriptionManager {
     private Connected performConnect() throws Exception {
 
         // eval endpoint
-
         String discoveryUri = getEndpointDiscoveryUri();
 
         final URI uri = URI.create(getEndpointDiscoveryUri());
 
-        // milo library doesn't allow user info as a part of the uri, it has to
-        // be
-        // removed before sending to milo
+        // Extracting/removing user:password string from the full URL is error-prone with special characters,
+        // because of that the discovery URL is rebuilt from URI parts.
+        discoveryUri
+                = new URI(uri.getScheme(), null, uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment())
+                        .toString();
         final String user = uri.getUserInfo();
-        if (user != null && !user.isEmpty()) {
-            discoveryUri = discoveryUri.replaceFirst(user + "@", "");
-        }
+
         LOG.debug("Discovering endpoints from: {}", discoveryUri);
 
         final EndpointDescription endpoint = DiscoveryClient.getEndpoints(discoveryUri).thenApply(endpoints -> {
@@ -701,14 +727,21 @@ public class SubscriptionManager {
         // set identity providers
         final List<IdentityProvider> providers = new LinkedList<>();
 
-        if (user != null && !user.isEmpty()) {
+        // prefer explicit username/password parameters over URI-embedded credentials
+        // to avoid issues with special characters in the URI
+        final String explicitUsername = this.configuration.getUsername();
+        final String explicitPassword = this.configuration.getPassword();
+        if (explicitUsername != null && !explicitUsername.isEmpty()) {
+            LOG.debug("Enable username/password provider (explicit parameter): {}", explicitUsername);
+            providers.add(new UsernameProvider(explicitUsername, explicitPassword != null ? explicitPassword : ""));
+        } else if (user != null && !user.isEmpty()) {
             final String[] creds = user.split(":", 2);
             if (creds != null) {
                 if (creds.length == 2) {
                     LOG.debug("Enable username/password provider: {}", creds[0]);
                 }
 
-                providers.add(new UsernameProvider(creds[0], creds[1]));
+                providers.add(new UsernameProvider(creds[0], creds.length == 2 ? creds[1] : ""));
             }
         }
 
@@ -766,12 +799,15 @@ public class SubscriptionManager {
     public void dispose() {
         Connected connected;
 
-        synchronized (this) {
+        lock.lock();
+        try {
             if (this.disposed) {
                 return;
             }
             this.disposed = true;
             connected = this.connected;
+        } finally {
+            lock.unlock();
         }
 
         if (connected != null) {
@@ -780,18 +816,23 @@ public class SubscriptionManager {
         }
     }
 
-    private synchronized void triggerReconnect(final boolean immediate) {
-        LOG.info("Trigger re-connect (immediate: {})", immediate);
+    private void triggerReconnect(final boolean immediate) {
+        lock.lock();
+        try {
+            LOG.info("Trigger re-connect (immediate: {})", immediate);
 
-        if (this.reconnectJob != null) {
-            LOG.info("Re-connect already scheduled");
-            return;
-        }
+            if (this.reconnectJob != null) {
+                LOG.info("Re-connect already scheduled");
+                return;
+            }
 
-        if (immediate) {
-            this.reconnectJob = this.executor.submit(this::connect);
-        } else {
-            this.reconnectJob = this.executor.schedule(this::connect, this.reconnectTimeout, TimeUnit.MILLISECONDS);
+            if (immediate) {
+                this.reconnectJob = this.executor.submit(this::connect);
+            } else {
+                this.reconnectJob = this.executor.schedule(this::connect, this.reconnectTimeout, TimeUnit.MILLISECONDS);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -821,30 +862,32 @@ public class SubscriptionManager {
 
         // return result, might override the host part
 
-        return overrideHost(best);
+        return overrideHostOrPort(best);
     }
 
     /**
-     * Optionally override the host of the endpoint URL with the configured one. <br>
-     * The method will call {@link #overrideHost(String)} if the endpoint is not {@code null} and
-     * {@link MiloClientConfiguration#isOverrideHost()} returns {@code true}.
+     * Optionally override the host or port of the endpoint URL with the configured one. <br>
+     * The method will call {@link #overrideHostOrPort(String)} if the endpoint is not {@code null} and
+     * ({@link MiloClientConfiguration#isOverrideHost()} returns {@code true} or
+     * {@link MiloClientConfiguration#isOverridePort()} returns {@code true}).
      *
      * @param  desc               The endpoint descriptor to work on
      * @return                    Either the provided or updated endpoint descriptor. Only returns {@code null} when the
      *                            input was {@code null}.
      * @throws URISyntaxException on case the URI is malformed
      */
-    private EndpointDescription overrideHost(final EndpointDescription desc) throws URISyntaxException {
+    private EndpointDescription overrideHostOrPort(final EndpointDescription desc) throws URISyntaxException {
         if (desc == null) {
             return null;
         }
 
-        if (!this.configuration.isOverrideHost()) {
+        if (!this.configuration.isOverrideHost() && !this.configuration.isOverridePort()) {
             return desc;
         }
 
         return new EndpointDescription(
-                overrideHost(desc.getEndpointUrl()), desc.getServer(), desc.getServerCertificate(), desc.getSecurityMode(),
+                overrideHostOrPort(desc.getEndpointUrl()), desc.getServer(), desc.getServerCertificate(),
+                desc.getSecurityMode(),
                 desc.getSecurityPolicyUri(),
                 desc.getUserIdentityTokens(), desc.getTransportProfileUri(), desc.getSecurityLevel());
     }
@@ -853,11 +896,11 @@ public class SubscriptionManager {
      * Override host part of the endpoint URL with the configured one.
      *
      * @param  endpointUrl        the server provided endpoint URL
-     * @return                    A new endpoint URL with the host part exchanged by the configured host. Will be
-     *                            {@code null} when the input is {@code null}.
+     * @return                    A new endpoint URL with the host part or port part exchanged by the configured host or
+     *                            configured port, respectively. Will be {@code null} when the input is {@code null}.
      * @throws URISyntaxException on case the URI is malformed
      */
-    private String overrideHost(final String endpointUrl) throws URISyntaxException {
+    private String overrideHostOrPort(final String endpointUrl) throws URISyntaxException {
 
         if (endpointUrl == null) {
             return null;
@@ -865,19 +908,25 @@ public class SubscriptionManager {
 
         final URI uri = URI.create(endpointUrl);
         final URI originalUri = URI.create(configuration.getEndpointUri());
+        final String host = configuration.isOverrideHost() ? originalUri.getHost() : uri.getHost();
+        final int port = configuration.isOverridePort() ? originalUri.getPort() : uri.getPort();
 
-        return new URI(
-                uri.getScheme(), uri.getUserInfo(), originalUri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(),
-                uri.getFragment()).toString();
+        return new URI(uri.getScheme(), uri.getUserInfo(), host, port, uri.getPath(), uri.getQuery(), uri.getFragment())
+                .toString();
     }
 
-    protected synchronized void whenConnected(final Worker<Connected> worker) {
-        if (this.connected != null) {
-            try {
-                worker.work(this.connected);
-            } catch (final Exception e) {
-                handleConnectionFailure(e);
+    protected void whenConnected(final Worker<Connected> worker) {
+        lock.lock();
+        try {
+            if (this.connected != null) {
+                try {
+                    worker.work(this.connected);
+                } catch (final Exception e) {
+                    handleConnectionFailure(e);
+                }
             }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -894,28 +943,37 @@ public class SubscriptionManager {
         final UInteger clientHandle = Unsigned.uint(this.clientHandleCounter.incrementAndGet());
         final Subscription subscription = new Subscription(nodeId, samplingInterval, valueConsumer, monitorFilterConfiguration);
 
-        synchronized (this) {
+        lock.lock();
+        try {
             this.subscriptions.put(clientHandle, subscription);
 
             whenConnected(connected -> {
                 connected.activate(clientHandle, subscription);
             });
+        } finally {
+            lock.unlock();
         }
 
         return clientHandle;
     }
 
-    public synchronized void unregisterItem(final UInteger clientHandle) {
-        if (this.subscriptions.remove(clientHandle) != null) {
-            whenConnected(connected -> {
-                connected.deactivate(clientHandle);
-            });
+    public void unregisterItem(final UInteger clientHandle) {
+        lock.lock();
+        try {
+            if (this.subscriptions.remove(clientHandle) != null) {
+                whenConnected(connected -> {
+                    connected.deactivate(clientHandle);
+                });
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
     public CompletableFuture<CallMethodResult> call(
             final ExpandedNodeId nodeId, final ExpandedNodeId methodId, final Variant[] inputArguments) {
-        synchronized (this) {
+        lock.lock();
+        try {
             if (this.connected == null) {
                 return newNotConnectedResult();
             }
@@ -928,11 +986,14 @@ public class SubscriptionManager {
                 }
                 return null;
             }, this.executor);
+        } finally {
+            lock.unlock();
         }
     }
 
     public CompletableFuture<?> write(final ExpandedNodeId nodeId, final DataValue value) {
-        synchronized (this) {
+        lock.lock();
+        try {
             if (this.connected == null) {
                 return newNotConnectedResult();
             }
@@ -945,11 +1006,14 @@ public class SubscriptionManager {
                 }
                 return status;
             }, this.executor);
+        } finally {
+            lock.unlock();
         }
     }
 
     public CompletableFuture<?> readValues(final List<ExpandedNodeId> nodeIds) {
-        synchronized (this) {
+        lock.lock();
+        try {
             if (this.connected == null) {
                 return newNotConnectedResult();
             }
@@ -962,13 +1026,16 @@ public class SubscriptionManager {
                 }
                 return nodes;
             }, this.executor);
+        } finally {
+            lock.unlock();
         }
     }
 
     public CompletableFuture<Map<ExpandedNodeId, BrowseResult>> browse(
             List<ExpandedNodeId> expandedNodeIds, BrowseDirection direction, int nodeClasses, int maxDepth, String filter,
             boolean includeSubTypes, int maxNodesPerRequest) {
-        synchronized (this) {
+        lock.lock();
+        try {
             if (this.connected == null) {
                 return newNotConnectedResult();
             }
@@ -983,6 +1050,8 @@ public class SubscriptionManager {
                         }
                         return browseResult;
                     }, this.executor);
+        } finally {
+            lock.unlock();
         }
     }
 }

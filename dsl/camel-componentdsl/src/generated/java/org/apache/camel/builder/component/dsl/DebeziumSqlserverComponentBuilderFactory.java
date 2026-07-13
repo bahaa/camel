@@ -444,7 +444,7 @@ public interface DebeziumSqlserverComponentBuilderFactory {
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
          * Default:
-         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret
+         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret|.*credentials\.json$
          * Group: sqlserver
          * 
          * @param customSanitizePattern the value to set
@@ -991,6 +991,48 @@ public interface DebeziumSqlserverComponentBuilderFactory {
          */
         default DebeziumSqlserverComponentBuilder maxQueueSizeInBytes(long maxQueueSizeInBytes) {
             doSetProperty("maxQueueSizeInBytes", maxQueueSizeInBytes);
+            return this;
+        }
+    
+        
+        /**
+         * The fully-qualified class name of the storage implementation for
+         * schema metadata. The class must implement
+         * io.debezium.relational.TableMappingStorage. Defaults to
+         * io.debezium.relational.ConcurrentMapTableMappingStorage for in-memory
+         * storage.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: io.debezium.relational.ConcurrentMapTableMappingStorage
+         * Group: sqlserver
+         * 
+         * @param memoryManagementSchemasClass the value to set
+         * @return the dsl builder
+         */
+        default DebeziumSqlserverComponentBuilder memoryManagementSchemasClass(java.lang.String memoryManagementSchemasClass) {
+            doSetProperty("memoryManagementSchemasClass", memoryManagementSchemasClass);
+            return this;
+        }
+    
+        
+        /**
+         * The fully-qualified class name of the storage implementation for
+         * table metadata. The class must implement
+         * io.debezium.relational.TableMappingStorage. Defaults to
+         * io.debezium.relational.ConcurrentMapTableMappingStorage for in-memory
+         * storage.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: io.debezium.relational.ConcurrentMapTableMappingStorage
+         * Group: sqlserver
+         * 
+         * @param memoryManagementTablesClass the value to set
+         * @return the dsl builder
+         */
+        default DebeziumSqlserverComponentBuilder memoryManagementTablesClass(java.lang.String memoryManagementTablesClass) {
+            doSetProperty("memoryManagementTablesClass", memoryManagementTablesClass);
             return this;
         }
     
@@ -1550,6 +1592,28 @@ public interface DebeziumSqlserverComponentBuilderFactory {
     
         
         /**
+         * The factor used to scale the number of snapshot chunks per table. The
+         * default behavior is to take 'row_count/snapshot.max.threads' to
+         * compute the number of rows per chunks. This may not be ideal for
+         * larger tables, and using the multiplier, the formula is adjusted to
+         * increase the number of chunks by using
+         * 'row_count/(snapshot.max.threads snapshot.max.threads.multiplier).
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Default: 1
+         * Group: sqlserver
+         * 
+         * @param snapshotMaxThreadsMultiplier the value to set
+         * @return the dsl builder
+         */
+        default DebeziumSqlserverComponentBuilder snapshotMaxThreadsMultiplier(int snapshotMaxThreadsMultiplier) {
+            doSetProperty("snapshotMaxThreadsMultiplier", snapshotMaxThreadsMultiplier);
+            return this;
+        }
+    
+        
+        /**
          * The criteria for running a snapshot upon startup of the connector.
          * Select one of the following snapshot options: 'initial' (default): If
          * the connector does not detect any offsets for the logical server
@@ -1759,6 +1823,25 @@ public interface DebeziumSqlserverComponentBuilderFactory {
     
         
         /**
+         * Enable to collect various kind of statistics, like latencies in
+         * record processing, and derived data like quantiles. By default
+         * collecting statistics is enabled.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: sqlserver
+         * 
+         * @param statisticsMetricsEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumSqlserverComponentBuilder statisticsMetricsEnabled(boolean statisticsMetricsEnabled) {
+            doSetProperty("statisticsMetricsEnabled", statisticsMetricsEnabled);
+            return this;
+        }
+    
+        
+        /**
          * A delay period after the snapshot is completed and the streaming
          * begins, given in milliseconds. Defaults to 0 ms.
          * 
@@ -1850,7 +1933,12 @@ public interface DebeziumSqlserverComponentBuilderFactory {
          * TIME fields always use microseconds precision; 'connect' always
          * represents time, date, and timestamp values using Kafka Connect's
          * built-in representations for Time, Date, and Timestamp, which uses
-         * millisecond precision regardless of the database columns' precision.
+         * millisecond precision regardless of the database columns' precision;
+         * 'isostring' represents time, date, and timestamp values as ISO-8601
+         * formatted strings at the UTC time zone; 'microseconds' always
+         * represents time, date, and timestamp values using microsecond
+         * precision; 'nanoseconds' always represents time, date, and timestamp
+         * values using nanosecond precision.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -2014,6 +2102,8 @@ public interface DebeziumSqlserverComponentBuilderFactory {
             case "maxIterationTransactions": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setMaxIterationTransactions((int) value); return true;
             case "maxQueueSize": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setMaxQueueSize((int) value); return true;
             case "maxQueueSizeInBytes": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setMaxQueueSizeInBytes((long) value); return true;
+            case "memoryManagementSchemasClass": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setMemoryManagementSchemasClass((java.lang.String) value); return true;
+            case "memoryManagementTablesClass": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setMemoryManagementTablesClass((java.lang.String) value); return true;
             case "messageKeyColumns": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setMessageKeyColumns((java.lang.String) value); return true;
             case "notificationEnabledChannels": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setNotificationEnabledChannels((java.lang.String) value); return true;
             case "notificationSinkTopicName": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setNotificationSinkTopicName((java.lang.String) value); return true;
@@ -2044,6 +2134,7 @@ public interface DebeziumSqlserverComponentBuilderFactory {
             case "snapshotIsolationMode": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSnapshotIsolationMode((java.lang.String) value); return true;
             case "snapshotLockTimeoutMs": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSnapshotLockTimeoutMs((long) value); return true;
             case "snapshotMaxThreads": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSnapshotMaxThreads((int) value); return true;
+            case "snapshotMaxThreadsMultiplier": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSnapshotMaxThreadsMultiplier((int) value); return true;
             case "snapshotMode": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSnapshotMode((java.lang.String) value); return true;
             case "snapshotModeConfigurationBasedSnapshotData": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSnapshotModeConfigurationBasedSnapshotData((boolean) value); return true;
             case "snapshotModeConfigurationBasedSnapshotOnDataError": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSnapshotModeConfigurationBasedSnapshotOnDataError((boolean) value); return true;
@@ -2054,6 +2145,7 @@ public interface DebeziumSqlserverComponentBuilderFactory {
             case "snapshotSelectStatementOverrides": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSnapshotSelectStatementOverrides((java.lang.String) value); return true;
             case "snapshotTablesOrderByRowCount": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSnapshotTablesOrderByRowCount((java.lang.String) value); return true;
             case "sourceinfoStructMaker": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setSourceinfoStructMaker((java.lang.String) value); return true;
+            case "statisticsMetricsEnabled": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setStatisticsMetricsEnabled((boolean) value); return true;
             case "streamingDelayMs": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setStreamingDelayMs((long) value); return true;
             case "streamingFetchSize": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setStreamingFetchSize((int) value); return true;
             case "tableExcludeList": getOrCreateConfiguration((DebeziumSqlserverComponent) component).setTableExcludeList((java.lang.String) value); return true;

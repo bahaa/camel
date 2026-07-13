@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.ocsf.io/1.8.0/classes/kernel_activity",
+  "title": "KernelActivity",
+  "type": "object",
+  "javaType": "org.apache.camel.dataformat.ocsf.model.KernelActivity",
+  "description": "KernelActivity event class.",
+  "extends": {
+    "$ref": "OcsfEvent.json"
+  },
+  "properties": {
+    "device": {
+      "$ref": "Device.json"
+    },
+    "kernel": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "actor": {
+      "$ref": "Actor.json"
+    },
+    "enrichments": {
+      "type": "array",
+      "description": "",
+      "items": {
+        "$ref": "Enrichment.json"
+      }
+    },
+    "raw_data_hash": {
+      "$ref": "Fingerprint.json"
+    },
+    "raw_data_size": {
+      "type": "integer",
+      "title": "Raw Data Size"
+    }
+  }
+}

@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
@@ -45,8 +44,7 @@ class ExportMainApplicationProperties {
 
     @BeforeEach
     public void setup() throws IOException {
-        Path base = Paths.get("target");
-        workingDir = Files.createTempDirectory(base, "camel-export").toFile();
+        workingDir = Files.createTempDirectory("camel-export").toFile();
     }
 
     @AfterEach
@@ -57,10 +55,14 @@ class ExportMainApplicationProperties {
     }
 
     private static Stream<Arguments> runtimeProvider() {
-        return Stream.of(
-                Arguments.of(RuntimeType.quarkus),
-                Arguments.of(RuntimeType.springBoot),
-                Arguments.of(RuntimeType.main));
+        Stream.Builder<Arguments> builder = Stream.builder();
+        builder.add(Arguments.of(RuntimeType.quarkus));
+        // camel-spring-boot 4.19+ requires JDK 21 (Spring Boot 4)
+        if (Runtime.version().feature() >= 21) {
+            builder.add(Arguments.of(RuntimeType.springBoot));
+        }
+        builder.add(Arguments.of(RuntimeType.main));
+        return builder.build();
     }
 
     @ParameterizedTest
@@ -92,7 +94,8 @@ class ExportMainApplicationProperties {
     private Export createCommand(RuntimeType rt, String[] files, String... args) {
         Export command = new Export(new CamelJBangMain());
         CommandLine.populateCommand(command, "--gav=examples:route:1.0.0", "--dir=" + workingDir, "--quiet",
-                "--runtime=%s".formatted(rt.runtime()));
+                "--runtime=%s".formatted(rt.runtime()),
+                CamelCommandBaseTestSupport.quarkusExtRegistry());
         if (args != null) {
             CommandLine.populateCommand(command, args);
         }

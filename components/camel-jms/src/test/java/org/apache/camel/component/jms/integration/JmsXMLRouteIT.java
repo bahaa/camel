@@ -18,6 +18,8 @@ package org.apache.camel.component.jms.integration;
 
 import java.io.FileInputStream;
 
+import jakarta.jms.ConnectionFactory;
+
 import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
 
@@ -26,6 +28,7 @@ import org.apache.camel.ConsumerTemplate;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.jms.AbstractJMSTest;
+import org.apache.camel.component.jms.JmsComponent;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.infra.core.CamelContextExtension;
 import org.apache.camel.test.infra.core.DefaultCamelContextExtension;
@@ -37,7 +40,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -92,12 +95,12 @@ public class JmsXMLRouteIT extends AbstractJMSTest {
         mock.message(0).body(String.class).contains("James");
 
         Source source = new StringSource(
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                                         + "<person user=\"james\">\n"
-                                         + "  <firstName>James</firstName>\n"
-                                         + "  <lastName>Strachan</lastName>\n"
-                                         + "  <city>London</city>\n"
-                                         + "</person>");
+                """
+                        <?xml version="1.0" encoding="UTF-8"?><person user="james">
+                          <firstName>James</firstName>
+                          <lastName>Strachan</lastName>
+                          <city>London</city>
+                        </person>""");
         assertNotNull(source);
 
         template.sendBody(endpointUri, source);
@@ -108,6 +111,14 @@ public class JmsXMLRouteIT extends AbstractJMSTest {
     @Override
     protected String getComponentName() {
         return "activemq";
+    }
+
+    @Override
+    protected JmsComponent setupComponent(
+            CamelContext camelContext, ConnectionFactory connectionFactory, String componentName) {
+        JmsComponent component = super.setupComponent(camelContext, connectionFactory, componentName);
+        component.setObjectMessageEnabled(true);
+        return component;
     }
 
     @ContextFixture

@@ -28,7 +28,7 @@ import org.testcontainers.mongodb.MongoDBContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @InfraService(service = MongoDBInfraService.class,
-              description = "MongoDB NoSql Database",
+              description = "MongoDB is a document-oriented NoSQL database",
               serviceAlias = { "mongodb" })
 public class MongoDBLocalContainerInfraService implements MongoDBInfraService, ContainerService<MongoDBContainer> {
     private static final Logger LOG = LoggerFactory.getLogger(MongoDBLocalContainerInfraService.class);
@@ -57,16 +57,8 @@ public class MongoDBLocalContainerInfraService implements MongoDBInfraService, C
 
             public TestInfraMongoDBContainer(boolean fixedPort, String imageName) {
                 super(DockerImageName.parse(imageName).asCompatibleSubstituteFor("mongo"));
-                addPort(fixedPort);
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, DEFAULT_MONGODB_PORT);
                 withReplicaSet();
-            }
-
-            private void addPort(boolean fixedPort) {
-                if (fixedPort) {
-                    addFixedExposedPort(27017, 27017);
-                } else {
-                    addExposedPort(27017);
-                }
             }
         }
         return new TestInfraMongoDBContainer(ContainerEnvironmentUtil.isFixedPort(this.getClass()), imageName);

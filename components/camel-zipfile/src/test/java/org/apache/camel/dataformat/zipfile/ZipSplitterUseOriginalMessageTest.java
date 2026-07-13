@@ -26,7 +26,7 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.model.dataformat.ZipFileDataFormat;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 public class ZipSplitterUseOriginalMessageTest extends CamelTestSupport {
@@ -44,7 +44,7 @@ public class ZipSplitterUseOriginalMessageTest extends CamelTestSupport {
         Arrays.deepEquals(list1.toArray(), list2.toArray());
     }
 
-    private org.apache.camel.model.dataformat.ZipFileDataFormat multiEntryZipFormat() {
+    private ZipFileDataFormat multiEntryZipFormat() {
         var zipFormat = new ZipFileDataFormat();
         zipFormat.setUsingIterator("true");
         return zipFormat;

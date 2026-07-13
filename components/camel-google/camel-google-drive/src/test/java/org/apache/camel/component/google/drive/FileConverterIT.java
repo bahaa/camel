@@ -27,7 +27,7 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.camel.test.junit5.TestSupport.deleteDirectory;
+import static org.apache.camel.test.junit6.TestSupport.deleteDirectory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -56,7 +56,7 @@ public class FileConverterIT extends AbstractGoogleDriveTestSupport {
 
         MockEndpoint.assertIsSatisfied(context);
 
-        File file = mock.getReceivedExchanges().get(0).getIn().getBody(com.google.api.services.drive.model.File.class);
+        File file = mock.getReceivedExchanges().get(0).getIn().getBody(File.class);
 
         assertEquals("Hello!", context.getTypeConverter().convertTo(String.class, mock.getReceivedExchanges().get(0), file));
 

@@ -40,15 +40,15 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class MimeMessageConsumeTest extends CamelTestSupport {
-    private static final MailboxUser james3 = Mailbox.getOrCreateUser("james3", "secret");
-    private static final MailboxUser james4 = Mailbox.getOrCreateUser("james4", "secret");
+    private static final MailboxUser james3 = Mailbox.getOrCreateUser("MimeMessageConsumeTest-james3", "secret");
+    private static final MailboxUser james4 = Mailbox.getOrCreateUser("MimeMessageConsumeTest-james4", "secret");
     private String body = "hello world!";
 
     @Test
@@ -62,7 +62,7 @@ public class MimeMessageConsumeTest extends CamelTestSupport {
 
         MimeMessage message = new MimeMessage(session);
         populateMimeMessageBody(message);
-        message.setRecipients(Message.RecipientType.TO, "james3@localhost");
+        message.setRecipients(Message.RecipientType.TO, james3.getEmail());
 
         Transport.send(message, james3.getLogin(), james3.getPassword());
 

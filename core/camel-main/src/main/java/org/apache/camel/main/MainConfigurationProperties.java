@@ -26,7 +26,6 @@ import org.apache.camel.builder.LambdaRouteBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.spi.BootstrapCloseable;
 import org.apache.camel.spi.Configurer;
-import org.apache.camel.spi.Metadata;
 
 /**
  * Global configuration for Camel Main to configure context name, stream caching and other global configurations.
@@ -35,8 +34,6 @@ import org.apache.camel.spi.Metadata;
 public class MainConfigurationProperties extends DefaultConfigurationProperties<MainConfigurationProperties>
         implements BootstrapCloseable {
 
-    @Metadata(enums = "dev,test,prod")
-    private String profile;
     private boolean autoConfigurationEnabled = true;
     private boolean autoConfigurationEnvironmentVariablesEnabled = true;
     private boolean autoConfigurationSystemPropertiesEnabled = true;
@@ -46,6 +43,7 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
     private int extraShutdownTimeout = 15;
     private String basePackageScan;
     private boolean basePackageScanEnabled = true;
+    private boolean virtualThreadsEnabled;
 
     private String mainListenerClasses;
     private String routesBuilderClasses;
@@ -72,9 +70,11 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
     private HttpServerConfigurationProperties httpServerConfigurationProperties;
     private HttpManagementServerConfigurationProperties httpManagementServerConfigurationProperties;
     private SSLConfigurationProperties sslConfigurationProperties;
+    private SecurityConfigurationProperties securityConfigurationProperties;
     private DebuggerConfigurationProperties debuggerConfigurationProperties;
     private TracerConfigurationProperties tracerConfigurationProperties;
     private RouteControllerConfigurationProperties routeControllerConfigurationProperties;
+    private ErrorRegistryConfigurationProperties errorRegistryConfigurationProperties;
 
     @Override
     public void close() {
@@ -138,6 +138,10 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
             sslConfigurationProperties.close();
             sslConfigurationProperties = null;
         }
+        if (securityConfigurationProperties != null) {
+            securityConfigurationProperties.close();
+            securityConfigurationProperties = null;
+        }
         if (debuggerConfigurationProperties != null) {
             debuggerConfigurationProperties.close();
             debuggerConfigurationProperties = null;
@@ -149,6 +153,10 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
         if (routeControllerConfigurationProperties != null) {
             routeControllerConfigurationProperties.close();
             routeControllerConfigurationProperties = null;
+        }
+        if (errorRegistryConfigurationProperties != null) {
+            errorRegistryConfigurationProperties.close();
+            errorRegistryConfigurationProperties = null;
         }
         if (routesBuilders != null) {
             routesBuilders.clear();
@@ -319,6 +327,23 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
     }
 
     /**
+     * To configure Security policies.
+     */
+    public SecurityConfigurationProperties securityConfig() {
+        if (securityConfigurationProperties == null) {
+            securityConfigurationProperties = new SecurityConfigurationProperties(this);
+        }
+        return securityConfigurationProperties;
+    }
+
+    /**
+     * Whether there has been any Security configuration specified.
+     */
+    public boolean hasSecurityConfiguration() {
+        return securityConfigurationProperties != null;
+    }
+
+    /**
      * To configure Debugger.
      */
     public DebuggerConfigurationProperties debuggerConfig() {
@@ -352,6 +377,24 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
      */
     public boolean hasTracerConfiguration() {
         return tracerConfigurationProperties != null;
+    }
+
+    /**
+     * To configure Error Registry.
+     */
+    public ErrorRegistryConfigurationProperties errorRegistryConfig() {
+        if (errorRegistryConfigurationProperties == null) {
+            errorRegistryConfigurationProperties = new ErrorRegistryConfigurationProperties(this);
+        }
+
+        return errorRegistryConfigurationProperties;
+    }
+
+    /**
+     * Whether there has been any Error Registry configuration specified.
+     */
+    public boolean hasErrorRegistryConfiguration() {
+        return errorRegistryConfigurationProperties != null;
     }
 
     /**
@@ -460,23 +503,6 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
     // getter and setters
     // --------------------------------------------------------------
 
-    public String getProfile() {
-        return profile;
-    }
-
-    /**
-     * Camel profile to use when running.
-     *
-     * The dev profile is for development, which enables a set of additional developer focus functionality, tracing,
-     * debugging, and gathering additional runtime statistics that are useful during development. However, those
-     * additional features has a slight overhead cost, and are not enabled for production profile.
-     *
-     * The default profile is prod.
-     */
-    public void setProfile(String profile) {
-        this.profile = profile;
-    }
-
     public boolean isAutoConfigurationEnabled() {
         return autoConfigurationEnabled;
     }
@@ -584,6 +610,23 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
      */
     public void setBasePackageScanEnabled(boolean basePackageScanEnabled) {
         this.basePackageScanEnabled = basePackageScanEnabled;
+    }
+
+    public boolean isVirtualThreadsEnabled() {
+        return virtualThreadsEnabled;
+    }
+
+    /**
+     * Whether to enable virtual threads when creating thread pools.
+     *
+     * When enabled, Camel will use virtual threads instead of platform threads for its thread pools. This can also be
+     * enabled via the JVM system property {@code camel.threads.virtual.enabled=true}.
+     *
+     * This option must be read early during bootstrap, so it is set as a system property before thread pools are
+     * created.
+     */
+    public void setVirtualThreadsEnabled(boolean virtualThreadsEnabled) {
+        this.virtualThreadsEnabled = virtualThreadsEnabled;
     }
 
     public int getDurationHitExitCode() {
@@ -790,20 +833,6 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
     // --------------------------------------------------------------
 
     /**
-     * Camel profile to use when running.
-     *
-     * The dev profile is for development, which enables a set of additional developer focus functionality, tracing,
-     * debugging, and gathering additional runtime statistics that are useful during development. However, those
-     * additional features has a slight overhead cost, and are not enabled for production profile.
-     *
-     * The default profile is prod.
-     */
-    public MainConfigurationProperties withProfile(String profile) {
-        this.profile = profile;
-        return this;
-    }
-
-    /**
      * Whether auto configuration of components/dataformats/languages is enabled or not. When enabled the configuration
      * parameters are loaded from the properties component and configured as defaults (similar to spring-boot
      * auto-configuration). You can prefix the parameters in the properties file with: -
@@ -909,6 +938,14 @@ public class MainConfigurationProperties extends DefaultConfigurationProperties<
      */
     public MainConfigurationProperties withBasePackageScanEnabled(boolean basePackageScanEnabled) {
         this.basePackageScanEnabled = basePackageScanEnabled;
+        return this;
+    }
+
+    /**
+     * Whether to enable virtual threads when creating thread pools.
+     */
+    public MainConfigurationProperties withVirtualThreadsEnabled(boolean virtualThreadsEnabled) {
+        this.virtualThreadsEnabled = virtualThreadsEnabled;
         return this;
     }
 

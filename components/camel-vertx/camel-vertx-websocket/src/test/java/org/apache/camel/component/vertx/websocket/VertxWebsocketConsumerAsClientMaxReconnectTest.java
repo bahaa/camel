@@ -17,6 +17,7 @@
 package org.apache.camel.component.vertx.websocket;
 
 import java.net.ConnectException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -26,13 +27,15 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import static org.awaitility.Awaitility.await;
+
 public class VertxWebsocketConsumerAsClientMaxReconnectTest extends VertxWebSocketTestSupport {
     @Test
     void testMaxReconnect() throws Exception {
         MockEndpoint mockEndpoint = getMockEndpoint("mock:result");
         mockEndpoint.expectedBodiesReceived("Hello World");
 
-        String uri = String.format("vertx-websocket:localhost:%d/echo", port);
+        String uri = String.format("vertx-websocket:localhost:%d/echo", port.getPort());
         template.sendBody(uri, "Hello World");
         mockEndpoint.assertIsSatisfied();
 
@@ -42,25 +45,36 @@ public class VertxWebsocketConsumerAsClientMaxReconnectTest extends VertxWebSock
 
         context.getRouteController().stopRoute("server");
 
-        // Verify that we cannot send messages
-        Exchange exchange = template.send(uri, new Processor() {
-            @Override
-            public void process(Exchange exchange) throws Exception {
-                exchange.getMessage().setBody("Hello World Again");
-            }
-        });
-        Exception exception = exchange.getException();
-        Assertions.assertNotNull(exception);
-        Assertions.assertInstanceOf(ConnectException.class, exception.getCause());
+        // Verify that the server is fully down by waiting until sends fail.
+        // The producer endpoint's cached WebSocket may still appear open briefly
+        // after stopRoute returns, until the Vert.x event loop processes the
+        // TCP close frame and isClosed() starts returning true.
+        await().atMost(10, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    Exchange exchange = template.send(uri, new Processor() {
+                        @Override
+                        public void process(Exchange exchange) throws Exception {
+                            exchange.getMessage().setBody("Hello World Again");
+                        }
+                    });
+                    Assertions.assertNotNull(exchange.getException());
+                    Assertions.assertInstanceOf(ConnectException.class, exchange.getException().getCause());
+                });
 
         // Wait for client consumer reconnect max attempts to be exhausted
-        Thread.sleep(300);
+        // (maxReconnectAttempts=1, reconnectInterval=10ms).
+        // With expectedMessageCount(0), assertIsSatisfied(2000) sleeps for
+        // 2 seconds then verifies no messages were received.
+        mockEndpoint.assertIsSatisfied(2000);
 
         // Restart server
         context.getRouteController().startRoute("server");
 
-        // Verify that the client consumer gave up reconnecting
+        // Verify that the client consumer gave up reconnecting.
+        // Use setAssertPeriod to re-verify after a delay, catching any
+        // late deliveries that arrive after the initial assertion passes.
         template.sendBody(uri, "Hello World Again");
+        mockEndpoint.setAssertPeriod(1000);
         mockEndpoint.assertIsSatisfied();
     }
 
@@ -69,12 +83,12 @@ public class VertxWebsocketConsumerAsClientMaxReconnectTest extends VertxWebSock
         return new RouteBuilder() {
             @Override
             public void configure() {
-                fromF("vertx-websocket:localhost:%d/echo", port).routeId("server")
+                fromF("vertx-websocket:localhost:%d/echo", port.getPort()).routeId("server")
                         .log("Server consumer: Received message: ${body}")
-                        .toF("vertx-websocket:localhost:%d/echo?sendToAll=true", port);
+                        .toF("vertx-websocket:localhost:%d/echo?sendToAll=true", port.getPort());
 
                 fromF("vertx-websocket:localhost:%d/echo?consumeAsClient=true&reconnectInterval=10&maxReconnectAttempts=1",
-                        port)
+                        port.getPort())
                         .log("Client consumer 1: Received message: ${body}")
                         .to("mock:result");
             }

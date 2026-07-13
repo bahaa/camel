@@ -26,6 +26,7 @@ import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.URISupport;
 
+@Deprecated
 public class UriBindingProvider implements BindingProvider {
 
     private static final Pattern CAMEL_ENDPOINT_URI_PATTERN = Pattern.compile("^[a-z0-9+][a-zA-Z0-9-+]*:.*$");
@@ -56,8 +57,8 @@ public class UriBindingProvider implements BindingProvider {
         String context = IOHelper.loadText(is);
         IOHelper.close(is);
 
-        context = context.replaceFirst("\\{\\{ \\.URI }}", endpointUri);
-        context = context.replaceFirst("\\{\\{ \\.EndpointProperties }}\n",
+        context = context.replace("{{ .URI }}", endpointUri);
+        context = context.replace("{{ .EndpointProperties }}\n",
                 templateProvider.asEndpointProperties(endpointProperties));
 
         return context;

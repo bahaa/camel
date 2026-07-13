@@ -16,6 +16,8 @@
  */
 package org.apache.camel.component.netty.http;
 
+import javax.net.ssl.SSLHandshakeException;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
@@ -24,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -62,7 +63,11 @@ public class NettyHttpSSLHandshakeErrorTest extends BaseNettyTestSupport {
 
         assertTrue(response.isFailed(), "should have failed");
         assertNotNull(ex);
-        assertEquals(javax.net.ssl.SSLHandshakeException.class, ex.getClass(), "SSLHandshakeException expected");
+        // Netty may wrap SSLHandshakeException in DecoderException
+        boolean isSslError = ex instanceof SSLHandshakeException
+                || (ex.getCause() instanceof SSLHandshakeException);
+        assertTrue(isSslError,
+                "Expected SSLHandshakeException (possibly wrapped) but got: " + ex.getClass().getName());
 
         MockEndpoint.assertIsSatisfied(context);
     }

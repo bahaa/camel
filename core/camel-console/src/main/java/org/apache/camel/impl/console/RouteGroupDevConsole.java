@@ -32,6 +32,7 @@ import org.apache.camel.api.management.ManagedCamelContext;
 import org.apache.camel.api.management.mbean.ManagedProcessorMBean;
 import org.apache.camel.api.management.mbean.ManagedRouteGroupMBean;
 import org.apache.camel.api.management.mbean.ManagedRouteMBean;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.PatternHelper;
 import org.apache.camel.support.console.AbstractDevConsole;
@@ -47,19 +48,14 @@ public class RouteGroupDevConsole extends AbstractDevConsole {
 
     private static final Logger LOG = LoggerFactory.getLogger(RouteGroupDevConsole.class);
 
-    /**
-     * Filters the route groups matching by group id
-     */
+    @Metadata(label = "query", description = "Filters the route groups matching by group id", javaType = "java.lang.String")
     public static final String FILTER = "filter";
 
-    /**
-     * Limits the number of entries displayed
-     */
+    @Metadata(label = "query", description = "Limits the number of entries displayed", javaType = "java.lang.Integer")
     public static final String LIMIT = "limit";
 
-    /**
-     * Action to perform such as start, or stop
-     */
+    @Metadata(label = "query", description = "Action to perform such as start or stop", javaType = "java.lang.String",
+              enums = "start,stop")
     public static final String ACTION = "action";
 
     public RouteGroupDevConsole() {
@@ -68,8 +64,8 @@ public class RouteGroupDevConsole extends AbstractDevConsole {
 
     @Override
     protected String doCallText(Map<String, Object> options) {
-        String action = (String) options.get(ACTION);
-        String filter = (String) options.get(FILTER);
+        String action = optionString(options, ACTION);
+        String filter = optionString(options, FILTER);
         if (action != null) {
             doAction(getCamelContext(), action, filter);
             return "";
@@ -81,53 +77,58 @@ public class RouteGroupDevConsole extends AbstractDevConsole {
                 sb.append("\n");
             }
             sb.append(String.format("    Group: %s", mrg.getRouteGroup()));
-            sb.append(String.format("\n    Size: %s", mrg.getGroupSize()));
-            sb.append(String.format("\n    State: %s", mrg.getState()));
-            sb.append(String.format("\n    Uptime: %s", mrg.getUptime()));
+            sb.append(String.format("%n    Size: %s", mrg.getGroupSize()));
+            sb.append(String.format("%n    State: %s", mrg.getState()));
+            sb.append(String.format("%n    Uptime: %s", mrg.getUptime()));
             String coverage = calculateRouteCoverage(mrg, true);
             if (coverage != null) {
-                sb.append(String.format("\n    Coverage: %s", coverage));
+                sb.append(String.format("%n    Coverage: %s", coverage));
             }
             String load1 = getLoad1(mrg);
             String load5 = getLoad5(mrg);
             String load15 = getLoad15(mrg);
             if (!load1.isEmpty() || !load5.isEmpty() || !load15.isEmpty()) {
-                sb.append(String.format("\n    Load Average: %s %s %s", load1, load5, load15));
+                sb.append(String.format("%n    Load Average: %s %s %s", load1, load5, load15));
             }
             String thp = getThroughput(mrg);
             if (!thp.isEmpty()) {
-                sb.append(String.format("\n    Messages/Sec: %s", thp));
+                sb.append(String.format("%n    Messages/Sec: %s", thp));
             }
-            sb.append(String.format("\n    Total: %s", mrg.getExchangesTotal()));
-            sb.append(String.format("\n    Failed: %s", mrg.getExchangesFailed()));
-            sb.append(String.format("\n    Inflight: %s", mrg.getExchangesInflight()));
+            sb.append(String.format("%n    Total: %s", mrg.getExchangesTotal()));
+            sb.append(String.format("%n    Failed: %s", mrg.getExchangesFailed()));
+            sb.append(String.format("%n    Inflight: %s", mrg.getExchangesInflight()));
             long idle = mrg.getIdleSince();
             if (idle > 0) {
-                sb.append(String.format("\n    Idle Since: %s", TimeUtils.printDuration(idle)));
+                sb.append(String.format("%n    Idle Since: %s", TimeUtils.printDuration(idle)));
             } else {
-                sb.append(String.format("\n    Idle Since: %s", ""));
+                sb.append(String.format("%n    Idle Since: %s", ""));
             }
-            sb.append(String.format("\n    Mean Time: %s", TimeUtils.printDuration(mrg.getMeanProcessingTime(), true)));
-            sb.append(String.format("\n    Max Time: %s", TimeUtils.printDuration(mrg.getMaxProcessingTime(), true)));
-            sb.append(String.format("\n    Min Time: %s", TimeUtils.printDuration(mrg.getMinProcessingTime(), true)));
+            sb.append(String.format("%n    Mean Time: %s", TimeUtils.printDuration(mrg.getMeanProcessingTime(), true)));
+            sb.append(String.format("%n    Max Time: %s", TimeUtils.printDuration(mrg.getMaxProcessingTime(), true)));
+            sb.append(String.format("%n    Min Time: %s", TimeUtils.printDuration(mrg.getMinProcessingTime(), true)));
             if (mrg.getExchangesTotal() > 0) {
-                sb.append(String.format("\n    Last Time: %s", TimeUtils.printDuration(mrg.getLastProcessingTime(), true)));
-                sb.append(String.format("\n    Delta Time: %s", TimeUtils.printDuration(mrg.getDeltaProcessingTime(), true)));
+                sb.append(String.format("%n    Last Time: %s", TimeUtils.printDuration(mrg.getLastProcessingTime(), true)));
+                sb.append(String.format("%n    Delta Time: %s", TimeUtils.printDuration(mrg.getDeltaProcessingTime(), true)));
             }
             Date last = mrg.getLastExchangeCreatedTimestamp();
             if (last != null) {
                 String ago = TimeUtils.printSince(last.getTime());
-                sb.append(String.format("\n    Since Last Started: %s", ago));
+                sb.append(String.format("%n    Since Last Started: %s", ago));
             }
             last = mrg.getLastExchangeCompletedTimestamp();
             if (last != null) {
                 String ago = TimeUtils.printSince(last.getTime());
-                sb.append(String.format("\n    Since Last Completed: %s", ago));
+                sb.append(String.format("%n    Since Last Completed: %s", ago));
+            }
+            last = mrg.getLastExchangeFailureHandledTimestamp();
+            if (last != null) {
+                String ago = TimeUtils.printSince(last.getTime());
+                sb.append(String.format("%n    Since Last Failure Handled: %s", ago));
             }
             last = mrg.getLastExchangeFailureTimestamp();
             if (last != null) {
                 String ago = TimeUtils.printSince(last.getTime());
-                sb.append(String.format("\n    Since Last Failed: %s", ago));
+                sb.append(String.format("%n    Since Last Failed: %s", ago));
             }
             sb.append("\n");
             return null;
@@ -138,15 +139,15 @@ public class RouteGroupDevConsole extends AbstractDevConsole {
 
     @Override
     protected JsonObject doCallJson(Map<String, Object> options) {
-        String action = (String) options.get(ACTION);
-        String filter = (String) options.get(FILTER);
+        String action = optionString(options, ACTION);
+        String filter = optionString(options, FILTER);
         if (action != null) {
             doAction(getCamelContext(), action, filter);
             return new JsonObject();
         }
 
         final JsonObject root = new JsonObject();
-        final List<JsonObject> list = new ArrayList<>();
+        final JsonArray list = new JsonArray();
         Function<ManagedRouteGroupMBean, Object> task = mrg -> {
             JsonObject jo = new JsonObject();
             list.add(jo);
@@ -179,6 +180,11 @@ public class RouteGroupDevConsole extends AbstractDevConsole {
             stats.put("meanProcessingTime", mrg.getMeanProcessingTime());
             stats.put("maxProcessingTime", mrg.getMaxProcessingTime());
             stats.put("minProcessingTime", mrg.getMinProcessingTime());
+            if (mrg.getProcessingTimeP50() >= 0) {
+                stats.put("p50ProcessingTime", mrg.getProcessingTimeP50());
+                stats.put("p95ProcessingTime", mrg.getProcessingTimeP95());
+                stats.put("p99ProcessingTime", mrg.getProcessingTimeP99());
+            }
             if (mrg.getExchangesTotal() > 0) {
                 stats.put("lastProcessingTime", mrg.getLastProcessingTime());
                 stats.put("deltaProcessingTime", mrg.getDeltaProcessingTime());
@@ -190,6 +196,10 @@ public class RouteGroupDevConsole extends AbstractDevConsole {
             last = mrg.getLastExchangeCompletedTimestamp();
             if (last != null) {
                 stats.put("lastCompletedExchangeTimestamp", last.getTime());
+            }
+            last = mrg.getLastExchangeFailureHandledTimestamp();
+            if (last != null) {
+                stats.put("lastFailureHandledExchangeTimestamp", last.getTime());
             }
             last = mrg.getLastExchangeFailureTimestamp();
             if (last != null) {
@@ -206,9 +216,8 @@ public class RouteGroupDevConsole extends AbstractDevConsole {
     protected void doCall(Map<String, Object> options, Function<ManagedRouteGroupMBean, Object> task) {
         String path = (String) options.get(Exchange.HTTP_PATH);
         String subPath = path != null ? StringHelper.after(path, "/") : null;
-        String filter = (String) options.get(FILTER);
-        String limit = (String) options.get(LIMIT);
-        final int max = limit == null ? Integer.MAX_VALUE : Integer.parseInt(limit);
+        String filter = optionString(options, FILTER);
+        final int max = optionInt(options, LIMIT, Integer.MAX_VALUE);
 
         ManagedCamelContext mcc = getCamelContext().getCamelContextExtension().getContextPlugin(ManagedCamelContext.class);
         if (mcc != null) {

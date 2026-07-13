@@ -39,6 +39,7 @@ import org.apache.camel.model.dataformat.FhirXmlDataFormat;
 import org.apache.camel.model.dataformat.FlatpackDataFormat;
 import org.apache.camel.model.dataformat.ForyDataFormat;
 import org.apache.camel.model.dataformat.GrokDataFormat;
+import org.apache.camel.model.dataformat.GroovyJSonDataFormat;
 import org.apache.camel.model.dataformat.GroovyXmlDataFormat;
 import org.apache.camel.model.dataformat.GzipDeflaterDataFormat;
 import org.apache.camel.model.dataformat.HL7DataFormat;
@@ -50,7 +51,9 @@ import org.apache.camel.model.dataformat.JsonApiDataFormat;
 import org.apache.camel.model.dataformat.JsonDataFormat;
 import org.apache.camel.model.dataformat.LZFDataFormat;
 import org.apache.camel.model.dataformat.MimeMultipartDataFormat;
+import org.apache.camel.model.dataformat.OcsfDataFormat;
 import org.apache.camel.model.dataformat.PGPDataFormat;
+import org.apache.camel.model.dataformat.PQCDataFormat;
 import org.apache.camel.model.dataformat.ParquetAvroDataFormat;
 import org.apache.camel.model.dataformat.ProtobufDataFormat;
 import org.apache.camel.model.dataformat.RssDataFormat;
@@ -73,7 +76,9 @@ import org.apache.camel.spi.Metadata;
 /**
  * Converts the message data received from the wire into a format that Apache Camel processors can consume
  */
-@Metadata(label = "eip,dataformat,transformation")
+@Metadata(label = "eip,dataformat,transformation",
+          aliases = { "deserialize" },
+          description = "Deserializes the message body from a specific data format such as JSON, XML, CSV, or Protobuf into a Java object")
 @XmlRootElement(name = "unmarshal")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class UnmarshalDefinition extends NoOutputDefinition<UnmarshalDefinition> implements DataFormatDefinitionAware {
@@ -95,6 +100,7 @@ public class UnmarshalDefinition extends NoOutputDefinition<UnmarshalDefinition>
             @XmlElement(name = "flatpack", type = FlatpackDataFormat.class),
             @XmlElement(name = "fory", type = ForyDataFormat.class),
             @XmlElement(name = "grok", type = GrokDataFormat.class),
+            @XmlElement(name = "groovyJson", type = GroovyJSonDataFormat.class),
             @XmlElement(name = "groovyXml", type = GroovyXmlDataFormat.class),
             @XmlElement(name = "gzipDeflater", type = GzipDeflaterDataFormat.class),
             @XmlElement(name = "hl7", type = HL7DataFormat.class),
@@ -106,7 +112,10 @@ public class UnmarshalDefinition extends NoOutputDefinition<UnmarshalDefinition>
             @XmlElement(name = "jsonApi", type = JsonApiDataFormat.class),
             @XmlElement(name = "lzf", type = LZFDataFormat.class),
             @XmlElement(name = "mimeMultipart", type = MimeMultipartDataFormat.class),
+            @XmlElement(name = "ocsf", type = OcsfDataFormat.class),
             @XmlElement(name = "parquetAvro", type = ParquetAvroDataFormat.class),
+            @XmlElement(name = "pgp", type = PGPDataFormat.class),
+            @XmlElement(name = "pqc", type = PQCDataFormat.class),
             @XmlElement(name = "protobuf", type = ProtobufDataFormat.class),
             @XmlElement(name = "rss", type = RssDataFormat.class),
             @XmlElement(name = "smooks", type = SmooksDataFormat.class),
@@ -120,17 +129,21 @@ public class UnmarshalDefinition extends NoOutputDefinition<UnmarshalDefinition>
             @XmlElement(name = "univocityFixed", type = UniVocityFixedDataFormat.class),
             @XmlElement(name = "univocityTsv", type = UniVocityTsvDataFormat.class),
             @XmlElement(name = "xmlSecurity", type = XMLSecurityDataFormat.class),
-            @XmlElement(name = "pgp", type = PGPDataFormat.class),
             @XmlElement(name = "yaml", type = YAMLDataFormat.class),
             @XmlElement(name = "zipDeflater", type = ZipDeflaterDataFormat.class),
             @XmlElement(name = "zipFile", type = ZipFileDataFormat.class) })
+    @Metadata(required = true,
+              description = "The data format to use for unmarshalling the message body from a specific format such as JSON, XML, CSV, Avro, Protobuf, etc. back into a Java object.")
     private DataFormatDefinition dataFormatType;
     @XmlAttribute
+    @Metadata(description = "To use a variable as the source for the message body to send. This makes it handy to use variables for user data and to easily control what data to use for sending and receiving.")
     private String variableSend;
     @XmlAttribute
+    @Metadata(description = "To use a variable to store the received message body (only body, not headers). This makes it handy to use variables for user data and to easily control what data to use for sending and receiving.")
     private String variableReceive;
     @XmlAttribute
-    @Metadata(label = "advanced", javaType = "java.lang.Boolean", defaultValue = "false")
+    @Metadata(label = "advanced", javaType = "java.lang.Boolean", defaultValue = "false",
+              description = "Indicates whether null is allowed as value of a body to unmarshall.")
     private String allowNullBody;
 
     public UnmarshalDefinition() {
@@ -181,9 +194,6 @@ public class UnmarshalDefinition extends NoOutputDefinition<UnmarshalDefinition>
         return dataFormatType;
     }
 
-    /**
-     * The data format to be used
-     */
     @Override
     public void setDataFormatType(DataFormatDefinition dataFormatType) {
         this.dataFormatType = dataFormatType;
@@ -209,9 +219,6 @@ public class UnmarshalDefinition extends NoOutputDefinition<UnmarshalDefinition>
         return allowNullBody;
     }
 
-    /**
-     * Indicates whether {@code null} is allowed as value of a body to unmarshall.
-     */
     public void setAllowNullBody(String allowNullBody) {
         this.allowNullBody = allowNullBody;
     }

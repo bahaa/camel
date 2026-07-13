@@ -18,7 +18,7 @@ package org.apache.camel.component.atom;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -33,7 +33,6 @@ public class AtomPollingLowDelayTest extends CamelTestSupport {
     void testLowDelay() throws Exception {
         MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedMessageCount(7);
-        mock.setResultWaitTime(3000L);
         mock.assertIsSatisfied();
     }
 
@@ -41,7 +40,9 @@ public class AtomPollingLowDelayTest extends CamelTestSupport {
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
-                from("atom:file:src/test/data/feed.atom?splitEntries=true&delay=100&initialDelay=0").to("mock:result");
+                // throttled fast polling: one entry per poll; repeatCount=7 bounds it to exactly the 7 feed entries
+                from("atom:file:src/test/data/feed.atom?splitEntries=true&delay=100&initialDelay=0&repeatCount=7")
+                        .to("mock:result");
             }
         };
     }

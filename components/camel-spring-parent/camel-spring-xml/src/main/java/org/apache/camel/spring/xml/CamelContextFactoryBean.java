@@ -64,7 +64,6 @@ import org.apache.camel.model.RouteTemplateContextRefDefinition;
 import org.apache.camel.model.RouteTemplateDefinition;
 import org.apache.camel.model.TemplatedRouteDefinition;
 import org.apache.camel.model.ThreadPoolProfileDefinition;
-import org.apache.camel.model.cloud.ServiceCallConfigurationDefinition;
 import org.apache.camel.model.dataformat.DataFormatsDefinition;
 import org.apache.camel.model.rest.RestConfigurationDefinition;
 import org.apache.camel.model.rest.RestDefinition;
@@ -101,7 +100,8 @@ import static org.apache.camel.RuntimeCamelException.wrapRuntimeCamelException;
 @XmlRootElement(name = "camelContext")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<SpringCamelContext>
-        implements FactoryBean<SpringCamelContext>, InitializingBean, DisposableBean, ApplicationContextAware, Lifecycle,
+        implements FactoryBean<SpringCamelContext>, InitializingBean, DisposableBean, ApplicationContextAware,
+        Lifecycle,
         Phased, ApplicationListener<ContextRefreshedEvent>, Ordered {
 
     private static final Logger LOG = LoggerFactory.getLogger(CamelContextFactoryBean.class);
@@ -153,6 +153,7 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     private String useMDCLogging;
     @XmlAttribute
     @Metadata(displayName = "MDC Logging Keys Pattern")
+    @Deprecated(since = "4.19.0")
     private String mdcLoggingKeysPattern;
     @XmlAttribute
     private String useDataType;
@@ -222,10 +223,7 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     @XmlElements({
             @XmlElement(name = "errorHandler", type = SpringErrorHandlerDefinition.class) })
     private List<?> beans;
-    @XmlElement(name = "defaultServiceCallConfiguration")
-    private ServiceCallConfigurationDefinition defaultServiceCallConfiguration;
-    @XmlElement(name = "serviceCallConfiguration", type = ServiceCallConfigurationDefinition.class)
-    private List<ServiceCallConfigurationDefinition> serviceCallConfigurations;
+
     @XmlElement(name = "defaultResilience4jConfiguration")
     private Resilience4jConfigurationDefinition defaultResilience4jConfiguration;
     @XmlElement(name = "resilience4jConfiguration", type = Resilience4jConfigurationDefinition.class)
@@ -316,7 +314,9 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     }
 
     @Override
-    protected void findRouteBuildersByPackageScan(String[] packages, PackageScanFilter filter, List<RoutesBuilder> builders)
+    protected void findRouteBuildersByPackageScan(
+            String[] packages, PackageScanFilter filter,
+            List<RoutesBuilder> builders)
             throws Exception {
         // add filter to class resolver which then will filter
         PluginHelper.getPackageScanClassResolver(getContext()).addFilter(filter);
@@ -334,7 +334,9 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     protected void findRouteBuildersByContextScan(
             PackageScanFilter filter, boolean includeNonSingletons, List<RoutesBuilder> builders)
             throws Exception {
-        ContextScanRouteBuilderFinder finder = new ContextScanRouteBuilderFinder(getContext(), filter, includeNonSingletons);
+        ContextScanRouteBuilderFinder finder = new ContextScanRouteBuilderFinder(
+                getContext(), filter,
+                includeNonSingletons);
         finder.appendBuilders(builders);
     }
 
@@ -391,8 +393,8 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     protected void initPropertyPlaceholder() throws Exception {
         super.initPropertyPlaceholder();
 
-        Map<String, BridgePropertyPlaceholderConfigurer> beans
-                = applicationContext.getBeansOfType(BridgePropertyPlaceholderConfigurer.class);
+        Map<String, BridgePropertyPlaceholderConfigurer> beans = applicationContext
+                .getBeansOfType(BridgePropertyPlaceholderConfigurer.class);
         if (beans.size() == 1) {
             // setup properties component that uses this beans
             BridgePropertyPlaceholderConfigurer configurer = beans.values().iterator().next();
@@ -401,7 +403,8 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
 
             // get properties component
             PropertiesComponent pc = (PropertiesComponent) getContext().getPropertiesComponent();
-            // use the spring system properties mode which has a different value than Camel may have
+            // use the spring system properties mode which has a different value than Camel
+            // may have
             pc.setSystemPropertiesMode(configurer.getSystemPropertiesMode());
 
             // replace existing resolver with us
@@ -477,8 +480,8 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
         if (event.getSource() instanceof ApplicationContext) {
             ApplicationContext appCtx = (ApplicationContext) event.getSource();
             if (appCtx.getId().endsWith(":management")) {
-                //don't start camel context if
-                //event is from the self management ApplicationContext
+                // don't start camel context if
+                // event is from the self management ApplicationContext
                 return;
             }
         }
@@ -539,8 +542,8 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
         try {
             // allow any custom configuration, such as when running in camel-spring-boot
             if (applicationContext.containsBean("xmlCamelContextConfigurer")) {
-                XmlCamelContextConfigurer configurer
-                        = applicationContext.getBean("xmlCamelContextConfigurer", XmlCamelContextConfigurer.class);
+                XmlCamelContextConfigurer configurer = applicationContext.getBean("xmlCamelContextConfigurer",
+                        XmlCamelContextConfigurer.class);
                 if (configurer != null) {
                     configurer.configure(applicationContext, ctx);
                 }
@@ -1013,6 +1016,7 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     }
 
     @Override
+    @Deprecated(since = "4.19.0")
     public String getUseMDCLogging() {
         return useMDCLogging;
     }
@@ -1020,10 +1024,12 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     /**
      * Set whether <a href="http://www.slf4j.org/api/org/slf4j/MDC.html">MDC</a> is enabled.
      */
+    @Deprecated(since = "4.19.0")
     public void setUseMDCLogging(String useMDCLogging) {
         this.useMDCLogging = useMDCLogging;
     }
 
+    @Deprecated(since = "4.19.0")
     public String getMDCLoggingKeysPattern() {
         return mdcLoggingKeysPattern;
     }
@@ -1039,6 +1045,7 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
      * 1. exact match, returns true 2. wildcard match (pattern ends with a * and the name starts with the pattern),
      * returns true 3. regular expression match, returns true 4. otherwise returns false
      */
+    @Deprecated(since = "4.19.0")
     public void setMDCLoggingKeysPattern(String mdcLoggingKeysPattern) {
         this.mdcLoggingKeysPattern = mdcLoggingKeysPattern;
     }
@@ -1419,30 +1426,6 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     }
 
     @Override
-    public ServiceCallConfigurationDefinition getDefaultServiceCallConfiguration() {
-        return defaultServiceCallConfiguration;
-    }
-
-    /**
-     * ServiceCall EIP default configuration
-     */
-    public void setDefaultServiceCallConfiguration(ServiceCallConfigurationDefinition defaultServiceCallConfiguration) {
-        this.defaultServiceCallConfiguration = defaultServiceCallConfiguration;
-    }
-
-    @Override
-    public List<ServiceCallConfigurationDefinition> getServiceCallConfigurations() {
-        return serviceCallConfigurations;
-    }
-
-    /**
-     * ServiceCall EIP configurations
-     */
-    public void setServiceCallConfigurations(List<ServiceCallConfigurationDefinition> serviceCallConfigurations) {
-        this.serviceCallConfigurations = serviceCallConfigurations;
-    }
-
-    @Override
     public Resilience4jConfigurationDefinition getDefaultResilience4jConfiguration() {
         return defaultResilience4jConfiguration;
     }
@@ -1450,7 +1433,8 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     /**
      * Resilience4j EIP default configuration
      */
-    public void setDefaultResilience4jConfiguration(Resilience4jConfigurationDefinition defaultResilience4jConfiguration) {
+    public void setDefaultResilience4jConfiguration(
+            Resilience4jConfigurationDefinition defaultResilience4jConfiguration) {
         this.defaultResilience4jConfiguration = defaultResilience4jConfiguration;
     }
 
@@ -1487,7 +1471,8 @@ public class CamelContextFactoryBean extends AbstractCamelContextFactoryBean<Spr
     /**
      * MicroProfile Circuit Breaker EIP configurations
      */
-    public void setFaultToleranceConfigurations(List<FaultToleranceConfigurationDefinition> faultToleranceConfigurations) {
+    public void setFaultToleranceConfigurations(
+            List<FaultToleranceConfigurationDefinition> faultToleranceConfigurations) {
         this.faultToleranceConfigurations = faultToleranceConfigurations;
     }
 

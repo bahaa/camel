@@ -87,6 +87,10 @@ public class KafkaComponentConfigurer extends PropertyConfigurerSupport implemen
         case "groupId": getOrCreateConfiguration(target).setGroupId(property(camelContext, java.lang.String.class, value)); return true;
         case "groupinstanceid":
         case "groupInstanceId": getOrCreateConfiguration(target).setGroupInstanceId(property(camelContext, java.lang.String.class, value)); return true;
+        case "groupprotocol":
+        case "groupProtocol": getOrCreateConfiguration(target).setGroupProtocol(property(camelContext, java.lang.String.class, value)); return true;
+        case "groupremoteassignor":
+        case "groupRemoteAssignor": getOrCreateConfiguration(target).setGroupRemoteAssignor(property(camelContext, java.lang.String.class, value)); return true;
         case "headerdeserializer":
         case "headerDeserializer": getOrCreateConfiguration(target).setHeaderDeserializer(property(camelContext, org.apache.camel.component.kafka.serde.KafkaHeaderDeserializer.class, value)); return true;
         case "headerfilterstrategy":
@@ -148,6 +152,14 @@ public class KafkaComponentConfigurer extends PropertyConfigurerSupport implemen
         case "metricsSampleWindowMs": getOrCreateConfiguration(target).setMetricsSampleWindowMs(property(camelContext, java.lang.Integer.class, value)); return true;
         case "noofmetricssample":
         case "noOfMetricsSample": getOrCreateConfiguration(target).setNoOfMetricsSample(property(camelContext, java.lang.Integer.class, value)); return true;
+        case "oauthclientid":
+        case "oauthClientId": getOrCreateConfiguration(target).setOauthClientId(property(camelContext, java.lang.String.class, value)); return true;
+        case "oauthclientsecret":
+        case "oauthClientSecret": getOrCreateConfiguration(target).setOauthClientSecret(property(camelContext, java.lang.String.class, value)); return true;
+        case "oauthscope":
+        case "oauthScope": getOrCreateConfiguration(target).setOauthScope(property(camelContext, java.lang.String.class, value)); return true;
+        case "oauthtokenendpointuri":
+        case "oauthTokenEndpointUri": getOrCreateConfiguration(target).setOauthTokenEndpointUri(property(camelContext, java.lang.String.class, value)); return true;
         case "offsetrepository":
         case "offsetRepository": getOrCreateConfiguration(target).setOffsetRepository(property(camelContext, org.apache.camel.spi.StateRepository.class, value)); return true;
         case "partitionassignor":
@@ -186,12 +198,18 @@ public class KafkaComponentConfigurer extends PropertyConfigurerSupport implemen
         case "retryBackoffMaxMs": getOrCreateConfiguration(target).setRetryBackoffMaxMs(property(camelContext, java.lang.Integer.class, value)); return true;
         case "retrybackoffms":
         case "retryBackoffMs": getOrCreateConfiguration(target).setRetryBackoffMs(property(camelContext, java.lang.Integer.class, value)); return true;
+        case "saslauthtype":
+        case "saslAuthType": getOrCreateConfiguration(target).setSaslAuthType(property(camelContext, org.apache.camel.component.kafka.security.KafkaAuthType.class, value)); return true;
         case "sasljaasconfig":
         case "saslJaasConfig": getOrCreateConfiguration(target).setSaslJaasConfig(property(camelContext, java.lang.String.class, value)); return true;
         case "saslkerberosservicename":
         case "saslKerberosServiceName": getOrCreateConfiguration(target).setSaslKerberosServiceName(property(camelContext, java.lang.String.class, value)); return true;
         case "saslmechanism":
         case "saslMechanism": getOrCreateConfiguration(target).setSaslMechanism(property(camelContext, java.lang.String.class, value)); return true;
+        case "saslpassword":
+        case "saslPassword": getOrCreateConfiguration(target).setSaslPassword(property(camelContext, java.lang.String.class, value)); return true;
+        case "saslusername":
+        case "saslUsername": getOrCreateConfiguration(target).setSaslUsername(property(camelContext, java.lang.String.class, value)); return true;
         case "schemaregistryurl":
         case "schemaRegistryURL": getOrCreateConfiguration(target).setSchemaRegistryURL(property(camelContext, java.lang.String.class, value)); return true;
         case "securityprotocol":
@@ -331,6 +349,10 @@ public class KafkaComponentConfigurer extends PropertyConfigurerSupport implemen
         case "groupId": return java.lang.String.class;
         case "groupinstanceid":
         case "groupInstanceId": return java.lang.String.class;
+        case "groupprotocol":
+        case "groupProtocol": return java.lang.String.class;
+        case "groupremoteassignor":
+        case "groupRemoteAssignor": return java.lang.String.class;
         case "headerdeserializer":
         case "headerDeserializer": return org.apache.camel.component.kafka.serde.KafkaHeaderDeserializer.class;
         case "headerfilterstrategy":
@@ -392,6 +414,14 @@ public class KafkaComponentConfigurer extends PropertyConfigurerSupport implemen
         case "metricsSampleWindowMs": return java.lang.Integer.class;
         case "noofmetricssample":
         case "noOfMetricsSample": return java.lang.Integer.class;
+        case "oauthclientid":
+        case "oauthClientId": return java.lang.String.class;
+        case "oauthclientsecret":
+        case "oauthClientSecret": return java.lang.String.class;
+        case "oauthscope":
+        case "oauthScope": return java.lang.String.class;
+        case "oauthtokenendpointuri":
+        case "oauthTokenEndpointUri": return java.lang.String.class;
         case "offsetrepository":
         case "offsetRepository": return org.apache.camel.spi.StateRepository.class;
         case "partitionassignor":
@@ -430,12 +460,18 @@ public class KafkaComponentConfigurer extends PropertyConfigurerSupport implemen
         case "retryBackoffMaxMs": return java.lang.Integer.class;
         case "retrybackoffms":
         case "retryBackoffMs": return java.lang.Integer.class;
+        case "saslauthtype":
+        case "saslAuthType": return org.apache.camel.component.kafka.security.KafkaAuthType.class;
         case "sasljaasconfig":
         case "saslJaasConfig": return java.lang.String.class;
         case "saslkerberosservicename":
         case "saslKerberosServiceName": return java.lang.String.class;
         case "saslmechanism":
         case "saslMechanism": return java.lang.String.class;
+        case "saslpassword":
+        case "saslPassword": return java.lang.String.class;
+        case "saslusername":
+        case "saslUsername": return java.lang.String.class;
         case "schemaregistryurl":
         case "schemaRegistryURL": return java.lang.String.class;
         case "securityprotocol":
@@ -571,6 +607,10 @@ public class KafkaComponentConfigurer extends PropertyConfigurerSupport implemen
         case "groupId": return getOrCreateConfiguration(target).getGroupId();
         case "groupinstanceid":
         case "groupInstanceId": return getOrCreateConfiguration(target).getGroupInstanceId();
+        case "groupprotocol":
+        case "groupProtocol": return getOrCreateConfiguration(target).getGroupProtocol();
+        case "groupremoteassignor":
+        case "groupRemoteAssignor": return getOrCreateConfiguration(target).getGroupRemoteAssignor();
         case "headerdeserializer":
         case "headerDeserializer": return getOrCreateConfiguration(target).getHeaderDeserializer();
         case "headerfilterstrategy":
@@ -632,6 +672,14 @@ public class KafkaComponentConfigurer extends PropertyConfigurerSupport implemen
         case "metricsSampleWindowMs": return getOrCreateConfiguration(target).getMetricsSampleWindowMs();
         case "noofmetricssample":
         case "noOfMetricsSample": return getOrCreateConfiguration(target).getNoOfMetricsSample();
+        case "oauthclientid":
+        case "oauthClientId": return getOrCreateConfiguration(target).getOauthClientId();
+        case "oauthclientsecret":
+        case "oauthClientSecret": return getOrCreateConfiguration(target).getOauthClientSecret();
+        case "oauthscope":
+        case "oauthScope": return getOrCreateConfiguration(target).getOauthScope();
+        case "oauthtokenendpointuri":
+        case "oauthTokenEndpointUri": return getOrCreateConfiguration(target).getOauthTokenEndpointUri();
         case "offsetrepository":
         case "offsetRepository": return getOrCreateConfiguration(target).getOffsetRepository();
         case "partitionassignor":
@@ -670,12 +718,18 @@ public class KafkaComponentConfigurer extends PropertyConfigurerSupport implemen
         case "retryBackoffMaxMs": return getOrCreateConfiguration(target).getRetryBackoffMaxMs();
         case "retrybackoffms":
         case "retryBackoffMs": return getOrCreateConfiguration(target).getRetryBackoffMs();
+        case "saslauthtype":
+        case "saslAuthType": return getOrCreateConfiguration(target).getSaslAuthType();
         case "sasljaasconfig":
         case "saslJaasConfig": return getOrCreateConfiguration(target).getSaslJaasConfig();
         case "saslkerberosservicename":
         case "saslKerberosServiceName": return getOrCreateConfiguration(target).getSaslKerberosServiceName();
         case "saslmechanism":
         case "saslMechanism": return getOrCreateConfiguration(target).getSaslMechanism();
+        case "saslpassword":
+        case "saslPassword": return getOrCreateConfiguration(target).getSaslPassword();
+        case "saslusername":
+        case "saslUsername": return getOrCreateConfiguration(target).getSaslUsername();
         case "schemaregistryurl":
         case "schemaRegistryURL": return getOrCreateConfiguration(target).getSchemaRegistryURL();
         case "securityprotocol":

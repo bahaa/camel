@@ -25,7 +25,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-jbang-parent</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -54,18 +54,6 @@
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
                 <version>${logback-version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.camel</groupId>
-                <artifactId>camel-test-infra-cli</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.camel</groupId>
-                <artifactId>camel-test-infra-mosquitto</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.camel</groupId>
@@ -110,19 +98,6 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-infra-cli</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-infra-mosquitto</artifactId>
-            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
 
@@ -176,10 +151,6 @@
                     <artifactId>jackson-databind</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>org.fusesource.jansi</groupId>
-                    <artifactId>jansi</artifactId>
-                </exclusion>
-                <exclusion>
                     <groupId>org.apache.logging.log4j</groupId>
                     <artifactId>log4j-slf4j2-impl</artifactId>
                 </exclusion>
@@ -208,7 +179,19 @@
         </dependency>
         <dependency>
             <groupId>org.apache.camel</groupId>
-            <artifactId>camel-test-junit5</artifactId>
+            <artifactId>camel-test-junit6</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-test-infra-cli</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-test-infra-mosquitto</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -227,11 +210,14 @@
                 <cli.jbang.repo>apache/camel</cli.jbang.repo>
                 <cli.jbang.branch>main</cli.jbang.branch>
                 <cli.jbang.docker.file/>
+                <cli.service.command>camel</cli.service.command>
                 <export.runtime/>
                 <maven.test.skip>false</maven.test.skip>
                 <shared.data.folder>target/data</shared.data.folder>
                 <shared.maven.local.repo>${settings.localRepository}</shared.maven.local.repo>
+                <failsafe.forkCount>1C</failsafe.forkCount>
                 <x11.display>:0</x11.display>
+                <failsafe.excludedGroups/>
             </properties>
             <build>
                 <plugins>
@@ -252,6 +238,18 @@
                                     <goal>run</goal>
                                 </goals>
                             </execution>
+                            <execution>
+                                <id>post-integration-test</id>
+                                <phase>post-integration-test</phase>
+                                <configuration>
+                                    <target>
+                                        <delete dir="${shared.data.folder}"/>
+                                    </target>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
@@ -266,8 +264,9 @@
                         </executions>
                         <configuration>
                             <argLine>-DforkNumber=${surefire.forkNumber}</argLine>
-                            <forkCount>1C</forkCount>
+                            <forkCount>${failsafe.forkCount}</forkCount>
                             <groups>${export.runtime}</groups>
+                            <excludedGroups>${failsafe.excludedGroups}</excludedGroups>
                             <rerunFailingTestsCount>${surefire.rerunFailingTestsCount}</rerunFailingTestsCount>
                             <systemPropertyVariables>
                                 <cli.service.data.folder>${shared.data.folder}</cli.service.data.folder>
@@ -276,6 +275,7 @@
                                 <cli.service.repo>${cli.jbang.repo}</cli.service.repo>
                                 <cli.service.branch>${cli.jbang.branch}</cli.service.branch>
                                 <cli.service.docker.file>${cli.jbang.docker.file}</cli.service.docker.file>
+                                <cli.service.command>${cli.service.command}</cli.service.command>
                                 <jbang.it.assert.wait.timeout>300</jbang.it.assert.wait.timeout>
                                 <DISPLAY>${x11.display}</DISPLAY>
                             </systemPropertyVariables>
@@ -284,6 +284,19 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>local-cmvn verify -Djbang-it-test -Dcamel-cli.instance.type=local-camel-cli-processamel-cli-process</id>
+            <activation>
+                <property>
+                    <name>camel-cli.instance.type</name>
+                    <value>local-camel-cli-process</value>
+                </property>
+            </activation>
+            <properties>
+                <failsafe.forkCount>1</failsafe.forkCount>
+                <failsafe.excludedGroups>container-only</failsafe.excludedGroups>
+            </properties>
         </profile>
     </profiles>
 

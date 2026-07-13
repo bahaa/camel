@@ -310,8 +310,11 @@ public interface DoclingEndpointBuilderFactory {
             return this;
         }
         /**
-         * Maximum number of documents to process in a single batch (batch
-         * operations only).
+         * Number of documents to submit per sub-batch. Documents are
+         * partitioned into sub-batches of this size and each sub-batch is
+         * processed before starting the next one. Within each sub-batch, up to
+         * batchParallelism threads are used concurrently. This controls memory
+         * usage and back-pressure when processing large document sets.
          * 
          * The option is a: <code>int</code> type.
          * 
@@ -326,8 +329,11 @@ public interface DoclingEndpointBuilderFactory {
             return this;
         }
         /**
-         * Maximum number of documents to process in a single batch (batch
-         * operations only).
+         * Number of documents to submit per sub-batch. Documents are
+         * partitioned into sub-batches of this size and each sub-batch is
+         * processed before starting the next one. Within each sub-batch, up to
+         * batchParallelism threads are used concurrently. This controls memory
+         * usage and back-pressure when processing large document sets.
          * 
          * The option will be converted to a <code>int</code> type.
          * 
@@ -404,33 +410,140 @@ public interface DoclingEndpointBuilderFactory {
             return this;
         }
         /**
-         * Extract all available metadata fields including custom/raw fields.
+         * Include raw text in chunk output.
          * 
-         * The option is a: <code>boolean</code> type.
+         * The option is a: <code>java.lang.Boolean</code> type.
          * 
          * Default: false
-         * Group: metadata
+         * Group: chunking
          * 
-         * @param extractAllMetadata the value to set
+         * @param chunkingIncludeRawText the value to set
          * @return the dsl builder
          */
-        default DoclingEndpointBuilder extractAllMetadata(boolean extractAllMetadata) {
-            doSetProperty("extractAllMetadata", extractAllMetadata);
+        default DoclingEndpointBuilder chunkingIncludeRawText(Boolean chunkingIncludeRawText) {
+            doSetProperty("chunkingIncludeRawText", chunkingIncludeRawText);
             return this;
         }
         /**
-         * Extract all available metadata fields including custom/raw fields.
+         * Include raw text in chunk output.
          * 
-         * The option will be converted to a <code>boolean</code> type.
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
          * 
          * Default: false
-         * Group: metadata
+         * Group: chunking
          * 
-         * @param extractAllMetadata the value to set
+         * @param chunkingIncludeRawText the value to set
          * @return the dsl builder
          */
-        default DoclingEndpointBuilder extractAllMetadata(String extractAllMetadata) {
-            doSetProperty("extractAllMetadata", extractAllMetadata);
+        default DoclingEndpointBuilder chunkingIncludeRawText(String chunkingIncludeRawText) {
+            doSetProperty("chunkingIncludeRawText", chunkingIncludeRawText);
+            return this;
+        }
+        /**
+         * Maximum number of tokens per chunk for hybrid chunking.
+         * 
+         * The option is a: <code>java.lang.Integer</code> type.
+         * 
+         * Group: chunking
+         * 
+         * @param chunkingMaxTokens the value to set
+         * @return the dsl builder
+         */
+        default DoclingEndpointBuilder chunkingMaxTokens(Integer chunkingMaxTokens) {
+            doSetProperty("chunkingMaxTokens", chunkingMaxTokens);
+            return this;
+        }
+        /**
+         * Maximum number of tokens per chunk for hybrid chunking.
+         * 
+         * The option will be converted to a <code>java.lang.Integer</code>
+         * type.
+         * 
+         * Group: chunking
+         * 
+         * @param chunkingMaxTokens the value to set
+         * @return the dsl builder
+         */
+        default DoclingEndpointBuilder chunkingMaxTokens(String chunkingMaxTokens) {
+            doSetProperty("chunkingMaxTokens", chunkingMaxTokens);
+            return this;
+        }
+        /**
+         * Whether to merge peer chunks in hybrid chunking.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: true
+         * Group: chunking
+         * 
+         * @param chunkingMergePeers the value to set
+         * @return the dsl builder
+         */
+        default DoclingEndpointBuilder chunkingMergePeers(Boolean chunkingMergePeers) {
+            doSetProperty("chunkingMergePeers", chunkingMergePeers);
+            return this;
+        }
+        /**
+         * Whether to merge peer chunks in hybrid chunking.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: true
+         * Group: chunking
+         * 
+         * @param chunkingMergePeers the value to set
+         * @return the dsl builder
+         */
+        default DoclingEndpointBuilder chunkingMergePeers(String chunkingMergePeers) {
+            doSetProperty("chunkingMergePeers", chunkingMergePeers);
+            return this;
+        }
+        /**
+         * Tokenizer model for hybrid chunking (e.g.
+         * sentence-transformers/all-MiniLM-L6-v2).
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: chunking
+         * 
+         * @param chunkingTokenizer the value to set
+         * @return the dsl builder
+         */
+        default DoclingEndpointBuilder chunkingTokenizer(String chunkingTokenizer) {
+            doSetProperty("chunkingTokenizer", chunkingTokenizer);
+            return this;
+        }
+        /**
+         * Use markdown format for tables in chunk output.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: chunking
+         * 
+         * @param chunkingUseMarkdownTables the value to set
+         * @return the dsl builder
+         */
+        default DoclingEndpointBuilder chunkingUseMarkdownTables(Boolean chunkingUseMarkdownTables) {
+            doSetProperty("chunkingUseMarkdownTables", chunkingUseMarkdownTables);
+            return this;
+        }
+        /**
+         * Use markdown format for tables in chunk output.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: chunking
+         * 
+         * @param chunkingUseMarkdownTables the value to set
+         * @return the dsl builder
+         */
+        default DoclingEndpointBuilder chunkingUseMarkdownTables(String chunkingUseMarkdownTables) {
+            doSetProperty("chunkingUseMarkdownTables", chunkingUseMarkdownTables);
             return this;
         }
         /**
@@ -586,6 +699,23 @@ public interface DoclingEndpointBuilderFactory {
             doSetProperty("maxFileSize", maxFileSize);
             return this;
         }
+        /**
+         * OAuth profile name for obtaining an access token via the OAuth 2.0
+         * Client Credentials grant. When set, the token is acquired from the
+         * configured identity provider and used as authenticationToken.
+         * Requires camel-oauth on the classpath.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthProfile the value to set
+         * @return the dsl builder
+         */
+        default DoclingEndpointBuilder oauthProfile(String oauthProfile) {
+            doSetProperty("oauthProfile", oauthProfile);
+            return this;
+        }
     }
 
     /**
@@ -645,6 +775,37 @@ public interface DoclingEndpointBuilderFactory {
             return this;
         }
         /**
+         * Abort processing on error.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param abortOnError the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder abortOnError(Boolean abortOnError) {
+            doSetProperty("abortOnError", abortOnError);
+            return this;
+        }
+        /**
+         * Abort processing on error.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param abortOnError the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder abortOnError(String abortOnError) {
+            doSetProperty("abortOnError", abortOnError);
+            return this;
+        }
+        /**
          * Polling interval for async conversion status in milliseconds.
          * 
          * The option is a: <code>long</code> type.
@@ -672,6 +833,38 @@ public interface DoclingEndpointBuilderFactory {
          */
         default AdvancedDoclingEndpointBuilder asyncPollInterval(String asyncPollInterval) {
             doSetProperty("asyncPollInterval", asyncPollInterval);
+            return this;
+        }
+        /**
+         * Time-to-live for pending async conversion tasks in milliseconds.
+         * Tasks older than this will be evicted from memory to prevent leaks.
+         * 
+         * The option is a: <code>long</code> type.
+         * 
+         * Default: 86400000
+         * Group: advanced
+         * 
+         * @param asyncTaskTtl the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder asyncTaskTtl(long asyncTaskTtl) {
+            doSetProperty("asyncTaskTtl", asyncTaskTtl);
+            return this;
+        }
+        /**
+         * Time-to-live for pending async conversion tasks in milliseconds.
+         * Tasks older than this will be evicted from memory to prevent leaks.
+         * 
+         * The option will be converted to a <code>long</code> type.
+         * 
+         * Default: 86400000
+         * Group: advanced
+         * 
+         * @param asyncTaskTtl the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder asyncTaskTtl(String asyncTaskTtl) {
+            doSetProperty("asyncTaskTtl", asyncTaskTtl);
             return this;
         }
         /**
@@ -719,6 +912,384 @@ public interface DoclingEndpointBuilderFactory {
             return this;
         }
         /**
+         * Enable code enrichment in document processing.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doCodeEnrichment the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doCodeEnrichment(Boolean doCodeEnrichment) {
+            doSetProperty("doCodeEnrichment", doCodeEnrichment);
+            return this;
+        }
+        /**
+         * Enable code enrichment in document processing.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doCodeEnrichment the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doCodeEnrichment(String doCodeEnrichment) {
+            doSetProperty("doCodeEnrichment", doCodeEnrichment);
+            return this;
+        }
+        /**
+         * Document processing timeout in seconds.
+         * 
+         * The option is a: <code>java.lang.Long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param documentTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder documentTimeout(Long documentTimeout) {
+            doSetProperty("documentTimeout", documentTimeout);
+            return this;
+        }
+        /**
+         * Document processing timeout in seconds.
+         * 
+         * The option will be converted to a <code>java.lang.Long</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param documentTimeout the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder documentTimeout(String documentTimeout) {
+            doSetProperty("documentTimeout", documentTimeout);
+            return this;
+        }
+        /**
+         * Enable formula enrichment in document processing.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doFormulaEnrichment the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doFormulaEnrichment(Boolean doFormulaEnrichment) {
+            doSetProperty("doFormulaEnrichment", doFormulaEnrichment);
+            return this;
+        }
+        /**
+         * Enable formula enrichment in document processing.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doFormulaEnrichment the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doFormulaEnrichment(String doFormulaEnrichment) {
+            doSetProperty("doFormulaEnrichment", doFormulaEnrichment);
+            return this;
+        }
+        /**
+         * Enable OCR processing in docling-serve API mode. When not set, the
+         * server uses its own defaults. Set enableOCR to false to explicitly
+         * disable OCR.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doOcr the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doOcr(Boolean doOcr) {
+            doSetProperty("doOcr", doOcr);
+            return this;
+        }
+        /**
+         * Enable OCR processing in docling-serve API mode. When not set, the
+         * server uses its own defaults. Set enableOCR to false to explicitly
+         * disable OCR.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doOcr the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doOcr(String doOcr) {
+            doSetProperty("doOcr", doOcr);
+            return this;
+        }
+        /**
+         * Enable picture classification in document processing.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doPictureClassification the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doPictureClassification(Boolean doPictureClassification) {
+            doSetProperty("doPictureClassification", doPictureClassification);
+            return this;
+        }
+        /**
+         * Enable picture classification in document processing.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doPictureClassification the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doPictureClassification(String doPictureClassification) {
+            doSetProperty("doPictureClassification", doPictureClassification);
+            return this;
+        }
+        /**
+         * Enable picture description generation in document processing.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doPictureDescription the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doPictureDescription(Boolean doPictureDescription) {
+            doSetProperty("doPictureDescription", doPictureDescription);
+            return this;
+        }
+        /**
+         * Enable picture description generation in document processing.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doPictureDescription the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doPictureDescription(String doPictureDescription) {
+            doSetProperty("doPictureDescription", doPictureDescription);
+            return this;
+        }
+        /**
+         * Enable table structure recognition.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doTableStructure the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doTableStructure(Boolean doTableStructure) {
+            doSetProperty("doTableStructure", doTableStructure);
+            return this;
+        }
+        /**
+         * Enable table structure recognition.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param doTableStructure the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder doTableStructure(String doTableStructure) {
+            doSetProperty("doTableStructure", doTableStructure);
+            return this;
+        }
+        /**
+         * Force OCR processing even for digital documents.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param forceOcr the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder forceOcr(Boolean forceOcr) {
+            doSetProperty("forceOcr", forceOcr);
+            return this;
+        }
+        /**
+         * Force OCR processing even for digital documents.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param forceOcr the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder forceOcr(String forceOcr) {
+            doSetProperty("forceOcr", forceOcr);
+            return this;
+        }
+        /**
+         * Image export mode for referenced images.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param imageExportMode the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder imageExportMode(String imageExportMode) {
+            doSetProperty("imageExportMode", imageExportMode);
+            return this;
+        }
+        /**
+         * Scale factor for exported images.
+         * 
+         * The option is a: <code>java.lang.Double</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param imagesScale the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder imagesScale(Double imagesScale) {
+            doSetProperty("imagesScale", imagesScale);
+            return this;
+        }
+        /**
+         * Scale factor for exported images.
+         * 
+         * The option will be converted to a <code>java.lang.Double</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param imagesScale the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder imagesScale(String imagesScale) {
+            doSetProperty("imagesScale", imagesScale);
+            return this;
+        }
+        /**
+         * Include images in the conversion output.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param includeImages the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder includeImages(Boolean includeImages) {
+            doSetProperty("includeImages", includeImages);
+            return this;
+        }
+        /**
+         * Include images in the conversion output.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param includeImages the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder includeImages(String includeImages) {
+            doSetProperty("includeImages", includeImages);
+            return this;
+        }
+        /**
+         * Placeholder string for page breaks in markdown output.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param mdPageBreakPlaceholder the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder mdPageBreakPlaceholder(String mdPageBreakPlaceholder) {
+            doSetProperty("mdPageBreakPlaceholder", mdPageBreakPlaceholder);
+            return this;
+        }
+        /**
+         * OCR engine to use.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param ocrEngine the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder ocrEngine(String ocrEngine) {
+            doSetProperty("ocrEngine", ocrEngine);
+            return this;
+        }
+        /**
+         * PDF parsing backend.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param pdfBackend the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder pdfBackend(String pdfBackend) {
+            doSetProperty("pdfBackend", pdfBackend);
+            return this;
+        }
+        /**
+         * Processing pipeline to use.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param pipeline the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder pipeline(String pipeline) {
+            doSetProperty("pipeline", pipeline);
+            return this;
+        }
+        /**
          * Timeout for Docling process execution in milliseconds.
          * 
          * The option is a: <code>long</code> type.
@@ -746,6 +1317,51 @@ public interface DoclingEndpointBuilderFactory {
          */
         default AdvancedDoclingEndpointBuilder processTimeout(String processTimeout) {
             doSetProperty("processTimeout", processTimeout);
+            return this;
+        }
+        /**
+         * Enable table cell matching post-processing.
+         * 
+         * The option is a: <code>java.lang.Boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param tableCellMatching the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder tableCellMatching(Boolean tableCellMatching) {
+            doSetProperty("tableCellMatching", tableCellMatching);
+            return this;
+        }
+        /**
+         * Enable table cell matching post-processing.
+         * 
+         * The option will be converted to a <code>java.lang.Boolean</code>
+         * type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param tableCellMatching the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder tableCellMatching(String tableCellMatching) {
+            doSetProperty("tableCellMatching", tableCellMatching);
+            return this;
+        }
+        /**
+         * Table structure recognition mode.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: advanced
+         * 
+         * @param tableMode the value to set
+         * @return the dsl builder
+         */
+        default AdvancedDoclingEndpointBuilder tableMode(String tableMode) {
+            doSetProperty("tableMode", tableMode);
             return this;
         }
         /**
@@ -858,7 +1474,7 @@ public interface DoclingEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final DoclingHeaderNameBuilder INSTANCE = new DoclingHeaderNameBuilder();
+        public static final DoclingHeaderNameBuilder INSTANCE = new DoclingHeaderNameBuilder();
 
         /**
          * The operation to perform.
@@ -1114,103 +1730,6 @@ public interface DoclingEndpointBuilderFactory {
             return "CamelDoclingBatchSplitResults";
         }
         /**
-         * Document title extracted from metadata.
-         * 
-         * The option is a: {@code String} type.
-         * 
-         * Group: producer
-         * 
-         * @return the name of the header {@code DoclingMetadataTitle}.
-         */
-        public String doclingMetadataTitle() {
-            return "CamelDoclingMetadataTitle";
-        }
-        /**
-         * Document author extracted from metadata.
-         * 
-         * The option is a: {@code String} type.
-         * 
-         * Group: producer
-         * 
-         * @return the name of the header {@code DoclingMetadataAuthor}.
-         */
-        public String doclingMetadataAuthor() {
-            return "CamelDoclingMetadataAuthor";
-        }
-        /**
-         * Document creator application.
-         * 
-         * The option is a: {@code String} type.
-         * 
-         * Group: producer
-         * 
-         * @return the name of the header {@code DoclingMetadataCreator}.
-         */
-        public String doclingMetadataCreator() {
-            return "CamelDoclingMetadataCreator";
-        }
-        /**
-         * Document producer application.
-         * 
-         * The option is a: {@code String} type.
-         * 
-         * Group: producer
-         * 
-         * @return the name of the header {@code DoclingMetadataProducer}.
-         */
-        public String doclingMetadataProducer() {
-            return "CamelDoclingMetadataProducer";
-        }
-        /**
-         * Document subject.
-         * 
-         * The option is a: {@code String} type.
-         * 
-         * Group: producer
-         * 
-         * @return the name of the header {@code DoclingMetadataSubject}.
-         */
-        public String doclingMetadataSubject() {
-            return "CamelDoclingMetadataSubject";
-        }
-        /**
-         * Document keywords.
-         * 
-         * The option is a: {@code String} type.
-         * 
-         * Group: producer
-         * 
-         * @return the name of the header {@code DoclingMetadataKeywords}.
-         */
-        public String doclingMetadataKeywords() {
-            return "CamelDoclingMetadataKeywords";
-        }
-        /**
-         * Document creation date.
-         * 
-         * The option is a: {@code java.time.Instant} type.
-         * 
-         * Group: producer
-         * 
-         * @return the name of the header {@code DoclingMetadataCreationDate}.
-         */
-        public String doclingMetadataCreationDate() {
-            return "CamelDoclingMetadataCreationDate";
-        }
-        /**
-         * Document modification date.
-         * 
-         * The option is a: {@code java.time.Instant} type.
-         * 
-         * Group: producer
-         * 
-         * @return the name of the header {@code
-         * DoclingMetadataModificationDate}.
-         */
-        public String doclingMetadataModificationDate() {
-            return "CamelDoclingMetadataModificationDate";
-        }
-        /**
          * Number of pages in the document.
          * 
          * The option is a: {@code Integer} type.
@@ -1221,6 +1740,18 @@ public interface DoclingEndpointBuilderFactory {
          */
         public String doclingMetadataPageCount() {
             return "CamelDoclingMetadataPageCount";
+        }
+        /**
+         * Document title.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code DoclingMetadataTitle}.
+         */
+        public String doclingMetadataTitle() {
+            return "CamelDoclingMetadataTitle";
         }
         /**
          * Document language code.
@@ -1283,18 +1814,6 @@ public interface DoclingEndpointBuilderFactory {
             return "CamelDoclingMetadataFileName";
         }
         /**
-         * Custom metadata fields as a Map.
-         * 
-         * The option is a: {@code Map<String, Object>} type.
-         * 
-         * Group: producer
-         * 
-         * @return the name of the header {@code DoclingMetadataCustom}.
-         */
-        public String doclingMetadataCustom() {
-            return "CamelDoclingMetadataCustom";
-        }
-        /**
          * Raw metadata fields as a Map.
          * 
          * The option is a: {@code Map<String, Object>} type.
@@ -1305,6 +1824,43 @@ public interface DoclingEndpointBuilderFactory {
          */
         public String doclingMetadataRaw() {
             return "CamelDoclingMetadataRaw";
+        }
+        /**
+         * Tokenizer for hybrid chunking (e.g.
+         * sentence-transformers/all-MiniLM-L6-v2).
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code DoclingChunkingTokenizer}.
+         */
+        public String doclingChunkingTokenizer() {
+            return "CamelDoclingChunkingTokenizer";
+        }
+        /**
+         * Maximum tokens per chunk for hybrid chunking.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code DoclingChunkingMaxTokens}.
+         */
+        public String doclingChunkingMaxTokens() {
+            return "CamelDoclingChunkingMaxTokens";
+        }
+        /**
+         * Whether to merge peer chunks in hybrid chunking.
+         * 
+         * The option is a: {@code Boolean} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code DoclingChunkingMergePeers}.
+         */
+        public String doclingChunkingMergePeers() {
+            return "CamelDoclingChunkingMergePeers";
         }
     }
     static DoclingEndpointBuilder endpointBuilder(String componentName, String path) {

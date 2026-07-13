@@ -35,7 +35,7 @@ import org.testcontainers.ollama.OllamaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @InfraService(service = OllamaInfraService.class,
-              description = "Build and run LLMs with Ollama",
+              description = "Ollama is a tool for running large language models locally",
               serviceAlias = { "ollama" })
 public class OllamaLocalContainerInfraService implements OllamaInfraService, ContainerService<OllamaContainer> {
     private static class DefaultServiceConfiguration implements OllamaServiceConfiguration {
@@ -43,6 +43,11 @@ public class OllamaLocalContainerInfraService implements OllamaInfraService, Con
         @Override
         public String modelName() {
             return LocalPropertyResolver.getProperty(OllamaLocalContainerInfraService.class, OllamaProperties.MODEL);
+        }
+
+        @Override
+        public String embeddingModelName() {
+            return LocalPropertyResolver.getProperty(OllamaLocalContainerInfraService.class, OllamaProperties.EMBEDDING_MODEL);
         }
 
         @Override
@@ -104,9 +109,7 @@ public class OllamaLocalContainerInfraService implements OllamaInfraService, Con
                     LOG.info("GPU support disabled");
                 }
 
-                if (fixedPort) {
-                    addFixedExposedPort(11434, 11434);
-                }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, 11434);
                 String name = ContainerEnvironmentUtil.containerName(OllamaLocalContainerInfraService.this.getClass());
                 if (name != null) {
                     withCreateContainerCmdModifier(cmd -> cmd.withName(name));
@@ -130,6 +133,11 @@ public class OllamaLocalContainerInfraService implements OllamaInfraService, Con
     @Override
     public String modelName() {
         return configuration.modelName();
+    }
+
+    @Override
+    public String embeddingModelName() {
+        return configuration.embeddingModelName();
     }
 
     @Override
@@ -162,6 +170,16 @@ public class OllamaLocalContainerInfraService implements OllamaInfraService, Con
             container.execInContainer("ollama", "pull", getModel());
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
+        }
+
+        String embeddingModel = embeddingModelName();
+        if (embeddingModel != null && !embeddingModel.isEmpty()) {
+            LOG.info("Pulling the embedding model {}", embeddingModel);
+            try {
+                container.execInContainer("ollama", "pull", embeddingModel);
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         registerProperties();

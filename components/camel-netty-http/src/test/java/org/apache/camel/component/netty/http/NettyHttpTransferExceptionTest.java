@@ -21,9 +21,9 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class NettyHttpTransferExceptionTest extends BaseNettyTestSupport {
 
@@ -31,14 +31,12 @@ public class NettyHttpTransferExceptionTest extends BaseNettyTestSupport {
     public void testHttpTransferException() throws Exception {
         getMockEndpoint("mock:input").expectedBodiesReceived("Hello World");
 
-        try {
-            template.requestBody("netty-http:http://localhost:{{port}}/foo?transferException=true", "Hello World",
-                    String.class);
-            fail("Should have failed");
-        } catch (CamelExecutionException e) {
-            IllegalArgumentException cause = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
-            assertEquals("Camel cannot do this", cause.getMessage());
-        }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.requestBody("netty-http:http://localhost:{{port}}/foo?transferException=true", "Hello World",
+                        String.class),
+                "Should have failed");
+        IllegalArgumentException cause = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
+        assertEquals("Camel cannot do this", cause.getMessage());
 
         MockEndpoint.assertIsSatisfied(context);
     }
@@ -48,7 +46,7 @@ public class NettyHttpTransferExceptionTest extends BaseNettyTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from("netty-http:http://0.0.0.0:{{port}}/foo?transferException=true")
+                from("netty-http:http://0.0.0.0:{{port}}/foo?muteException=false&transferException=true")
                         .to("mock:input")
                         .throwException(new IllegalArgumentException("Camel cannot do this"));
             }

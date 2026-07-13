@@ -27,7 +27,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 @InfraService(service = NatsInfraService.class,
-              description = "Messaging Platform NATS",
+              description = "NATS is a high-performance messaging system for cloud native applications",
               serviceAlias = { "nats" })
 public class NatsLocalContainerInfraService implements NatsInfraService, ContainerService<GenericContainer<?>> {
     public static final String CONTAINER_NAME = "nats";
@@ -54,13 +54,11 @@ public class NatsLocalContainerInfraService implements NatsInfraService, Contain
                 super(imageName);
 
                 withNetworkAliases(containerName)
-                        .waitingFor(Wait.forLogMessage(".*Listening.*for.*route.*connections.*", 1));
+                        .waitingFor(Wait.forLogMessage(".*Server.*is.*ready.*", 1))
+                        .waitingFor(Wait.forListeningPort())
+                        .withCommand("--jetstream");
 
-                if (fixedPort) {
-                    addFixedExposedPort(PORT, PORT);
-                } else {
-                    withExposedPorts(PORT);
-                }
+                ContainerEnvironmentUtil.configurePort(this, fixedPort, PORT);
             }
         }
 

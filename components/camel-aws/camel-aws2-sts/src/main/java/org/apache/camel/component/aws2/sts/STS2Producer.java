@@ -67,7 +67,7 @@ public class STS2Producer extends DefaultProducer {
 
     private STS2Operations determineOperation(Exchange exchange) {
         STS2Operations operation = exchange.getIn().getHeader(STS2Constants.OPERATION, STS2Operations.class);
-        if (operation == null) {
+        if (ObjectHelper.isEmpty(operation)) {
             operation = getConfiguration().getOperation();
         }
         return operation;
@@ -79,7 +79,7 @@ public class STS2Producer extends DefaultProducer {
 
     @Override
     public String toString() {
-        if (stsProducerToString == null) {
+        if (ObjectHelper.isEmpty(stsProducerToString)) {
             stsProducerToString = "STSProducer[" + URISupport.sanitizeUri(getEndpoint().getEndpointUri()) + "]";
         }
         return stsProducerToString;
@@ -93,10 +93,9 @@ public class STS2Producer extends DefaultProducer {
     private void assumeRole(StsClient stsClient, Exchange exchange) throws InvalidPayloadException {
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof AssumeRoleRequest) {
+            if (payload instanceof AssumeRoleRequest request) {
                 AssumeRoleResponse result;
                 try {
-                    AssumeRoleRequest request = (AssumeRoleRequest) payload;
                     result = stsClient.assumeRole(request);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Assume Role command returned the error code {}", ase.awsErrorDetails().errorCode());
@@ -133,16 +132,24 @@ public class STS2Producer extends DefaultProducer {
             }
             Message message = getMessageForResponse(exchange);
             message.setBody(result);
+            if (ObjectHelper.isNotEmpty(result.credentials())) {
+                message.setHeader(STS2Constants.ACCESS_KEY_ID, result.credentials().accessKeyId());
+                message.setHeader(STS2Constants.SECRET_KEY_ID, result.credentials().secretAccessKey());
+                message.setHeader(STS2Constants.SESSION_TOKEN, result.credentials().sessionToken());
+                message.setHeader(STS2Constants.EXPIRATION, result.credentials().expiration());
+            }
+            if (ObjectHelper.isNotEmpty(result.assumedRoleUser())) {
+                message.setHeader(STS2Constants.ASSUMED_ROLE_ARN, result.assumedRoleUser().arn());
+            }
         }
     }
 
     private void getSessionToken(StsClient stsClient, Exchange exchange) throws InvalidPayloadException {
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof GetSessionTokenRequest) {
+            if (payload instanceof GetSessionTokenRequest request) {
                 GetSessionTokenResponse result;
                 try {
-                    GetSessionTokenRequest request = (GetSessionTokenRequest) payload;
                     result = stsClient.getSessionToken(request);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Get Session Token command returned the error code {}", ase.awsErrorDetails().errorCode());
@@ -162,16 +169,21 @@ public class STS2Producer extends DefaultProducer {
             }
             Message message = getMessageForResponse(exchange);
             message.setBody(result);
+            if (ObjectHelper.isNotEmpty(result.credentials())) {
+                message.setHeader(STS2Constants.ACCESS_KEY_ID, result.credentials().accessKeyId());
+                message.setHeader(STS2Constants.SECRET_KEY_ID, result.credentials().secretAccessKey());
+                message.setHeader(STS2Constants.SESSION_TOKEN, result.credentials().sessionToken());
+                message.setHeader(STS2Constants.EXPIRATION, result.credentials().expiration());
+            }
         }
     }
 
     private void getFederationToken(StsClient stsClient, Exchange exchange) throws InvalidPayloadException {
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof GetFederationTokenRequest) {
+            if (payload instanceof GetFederationTokenRequest request) {
                 GetFederationTokenResponse result;
                 try {
-                    GetFederationTokenRequest request = (GetFederationTokenRequest) payload;
                     result = stsClient.getFederationToken(request);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Get Federation Token command returned the error code {}", ase.awsErrorDetails().errorCode());
@@ -197,6 +209,12 @@ public class STS2Producer extends DefaultProducer {
             }
             Message message = getMessageForResponse(exchange);
             message.setBody(result);
+            if (ObjectHelper.isNotEmpty(result.credentials())) {
+                message.setHeader(STS2Constants.ACCESS_KEY_ID, result.credentials().accessKeyId());
+                message.setHeader(STS2Constants.SECRET_KEY_ID, result.credentials().secretAccessKey());
+                message.setHeader(STS2Constants.SESSION_TOKEN, result.credentials().sessionToken());
+                message.setHeader(STS2Constants.EXPIRATION, result.credentials().expiration());
+            }
         }
     }
 

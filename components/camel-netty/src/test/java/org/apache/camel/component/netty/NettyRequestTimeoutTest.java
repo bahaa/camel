@@ -24,11 +24,10 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class NettyRequestTimeoutTest extends BaseNettyTest {
 
@@ -41,14 +40,13 @@ public class NettyRequestTimeoutTest extends BaseNettyTest {
 
     @Test
     public void testRequestTimeout() {
-        try {
-            template.requestBody("netty:tcp://localhost:{{port}}?textline=true&sync=true&requestTimeout=100", "Hello Camel",
-                    String.class);
-            fail("Should have thrown exception");
-        } catch (CamelExecutionException e) {
-            ReadTimeoutException cause = assertIsInstanceOf(ReadTimeoutException.class, e.getCause());
-            assertNotNull(cause);
-        }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.requestBody("netty:tcp://localhost:{{port}}?textline=true&sync=true&requestTimeout=100",
+                        "Hello Camel",
+                        String.class),
+                "Should have thrown exception");
+        ReadTimeoutException cause = assertIsInstanceOf(ReadTimeoutException.class, e.getCause());
+        assertNotNull(cause);
     }
 
     @Test
@@ -67,26 +65,23 @@ public class NettyRequestTimeoutTest extends BaseNettyTest {
 
     @Test
     public void testRequestTimeoutViaHeader() {
-        try {
-            template.requestBodyAndHeader("netty:tcp://localhost:{{port}}?textline=true&sync=true", "Hello Camel",
-                    NettyConstants.NETTY_REQUEST_TIMEOUT, 100, String.class);
-            fail("Should have thrown exception");
-        } catch (CamelExecutionException e) {
-            ReadTimeoutException cause = assertIsInstanceOf(ReadTimeoutException.class, e.getCause());
-            assertNotNull(cause);
-        }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.requestBodyAndHeader("netty:tcp://localhost:{{port}}?textline=true&sync=true", "Hello Camel",
+                        NettyConstants.NETTY_REQUEST_TIMEOUT, 100, String.class),
+                "Should have thrown exception");
+        ReadTimeoutException cause = assertIsInstanceOf(ReadTimeoutException.class, e.getCause());
+        assertNotNull(cause);
     }
 
     @Test
     public void testRequestTimeoutAndOk() {
-        try {
-            template.requestBody("netty:tcp://localhost:{{port}}?textline=true&sync=true&requestTimeout=100", "Hello Camel",
-                    String.class);
-            fail("Should have thrown exception");
-        } catch (CamelExecutionException e) {
-            ReadTimeoutException cause = assertIsInstanceOf(ReadTimeoutException.class, e.getCause());
-            assertNotNull(cause);
-        }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.requestBody("netty:tcp://localhost:{{port}}?textline=true&sync=true&requestTimeout=100",
+                        "Hello Camel",
+                        String.class),
+                "Should have thrown exception");
+        ReadTimeoutException cause = assertIsInstanceOf(ReadTimeoutException.class, e.getCause());
+        assertNotNull(cause);
 
         // now we try again but this time the is no delay on server and thus faster
         String out = template.requestBody("netty:tcp://localhost:{{port}}?textline=true&sync=true&requestTimeout=100",

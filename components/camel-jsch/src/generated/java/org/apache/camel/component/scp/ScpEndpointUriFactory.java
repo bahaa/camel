@@ -21,12 +21,18 @@ public class ScpEndpointUriFactory extends org.apache.camel.support.component.En
 
     private static final Set<String> PROPERTY_NAMES;
     private static final Set<String> SECRET_PROPERTY_NAMES;
+    private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(27);
+        Set<String> props = new HashSet<>(32);
         props.add("allowNullBody");
         props.add("browseLimit");
+        props.add("caSignatureAlgorithms");
+        props.add("certBytes");
+        props.add("certFile");
+        props.add("certUri");
         props.add("checksumFileAlgorithm");
+        props.add("checksumWriteFile");
         props.add("chmod");
         props.add("ciphers");
         props.add("connectTimeout");
@@ -52,7 +58,10 @@ public class ScpEndpointUriFactory extends org.apache.camel.support.component.En
         props.add("useUserKnownHostsFile");
         props.add("username");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);
-        Set<String> secretProps = new HashSet<>(7);
+        Set<String> secretProps = new HashSet<>(10);
+        secretProps.add("certBytes");
+        secretProps.add("certFile");
+        secretProps.add("certUri");
         secretProps.add("knownHostsFile");
         secretProps.add("password");
         secretProps.add("preferredAuthentications");
@@ -61,6 +70,7 @@ public class ScpEndpointUriFactory extends org.apache.camel.support.component.En
         secretProps.add("privateKeyFilePassphrase");
         secretProps.add("username");
         SECRET_PROPERTY_NAMES = Collections.unmodifiableSet(secretProps);
+        ENDPOINT_IDENTITY_PROPERTY_NAMES = Collections.emptySet();
         MULTI_VALUE_PREFIXES = Collections.emptyMap();
     }
 
@@ -91,6 +101,11 @@ public class ScpEndpointUriFactory extends org.apache.camel.support.component.En
     @Override
     public Set<String> secretPropertyNames() {
         return SECRET_PROPERTY_NAMES;
+    }
+
+    @Override
+    public Set<String> endpointIdentityPropertyNames() {
+        return ENDPOINT_IDENTITY_PROPERTY_NAMES;
     }
 
     @Override

@@ -25,8 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.AvailablePortFinder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Isolated
 public class LumberjackMultiThreadIT extends CamelTestSupport {
 
-    private static final int PORT = AvailablePortFinder.getNextAvailable();
     private static final int CONCURRENCY_LEVEL = Math.min(Runtime.getRuntime().availableProcessors(), 4);
     private CountDownLatch latch = new CountDownLatch(CONCURRENCY_LEVEL);
     private volatile boolean interrupted;
@@ -56,10 +54,13 @@ public class LumberjackMultiThreadIT extends CamelTestSupport {
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
             public void configure() {
-                // Lumberjack configured with a specific port
-                from("lumberjack:0.0.0.0:" + PORT).to("mock:output");
+                from("lumberjack:0.0.0.0:0").routeId("lumberjack").to("mock:output");
             }
         };
+    }
+
+    private int getActualPort() {
+        return ((LumberjackConsumer) context.getRoute("lumberjack").getConsumer()).getLocalPort();
     }
 
     @BeforeEach
@@ -104,7 +105,7 @@ public class LumberjackMultiThreadIT extends CamelTestSupport {
         @Override
         public void run() {
             try {
-                this.responses = LumberjackUtil.sendMessages(PORT, null, Arrays.asList(15, 10));
+                this.responses = LumberjackUtil.sendMessages(getActualPort(), null, Arrays.asList(15, 10));
                 latch.countDown();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

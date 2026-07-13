@@ -19,7 +19,7 @@ package org.apache.camel.component.cxf.jaxws;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URL;
+import java.net.URI;
 import java.net.URLConnection;
 
 import org.w3c.dom.Document;
@@ -35,7 +35,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.cxf.common.CXFTestSupport;
 import org.apache.camel.component.cxf.common.message.CxfConstants;
 import org.apache.camel.impl.DefaultCamelContext;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.util.IOHelper;
 import org.apache.cxf.Bus;
 import org.apache.cxf.BusFactory;
@@ -46,8 +46,8 @@ import org.apache.cxf.interceptor.Fault;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class CxfCustomizedExceptionTest extends CamelTestSupport {
 
@@ -139,24 +139,19 @@ public class CxfCustomizedExceptionTest extends CamelTestSupport {
 
         HelloService client = (HelloService) proxyFactory.create();
 
-        try {
-            client.echo("hello world");
-            fail("Expect to get an exception here");
-        } catch (Exception e) {
-            assertEquals(EXCEPTION_MESSAGE, e.getMessage(), "Expect to get right exception message");
-            assertTrue(e instanceof SoapFault, "Exception is not instance of SoapFault");
-            assertEquals(DETAIL_TEXT, ((SoapFault) e).getDetail().getTextContent(), "Expect to get right detail message");
-            //In CXF 2.1.2 , the fault code is per spec , the below fault-code is for SOAP 1.1
-            assertEquals("{http://schemas.xmlsoap.org/soap/envelope/}Client", ((SoapFault) e).getFaultCode().toString(),
-                    "Expect to get right fault-code");
-        }
+        Exception e = assertThrows(Exception.class, () -> client.echo("hello world"));
+        assertEquals(EXCEPTION_MESSAGE, e.getMessage(), "Expect to get right exception message");
+        assertTrue(e instanceof SoapFault, "Exception is not instance of SoapFault");
+        assertEquals(DETAIL_TEXT, ((SoapFault) e).getDetail().getTextContent(), "Expect to get right detail message");
+        //In CXF 2.1.2 , the fault code is per spec , the below fault-code is for SOAP 1.1
+        assertEquals("{http://schemas.xmlsoap.org/soap/envelope/}Client", ((SoapFault) e).getFaultCode().toString(),
+                "Expect to get right fault-code");
 
     }
 
     @Test
     public void testInvokingServiceFromHTTPURL() throws Exception {
-        URL url = new URL(routerAddress);
-        URLConnection urlConnection = url.openConnection();
+        URLConnection urlConnection = URI.create(routerAddress).toURL().openConnection();
         urlConnection.setDoInput(true);
         urlConnection.setDoOutput(true);
         urlConnection.setUseCaches(false);
@@ -170,12 +165,8 @@ public class CxfCustomizedExceptionTest extends CamelTestSupport {
         out.flush();
         is.close();
         // check the response code
-        try {
-            urlConnection.getInputStream();
-            fail("We except an IOException here");
-        } catch (IOException exception) {
-            assertTrue(exception.getMessage().contains("500"));
-        }
+        IOException exception = assertThrows(IOException.class, urlConnection::getInputStream);
+        assertTrue(exception.getMessage().contains("500"));
 
     }
 

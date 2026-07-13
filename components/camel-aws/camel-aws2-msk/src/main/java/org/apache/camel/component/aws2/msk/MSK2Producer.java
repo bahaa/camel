@@ -103,22 +103,32 @@ public class MSK2Producer extends DefaultProducer {
     private void listClusters(KafkaClient mskClient, Exchange exchange) throws InvalidPayloadException {
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof ListClustersRequest) {
+            if (payload instanceof ListClustersRequest listClustersRequest) {
                 ListClustersResponse result;
                 try {
-                    result = mskClient.listClusters((ListClustersRequest) payload);
+                    result = mskClient.listClusters(listClustersRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("List Clusters command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
                 }
                 Message message = getMessageForResponse(exchange);
                 message.setBody(result);
+                message.setHeader(MSK2Constants.NEXT_TOKEN, result.nextToken());
+                message.setHeader(MSK2Constants.IS_TRUNCATED, ObjectHelper.isNotEmpty(result.nextToken()));
             }
         } else {
             ListClustersRequest.Builder builder = ListClustersRequest.builder();
-            if (ObjectHelper.isNotEmpty(exchange.getIn().getHeader(MSK2Constants.CLUSTERS_FILTER))) {
-                String filter = exchange.getIn().getHeader(MSK2Constants.CLUSTERS_FILTER, String.class);
+            String filter = getOptionalHeader(exchange, MSK2Constants.CLUSTERS_FILTER, String.class);
+            if (ObjectHelper.isNotEmpty(filter)) {
                 builder.clusterNameFilter(filter);
+            }
+            String nextToken = getOptionalHeader(exchange, MSK2Constants.NEXT_TOKEN, String.class);
+            if (ObjectHelper.isNotEmpty(nextToken)) {
+                builder.nextToken(nextToken);
+            }
+            Integer maxResults = getOptionalHeader(exchange, MSK2Constants.MAX_RESULTS, Integer.class);
+            if (ObjectHelper.isNotEmpty(maxResults)) {
+                builder.maxResults(maxResults);
             }
             ListClustersResponse result;
             try {
@@ -129,16 +139,18 @@ public class MSK2Producer extends DefaultProducer {
             }
             Message message = getMessageForResponse(exchange);
             message.setBody(result);
+            message.setHeader(MSK2Constants.NEXT_TOKEN, result.nextToken());
+            message.setHeader(MSK2Constants.IS_TRUNCATED, ObjectHelper.isNotEmpty(result.nextToken()));
         }
     }
 
     private void createCluster(KafkaClient mskClient, Exchange exchange) throws InvalidPayloadException {
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof CreateClusterRequest) {
+            if (payload instanceof CreateClusterRequest createClusterRequest) {
                 CreateClusterResponse response;
                 try {
-                    response = mskClient.createCluster((CreateClusterRequest) payload);
+                    response = mskClient.createCluster(createClusterRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Create Cluster command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -182,16 +194,18 @@ public class MSK2Producer extends DefaultProducer {
             }
             Message message = getMessageForResponse(exchange);
             message.setBody(response);
+            message.setHeader(MSK2Constants.CLUSTER_ARN, response.clusterArn());
+            message.setHeader(MSK2Constants.CLUSTER_STATE, response.stateAsString());
         }
     }
 
     private void deleteCluster(KafkaClient mskClient, Exchange exchange) throws InvalidPayloadException {
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof DeleteClusterRequest) {
+            if (payload instanceof DeleteClusterRequest deleteClusterRequest) {
                 DeleteClusterResponse result;
                 try {
-                    result = mskClient.deleteCluster((DeleteClusterRequest) payload);
+                    result = mskClient.deleteCluster(deleteClusterRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Delete Cluster command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -222,10 +236,10 @@ public class MSK2Producer extends DefaultProducer {
     private void describeCluster(KafkaClient mskClient, Exchange exchange) throws InvalidPayloadException {
         if (getConfiguration().isPojoRequest()) {
             Object payload = exchange.getIn().getMandatoryBody();
-            if (payload instanceof DescribeClusterRequest) {
+            if (payload instanceof DescribeClusterRequest describeClusterRequest) {
                 DescribeClusterResponse result;
                 try {
-                    result = mskClient.describeCluster((DescribeClusterRequest) payload);
+                    result = mskClient.describeCluster(describeClusterRequest);
                 } catch (AwsServiceException ase) {
                     LOG.trace("Delete Cluster command returned the error code {}", ase.awsErrorDetails().errorCode());
                     throw ase;
@@ -245,16 +259,27 @@ public class MSK2Producer extends DefaultProducer {
             try {
                 result = mskClient.describeCluster(builder.build());
             } catch (AwsServiceException ase) {
-                LOG.trace("Delete Cluster command returned the error code {}", ase.awsErrorDetails().errorCode());
+                LOG.trace("Describe Cluster command returned the error code {}", ase.awsErrorDetails().errorCode());
                 throw ase;
             }
             Message message = getMessageForResponse(exchange);
             message.setBody(result);
+            if (ObjectHelper.isNotEmpty(result.clusterInfo())) {
+                message.setHeader(MSK2Constants.CLUSTER_ARN, result.clusterInfo().clusterArn());
+                message.setHeader(MSK2Constants.CLUSTER_STATE, result.clusterInfo().stateAsString());
+            }
         }
     }
 
     public static Message getMessageForResponse(final Exchange exchange) {
         return exchange.getMessage();
+    }
+
+    /**
+     * Gets an optional header value.
+     */
+    private <T> T getOptionalHeader(Exchange exchange, String headerName, Class<T> headerType) {
+        return exchange.getIn().getHeader(headerName, headerType);
     }
 
     @Override
@@ -265,7 +290,7 @@ public class MSK2Producer extends DefaultProducer {
                 "producers",
                 WritableHealthCheckRepository.class);
 
-        if (healthCheckRepository != null) {
+        if (ObjectHelper.isNotEmpty(healthCheckRepository)) {
             String id = getEndpoint().getId();
             producerHealthCheck = new MSK2ProducerHealthCheck(getEndpoint(), id);
             producerHealthCheck.setEnabled(getEndpoint().getComponent().isHealthCheckProducerEnabled());
@@ -275,7 +300,7 @@ public class MSK2Producer extends DefaultProducer {
 
     @Override
     protected void doStop() throws Exception {
-        if (healthCheckRepository != null && producerHealthCheck != null) {
+        if (ObjectHelper.isNotEmpty(healthCheckRepository) && ObjectHelper.isNotEmpty(producerHealthCheck)) {
             healthCheckRepository.removeHealthCheck(producerHealthCheck);
             producerHealthCheck = null;
         }

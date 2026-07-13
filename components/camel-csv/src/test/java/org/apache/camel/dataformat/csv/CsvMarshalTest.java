@@ -23,7 +23,7 @@ import java.util.Map;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -110,6 +110,8 @@ public class CsvMarshalTest extends CamelTestSupport {
     @Override
     protected RouteBuilder createRouteBuilder() {
         return new RouteBuilder() {
+            @SuppressWarnings("resource")
+            // Resource lifecycle will be managed by the framework
             @Override
             public void configure() {
                 // Default format

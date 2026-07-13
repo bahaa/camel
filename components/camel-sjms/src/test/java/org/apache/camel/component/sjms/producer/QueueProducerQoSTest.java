@@ -16,6 +16,8 @@
  */
 package org.apache.camel.component.sjms.producer;
 
+import java.util.concurrent.TimeUnit;
+
 import jakarta.jms.Connection;
 import jakarta.jms.Session;
 
@@ -30,13 +32,16 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.component.sjms.SjmsComponent;
 import org.apache.camel.test.infra.artemis.services.ArtemisEmbeddedServiceBuilder;
 import org.apache.camel.test.infra.artemis.services.ArtemisService;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.parallel.Isolated;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@Isolated
 public class QueueProducerQoSTest extends CamelTestSupport {
 
     private static final String TEST_INONLY_DESTINATION_NAME = "queue.producer.test.qos.inonly.QueueProducerQoSTest";
@@ -82,19 +87,19 @@ public class QueueProducerQoSTest extends CamelTestSupport {
         String endpoint = String.format("sjms:queue:%s?timeToLive=1000&exchangePattern=InOut&requestTimeout=500",
                 TEST_INOUT_DESTINATION_NAME);
 
-        try {
+        // we are expecting an exception here because there are no consumers on this queue,
+        // so we will not be able to do a real InOut/request-response, but that's okay
+        // we're just interested in the message becoming expired
+        assertThrows(Exception.class, () -> {
             template.requestBody(endpoint, "test message");
-            fail("we aren't expecting any consumers, so should not succeed");
-        } catch (Exception e) {
-            // we are expecting an exception here because there are no consumers on this queue,
-            // so we will not be able to do a real InOut/request-response, but that's okay
-            // we're just interested in the message becoming expired
-        }
+        });
 
-        MockEndpoint.assertIsSatisfied(context);
+        mockExpiredAdvisory.assertIsSatisfied(10_000);
 
-        assertEquals(0, service.countMessages(TEST_INOUT_DESTINATION_NAME),
-                "There were unexpected messages left in the queue: " + TEST_INOUT_DESTINATION_NAME);
+        // The broker may need a moment to finish removing the expired message from the original queue
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(
+                () -> assertEquals(0, service.countMessages(TEST_INOUT_DESTINATION_NAME),
+                        "There were unexpected messages left in the queue: " + TEST_INOUT_DESTINATION_NAME));
     }
 
     @Test
@@ -104,10 +109,12 @@ public class QueueProducerQoSTest extends CamelTestSupport {
         String endpoint = String.format("sjms:queue:%s?timeToLive=1000", TEST_INONLY_DESTINATION_NAME);
         template.sendBody(endpoint, "test message");
 
-        MockEndpoint.assertIsSatisfied(context);
+        mockExpiredAdvisory.assertIsSatisfied(10_000);
 
-        assertEquals(0, service.countMessages(TEST_INONLY_DESTINATION_NAME),
-                "There were unexpected messages left in the queue: " + TEST_INONLY_DESTINATION_NAME);
+        // The broker may need a moment to finish removing the expired message from the original queue
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(
+                () -> assertEquals(0, service.countMessages(TEST_INONLY_DESTINATION_NAME),
+                        "There were unexpected messages left in the queue: " + TEST_INONLY_DESTINATION_NAME));
     }
 
     private static Configuration configureArtemis(Configuration configuration) {
@@ -124,7 +131,7 @@ public class QueueProducerQoSTest extends CamelTestSupport {
         return new RouteBuilder() {
             @Override
             public void configure() {
-                from("sjms:topic:ExpiryQueue")
+                from("sjms:queue:ExpiryQueue")
                         .routeId(EXPIRED_MESSAGE_ROUTE_ID)
                         .log("Expired message")
                         .to(MOCK_EXPIRED_ADVISORY);

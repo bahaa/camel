@@ -16,7 +16,7 @@
  */
 package org.apache.camel.component.cxf.jaxws;
 
-import java.net.ConnectException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +27,7 @@ import org.w3c.dom.Document;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
+import org.apache.camel.Message;
 import org.apache.camel.Processor;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.component.cxf.common.CXFTestSupport;
@@ -48,6 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -71,9 +73,13 @@ public class CxfProducerTest {
         return "http://localhost:" + CXFTestSupport.getPort2() + "/" + getClass().getSimpleName() + "/test";
     }
 
+    // Keep port reference to prevent reuse — this address must have nothing listening on it
+    private AvailablePortFinder.Port wrongPort;
+
     protected String getWrongServerAddress() {
         // Avoiding the test error on camel-cxf module
-        return "http://localhost:" + AvailablePortFinder.getNextAvailable() + "/" + getClass().getSimpleName() + "/test";
+        wrongPort = AvailablePortFinder.find();
+        return "http://localhost:" + wrongPort.getPort() + "/" + getClass().getSimpleName() + "/test";
     }
 
     @BeforeEach
@@ -114,7 +120,7 @@ public class CxfProducerTest {
     public void testInvokingSimpleServerWithParams() throws Exception {
         Exchange exchange = sendSimpleMessage();
 
-        org.apache.camel.Message out = exchange.getMessage();
+        Message out = exchange.getMessage();
         String result = out.getBody(String.class);
         LOG.info("Received output text: {}", result);
         Map<String, Object> responseContext = CastUtils.cast((Map<?, ?>) out.getHeader(Client.RESPONSE_CONTEXT));
@@ -136,24 +142,24 @@ public class CxfProducerTest {
     public void testInvokingAWrongServer() throws Exception {
         Exchange reply = sendSimpleMessage(getWrongEndpointUri());
         assertNotNull(reply.getException(), "We should get the exception here");
-        assertTrue(reply.getException().getCause() instanceof ConnectException);
+        assertInstanceOf(IOException.class, reply.getException().getCause());
 
         //Test the data format PAYLOAD
         reply = sendSimpleMessageWithPayloadMessage(getWrongEndpointUri() + "&dataFormat=PAYLOAD");
         assertNotNull(reply.getException(), "We should get the exception here");
-        assertTrue(reply.getException().getCause() instanceof ConnectException);
+        assertInstanceOf(IOException.class, reply.getException().getCause());
 
         //Test the data format MESSAGE
         reply = sendSimpleMessageWithRawMessage(getWrongEndpointUri() + "&dataFormat=RAW");
         assertNotNull(reply.getException(), "We should get the exception here");
-        assertTrue(reply.getException().getCause() instanceof ConnectException);
+        assertInstanceOf(IOException.class, reply.getException().getCause());
     }
 
     @Test
     public void testInvokingJaxWsServerWithParams() throws Exception {
         Exchange exchange = sendJaxWsMessage();
 
-        org.apache.camel.Message out = exchange.getMessage();
+        Message out = exchange.getMessage();
         String result = out.getBody(String.class);
         LOG.info("Received output text: {}", result);
         Map<String, Object> responseContext = CastUtils.cast((Map<?, ?>) out.getHeader(Client.RESPONSE_CONTEXT));

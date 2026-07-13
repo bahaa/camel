@@ -265,15 +265,18 @@ public class QdrantProducer extends DefaultAsyncProducer {
         Object body = in.getMandatoryBody();
 
         List<Float> vectors = null;
-        if (body instanceof Points.PointStruct) {
-            Points.Vectors resultVector = ((Points.PointStruct) body).getVectors();
+        if (body instanceof Points.PointStruct pointStruct) {
+            Points.Vectors resultVector = pointStruct.getVectors();
             vectors = resultVector.getVector().getDense().getDataList();
         } else {
             vectors = in.getMandatoryBody(List.class);
         }
 
         ObjectHelper.notNull(vectors, "vectors");
-        final int maxResults = getEndpoint().getConfiguration().getMaxResults();
+        final int maxResults = in.getHeader(
+                QdrantHeaders.MAX_RESULTS,
+                getEndpoint().getConfiguration().getMaxResults(),
+                int.class);
         final Common.Filter filter = getEndpoint().getConfiguration().getFilter();
         final Duration timeout = getEndpoint().getConfiguration().getTimeout();
 

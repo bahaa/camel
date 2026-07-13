@@ -33,7 +33,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -44,8 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class NestedMimeMessageConsumeTest extends CamelTestSupport {
-    private static final MailboxUser james3 = Mailbox.getOrCreateUser("james3", "secret");
-    private static final MailboxUser james4 = Mailbox.getOrCreateUser("james4", "secret");
+    private static final MailboxUser james3 = Mailbox.getOrCreateUser("NestedMimeMessageConsumeTest-james3", "secret");
+    private static final MailboxUser james4 = Mailbox.getOrCreateUser("NestedMimeMessageConsumeTest-james4", "secret");
 
     @Test
     public void testNestedMultipart() throws Exception {

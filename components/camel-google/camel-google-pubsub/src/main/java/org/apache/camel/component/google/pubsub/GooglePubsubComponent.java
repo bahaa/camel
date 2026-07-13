@@ -28,30 +28,28 @@ import java.util.stream.Stream;
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
-import com.google.api.gax.grpc.GrpcTransportChannel;
-import com.google.api.gax.rpc.FixedTransportChannelProvider;
+import com.google.api.gax.grpc.InstantiatingGrpcChannelProvider;
 import com.google.api.gax.rpc.StatusCode;
 import com.google.api.gax.rpc.TransportChannelProvider;
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.auth.oauth2.ServiceAccountCredentials;
+import com.google.auth.Credentials;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.cloud.pubsub.v1.Subscriber;
+import com.google.cloud.pubsub.v1.SubscriptionAdminClient;
+import com.google.cloud.pubsub.v1.SubscriptionAdminSettings;
 import com.google.cloud.pubsub.v1.stub.PublisherStubSettings;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
 import com.google.cloud.pubsub.v1.stub.SubscriberStubSettings;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
-import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.apache.camel.Endpoint;
 import org.apache.camel.RuntimeCamelException;
+import org.apache.camel.component.google.common.GoogleCredentialsHelper;
 import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.Component;
 import org.apache.camel.support.HeaderFilterStrategyComponent;
-import org.apache.camel.support.ResourceHelper;
-import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StringHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,9 +151,10 @@ public class GooglePubsubComponent extends HeaderFilterStrategyComponent {
             throws IOException {
         Publisher.Builder builder = Publisher.newBuilder(topicName);
         if (StringHelper.trimToNull(endpoint) != null) {
-            ManagedChannel channel = ManagedChannelBuilder.forTarget(endpoint).usePlaintext().build();
-            TransportChannelProvider channelProvider
-                    = FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
+            TransportChannelProvider channelProvider = InstantiatingGrpcChannelProvider.newBuilder()
+                    .setEndpoint(endpoint)
+                    .setChannelConfigurator(ManagedChannelBuilder::usePlaintext)
+                    .build();
             builder.setChannelProvider(channelProvider);
         }
         builder.setCredentialsProvider(getCredentialsProvider(googlePubsubEndpoint));
@@ -180,9 +179,10 @@ public class GooglePubsubComponent extends HeaderFilterStrategyComponent {
             throws IOException {
         Subscriber.Builder builder = Subscriber.newBuilder(subscriptionName, messageReceiver);
         if (StringHelper.trimToNull(endpoint) != null) {
-            ManagedChannel channel = ManagedChannelBuilder.forTarget(endpoint).usePlaintext().build();
-            TransportChannelProvider channelProvider
-                    = FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
+            TransportChannelProvider channelProvider = InstantiatingGrpcChannelProvider.newBuilder()
+                    .setEndpoint(endpoint)
+                    .setChannelConfigurator(ManagedChannelBuilder::usePlaintext)
+                    .build();
             builder.setChannelProvider(channelProvider);
         }
         builder.setCredentialsProvider(getCredentialsProvider(googlePubsubEndpoint));
@@ -206,28 +206,38 @@ public class GooglePubsubComponent extends HeaderFilterStrategyComponent {
         }
 
         if (StringHelper.trimToNull(endpoint) != null) {
-            ManagedChannel channel = ManagedChannelBuilder.forTarget(endpoint).usePlaintext().build();
-            TransportChannelProvider channelProvider
-                    = FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
+            TransportChannelProvider channelProvider = InstantiatingGrpcChannelProvider.newBuilder()
+                    .setEndpoint(endpoint)
+                    .setChannelConfigurator(ManagedChannelBuilder::usePlaintext)
+                    .build();
             builder.setTransportChannelProvider(channelProvider);
         }
         builder.setCredentialsProvider(getCredentialsProvider(googlePubsubEndpoint));
         return builder.build().createStub();
     }
 
-    private CredentialsProvider getCredentialsProvider(GooglePubsubEndpoint endpoint) throws IOException {
-        CredentialsProvider credentialsProvider;
+    public SubscriptionAdminClient getSubscriptionAdminClient(GooglePubsubEndpoint googlePubsubEndpoint) throws IOException {
+        SubscriptionAdminSettings.Builder builder = SubscriptionAdminSettings.newBuilder();
 
-        if (endpoint.isAuthenticate()) {
-            credentialsProvider = FixedCredentialsProvider.create(ObjectHelper.isEmpty(endpoint.getServiceAccountKey())
-                    ? GoogleCredentials.getApplicationDefault() : ServiceAccountCredentials.fromStream(ResourceHelper
-                            .resolveMandatoryResourceAsInputStream(getCamelContext(), endpoint.getServiceAccountKey()))
-                            .createScoped(PublisherStubSettings.getDefaultServiceScopes()));
-        } else {
-            credentialsProvider = NoCredentialsProvider.create();
+        if (StringHelper.trimToNull(endpoint) != null) {
+            TransportChannelProvider channelProvider = InstantiatingGrpcChannelProvider.newBuilder()
+                    .setEndpoint(endpoint)
+                    .setChannelConfigurator(ManagedChannelBuilder::usePlaintext)
+                    .build();
+            builder.setTransportChannelProvider(channelProvider);
+        }
+        builder.setCredentialsProvider(getCredentialsProvider(googlePubsubEndpoint));
+        return SubscriptionAdminClient.create(builder.build());
+    }
+
+    private CredentialsProvider getCredentialsProvider(GooglePubsubEndpoint endpoint) throws IOException {
+        if (!endpoint.isAuthenticate()) {
+            return NoCredentialsProvider.create();
         }
 
-        return credentialsProvider;
+        Credentials credentials = GoogleCredentialsHelper.getCredentials(
+                getCamelContext(), endpoint, PublisherStubSettings.getDefaultServiceScopes());
+        return FixedCredentialsProvider.create(credentials);
     }
 
     public String getEndpoint() {

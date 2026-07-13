@@ -31,14 +31,15 @@ import org.apache.camel.test.infra.cli.common.CliProperties;
 import org.assertj.core.api.Assertions;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
-import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.jupiter.api.condition.OS.LINUX;
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
 
 public class RunCommandITCase extends JBangTestSupport {
 
@@ -76,10 +77,11 @@ public class RunCommandITCase extends JBangTestSupport {
         executeBackground(String.format(
                 "run %s/route-props.yaml --property=a=a --property=b=b --properties=%s/route-props.properties",
                 mountPoint(), mountPoint()));
-        checkLogContains("Hello Camel with properties a=a b=b my-key=my-val", 5);
+        checkLogContains("Hello Camel with properties a=a b=b my-key=my-val");
     }
 
     @Test
+    @Tag("container-only")
     public void runRoutesFromMultipleFilesUsingWildcardTest() {
         execute("init one.yaml --directory=/tmp/one");
         execute("init two.xml --directory=/tmp/two");
@@ -126,6 +128,7 @@ public class RunCommandITCase extends JBangTestSupport {
     }
 
     @Test
+    @Tag("container-only")
     public void runDownloadedFromGithubTest() {
         execute("init https://github.com/apache/camel-kamelets-examples/tree/main/jbang/dependency-injection");
         Assertions.assertThat(containerService.listDirectory(DEFAULT_ROUTE_FOLDER))
@@ -153,10 +156,10 @@ public class RunCommandITCase extends JBangTestSupport {
     @DisabledIfSystemProperty(named = CliProperties.FORCE_RUN_VERSION, matches = ".+", disabledReason = "Due to CAMEL-20426")
     public void runSpecificVersionTest(String version) {
         initFileInDataFolder("cheese.xml");
-        final String pid = executeBackground(String.format("run %s/cheese.xml --camel-version=%s", mountPoint(), version));
+        final String process = executeBackground(String.format("run %s/cheese.xml --camel-version=%s", mountPoint(), version));
         checkLogContainsPattern(String.format(" Apache Camel %s .* started", version));
         checkLogContains(DEFAULT_MSG);
-        execute("stop " + pid);
+        execute("stop " + process);
     }
 
     @Test
@@ -168,7 +171,8 @@ public class RunCommandITCase extends JBangTestSupport {
     }
 
     @Test
-    @EnabledOnOs(LINUX)
+    @DisabledOnOs(WINDOWS)
+    @Tag("container-only")
     @DisabledIf(value = "java.awt.GraphicsEnvironment#isHeadless")
     public void runFromClipboardTest() throws IOException {
         Assumptions.assumeTrue(execInHost("command -v ssh").contains("ssh"));
@@ -182,7 +186,8 @@ public class RunCommandITCase extends JBangTestSupport {
                 "sshpass -p '" + containerService.getSshPassword()
                                    + "' ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -X jbang@localhost -p "
                                    + containerService.getSshPort()
-                                   + " \"camel run clipboard.xml --background && camel log\"")
+                                   + " \"" + getMainCommand() + " run clipboard.xml --background && " + getMainCommand()
+                                   + " log\"")
                 .redirectErrorStream(true);
         try (BufferedReader input = new BufferedReader(new InputStreamReader(builder.start().getInputStream()))) {
             Assertions.assertThatCode(() -> Awaitility.await()

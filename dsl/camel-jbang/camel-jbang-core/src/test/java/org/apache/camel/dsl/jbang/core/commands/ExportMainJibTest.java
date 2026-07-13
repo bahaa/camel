@@ -21,8 +21,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.stream.Stream;
 
@@ -46,8 +44,7 @@ class ExportMainJibTest {
 
     @BeforeEach
     public void setup() throws IOException {
-        Path base = Paths.get("target");
-        workingDir = Files.createTempDirectory(base, "camel-export").toFile();
+        workingDir = Files.createTempDirectory("camel-export").toFile();
     }
 
     @AfterEach
@@ -64,14 +61,16 @@ class ExportMainJibTest {
 
     @ParameterizedTest
     @MethodSource("runtimeProvider")
-    public void shouldGenerateJava17(RuntimeType rt) throws Exception {
+    public void shouldGenerateExplicitJava21(RuntimeType rt) throws Exception {
         // prepare as we need application.properties that contains jib settings
         Files.copy(new File("src/test/resources/application-jib.properties").toPath(), profile.toPath(),
                 StandardCopyOption.REPLACE_EXISTING);
 
         Export command = new Export(new CamelJBangMain());
         CommandLine.populateCommand(command, "--gav=examples:route:1.0.0", "--dir=" + workingDir,
-                "--runtime=%s".formatted(rt.runtime()), "--java-version=17", "target/test-classes/route.yaml");
+                "--runtime=%s".formatted(rt.runtime()), "--java-version=21",
+                CamelCommandBaseTestSupport.quarkusExtRegistry(),
+                "target/test-classes/route.yaml");
         int exit = command.doCall();
 
         Assertions.assertEquals(0, exit);
@@ -79,14 +78,14 @@ class ExportMainJibTest {
         Assertions.assertEquals("examples", model.getGroupId());
         Assertions.assertEquals("route", model.getArtifactId());
         Assertions.assertEquals("1.0.0", model.getVersion());
-        Assertions.assertEquals("17", model.getProperties().getProperty("java.version"));
+        Assertions.assertEquals("21", model.getProperties().getProperty("java.version"));
         Assertions.assertEquals("abc", model.getProperties().getProperty("jib.label"));
-        Assertions.assertEquals("mirror.gcr.io/library/eclipse-temurin:17-jre",
+        Assertions.assertEquals("mirror.gcr.io/library/eclipse-temurin:21-jre",
                 model.getProperties().getProperty("jib.from.image"));
 
         // should contain jib plugin
-        Assertions.assertEquals(4, model.getBuild().getPlugins().size());
-        Plugin p = model.getBuild().getPlugins().get(3);
+        Assertions.assertEquals(6, model.getBuild().getPlugins().size());
+        Plugin p = model.getBuild().getPlugins().get(5);
         Assertions.assertEquals("com.google.cloud.tools", p.getGroupId());
         Assertions.assertEquals("jib-maven-plugin", p.getArtifactId());
 
@@ -102,7 +101,9 @@ class ExportMainJibTest {
 
         Export command = new Export(new CamelJBangMain());
         CommandLine.populateCommand(command, "--gav=examples:route:1.0.0", "--dir=" + workingDir,
-                "--runtime=%s".formatted(rt.runtime()), "target/test-classes/route.yaml");
+                "--runtime=%s".formatted(rt.runtime()),
+                CamelCommandBaseTestSupport.quarkusExtRegistry(),
+                "target/test-classes/route.yaml");
         int exit = command.doCall();
 
         Assertions.assertEquals(0, exit);
@@ -116,8 +117,8 @@ class ExportMainJibTest {
                 model.getProperties().getProperty("jib.from.image"));
 
         // should contain jib plugin
-        Assertions.assertEquals(4, model.getBuild().getPlugins().size());
-        Plugin p = model.getBuild().getPlugins().get(3);
+        Assertions.assertEquals(6, model.getBuild().getPlugins().size());
+        Plugin p = model.getBuild().getPlugins().get(5);
         Assertions.assertEquals("com.google.cloud.tools", p.getGroupId());
         Assertions.assertEquals("jib-maven-plugin", p.getArtifactId());
 

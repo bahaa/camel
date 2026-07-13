@@ -20,6 +20,8 @@ package org.apache.camel.test.infra.ftp.services.embedded;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,6 +29,7 @@ import java.security.KeyPair;
 import java.security.PublicKey;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 import org.apache.camel.spi.annotations.InfraService;
@@ -96,10 +99,11 @@ public class SftpEmbeddedInfraService extends AbstractService implements FtpInfr
 
     public void setUpServer() throws Exception {
         sshd = SshServer.setUpDefaultServer();
-        if (ContainerEnvironmentUtil.isFixedPort(this.getClass())) {
-            sshd.setPort(2222);
-        } else {
+        // If port was already assigned (restart scenario), reuse it; otherwise get a new one
+        if (port > 0) {
             sshd.setPort(port);
+        } else {
+            sshd.setPort(ContainerEnvironmentUtil.getConfiguredPortOrRandom(FtpProperties.DEFAULT_SFTP_PORT));
         }
 
         sshd.setKeyPairProvider(createKeyPairProvider());
@@ -119,12 +123,77 @@ public class SftpEmbeddedInfraService extends AbstractService implements FtpInfr
         signatureFactories.clear();
         // use only one, quite strong signature algorithms for 3 kinds of keys - RSA, EC, EDDSA
         signatureFactories.add(BuiltinSignatures.rsaSHA512);
+        signatureFactories.add(BuiltinSignatures.nistp256);
         signatureFactories.add(BuiltinSignatures.nistp521);
         signatureFactories.add(BuiltinSignatures.ed25519);
+        // include both certificate and non-certificate variants so that OpenSSH certificate
+        // authentication works (the server needs cert-specific verifiers for cert key types)
+        // rsa_cert handles ssh-rsa-cert-v01@openssh.com (JSch sends this as the key type)
+        signatureFactories.add(BuiltinSignatures.rsa_cert);
+        signatureFactories.add(BuiltinSignatures.rsaSHA256_cert);
+        signatureFactories.add(BuiltinSignatures.rsaSHA512_cert);
+        signatureFactories.add(BuiltinSignatures.nistp256_cert);
+        signatureFactories.add(BuiltinSignatures.nistp521_cert);
+        signatureFactories.add(BuiltinSignatures.ed25519_cert);
         sshd.setSignatureFactories(signatureFactories);
         sshd.start();
 
         port = ((InetSocketAddress) sshd.getBoundAddresses().iterator().next()).getPort();
+
+        waitForServerReady();
+    }
+
+    /**
+     * Waits for the embedded SFTP server to be fully ready to accept SSH connections.
+     * <p/>
+     * This method goes beyond a simple TCP port check — it verifies that the SSH protocol layer is initialized by
+     * reading the server's SSH version banner (e.g., "SSH-2.0-..."). A TCP-only check can pass while the SSH layer is
+     * still initializing, causing clients to time out during the SSH handshake. This was the root cause of widespread
+     * flaky tests in camel-mina-sftp (CAMEL-23216).
+     * <p/>
+     * This method is {@code protected} so that subclasses that override {@link #setUpServer()} can call it after
+     * starting their own {@link SshServer} instance.
+     *
+     * @throws IOException if the server does not become ready within 30 seconds
+     */
+    protected void waitForServerReady() throws IOException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        IOException lastException = null;
+        String lastBanner = null;
+        while (System.nanoTime() < deadline) {
+            try (Socket socket = new Socket()) {
+                socket.connect(new InetSocketAddress("localhost", port), 2000);
+                socket.setSoTimeout(5000);
+                // Read the SSH version banner to verify the SSH protocol layer is ready.
+                // The server sends "SSH-2.0-..." immediately upon accepting a connection.
+                // A successful TCP connect alone is not sufficient — the SSH handshake can
+                // still time out if the protocol layer hasn't finished initializing.
+                // SSH version strings are US-ASCII per RFC 4253 §4.2.
+                byte[] buf = new byte[256];
+                int len = socket.getInputStream().read(buf);
+                if (len > 0) {
+                    lastBanner = new String(buf, 0, len, StandardCharsets.US_ASCII).trim();
+                    if (lastBanner.startsWith("SSH-")) {
+                        LOG.debug("SFTP server ready on port {} (banner: {})", port, lastBanner);
+                        return;
+                    }
+                }
+                // TCP connected but no SSH banner yet — server still initializing
+            } catch (IOException e) {
+                lastException = e;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting for SFTP server on port " + port, e);
+            }
+        }
+        String detail = lastBanner != null
+                ? "last banner received: \"" + lastBanner + "\""
+                : "no banner received";
+        throw new IOException(
+                "SFTP server not ready after 30 seconds on port " + port + " (" + detail + ")", lastException);
     }
 
     protected PublickeyAuthenticator getPublickeyAuthenticator() {

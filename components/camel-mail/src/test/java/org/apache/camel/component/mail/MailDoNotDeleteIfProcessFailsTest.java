@@ -28,7 +28,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,12 +37,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Unit test for rollback option.
  */
 public class MailDoNotDeleteIfProcessFailsTest extends CamelTestSupport {
-    private static final MailboxUser claus = Mailbox.getOrCreateUser("claus", "secret");
+    private static final MailboxUser claus = Mailbox.getOrCreateUser("MailDoNotDeleteIfProcessFailsTest-claus", "secret");
 
     private static int counter;
 
     @Override
-    public void doPreSetup() throws Exception {
+    public void setupResources() throws Exception {
         prepareMailbox();
     }
 

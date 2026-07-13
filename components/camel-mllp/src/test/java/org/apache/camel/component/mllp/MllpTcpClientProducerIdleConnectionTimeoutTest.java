@@ -26,10 +26,9 @@ import org.apache.camel.builder.NotifyBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.impl.DefaultCamelContext;
-import org.apache.camel.test.AvailablePortFinder;
 import org.apache.camel.test.junit.rule.mllp.MllpJUnitResourceException;
 import org.apache.camel.test.junit.rule.mllp.MllpServerResource;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.apache.camel.test.mllp.Hl7TestMessageGenerator;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
@@ -50,7 +49,7 @@ public class MllpTcpClientProducerIdleConnectionTimeoutTest extends CamelTestSup
     Logger log = LoggerFactory.getLogger(MllpTcpClientProducerIdleConnectionTimeoutTest.class);
 
     @RegisterExtension
-    MllpServerResource mllpServer = new MllpServerResource("localhost", AvailablePortFinder.getNextAvailable());
+    MllpServerResource mllpServer = new MllpServerResource("localhost", 0);
 
     @EndpointInject("direct://source")
     ProducerTemplate source;
@@ -64,6 +63,7 @@ public class MllpTcpClientProducerIdleConnectionTimeoutTest extends CamelTestSup
     @EndpointInject("mock://receive-ex")
     MockEndpoint receiveEx;
 
+    @SuppressWarnings("deprecation")
     @Override
     protected CamelContext createCamelContext() throws Exception {
         DefaultCamelContext context = (DefaultCamelContext) super.createCamelContext();

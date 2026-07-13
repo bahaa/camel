@@ -30,6 +30,7 @@ import org.apache.camel.model.RouteConfigurationDefinition;
 import org.apache.camel.spi.annotations.YamlIn;
 import org.apache.camel.spi.annotations.YamlProperty;
 import org.apache.camel.spi.annotations.YamlType;
+import org.apache.camel.util.StringHelper;
 import org.snakeyaml.engine.v2.nodes.MappingNode;
 import org.snakeyaml.engine.v2.nodes.Node;
 import org.snakeyaml.engine.v2.nodes.NodeTuple;
@@ -37,12 +38,13 @@ import org.snakeyaml.engine.v2.nodes.NodeTuple;
 @YamlIn
 @YamlType(
           inline = false,
-          types = org.apache.camel.model.RouteConfigurationDefinition.class,
+          types = RouteConfigurationDefinition.class,
           order = YamlDeserializerResolver.ORDER_DEFAULT,
           nodes = { "routeConfiguration" },
           properties = {
                   @YamlProperty(name = "id", type = "string"),
                   @YamlProperty(name = "description", type = "string"),
+                  @YamlProperty(name = "note", type = "string"),
                   @YamlProperty(name = "precondition", type = "string"),
                   @YamlProperty(name = "errorHandler", type = "object:org.apache.camel.model.ErrorHandlerDefinition"),
                   @YamlProperty(name = "intercept", wrapItem = true,
@@ -75,17 +77,26 @@ public class RouteConfigurationDefinitionDeserializer extends YamlDeserializerBa
         final MappingNode bn = asMappingNode(node);
         setDeserializationContext(node, dc);
 
+        int line = -1;
+        if (node.getStartMark().isPresent()) {
+            line = node.getStartMark().get().getLine();
+        }
+        onNewTarget(node, target, line);
+
         for (NodeTuple tuple : bn.getValue()) {
             String key = asText(tuple.getKeyNode());
             Node val = tuple.getValueNode();
 
-            key = org.apache.camel.util.StringHelper.dashToCamelCase(key);
+            key = StringHelper.dashToCamelCase(key);
             switch (key) {
                 case "id":
                     target.setId(asText(val));
                     break;
                 case "description":
                     target.setDescription(asText(val));
+                    break;
+                case "note":
+                    target.setNote(asText(val));
                     break;
                 case "precondition":
                     target.setPrecondition(asText(val));

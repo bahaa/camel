@@ -1687,6 +1687,7 @@ public interface ClientEndpointBuilderFactory {
          * 
          * @return the dsl builder for the headers' name.
          */
+        @Deprecated
         default ClientHeaderNameBuilder iec60870Client() {
             return ClientHeaderNameBuilder.INSTANCE;
         }
@@ -1707,6 +1708,7 @@ public interface ClientEndpointBuilderFactory {
          * @param path uriPath
          * @return the dsl builder
          */
+        @Deprecated
         default ClientEndpointBuilder iec60870Client(String path) {
             return ClientEndpointBuilderFactory.endpointBuilder("iec60870-client", path);
         }
@@ -1729,6 +1731,7 @@ public interface ClientEndpointBuilderFactory {
          * @param path uriPath
          * @return the dsl builder
          */
+        @Deprecated
         default ClientEndpointBuilder iec60870Client(String componentName, String path) {
             return ClientEndpointBuilderFactory.endpointBuilder(componentName, path);
         }
@@ -1742,7 +1745,7 @@ public interface ClientEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final ClientHeaderNameBuilder INSTANCE = new ClientHeaderNameBuilder();
+        public static final ClientHeaderNameBuilder INSTANCE = new ClientHeaderNameBuilder();
 
         /**
          * The value.
@@ -1793,6 +1796,142 @@ public interface ClientEndpointBuilderFactory {
          */
         public String iec60870Overflow() {
             return "CamelIec60870Overflow";
+        }
+        /**
+         * The connection state (CONNECTED, DISCONNECTED, etc.).
+         * 
+         * The option is a: {@code
+         * org.eclipse.neoscada.protocol.iec60870.client.AutoConnectClient.State} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code Iec60870ConnectionState}.
+         */
+        public String iec60870ConnectionState() {
+            return "CamelIec60870ConnectionState";
+        }
+        /**
+         * The connection state error if any.
+         * 
+         * The option is a: {@code Throwable} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code Iec60870ConnectionError}.
+         */
+        public String iec60870ConnectionError() {
+            return "CamelIec60870ConnectionError";
+        }
+        /**
+         * Connection uptime in milliseconds since last connected.
+         * 
+         * The option is a: {@code long} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code Iec60870ConnectionUptime}.
+         */
+        public String iec60870ConnectionUptime() {
+            return "CamelIec60870ConnectionUptime";
+        }
+        /**
+         * The command type: 'value' (default), 'interrogation', 'read', or
+         * 'status'.
+         * 
+         * The option is a: {@code String} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code Iec60870CommandType}.
+         */
+        public String iec60870CommandType() {
+            return "CamelIec60870CommandType";
+        }
+        /**
+         * The ASDU address for interrogation (optional, defaults to broadcast).
+         * 
+         * The option is a: {@code
+         * org.eclipse.neoscada.protocol.iec60870.asdu.types.ASDUAddress} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code Iec60870AsduAddress}.
+         */
+        public String iec60870AsduAddress() {
+            return "CamelIec60870AsduAddress";
+        }
+        /**
+         * The qualifier of interrogation: 20 (global) or 21-36 (groups 1-16).
+         * 
+         * The option is a: {@code short} type.
+         * 
+         * Group: producer
+         * 
+         * @return the name of the header {@code Iec60870Qoi}.
+         */
+        public String iec60870Qoi() {
+            return "CamelIec60870Qoi";
+        }
+        /**
+         * Quality flag: Blocked (BL).
+         * 
+         * The option is a: {@code boolean} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code Iec60870QualityBlocked}.
+         */
+        public String iec60870QualityBlocked() {
+            return "CamelIec60870QualityBlocked";
+        }
+        /**
+         * Quality flag: Substituted (SB).
+         * 
+         * The option is a: {@code boolean} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code Iec60870QualitySubstituted}.
+         */
+        public String iec60870QualitySubstituted() {
+            return "CamelIec60870QualitySubstituted";
+        }
+        /**
+         * Quality flag: Not topical (NT).
+         * 
+         * The option is a: {@code boolean} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code Iec60870QualityNotTopical}.
+         */
+        public String iec60870QualityNotTopical() {
+            return "CamelIec60870QualityNotTopical";
+        }
+        /**
+         * Quality flag: Invalid (IV).
+         * 
+         * The option is a: {@code boolean} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code Iec60870QualityValid}.
+         */
+        public String iec60870QualityValid() {
+            return "CamelIec60870QualityValid";
+        }
+        /**
+         * The cause of transmission.
+         * 
+         * The option is a: {@code
+         * org.eclipse.neoscada.protocol.iec60870.asdu.types.CauseOfTransmission} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code Iec60870CauseOfTransmission}.
+         */
+        public String iec60870CauseOfTransmission() {
+            return "CamelIec60870CauseOfTransmission";
         }
     }
     static ClientEndpointBuilder endpointBuilder(String componentName, String path) {

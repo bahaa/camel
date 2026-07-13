@@ -25,7 +25,6 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
 public class VertxPlatformHttpJacksonTest {
-
     @Test
     public void testJackson() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -43,7 +42,7 @@ public class VertxPlatformHttpJacksonTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()

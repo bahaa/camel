@@ -318,6 +318,52 @@ public interface GooglePubsubEndpointBuilderFactory {
             return this;
         }
         /**
+         * The maximum number of delivery attempts for each message. When set to
+         * a positive value, the consumer will automatically nack any message
+         * whose delivery attempt count is greater than or equal to this value,
+         * allowing Pub/Sub to route it to the dead-letter topic without
+         * processing it. This prevents infinite redelivery loops when short
+         * retry delays are configured. If not explicitly set and the
+         * subscription has a dead-letter policy, the value is automatically
+         * fetched from the subscription configuration at consumer startup. Set
+         * to 0 to disable enforcement.
+         * 
+         * The option is a: <code>int</code> type.
+         * 
+         * Default: 0
+         * Group: consumer (advanced)
+         * 
+         * @param maxDeliveryAttempts the value to set
+         * @return the dsl builder
+         */
+        default AdvancedGooglePubsubEndpointConsumerBuilder maxDeliveryAttempts(int maxDeliveryAttempts) {
+            doSetProperty("maxDeliveryAttempts", maxDeliveryAttempts);
+            return this;
+        }
+        /**
+         * The maximum number of delivery attempts for each message. When set to
+         * a positive value, the consumer will automatically nack any message
+         * whose delivery attempt count is greater than or equal to this value,
+         * allowing Pub/Sub to route it to the dead-letter topic without
+         * processing it. This prevents infinite redelivery loops when short
+         * retry delays are configured. If not explicitly set and the
+         * subscription has a dead-letter policy, the value is automatically
+         * fetched from the subscription configuration at consumer startup. Set
+         * to 0 to disable enforcement.
+         * 
+         * The option will be converted to a <code>int</code> type.
+         * 
+         * Default: 0
+         * Group: consumer (advanced)
+         * 
+         * @param maxDeliveryAttempts the value to set
+         * @return the dsl builder
+         */
+        default AdvancedGooglePubsubEndpointConsumerBuilder maxDeliveryAttempts(String maxDeliveryAttempts) {
+            doSetProperty("maxDeliveryAttempts", maxDeliveryAttempts);
+            return this;
+        }
+        /**
          * The max number of messages to receive from the server in a single API
          * call.
          * 
@@ -1002,7 +1048,7 @@ public interface GooglePubsubEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final GooglePubsubHeaderNameBuilder INSTANCE = new GooglePubsubHeaderNameBuilder();
+        public static final GooglePubsubHeaderNameBuilder INSTANCE = new GooglePubsubHeaderNameBuilder();
 
         /**
          * The ID of the message, assigned by the server when the message is
@@ -1080,6 +1126,21 @@ public interface GooglePubsubEndpointBuilderFactory {
          */
         public String googlePubsubAcknowledge() {
             return "CamelGooglePubsubAcknowledge";
+        }
+        /**
+         * The delivery attempt counter received from PubSub. This is the
+         * approximate number of times the message has been delivered. This will
+         * be 1 for the first delivery. This feature requires a dead-letter
+         * policy to be configured on the subscription.
+         * 
+         * The option is a: {@code Integer} type.
+         * 
+         * Group: consumer
+         * 
+         * @return the name of the header {@code GooglePubsubDeliveryAttempt}.
+         */
+        public String googlePubsubDeliveryAttempt() {
+            return "CamelGooglePubsubDeliveryAttempt";
         }
     }
     static GooglePubsubEndpointBuilder endpointBuilder(String componentName, String path) {

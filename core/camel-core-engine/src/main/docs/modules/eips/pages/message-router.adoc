@@ -64,4 +64,30 @@ XML::
     </choice>
 </route>
 ----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:a
+      steps:
+        - choice:
+            when:
+              - simple:
+                  expression: ${header.foo} == 'bar'
+                steps:
+                  - to:
+                      uri: direct:b
+              - simple:
+                  expression: ${header.foo} == 'cheese'
+                steps:
+                  - to:
+                      uri: direct:c
+            otherwise:
+              steps:
+                - to:
+                    uri: direct:d
+----
 ====

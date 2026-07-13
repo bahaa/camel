@@ -33,15 +33,17 @@ public abstract class RestSecurityDefinition {
     RestDefinition rest;
 
     @XmlAttribute(required = true)
-    @Metadata(required = true)
+    @Metadata(description = "Key used to refer to this security definition.",
+              required = true)
     private String key;
     @XmlAttribute
+    @Metadata(description = "A short description for the security scheme.")
     private String description;
 
-    public RestSecurityDefinition() {
+    protected RestSecurityDefinition() {
     }
 
-    public RestSecurityDefinition(RestDefinition rest) {
+    protected RestSecurityDefinition(RestDefinition rest) {
         this.rest = rest;
     }
 
@@ -57,9 +59,6 @@ public abstract class RestSecurityDefinition {
         return key;
     }
 
-    /**
-     * Key used to refer to this security definition
-     */
     public void setKey(String key) {
         this.key = key;
     }
@@ -68,9 +67,6 @@ public abstract class RestSecurityDefinition {
         return description;
     }
 
-    /**
-     * A short description for security scheme.
-     */
     public void setDescription(String description) {
         this.description = description;
     }

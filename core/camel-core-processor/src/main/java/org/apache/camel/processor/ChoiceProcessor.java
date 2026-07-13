@@ -28,7 +28,9 @@ import org.apache.camel.Processor;
 import org.apache.camel.Traceable;
 import org.apache.camel.spi.IdAware;
 import org.apache.camel.spi.RouteIdAware;
+import org.apache.camel.spi.StepIdAware;
 import org.apache.camel.support.AsyncProcessorConverterHelper;
+import org.apache.camel.support.MessageHelper;
 import org.apache.camel.support.service.ServiceHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,12 +41,14 @@ import static org.apache.camel.processor.PipelineHelper.continueProcessing;
  * Implements a Choice structure where one or more predicates are used which if they are true their processors are used,
  * with a default otherwise clause used if none match.
  */
-public class ChoiceProcessor extends BaseProcessorSupport implements Navigate<Processor>, Traceable, IdAware, RouteIdAware {
+public class ChoiceProcessor extends BaseProcessorSupport
+        implements Navigate<Processor>, Traceable, IdAware, RouteIdAware, StepIdAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChoiceProcessor.class);
 
     private String id;
     private String routeId;
+    private String stepId;
     // optimize to use an array
     private final FilterProcessor[] filters;
     private final int len;
@@ -81,6 +85,8 @@ public class ChoiceProcessor extends BaseProcessorSupport implements Navigate<Pr
 
             // if we did not match then continue to next filter
             if (!matches) {
+                // prepare for re-read from next filter
+                MessageHelper.resetStreamCache(exchange.getIn());
                 continue;
             }
 
@@ -172,6 +178,16 @@ public class ChoiceProcessor extends BaseProcessorSupport implements Navigate<Pr
     @Override
     public void setRouteId(String routeId) {
         this.routeId = routeId;
+    }
+
+    @Override
+    public String getStepId() {
+        return stepId;
+    }
+
+    @Override
+    public void setStepId(String stepId) {
+        this.stepId = stepId;
     }
 
     @Override

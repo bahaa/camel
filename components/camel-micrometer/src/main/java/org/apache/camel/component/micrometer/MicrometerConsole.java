@@ -30,6 +30,7 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
+import org.apache.camel.spi.Metadata;
 import org.apache.camel.spi.annotations.DevConsole;
 import org.apache.camel.support.PatternHelper;
 import org.apache.camel.support.console.AbstractDevConsole;
@@ -39,14 +40,12 @@ import org.apache.camel.util.json.JsonObject;
 @DevConsole(name = "micrometer", description = "Display runtime metrics")
 public class MicrometerConsole extends AbstractDevConsole {
 
-    /**
-     * Whether to include tags
-     */
+    @Metadata(label = "query", description = "Whether to include tags", defaultValue = "true",
+              javaType = "java.lang.Boolean")
     public static final String TAGS = "tags";
 
-    /**
-     * Filters matching metrics by name
-     */
+    @Metadata(label = "query", description = "Filters matching metrics by name",
+              javaType = "java.lang.String")
     public static final String FILTER = "filter";
 
     public MicrometerConsole() {
@@ -55,13 +54,13 @@ public class MicrometerConsole extends AbstractDevConsole {
 
     @Override
     protected String doCallText(Map<String, Object> options) {
-        final boolean tags = "true".equals(options.getOrDefault(TAGS, "true"));
-        final String filter = (String) options.get(FILTER);
+        final boolean tags = optionBoolean(options, TAGS, true);
+        final String filter = optionString(options, FILTER);
 
         StringBuilder sb = new StringBuilder();
 
         MeterRegistry mr = lookupMeterRegistry();
-        sb.append(String.format("MeterRegistry: %s\n\n", mr.getClass().getName()));
+        sb.append(String.format("MeterRegistry: %s%n%n", mr.getClass().getName()));
 
         List<Meter> meters = mr.getMeters()
                 .stream()
@@ -82,7 +81,7 @@ public class MicrometerConsole extends AbstractDevConsole {
                 if (cnt.endsWith(".0") || cnt.endsWith(",0")) {
                     cnt = cnt.substring(0, cnt.length() - 2);
                 }
-                sb.append(String.format("    %s: %s\n", name, cnt));
+                sb.append(String.format("    %s: %s%n", name, cnt));
                 if (tags) {
                     addTags(sb, c.getId());
                 }
@@ -98,7 +97,7 @@ public class MicrometerConsole extends AbstractDevConsole {
                 i++;
                 String name = g.getId().getName();
                 double cnt = g.value();
-                sb.append(String.format("    %s: %s\n", name, cnt));
+                sb.append(String.format("    %s: %s%n", name, cnt));
                 if (tags) {
                     addTags(sb, g.getId());
                 }
@@ -117,7 +116,7 @@ public class MicrometerConsole extends AbstractDevConsole {
                 long mean = Math.round(t.mean(TimeUnit.MILLISECONDS));
                 long max = Math.round(t.max(TimeUnit.MILLISECONDS));
                 long total = Math.round(t.totalTime(TimeUnit.MILLISECONDS));
-                sb.append(String.format("    %s: %d (total: %dms mean: %dms max: %dms)\n", name, count, total, mean, max));
+                sb.append(String.format("    %s: %d (total: %dms mean: %dms max: %dms)%n", name, count, total, mean, max));
                 if (tags) {
                     addTags(sb, t.getId());
                 }
@@ -137,7 +136,7 @@ public class MicrometerConsole extends AbstractDevConsole {
                 long max = Math.round(t.max(TimeUnit.MILLISECONDS));
                 long duration = Math.round(t.duration(TimeUnit.MILLISECONDS));
                 sb.append(
-                        String.format("    %s: %d (duration: %dms mean: %dms max: %dms)\n", name, tasks, duration, mean, max));
+                        String.format("    %s: %d (duration: %dms mean: %dms max: %dms)%n", name, tasks, duration, mean, max));
                 if (tags) {
                     addTags(sb, t.getId());
                 }
@@ -156,7 +155,7 @@ public class MicrometerConsole extends AbstractDevConsole {
                 double mean = d.mean();
                 double max = d.max();
                 double total = d.totalAmount();
-                sb.append(String.format("    %s: %d (total: %f mean: %f max: %f)\n", name, count, total, mean, max));
+                sb.append(String.format("    %s: %d (total: %f mean: %f max: %f)%n", name, count, total, mean, max));
                 if (tags) {
                     addTags(sb, d.getId());
                 }
@@ -172,14 +171,14 @@ public class MicrometerConsole extends AbstractDevConsole {
             sj.add(tag.getKey() + "=" + tag.getValue());
         }
         if (sj.length() > 0) {
-            sb.append(String.format("        %s\n", sj));
+            sb.append(String.format("        %s%n", sj));
         }
     }
 
     @Override
     protected JsonObject doCallJson(Map<String, Object> options) {
-        final boolean tags = "true".equals(options.getOrDefault(TAGS, "true"));
-        final String filter = (String) options.get(FILTER);
+        final boolean tags = optionBoolean(options, TAGS, true);
+        final String filter = optionString(options, FILTER);
 
         JsonObject root = new JsonObject();
 

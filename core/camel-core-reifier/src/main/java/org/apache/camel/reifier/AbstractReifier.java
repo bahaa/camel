@@ -17,17 +17,22 @@
 package org.apache.camel.reifier;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Endpoint;
 import org.apache.camel.Expression;
+import org.apache.camel.NamedNode;
 import org.apache.camel.NoSuchBeanException;
 import org.apache.camel.NoSuchEndpointException;
 import org.apache.camel.Predicate;
 import org.apache.camel.Route;
+import org.apache.camel.RouteTemplateContext;
 import org.apache.camel.model.ExpressionSubElementDefinition;
+import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.model.language.ExpressionDefinition;
 import org.apache.camel.reifier.language.ExpressionReifier;
 import org.apache.camel.spi.BeanRepository;
@@ -37,21 +42,46 @@ import org.apache.camel.util.ObjectHelper;
 
 public abstract class AbstractReifier implements BeanRepository {
 
-    protected final org.apache.camel.Route route;
+    protected final Route route;
     protected final CamelContext camelContext;
 
-    public AbstractReifier(Route route) {
+    protected AbstractReifier(Route route) {
         this.route = ObjectHelper.notNull(route, "Route");
         this.camelContext = route.getCamelContext();
     }
 
-    public AbstractReifier(CamelContext camelContext) {
+    protected AbstractReifier(CamelContext camelContext) {
         this.route = null;
         this.camelContext = ObjectHelper.notNull(camelContext, "CamelContext");
     }
 
     protected CamelContext getCamelContext() {
         return camelContext;
+    }
+
+    protected Map<String, String> parseMap(Map<String, String> map) {
+        if (map == null) {
+            return null;
+        }
+        Map<String, String> answer = new LinkedHashMap<>();
+        for (var e : map.entrySet()) {
+            String newKey = parseString(e.getKey());
+            String newValue = parseString(e.getValue());
+            answer.put(newKey, newValue);
+        }
+        return answer.isEmpty() ? map : answer;
+    }
+
+    protected Set<String> parseSet(Set<String> set) {
+        if (set == null) {
+            return null;
+        }
+        Set<String> answer = new LinkedHashSet<>();
+        for (var e : set) {
+            String value = parseString(e);
+            answer.add(value);
+        }
+        return answer.isEmpty() ? set : answer;
     }
 
     protected String parseString(String text) {
@@ -160,11 +190,15 @@ public abstract class AbstractReifier implements BeanRepository {
         }
         name = parseString(name);
 
+        Object answer = null;
         if (EndpointHelper.isReferenceParameter(name)) {
-            return EndpointHelper.resolveReferenceParameter(camelContext, name, Object.class, false);
-        } else {
+            answer = EndpointHelper.resolveReferenceParameter(camelContext, name, Object.class, false);
+        }
+        if (answer == null) {
+            // fallback to use registry which allows tooling to influence reifier that uses beans or classes
             return getRegistry().lookupByName(name);
         }
+        return answer;
     }
 
     public <T> T lookupByNameAndType(String name, Class<T> type) {
@@ -173,11 +207,28 @@ public abstract class AbstractReifier implements BeanRepository {
         }
         name = parseString(name);
 
+        T answer = null;
         if (EndpointHelper.isReferenceParameter(name)) {
-            return EndpointHelper.resolveReferenceParameter(camelContext, name, type, false);
-        } else {
-            return getRegistry().lookupByNameAndType(name, type);
+            answer = EndpointHelper.resolveReferenceParameter(camelContext, name, type, false);
         }
+        if (answer == null && route != null) {
+            // check local bean repository from route template context first
+            NamedNode routeNode = route.getRoute();
+            if (routeNode instanceof RouteDefinition routeDef) {
+                RouteTemplateContext rtc = routeDef.getRouteTemplateContext();
+                if (rtc != null) {
+                    BeanRepository localRepo = rtc.getLocalBeanRepository();
+                    if (localRepo != null) {
+                        answer = localRepo.lookupByNameAndType(name, type);
+                    }
+                }
+            }
+        }
+        if (answer == null) {
+            // fallback to use registry which allows tooling to influence reifier that uses beans or classes
+            answer = getRegistry().lookupByNameAndType(name, type);
+        }
+        return answer;
     }
 
     @Override

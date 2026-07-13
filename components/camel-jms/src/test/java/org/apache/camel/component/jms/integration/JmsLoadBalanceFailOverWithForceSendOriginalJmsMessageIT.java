@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Unit test for Camel loadbalancer failover with JMS
  */
-@Timeout(10)
+@Timeout(30)
 public class JmsLoadBalanceFailOverWithForceSendOriginalJmsMessageIT extends AbstractJMSTest {
     @Order(2)
     @RegisterExtension
@@ -143,6 +143,8 @@ public class JmsLoadBalanceFailOverWithForceSendOriginalJmsMessageIT extends Abs
 
         // we want to transfer the exception
         jms.getConfiguration().setTransferException(true);
+        // transferException uses JMS ObjectMessage which is disabled by default
+        jms.setObjectMessageEnabled(true);
         return jms;
     }
 

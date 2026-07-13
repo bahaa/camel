@@ -34,6 +34,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import org.apache.camel.Converter;
 import org.apache.camel.Exchange;
+import org.apache.camel.support.DeserializationFilterHelper;
 
 /**
  * A set of converter methods for working with Netty types
@@ -79,7 +80,9 @@ public final class NettyConverter {
     @Converter
     public static ObjectInput toObjectInput(ByteBuf buffer, Exchange exchange) throws IOException {
         InputStream is = toInputStream(buffer, exchange);
-        return new ObjectInputStream(is);
+        ObjectInputStream ois = new ObjectInputStream(is);
+        ois.setObjectInputFilter(DeserializationFilterHelper.resolveDeserializationFilter(null));
+        return ois;
     }
 
     @Converter
@@ -99,6 +102,13 @@ public final class NettyConverter {
             bytes = s.getBytes();
         }
         return toByteBuffer(bytes);
+    }
+
+    @Converter
+    public static ByteBuf toByteBuffer(InputStream is, Exchange exchange) {
+        // convert to byte array first
+        byte[] arr = exchange.getContext().getTypeConverter().convertTo(byte[].class, exchange, is);
+        return toByteBuffer(arr);
     }
 
     @Converter

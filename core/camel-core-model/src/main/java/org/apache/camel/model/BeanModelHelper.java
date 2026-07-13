@@ -30,6 +30,7 @@ import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.spi.Language;
 import org.apache.camel.spi.ScriptingLanguage;
 import org.apache.camel.support.ExchangeHelper;
+import org.apache.camel.support.ObjectHelper;
 import org.apache.camel.support.PropertyBindingSupport;
 import org.apache.camel.support.ScriptHelper;
 import org.apache.camel.util.StringHelper;
@@ -67,7 +68,7 @@ public final class BeanModelHelper {
             String script = resolveScript(context, def);
             // create bean via the script
             final Language lan = context.resolveLanguage(def.getScriptLanguage());
-            final ScriptingLanguage slan = lan instanceof ScriptingLanguage ? (ScriptingLanguage) lan : null;
+            final ScriptingLanguage slan = lan instanceof ScriptingLanguage sl ? sl : null;
             String fqn = def.getType();
             if (fqn.startsWith("#class:")) {
                 fqn = fqn.substring(7);
@@ -178,7 +179,7 @@ public final class BeanModelHelper {
                 clazz = Object.class;
             }
             final String script = resolveScript(camelContext, def);
-            final ScriptingLanguage slan = lan instanceof ScriptingLanguage ? (ScriptingLanguage) lan : null;
+            final ScriptingLanguage slan = lan instanceof ScriptingLanguage sl ? sl : null;
             if (slan != null) {
                 // scripting language should be evaluated with route template context as binding
                 // and memorize so the script is only evaluated once and the local bean is the same
@@ -194,7 +195,7 @@ public final class BeanModelHelper {
                             PropertyBindingSupport.setPropertiesOnTarget(camelContext, local, props);
                         }
                         if (def.getInitMethod() != null) {
-                            org.apache.camel.support.ObjectHelper.invokeMethodSafe(def.getInitMethod(), local);
+                            ObjectHelper.invokeMethodSafe(def.getInitMethod(), local);
                         }
                         if (def.getDestroyMethod() != null) {
                             routeTemplateContext.registerDestroyMethod(def.getName(), def.getDestroyMethod());
@@ -221,7 +222,7 @@ public final class BeanModelHelper {
                             }
                             if (def.getInitMethod() != null) {
                                 try {
-                                    org.apache.camel.support.ObjectHelper.invokeMethodSafe(def.getInitMethod(), local);
+                                    ObjectHelper.invokeMethodSafe(def.getInitMethod(), local);
                                 } catch (Exception e) {
                                     throw RuntimeCamelException.wrapRuntimeException(e);
                                 }
@@ -283,7 +284,7 @@ public final class BeanModelHelper {
                         }
                     }
                     if (def.getInitMethod() != null) {
-                        org.apache.camel.support.ObjectHelper.invokeMethodSafe(def.getInitMethod(), local);
+                        ObjectHelper.invokeMethodSafe(def.getInitMethod(), local);
                     }
                     if (def.getDestroyMethod() != null) {
                         routeTemplateContext.registerDestroyMethod(def.getName(), def.getDestroyMethod());

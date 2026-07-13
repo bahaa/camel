@@ -28,12 +28,12 @@ import org.apache.camel.non_wrapper.PersonService;
 import org.apache.camel.non_wrapper.UnknownPersonFault;
 import org.apache.camel.non_wrapper.types.GetPerson;
 import org.apache.camel.non_wrapper.types.GetPersonResponse;
-import org.apache.camel.test.spring.junit5.CamelSpringTestSupport;
+import org.apache.camel.test.spring.junit6.CamelSpringTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CxfNonWrapperTest extends CamelSpringTestSupport {
     int port1 = CXFTestSupport.getPort1();
@@ -60,12 +60,7 @@ public class CxfNonWrapperTest extends CamelSpringTestSupport {
         assertEquals("Bonjour", response.getName(), "we should get the right answer from router");
 
         request.setPersonId("");
-        try {
-            client.getPerson(request);
-            fail("We expect to get the UnknowPersonFault here");
-        } catch (UnknownPersonFault fault) {
-            // We expect to get fault here
-        }
+        assertThrows(UnknownPersonFault.class, () -> client.getPerson(request));
     }
 
 }

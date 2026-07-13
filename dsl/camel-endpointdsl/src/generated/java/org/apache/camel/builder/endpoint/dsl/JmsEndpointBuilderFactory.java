@@ -152,10 +152,13 @@ public interface JmsEndpointBuilderFactory {
         }
         /**
          * Allows you to force the use of a specific jakarta.jms.Message
-         * implementation for sending JMS messages. Possible values are: Bytes,
-         * Map, Object, Stream, Text. By default, Camel would determine which
-         * JMS message type to use from the In body type. This option allows you
-         * to specify it.
+         * implementation for sending JMS messages from Camel to the broker
+         * (also when Camel is used for request/reply). This is not in use when
+         * Camel receives messages as the message is locked to the type from the
+         * client that sent the message to the broker. Possible values are:
+         * Bytes, Map, Object, Stream, Text. By default, Camel would determine
+         * which JMS message type to use from the message body type. This option
+         * allows you to specify it.
          * 
          * The option is a:
          * <code>org.apache.camel.component.jms.JmsMessageType</code> type.
@@ -171,10 +174,13 @@ public interface JmsEndpointBuilderFactory {
         }
         /**
          * Allows you to force the use of a specific jakarta.jms.Message
-         * implementation for sending JMS messages. Possible values are: Bytes,
-         * Map, Object, Stream, Text. By default, Camel would determine which
-         * JMS message type to use from the In body type. This option allows you
-         * to specify it.
+         * implementation for sending JMS messages from Camel to the broker
+         * (also when Camel is used for request/reply). This is not in use when
+         * Camel receives messages as the message is locked to the type from the
+         * client that sent the message to the broker. Possible values are:
+         * Bytes, Map, Object, Stream, Text. By default, Camel would determine
+         * which JMS message type to use from the message body type. This option
+         * allows you to specify it.
          * 
          * The option will be converted to a
          * <code>org.apache.camel.component.jms.JmsMessageType</code> type.
@@ -2119,6 +2125,50 @@ public interface JmsEndpointBuilderFactory {
             return this;
         }
         /**
+         * Whether to enable sending and receiving JMS ObjectMessage. By default
+         * this is disabled because Java object serialization is a known source
+         * of security vulnerabilities. Enable this option only if you trust the
+         * source of the messages and need to send or receive Java serialized
+         * objects via JMS. When disabled, Camel will refuse to create or read
+         * JMS ObjectMessage instances. Options that rely on ObjectMessage
+         * internally (such as transferExchange and transferException) require
+         * this option to be enabled.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param objectMessageEnabled the value to set
+         * @return the dsl builder
+         */
+        default AdvancedJmsEndpointConsumerBuilder objectMessageEnabled(boolean objectMessageEnabled) {
+            doSetProperty("objectMessageEnabled", objectMessageEnabled);
+            return this;
+        }
+        /**
+         * Whether to enable sending and receiving JMS ObjectMessage. By default
+         * this is disabled because Java object serialization is a known source
+         * of security vulnerabilities. Enable this option only if you trust the
+         * source of the messages and need to send or receive Java serialized
+         * objects via JMS. When disabled, Camel will refuse to create or read
+         * JMS ObjectMessage instances. Options that rely on ObjectMessage
+         * internally (such as transferExchange and transferException) require
+         * this option to be enabled.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param objectMessageEnabled the value to set
+         * @return the dsl builder
+         */
+        default AdvancedJmsEndpointConsumerBuilder objectMessageEnabled(String objectMessageEnabled) {
+            doSetProperty("objectMessageEnabled", objectMessageEnabled);
+            return this;
+        }
+        /**
          * Specifies whether to inhibit the delivery of messages published by
          * its own connection.
          * 
@@ -2593,6 +2643,30 @@ public interface JmsEndpointBuilderFactory {
             return this;
         }
         /**
+         * Sets an ObjectInputFilter pattern (jdk.serialFilter syntax) applied
+         * as a defense-in-depth check on the class of the body returned by
+         * jakarta.jms.ObjectMessage.getObject(). The pattern is evaluated after
+         * the JMS provider has deserialized the payload, so this option alone
+         * does not prevent gadget-chain execution that happens inside the
+         * provider's ObjectInputStream; to block such attacks, also configure
+         * the JMS provider's own deserialization filter and/or the JVM-wide
+         * -Djdk.serialFilter. When this option is not set and no JVM-wide
+         * filter is configured, a conservative default filter denying java.net.
+         * and otherwise allowing java., javax. and org.apache.camel. is
+         * applied.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param deserializationFilter the value to set
+         * @return the dsl builder
+         */
+        default AdvancedJmsEndpointConsumerBuilder deserializationFilter(String deserializationFilter) {
+            doSetProperty("deserializationFilter", deserializationFilter);
+            return this;
+        }
+        /**
          * If true, Camel will create a JmsTransactionManager, if there is no
          * transactionManager injected when option transacted=true.
          * 
@@ -2821,10 +2895,13 @@ public interface JmsEndpointBuilderFactory {
         }
         /**
          * Allows you to force the use of a specific jakarta.jms.Message
-         * implementation for sending JMS messages. Possible values are: Bytes,
-         * Map, Object, Stream, Text. By default, Camel would determine which
-         * JMS message type to use from the In body type. This option allows you
-         * to specify it.
+         * implementation for sending JMS messages from Camel to the broker
+         * (also when Camel is used for request/reply). This is not in use when
+         * Camel receives messages as the message is locked to the type from the
+         * client that sent the message to the broker. Possible values are:
+         * Bytes, Map, Object, Stream, Text. By default, Camel would determine
+         * which JMS message type to use from the message body type. This option
+         * allows you to specify it.
          * 
          * The option is a:
          * <code>org.apache.camel.component.jms.JmsMessageType</code> type.
@@ -2840,10 +2917,13 @@ public interface JmsEndpointBuilderFactory {
         }
         /**
          * Allows you to force the use of a specific jakarta.jms.Message
-         * implementation for sending JMS messages. Possible values are: Bytes,
-         * Map, Object, Stream, Text. By default, Camel would determine which
-         * JMS message type to use from the In body type. This option allows you
-         * to specify it.
+         * implementation for sending JMS messages from Camel to the broker
+         * (also when Camel is used for request/reply). This is not in use when
+         * Camel receives messages as the message is locked to the type from the
+         * client that sent the message to the broker. Possible values are:
+         * Bytes, Map, Object, Stream, Text. By default, Camel would determine
+         * which JMS message type to use from the message body type. This option
+         * allows you to specify it.
          * 
          * The option will be converted to a
          * <code>org.apache.camel.component.jms.JmsMessageType</code> type.
@@ -4698,6 +4778,50 @@ public interface JmsEndpointBuilderFactory {
             return this;
         }
         /**
+         * Whether to enable sending and receiving JMS ObjectMessage. By default
+         * this is disabled because Java object serialization is a known source
+         * of security vulnerabilities. Enable this option only if you trust the
+         * source of the messages and need to send or receive Java serialized
+         * objects via JMS. When disabled, Camel will refuse to create or read
+         * JMS ObjectMessage instances. Options that rely on ObjectMessage
+         * internally (such as transferExchange and transferException) require
+         * this option to be enabled.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param objectMessageEnabled the value to set
+         * @return the dsl builder
+         */
+        default AdvancedJmsEndpointProducerBuilder objectMessageEnabled(boolean objectMessageEnabled) {
+            doSetProperty("objectMessageEnabled", objectMessageEnabled);
+            return this;
+        }
+        /**
+         * Whether to enable sending and receiving JMS ObjectMessage. By default
+         * this is disabled because Java object serialization is a known source
+         * of security vulnerabilities. Enable this option only if you trust the
+         * source of the messages and need to send or receive Java serialized
+         * objects via JMS. When disabled, Camel will refuse to create or read
+         * JMS ObjectMessage instances. Options that rely on ObjectMessage
+         * internally (such as transferExchange and transferException) require
+         * this option to be enabled.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param objectMessageEnabled the value to set
+         * @return the dsl builder
+         */
+        default AdvancedJmsEndpointProducerBuilder objectMessageEnabled(String objectMessageEnabled) {
+            doSetProperty("objectMessageEnabled", objectMessageEnabled);
+            return this;
+        }
+        /**
          * Specifies whether to inhibit the delivery of messages published by
          * its own connection.
          * 
@@ -5172,6 +5296,30 @@ public interface JmsEndpointBuilderFactory {
             return this;
         }
         /**
+         * Sets an ObjectInputFilter pattern (jdk.serialFilter syntax) applied
+         * as a defense-in-depth check on the class of the body returned by
+         * jakarta.jms.ObjectMessage.getObject(). The pattern is evaluated after
+         * the JMS provider has deserialized the payload, so this option alone
+         * does not prevent gadget-chain execution that happens inside the
+         * provider's ObjectInputStream; to block such attacks, also configure
+         * the JMS provider's own deserialization filter and/or the JVM-wide
+         * -Djdk.serialFilter. When this option is not set and no JVM-wide
+         * filter is configured, a conservative default filter denying java.net.
+         * and otherwise allowing java., javax. and org.apache.camel. is
+         * applied.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param deserializationFilter the value to set
+         * @return the dsl builder
+         */
+        default AdvancedJmsEndpointProducerBuilder deserializationFilter(String deserializationFilter) {
+            doSetProperty("deserializationFilter", deserializationFilter);
+            return this;
+        }
+        /**
          * If true, Camel will create a JmsTransactionManager, if there is no
          * transactionManager injected when option transacted=true.
          * 
@@ -5401,10 +5549,13 @@ public interface JmsEndpointBuilderFactory {
         }
         /**
          * Allows you to force the use of a specific jakarta.jms.Message
-         * implementation for sending JMS messages. Possible values are: Bytes,
-         * Map, Object, Stream, Text. By default, Camel would determine which
-         * JMS message type to use from the In body type. This option allows you
-         * to specify it.
+         * implementation for sending JMS messages from Camel to the broker
+         * (also when Camel is used for request/reply). This is not in use when
+         * Camel receives messages as the message is locked to the type from the
+         * client that sent the message to the broker. Possible values are:
+         * Bytes, Map, Object, Stream, Text. By default, Camel would determine
+         * which JMS message type to use from the message body type. This option
+         * allows you to specify it.
          * 
          * The option is a:
          * <code>org.apache.camel.component.jms.JmsMessageType</code> type.
@@ -5420,10 +5571,13 @@ public interface JmsEndpointBuilderFactory {
         }
         /**
          * Allows you to force the use of a specific jakarta.jms.Message
-         * implementation for sending JMS messages. Possible values are: Bytes,
-         * Map, Object, Stream, Text. By default, Camel would determine which
-         * JMS message type to use from the In body type. This option allows you
-         * to specify it.
+         * implementation for sending JMS messages from Camel to the broker
+         * (also when Camel is used for request/reply). This is not in use when
+         * Camel receives messages as the message is locked to the type from the
+         * client that sent the message to the broker. Possible values are:
+         * Bytes, Map, Object, Stream, Text. By default, Camel would determine
+         * which JMS message type to use from the message body type. This option
+         * allows you to specify it.
          * 
          * The option will be converted to a
          * <code>org.apache.camel.component.jms.JmsMessageType</code> type.
@@ -6425,6 +6579,50 @@ public interface JmsEndpointBuilderFactory {
             return this;
         }
         /**
+         * Whether to enable sending and receiving JMS ObjectMessage. By default
+         * this is disabled because Java object serialization is a known source
+         * of security vulnerabilities. Enable this option only if you trust the
+         * source of the messages and need to send or receive Java serialized
+         * objects via JMS. When disabled, Camel will refuse to create or read
+         * JMS ObjectMessage instances. Options that rely on ObjectMessage
+         * internally (such as transferExchange and transferException) require
+         * this option to be enabled.
+         * 
+         * The option is a: <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param objectMessageEnabled the value to set
+         * @return the dsl builder
+         */
+        default AdvancedJmsEndpointBuilder objectMessageEnabled(boolean objectMessageEnabled) {
+            doSetProperty("objectMessageEnabled", objectMessageEnabled);
+            return this;
+        }
+        /**
+         * Whether to enable sending and receiving JMS ObjectMessage. By default
+         * this is disabled because Java object serialization is a known source
+         * of security vulnerabilities. Enable this option only if you trust the
+         * source of the messages and need to send or receive Java serialized
+         * objects via JMS. When disabled, Camel will refuse to create or read
+         * JMS ObjectMessage instances. Options that rely on ObjectMessage
+         * internally (such as transferExchange and transferException) require
+         * this option to be enabled.
+         * 
+         * The option will be converted to a <code>boolean</code> type.
+         * 
+         * Default: false
+         * Group: advanced
+         * 
+         * @param objectMessageEnabled the value to set
+         * @return the dsl builder
+         */
+        default AdvancedJmsEndpointBuilder objectMessageEnabled(String objectMessageEnabled) {
+            doSetProperty("objectMessageEnabled", objectMessageEnabled);
+            return this;
+        }
+        /**
          * Specifies whether to inhibit the delivery of messages published by
          * its own connection.
          * 
@@ -6899,6 +7097,30 @@ public interface JmsEndpointBuilderFactory {
             return this;
         }
         /**
+         * Sets an ObjectInputFilter pattern (jdk.serialFilter syntax) applied
+         * as a defense-in-depth check on the class of the body returned by
+         * jakarta.jms.ObjectMessage.getObject(). The pattern is evaluated after
+         * the JMS provider has deserialized the payload, so this option alone
+         * does not prevent gadget-chain execution that happens inside the
+         * provider's ObjectInputStream; to block such attacks, also configure
+         * the JMS provider's own deserialization filter and/or the JVM-wide
+         * -Djdk.serialFilter. When this option is not set and no JVM-wide
+         * filter is configured, a conservative default filter denying java.net.
+         * and otherwise allowing java., javax. and org.apache.camel. is
+         * applied.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param deserializationFilter the value to set
+         * @return the dsl builder
+         */
+        default AdvancedJmsEndpointBuilder deserializationFilter(String deserializationFilter) {
+            doSetProperty("deserializationFilter", deserializationFilter);
+            return this;
+        }
+        /**
          * If true, Camel will create a JmsTransactionManager, if there is no
          * transactionManager injected when option transacted=true.
          * 
@@ -7084,7 +7306,7 @@ public interface JmsEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final JmsHeaderNameBuilder INSTANCE = new JmsHeaderNameBuilder();
+        public static final JmsHeaderNameBuilder INSTANCE = new JmsHeaderNameBuilder();
 
         /**
          * The destination.

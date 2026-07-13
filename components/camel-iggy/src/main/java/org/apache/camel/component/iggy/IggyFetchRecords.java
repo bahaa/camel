@@ -17,6 +17,7 @@
 package org.apache.camel.component.iggy;
 
 import java.math.BigInteger;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,12 +25,16 @@ import java.util.stream.Collectors;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.component.iggy.client.IggyClientConnectionPool;
+import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.support.BridgeExceptionHandlerToErrorHandler;
+import org.apache.camel.support.task.Tasks;
+import org.apache.camel.support.task.budget.Budgets;
 import org.apache.iggy.client.blocking.IggyBaseClient;
 import org.apache.iggy.consumergroup.Consumer;
 import org.apache.iggy.identifier.ConsumerId;
 import org.apache.iggy.identifier.StreamId;
 import org.apache.iggy.identifier.TopicId;
+import org.apache.iggy.message.Message;
 import org.apache.iggy.message.PolledMessages;
 import org.apache.iggy.message.PollingStrategy;
 import org.slf4j.Logger;
@@ -66,11 +71,17 @@ public class IggyFetchRecords implements Runnable {
         while (running) {
             if (iggyConsumer.isSuspending() || iggyConsumer.isSuspended()) {
                 LOG.trace("Consumer is suspended. Skipping message polling.");
-                try {
-                    Thread.sleep(1000); // Sleep for a bit to avoid busy-waiting
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                // Use Camel's task API to avoid busy-waiting instead of Thread.sleep()
+                // We use initialDelay for the actual delay, and maxIterations(1) to run once
+                Tasks.foregroundTask()
+                        .withBudget(Budgets.iterationBudget()
+                                .withMaxIterations(1)
+                                .withInitialDelay(Duration.ofSeconds(1))
+                                .withInterval(Duration.ZERO)
+                                .build())
+                        .withName("IggySuspendedDelay")
+                        .build()
+                        .run(endpoint.getCamelContext(), () -> true);
                 continue;
             }
 
@@ -124,7 +135,7 @@ public class IggyFetchRecords implements Runnable {
                     polledMessages.partitionId(),
                     configuration.isAutoCommit() ? polledMessages.currentOffset() : offset);
 
-            for (org.apache.iggy.message.Message message : polledMessages.messages()) {
+            for (Message message : polledMessages.messages()) {
                 Exchange exchange = createExchange(message);
                 try {
                     iggyConsumer.getProcessor().process(exchange);
@@ -148,7 +159,7 @@ public class IggyFetchRecords implements Runnable {
         }
     }
 
-    private Exchange createExchange(org.apache.iggy.message.Message message) {
+    private Exchange createExchange(Message message) {
         Exchange exchange = iggyConsumer.createExchange(true);
 
         exchange.getIn().setBody(new String(message.payload())); // TODO is it ok?
@@ -160,14 +171,19 @@ public class IggyFetchRecords implements Runnable {
         exchange.getIn().setHeader(IggyConstants.MESSAGE_LENGTH, message.header().payloadLength());
         exchange.getIn().setHeader(IggyConstants.MESSAGE_SIZE, message.getSize());
 
-        message.userHeaders().ifPresent(userHeaders -> {
-            Map<String, Object> stringUserHeaders = userHeaders.entrySet().stream().collect(Collectors.toMap(
-                    k -> k.getKey(),
-                    hv -> hv.getValue().value() // TODO this way `HeaderKind kind` will be lost
-            ));
-
-            exchange.getIn().setHeaders(stringUserHeaders);
-        });
+        Map<String, Object> stringUserHeaders = message.userHeaders().entrySet().stream().collect(Collectors.toMap(
+                k -> k.getKey().toString(),
+                hv -> hv.getValue().asString() // TODO this way `HeaderKind kind` will be lost
+        ));
+        if (!stringUserHeaders.isEmpty()) {
+            HeaderFilterStrategy headerFilterStrategy = endpoint.getHeaderFilterStrategy();
+            for (Map.Entry<String, Object> entry : stringUserHeaders.entrySet()) {
+                if (headerFilterStrategy == null
+                        || !headerFilterStrategy.applyFilterToExternalHeaders(entry.getKey(), entry.getValue(), exchange)) {
+                    exchange.getIn().setHeader(entry.getKey(), entry.getValue());
+                }
+            }
+        }
 
         return exchange;
     }

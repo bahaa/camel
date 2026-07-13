@@ -20,6 +20,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.model.language.CSimpleExpression;
 import org.apache.camel.model.language.ExpressionDefinition;
 
+@Deprecated(since = "4.19")
 public class CSimpleExpressionReifier extends TypedExpressionReifier<CSimpleExpression> {
 
     public CSimpleExpressionReifier(CamelContext camelContext, ExpressionDefinition definition) {
@@ -30,6 +31,16 @@ public class CSimpleExpressionReifier extends TypedExpressionReifier<CSimpleExpr
     public boolean isResolveOptionalExternalScriptEnabled() {
         // csimple language will handle to resolve external scripts as they can be dynamic using simple language itself
         return false;
+    }
+
+    @Override
+    protected Object[] createProperties() {
+        Object[] properties = new Object[4];
+        properties[0] = asResultType();
+        properties[1] = parseBoolean(definition.getTrim());
+        properties[2] = parseBoolean(definition.getPretty());
+        properties[3] = parseBoolean(definition.getTrimResult());
+        return properties;
     }
 
 }

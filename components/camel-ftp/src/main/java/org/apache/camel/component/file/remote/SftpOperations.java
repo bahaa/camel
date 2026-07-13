@@ -28,6 +28,8 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.time.Duration;
 import java.util.Base64;
@@ -55,6 +57,7 @@ import org.apache.camel.component.file.FileComponent;
 import org.apache.camel.component.file.GenericFile;
 import org.apache.camel.component.file.GenericFileEndpoint;
 import org.apache.camel.component.file.GenericFileExist;
+import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.support.ResourceHelper;
@@ -62,6 +65,7 @@ import org.apache.camel.support.task.BlockingTask;
 import org.apache.camel.support.task.Tasks;
 import org.apache.camel.support.task.budget.Budgets;
 import org.apache.camel.util.FileUtil;
+import org.apache.camel.util.HomeHelper;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StopWatch;
@@ -239,12 +243,29 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             JSch.setConfig("kex", sftpConfig.getKeyExchangeProtocols());
         }
 
+        // Resolve certificate bytes once — used for both identity loading and key type detection
+        byte[] certData = resolveCertificateBytes(sftpConfig);
+
         if (isNotEmpty(sftpConfig.getPrivateKeyFile())) {
             LOG.debug("Using private keyfile: {}", sftpConfig.getPrivateKeyFile());
+            byte[] passphrase = null;
             if (isNotEmpty(sftpConfig.getPrivateKeyPassphrase())) {
-                jsch.addIdentity(sftpConfig.getPrivateKeyFile(), sftpConfig.getPrivateKeyPassphrase());
+                passphrase = sftpConfig.getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
+            }
+            if (certData != null) {
+                // Use byte-based overload for certificate — JSch's file-based
+                // addIdentity(prvkey, pubkey, passphrase) treats the second parameter
+                // as a public key file, not a certificate
+                LOG.debug("Using OpenSSH certificate for authentication");
+                try {
+                    byte[] keyData = Files.readAllBytes(Paths.get(sftpConfig.getPrivateKeyFile()));
+                    jsch.addIdentity(sftpConfig.getPrivateKeyFile(), keyData, certData, passphrase);
+                } catch (IOException e) {
+                    throw new JSchException("Cannot read private key file: " + sftpConfig.getPrivateKeyFile(), e);
+                }
             } else {
-                jsch.addIdentity(sftpConfig.getPrivateKeyFile());
+                // No explicit cert — JSch auto-discovers <key>-cert.pub if it exists
+                jsch.addIdentity(sftpConfig.getPrivateKeyFile(), passphrase);
             }
         }
 
@@ -254,7 +275,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             if (isNotEmpty(sftpConfig.getPrivateKeyPassphrase())) {
                 passphrase = sftpConfig.getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
             }
-            jsch.addIdentity("ID", sftpConfig.getPrivateKey(), null, passphrase);
+            jsch.addIdentity("ID", sftpConfig.getPrivateKey(), certData, passphrase);
         }
 
         if (sftpConfig.getPrivateKeyUri() != null) {
@@ -268,7 +289,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                         sftpConfig.getPrivateKeyUri());
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 IOHelper.copyAndCloseInput(is, bos);
-                jsch.addIdentity("ID", bos.toByteArray(), null, passphrase);
+                jsch.addIdentity("ID", bos.toByteArray(), certData, passphrase);
             } catch (IOException e) {
                 throw new JSchException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
             }
@@ -284,7 +305,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 sb.append(Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded())).append("\n");
                 sb.append("-----END PRIVATE KEY-----").append("\n");
 
-                jsch.addIdentity("ID", sb.toString().getBytes(StandardCharsets.UTF_8), null, null);
+                jsch.addIdentity("ID", sb.toString().getBytes(StandardCharsets.UTF_8), certData, null);
             } else {
                 LOG.warn("PrivateKey in the KeyPair must be filled");
             }
@@ -313,7 +334,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         String knownHostsFile = sftpConfig.getKnownHostsFile();
         if (knownHostsFile == null && sftpConfig.isUseUserKnownHostsFile()) {
-            knownHostsFile = System.getProperty("user.home") + "/.ssh/known_hosts";
+            knownHostsFile = HomeHelper.resolveHomeDir() + "/.ssh/known_hosts";
             LOG.info("Known host file not configured, using user known host file: {}", knownHostsFile);
         }
         if (ObjectHelper.isNotEmpty(knownHostsFile)) {
@@ -355,6 +376,29 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         if (sftpConfig.getPublicKeyAcceptedAlgorithms() != null) {
             LOG.debug("Using PublicKeyAcceptedAlgorithms: {}", sftpConfig.getPublicKeyAcceptedAlgorithms());
             session.setConfig("PubkeyAcceptedAlgorithms", sftpConfig.getPublicKeyAcceptedAlgorithms());
+        }
+
+        // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
+        // JSch's defaults exclude SHA-1 based algorithms (matching OpenSSH 8.2+ policy),
+        // which includes ssh-rsa-cert-v01@openssh.com (or ssh-rsa-cert per newer RFC
+        // drafts). If the loaded certificate uses a key type not in the accepted list,
+        // JSch silently skips the certificate identity and auth fails.
+        // Detect the cert type and add it if missing.
+        if (sftpConfig.getPublicKeyAcceptedAlgorithms() == null) {
+            String certKeyType = detectCertKeyType(certData);
+            if (certKeyType != null) {
+                String defaults = JSch.getConfig("PubkeyAcceptedAlgorithms");
+                if (defaults != null && !defaults.contains(certKeyType)) {
+                    session.setConfig("PubkeyAcceptedAlgorithms", certKeyType + "," + defaults);
+                    LOG.debug("Added certificate key type {} to PubkeyAcceptedAlgorithms", certKeyType);
+                }
+            }
+        }
+
+        // set the CASignatureAlgorithms
+        if (sftpConfig.getCaSignatureAlgorithms() != null) {
+            LOG.debug("Using CASignatureAlgorithms: {}", sftpConfig.getCaSignatureAlgorithms());
+            session.setConfig("ca_signature_algorithms", sftpConfig.getCaSignatureAlgorithms());
         }
 
         // set user information
@@ -445,6 +489,65 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
 
         return session;
+    }
+
+    /**
+     * Resolves certificate bytes from the configuration's certFile, certUri, or certBytes. Returns null if no
+     * certificate is configured.
+     */
+    private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws JSchException {
+        if (isNotEmpty(config.getCertFile())) {
+            try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
+                    endpoint.getCamelContext(), "file:" + config.getCertFile())) {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                IOHelper.copyAndCloseInput(is, bos);
+                return bos.toByteArray();
+            } catch (IOException e) {
+                throw new JSchException("Cannot read certificate file: " + config.getCertFile(), e);
+            }
+        }
+        if (isNotEmpty(config.getCertUri())) {
+            try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
+                    endpoint.getCamelContext(), config.getCertUri())) {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                IOHelper.copyAndCloseInput(is, bos);
+                return bos.toByteArray();
+            } catch (IOException e) {
+                throw new JSchException("Cannot read certificate resource: " + config.getCertUri(), e);
+            }
+        }
+        if (config.getCertBytes() != null) {
+            return config.getCertBytes();
+        }
+        return null;
+    }
+
+    /**
+     * Detects the OpenSSH certificate key type from the given certificate data. OpenSSH certificate files use text
+     * format: "key-type base64-data [comment]".
+     *
+     * @return the certificate key type (e.g., "ssh-rsa-cert-v01@openssh.com" or "ssh-rsa-cert") or null
+     */
+    private static String detectCertKeyType(byte[] certData) {
+        if (certData == null) {
+            return null;
+        }
+        String certLine = new String(certData, StandardCharsets.UTF_8).trim();
+        int space = certLine.indexOf(' ');
+        if (space > 0) {
+            String keyType = certLine.substring(0, space);
+            if (
+            // ssh key type format for rfc until draft 03
+            // https://datatracker.ietf.org/doc/html/draft-miller-ssh-cert-03.html
+            keyType.endsWith("-cert-v01@openssh.com") ||
+            // ssh key type format for rfc from draft 04
+            // https://datatracker.ietf.org/doc/html/draft-miller-ssh-cert-04.html
+                    keyType.endsWith("-cert")) {
+
+                return keyType;
+            }
+        }
+        return null;
     }
 
     private static final class JSchLogger implements com.jcraft.jsch.Logger {
@@ -935,8 +1038,15 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             // use relative filename in local work directory
             String relativeName = file.getRelativeFilePath();
 
+            File localWorkDir = local;
             temp = new File(local, relativeName + ".inprogress");
             local = new File(local, relativeName);
+
+            // ensure the local work file stays within the local work directory (CAMEL-23765)
+            if (endpoint.isJailStartingDirectory()) {
+                GenericFileHelper.jailToLocalWorkDirectory(temp, localWorkDir);
+                GenericFileHelper.jailToLocalWorkDirectory(local, localWorkDir);
+            }
 
             // create directory to local work file
             local.mkdirs();
@@ -1150,6 +1260,21 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             throw new GenericFileOperationFailedException("Cannot store file: " + name, e);
         } finally {
             IOHelper.close(is, "store: " + name, LOG);
+        }
+    }
+
+    @Override
+    public boolean storeFileDirectly(String name, String payload) throws GenericFileOperationFailedException {
+        lock.lock();
+        ByteArrayInputStream bis = new ByteArrayInputStream(payload.getBytes());
+        try {
+            channel.put(bis, name);
+            return true;
+        } catch (SftpException e) {
+            throw new GenericFileOperationFailedException("Cannot store file: " + name, e);
+        } finally {
+            IOHelper.close(bis);
+            lock.unlock();
         }
     }
 

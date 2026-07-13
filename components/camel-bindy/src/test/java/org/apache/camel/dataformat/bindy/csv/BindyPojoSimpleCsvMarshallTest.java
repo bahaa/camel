@@ -27,7 +27,7 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.bindy.model.simple.oneclass.Order;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
@@ -94,7 +94,7 @@ public class BindyPojoSimpleCsvMarshallTest {
         @Override
         public void configure() {
             BindyCsvDataFormat camelDataFormat
-                    = new BindyCsvDataFormat(org.apache.camel.dataformat.bindy.model.simple.oneclass.Order.class);
+                    = new BindyCsvDataFormat(Order.class);
             camelDataFormat.setLocale("en");
 
             // default should errors go to mock:error

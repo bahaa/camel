@@ -21,18 +21,18 @@ import jakarta.mail.Message;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mail.Mailbox.MailboxUser;
 import org.apache.camel.component.mail.Mailbox.Protocol;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MailComponentRecipientSetTest extends CamelTestSupport {
-    private static final MailboxUser james = Mailbox.getOrCreateUser("james", "secret");
-    private static final MailboxUser admin = Mailbox.getOrCreateUser("admin", "secret");
+    private static final MailboxUser james = Mailbox.getOrCreateUser("MailComponentRecipientSetTest-james", "secret");
+    private static final MailboxUser admin = Mailbox.getOrCreateUser("MailComponentRecipientSetTest-admin", "secret");
 
-    private static final MailboxUser a = Mailbox.getOrCreateUser("a", "secret");
-    private static final MailboxUser b = Mailbox.getOrCreateUser("b", "secret");
-    private static final MailboxUser c = Mailbox.getOrCreateUser("c", "secret");
+    private static final MailboxUser a = Mailbox.getOrCreateUser("MailComponentRecipientSetTest-a", "secret");
+    private static final MailboxUser b = Mailbox.getOrCreateUser("MailComponentRecipientSetTest-b", "secret");
+    private static final MailboxUser c = Mailbox.getOrCreateUser("MailComponentRecipientSetTest-c", "secret");
 
     @Test
     public void testMultipleEndpoints() throws Exception {
@@ -78,11 +78,15 @@ public class MailComponentRecipientSetTest extends CamelTestSupport {
                 MailComponent mail = context.getComponent("smtp", MailComponent.class);
                 mail.setConfiguration(config);
 
-                from("direct:a").to(james.uriPrefix(Protocol.smtp) + "&to=a@localhost");
+                from("direct:a")
+                        .to(james.uriPrefix(Protocol.smtp) + "&to=" + a.getLogin() + "@localhost&useHeaderSubject=true");
 
-                from("direct:b").to(james.uriPrefix(Protocol.smtp) + "&to=b@localhost&from=you@you.com");
+                from("direct:b").to(james.uriPrefix(Protocol.smtp) + "&to=" + b.getLogin()
+                                    + "@localhost&from=you@you.com&useHeaderSubject=true");
 
-                from("direct:c").to(admin.uriPrefix(Protocol.smtp) + "&to=c@localhost&cc=you@you.com,them@them.com");
+                from("direct:c").to(
+                        admin.uriPrefix(Protocol.smtp) + "&to=" + c.getLogin()
+                                    + "@localhost&cc=you@you.com,them@them.com&useHeaderSubject=true");
             }
         };
     }

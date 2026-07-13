@@ -24,7 +24,7 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.bindy.model.simple.bool.BooleanExample;
-import org.apache.camel.test.spring.junit5.CamelSpringTest;
+import org.apache.camel.test.spring.junit6.CamelSpringTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
@@ -59,7 +59,10 @@ public class BindySimpleCsvBooleanUnmarshallTest {
     public void testUnMarshallMessageWithBoolean() throws Exception {
 
         // We suppress the firstName field of the first record
-        expected = "andrew,true\r\n" + "andrew,false\r\n";
+        expected = """
+                andrew,true\r
+                andrew,false\r
+                """;
 
         template.sendBody(expected);
 
@@ -83,7 +86,11 @@ public class BindySimpleCsvBooleanUnmarshallTest {
     public void testUnMarshallMessageWithBooleanMissingFields() throws Exception {
 
         // We suppress the firstName field of the first record
-        expected = "andrew,true\r\n" + "joseph,false\r\n" + "nicholas,\r\n";
+        expected = """
+                andrew,true\r
+                joseph,false\r
+                nicholas,\r
+                """;
 
         template.sendBody(expected);
 
@@ -106,7 +113,7 @@ public class BindySimpleCsvBooleanUnmarshallTest {
 
     public static class ContextConfig extends RouteBuilder {
         BindyCsvDataFormat camelDataFormat = new BindyCsvDataFormat(
-                org.apache.camel.dataformat.bindy.model.simple.bool.BooleanExample.class);
+                BooleanExample.class);
 
         @Override
         public void configure() {

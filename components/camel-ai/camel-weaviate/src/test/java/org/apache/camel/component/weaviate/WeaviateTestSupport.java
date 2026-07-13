@@ -19,7 +19,7 @@ package org.apache.camel.component.weaviate;
 import org.apache.camel.CamelContext;
 import org.apache.camel.test.infra.weaviate.services.WeaviateService;
 import org.apache.camel.test.infra.weaviate.services.WeaviateServiceFactory;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -34,6 +34,8 @@ public class WeaviateTestSupport extends CamelTestSupport {
 
         WeaviateVectorDbComponent component = context.getComponent("weaviate", WeaviateVectorDbComponent.class);
         component.getConfiguration().setHost(WEAVIATE.getWeaviateHost() + ":" + WEAVIATE.getWeaviatePort());
+        component.getConfiguration().setGrpcHost(WEAVIATE.getWeaviateHost());
+        component.getConfiguration().setGrpcPort(WEAVIATE.getWeaviateGrpcPort());
 
         return context;
     }

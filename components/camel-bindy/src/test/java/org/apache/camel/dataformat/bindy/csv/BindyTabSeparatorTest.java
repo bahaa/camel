@@ -22,7 +22,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.dataformat.bindy.model.tab.PurchaseOrder;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,10 +74,12 @@ public class BindyTabSeparatorTest extends CamelTestSupport {
         mock.expectedMessageCount(1);
 
         template.sendBodyAndHeader("direct:unmarshal",
-                "123\tCamel in Action\t2\t\t\n"
-                                                       + "456\tCamel in Action\t1\t\t\t\n"
-                                                       + "456\tCamel in Action\t2\t\t\n"
-                                                       + "456\tCamel in Action\t1\t\t\t\n",
+                """
+                        123\tCamel in Action\t2\t\t
+                        456\tCamel in Action\t1\t\t\t
+                        456\tCamel in Action\t2\t\t
+                        456\tCamel in Action\t1\t\t\t
+                        """,
                 Exchange.CONTENT_ENCODING, "iso8859-1");
 
         MockEndpoint.assertIsSatisfied(context);
@@ -117,7 +119,7 @@ public class BindyTabSeparatorTest extends CamelTestSupport {
             @Override
             public void configure() {
                 BindyCsvDataFormat bindy
-                        = new BindyCsvDataFormat(org.apache.camel.dataformat.bindy.model.tab.PurchaseOrder.class);
+                        = new BindyCsvDataFormat(PurchaseOrder.class);
 
                 from("direct:marshal")
                         .marshal(bindy)

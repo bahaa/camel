@@ -24,6 +24,7 @@ import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.model.ProcessorDefinition;
 import org.apache.camel.spi.Policy;
 import org.apache.camel.spi.TransactedPolicy;
+import org.apache.camel.util.ObjectHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,11 +34,11 @@ public abstract class AbstractPolicyReifier<T extends ProcessorDefinition<?>> ex
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractPolicyReifier.class);
 
-    public AbstractPolicyReifier(Route route, T definition) {
+    protected AbstractPolicyReifier(Route route, T definition) {
         super(route, definition);
     }
 
-    public AbstractPolicyReifier(CamelContext camelContext, T definition) {
+    protected AbstractPolicyReifier(CamelContext camelContext, T definition) {
         super(camelContext, definition);
     }
 
@@ -46,7 +47,7 @@ public abstract class AbstractPolicyReifier<T extends ProcessorDefinition<?>> ex
             return policy;
         }
         // explicit ref given so lookup by it
-        if (org.apache.camel.util.ObjectHelper.isNotEmpty(ref)) {
+        if (ObjectHelper.isNotEmpty(ref)) {
             return mandatoryLookup(ref, Policy.class);
         }
 

@@ -21,12 +21,12 @@ import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class DnsIpHeaderTransferTest extends CamelTestSupport {
 
@@ -50,12 +50,10 @@ public class DnsIpHeaderTransferTest extends CamelTestSupport {
     void testNullIPRequests() throws Exception {
         resultEndpoint.expectedMessageCount(0);
 
-        try {
-            template.sendBodyAndHeader("hello", "dns.domain", null);
-            fail("Should have thrown exception");
-        } catch (Exception t) {
-            assertTrue(t.getCause() instanceof IllegalArgumentException);
-        }
+        Exception e = assertThrows(Exception.class, () -> {
+            template.sendBodyAndHeader("hello", DnsConstants.DNS_DOMAIN, null);
+        });
+        assertTrue(e.getCause() instanceof IllegalArgumentException);
         resultEndpoint.assertIsSatisfied();
     }
 
@@ -63,12 +61,10 @@ public class DnsIpHeaderTransferTest extends CamelTestSupport {
     void testEmptyIPRequests() throws Exception {
         resultEndpoint.expectedMessageCount(0);
 
-        try {
-            template.sendBodyAndHeader("hello", "dns.domain", "");
-            fail("Should have thrown exception");
-        } catch (Exception t) {
-            assertTrue(t.getCause() instanceof IllegalArgumentException);
-        }
+        Exception e = assertThrows(Exception.class, () -> {
+            template.sendBodyAndHeader("hello", DnsConstants.DNS_DOMAIN, "");
+        });
+        assertTrue(e.getCause() instanceof IllegalArgumentException);
         resultEndpoint.assertIsSatisfied();
     }
 
@@ -80,7 +76,7 @@ public class DnsIpHeaderTransferTest extends CamelTestSupport {
         resultEndpoint.expectedBodiesReceived("40.79.78.1");
         resultEndpoint.expectedHeaderReceived("foo", "bar");
 
-        template.sendBodyAndHeader("hello", "dns.domain", "www.apache.org");
+        template.sendBodyAndHeader("hello", DnsConstants.DNS_DOMAIN, "www.apache.org");
         resultEndpoint.assertIsSatisfied();
     }
 }

@@ -29,6 +29,8 @@ public class ClassicJmsHeaderFilterStrategy extends DefaultHeaderFilterStrategy 
     }
 
     public ClassicJmsHeaderFilterStrategy(boolean includeAllJMSXProperties) {
+        setInFilterStartsWith((String[]) null); // opt out: pass Camel headers inbound (legacy mode)
+        setOutFilterStartsWith((String[]) null); // opt out: pass Camel headers outbound (legacy mode)
         if (!includeAllJMSXProperties) {
             initialize();
         }

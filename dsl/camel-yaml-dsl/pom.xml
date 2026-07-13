@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.camel</groupId>
         <artifactId>dsl</artifactId>
-        <version>4.17.0-SNAPSHOT</version>
+        <version>4.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>camel-yaml-dsl-parent</artifactId>
@@ -37,6 +37,8 @@
         <module>camel-yaml-dsl-common</module>
         <module>camel-yaml-dsl-deserializers</module>
         <module>camel-yaml-dsl</module>
+        <module>camel-yaml-dsl-validator</module>
+        <module>camel-yaml-dsl-validator-maven-plugin</module>
     </modules>
 
 </project>

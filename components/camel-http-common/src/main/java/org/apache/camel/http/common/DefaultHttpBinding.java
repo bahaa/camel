@@ -50,6 +50,7 @@ import org.apache.camel.StreamCache;
 import org.apache.camel.attachment.AttachmentMessage;
 import org.apache.camel.attachment.CamelFileDataSource;
 import org.apache.camel.converter.stream.CachedOutputStream;
+import org.apache.camel.http.base.HttpHeaderFilterStrategy;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.support.ExchangeHelper;
 import org.apache.camel.support.GZIPHelper;
@@ -88,10 +89,11 @@ public class DefaultHttpBinding implements HttpBinding {
     private boolean muteException;
     private boolean logException;
     private boolean allowJavaSerializedObject;
+    private String deserializationFilter;
     private boolean mapHttpMessageBody = true;
     private boolean mapHttpMessageHeaders = true;
     private boolean mapHttpMessageFormUrlEncodedBody = true;
-    private HeaderFilterStrategy headerFilterStrategy = new org.apache.camel.http.base.HttpHeaderFilterStrategy();
+    private HeaderFilterStrategy headerFilterStrategy = new HttpHeaderFilterStrategy();
     private String fileNameExtWhitelist;
 
     public DefaultHttpBinding() {
@@ -110,6 +112,7 @@ public class DefaultHttpBinding implements HttpBinding {
         this.logException = endpoint.isLogException();
         if (endpoint.getComponent() != null) {
             this.allowJavaSerializedObject = endpoint.getComponent().isAllowJavaSerializedObject();
+            this.deserializationFilter = endpoint.getComponent().getDeserializationFilter();
         }
     }
 
@@ -219,7 +222,8 @@ public class DefaultHttpBinding implements HttpBinding {
                 try {
                     InputStream is
                             = message.getExchange().getContext().getTypeConverter().mandatoryConvertTo(InputStream.class, body);
-                    Object object = HttpHelper.deserializeJavaObjectFromStream(is, message.getExchange().getContext());
+                    Object object = HttpHelper.deserializeJavaObjectFromStream(is, message.getExchange().getContext(),
+                            deserializationFilter);
                     if (object != null) {
                         message.setBody(object);
                     }
@@ -369,9 +373,10 @@ public class DefaultHttpBinding implements HttpBinding {
                 doWriteFaultResponse(target, response, exchange);
             }
         } else {
-            if (exchange.hasOut()) {
+            if (exchange.getMessage() != null) {
+                // if (exchange.getOut() != null) {
                 // just copy the protocol relates header if we do not have them
-                copyProtocolHeaders(exchange.getIn(), exchange.getOut());
+                copyProtocolHeaders(exchange.getIn(), exchange.getMessage());
             }
             doWriteResponse(target, response, exchange);
         }
@@ -702,6 +707,16 @@ public class DefaultHttpBinding implements HttpBinding {
     @Override
     public void setAllowJavaSerializedObject(boolean allowJavaSerializedObject) {
         this.allowJavaSerializedObject = allowJavaSerializedObject;
+    }
+
+    @Override
+    public String getDeserializationFilter() {
+        return deserializationFilter;
+    }
+
+    @Override
+    public void setDeserializationFilter(String deserializationFilter) {
+        this.deserializationFilter = deserializationFilter;
     }
 
     @Override

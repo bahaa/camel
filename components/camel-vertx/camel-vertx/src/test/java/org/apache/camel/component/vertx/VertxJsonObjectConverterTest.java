@@ -19,10 +19,9 @@ package org.apache.camel.component.vertx;
 import java.io.InputStream;
 import java.util.Map;
 
-import io.netty.buffer.Unpooled;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -45,12 +44,6 @@ public class VertxJsonObjectConverterTest extends CamelTestSupport {
     @Test
     public void testByteArrayToJsonObject() {
         JsonObject jsonObject = context.getTypeConverter().convertTo(JsonObject.class, BODY.getBytes());
-        Assertions.assertEquals(BODY, jsonObject.toString());
-    }
-
-    @Test
-    public void testByteBufToJsonObject() {
-        JsonObject jsonObject = context.getTypeConverter().convertTo(JsonObject.class, Unpooled.wrappedBuffer(BODY.getBytes()));
         Assertions.assertEquals(BODY, jsonObject.toString());
     }
 

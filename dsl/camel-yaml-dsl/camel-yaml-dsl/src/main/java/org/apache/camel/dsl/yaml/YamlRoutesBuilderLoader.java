@@ -41,6 +41,7 @@ import org.apache.camel.model.InterceptDefinition;
 import org.apache.camel.model.InterceptFromDefinition;
 import org.apache.camel.model.InterceptSendToEndpointDefinition;
 import org.apache.camel.model.KameletDefinition;
+import org.apache.camel.model.Model;
 import org.apache.camel.model.OnCompletionDefinition;
 import org.apache.camel.model.OnExceptionDefinition;
 import org.apache.camel.model.ProcessorDefinition;
@@ -49,18 +50,22 @@ import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.model.RouteTemplateDefinition;
 import org.apache.camel.model.TemplatedRouteDefinition;
 import org.apache.camel.model.ToDefinition;
+import org.apache.camel.model.app.SSLContextParametersDefinition;
 import org.apache.camel.model.errorhandler.DeadLetterChannelDefinition;
 import org.apache.camel.model.errorhandler.DefaultErrorHandlerDefinition;
 import org.apache.camel.model.errorhandler.NoErrorHandlerDefinition;
 import org.apache.camel.model.rest.RestConfigurationDefinition;
 import org.apache.camel.model.rest.RestDefinition;
 import org.apache.camel.model.rest.VerbDefinition;
+import org.apache.camel.model.transformer.TransformersDefinition;
+import org.apache.camel.model.validator.ValidatorsDefinition;
 import org.apache.camel.spi.CamelContextCustomizer;
 import org.apache.camel.spi.DataType;
 import org.apache.camel.spi.Resource;
 import org.apache.camel.spi.annotations.RoutesLoader;
 import org.apache.camel.support.ObjectHelper;
 import org.apache.camel.support.PropertyBindingSupport;
+import org.apache.camel.support.jsse.SSLContextParameters;
 import org.apache.camel.util.URISupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -155,7 +160,13 @@ public class YamlRoutesBuilderLoader extends YamlRoutesBuilderLoaderSupport {
                             }
                         }
                     } else {
-                        doConfigure(target);
+                        boolean accepted = doConfigure(target);
+                        if (!accepted) {
+                            String loc = ctx.getResource() != null ? ctx.getResource().getLocation() : "";
+                            LOG.warn(
+                                    "Unsupported top-level YAML node in resource: {}. Ensure the YAML file uses a sequence (list) of route definitions.",
+                                    loc);
+                        }
                     }
                 }
 
@@ -166,11 +177,14 @@ public class YamlRoutesBuilderLoader extends YamlRoutesBuilderLoaderSupport {
                 if (resource != null) {
                     preparseDone.remove(resource.getLocation());
                 }
-                beansDeserializer.clearCache();
+                if (preparseDone.isEmpty()) {
+                    beansDeserializer.clearCache();
+                }
             }
 
             private boolean doConfigure(Object item) throws Exception {
                 if (item instanceof OutputAwareFromDefinition) {
+                    ctx.warnCompactNotationOnce(LOG);
                     RouteDefinition route = new RouteDefinition();
                     route.setInput(((OutputAwareFromDefinition) item).getDelegate());
                     route.setOutputs(((OutputAwareFromDefinition) item).getOutputs());
@@ -252,6 +266,30 @@ public class YamlRoutesBuilderLoader extends YamlRoutesBuilderLoaderSupport {
                             getCamelContext(),
                             getCamelContext().getRestConfiguration());
                     return true;
+                } else if (item instanceof SSLContextParametersDefinition def) {
+                    SSLContextParameters scp = def.createSSLContextParameters(getCamelContext());
+                    if (def.getId() != null) {
+                        getCamelContext().getRegistry().bind(def.getId(), scp);
+                    }
+                    // set the first one as the global default
+                    if (getCamelContext().getSSLContextParameters() == null) {
+                        getCamelContext().setSSLContextParameters(scp);
+                    }
+                    return true;
+                } else if (item instanceof TransformersDefinition definition) {
+                    if (definition.getTransformers() != null) {
+                        getCamelContext().getCamelContextExtension()
+                                .getContextPlugin(Model.class)
+                                .getTransformers().addAll(definition.getTransformers());
+                    }
+                    return true;
+                } else if (item instanceof ValidatorsDefinition definition) {
+                    if (definition.getValidators() != null) {
+                        getCamelContext().getCamelContextExtension()
+                                .getContextPlugin(Model.class)
+                                .getValidators().addAll(definition.getValidators());
+                    }
+                    return true;
                 }
 
                 return false;
@@ -294,7 +332,13 @@ public class YamlRoutesBuilderLoader extends YamlRoutesBuilderLoaderSupport {
                             }
                         }
                     } else {
-                        doConfiguration(target);
+                        boolean accepted = doConfiguration(target);
+                        if (!accepted) {
+                            String loc = ctx.getResource() != null ? ctx.getResource().getLocation() : "";
+                            LOG.warn(
+                                    "Unsupported top-level YAML node in resource: {}. Ensure the YAML file uses a sequence (list) of route definitions.",
+                                    loc);
+                        }
                     }
                 }
             }
@@ -476,7 +520,7 @@ public class YamlRoutesBuilderLoader extends YamlRoutesBuilderLoaderSupport {
 
                 // is there any error handler?
                 MappingNode errorHandler = asMappingNode(nodeAt(root, "/spec/errorHandler"));
-                if (errorHandler != null) {
+                if (errorHandler != null && !errorHandler.getValue().isEmpty()) {
                     // there are 5 different error handlers, which one is it
                     NodeTuple nt = errorHandler.getValue().get(0);
                     String ehName = asText(nt.getKeyNode());
@@ -486,6 +530,10 @@ public class YamlRoutesBuilderLoader extends YamlRoutesBuilderLoaderSupport {
                         // a sink is a dead letter queue
                         DeadLetterChannelDefinition dlcd = new DeadLetterChannelDefinition();
                         MappingNode endpoint = asMappingNode(nodeAt(nt.getValueNode(), "/endpoint"));
+                        if (endpoint == null) {
+                            throw new IllegalArgumentException(
+                                    "Pipe errorHandler sink must have an endpoint defined");
+                        }
                         String dlq = extractCamelEndpointUri(endpoint);
                         dlcd.setDeadLetterUri(dlq);
                         ehf = dlcd;
@@ -560,6 +608,12 @@ public class YamlRoutesBuilderLoader extends YamlRoutesBuilderLoaderSupport {
             uri = extractTupleValue(mn.getValue(), "name");
         } else {
             uri = extractTupleValue(node.getValue(), "uri");
+            if (uri == null && mn != null) {
+                String kind = extractTupleValue(mn.getValue(), "kind");
+                String apiVersion = extractTupleValue(mn.getValue(), "apiVersion");
+                throw new IllegalArgumentException(
+                        "Unsupported Pipe ref kind: " + kind + " (apiVersion: " + apiVersion + ")");
+            }
         }
 
         // properties
@@ -573,7 +627,10 @@ public class YamlRoutesBuilderLoader extends YamlRoutesBuilderLoaderSupport {
         }
 
         if (params != null && !params.isEmpty()) {
-            String query = URISupport.createQueryString(params);
+            // kamelet uses useRawUri so parameters should not be encoded
+            String query = URISupport.createQueryString(params, !kamelet);
+            // CAMEL-23284: restore property placeholders that were URL-encoded
+            query = query.replace("%7B%7B", "{{").replace("%7D%7D", "}}");
             uri = uri + "?" + query;
         }
 

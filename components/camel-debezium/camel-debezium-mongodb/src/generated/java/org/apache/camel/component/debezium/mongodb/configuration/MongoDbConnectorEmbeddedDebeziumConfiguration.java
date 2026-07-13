@@ -55,6 +55,8 @@ public class MongoDbConnectorEmbeddedDebeziumConfiguration
     private int mongodbConnectTimeoutMs = 10000;
     @UriParam(label = LABEL_NAME)
     private int snapshotFetchSize;
+    @UriParam(label = LABEL_NAME, defaultValue = "1")
+    private int snapshotMaxThreadsMultiplier = 1;
     @UriParam(label = LABEL_NAME)
     private String openlineageIntegrationJobTags;
     @UriParam(label = LABEL_NAME, defaultValue = "30s", javaType = "java.time.Duration")
@@ -93,8 +95,8 @@ public class MongoDbConnectorEmbeddedDebeziumConfiguration
     private int maxQueueSize = 8192;
     @UriParam(label = LABEL_NAME, defaultValue = "warn")
     private String guardrailCollectionsLimitAction = "warn";
-    @UriParam(label = LABEL_NAME, defaultValue = ".*secret$|.*password$|.*sasl\\.jaas\\.config$|.*basic\\.auth\\.user\\.info|.*registry\\.auth\\.client-secret")
-    private String customSanitizePattern = ".*secret$|.*password$|.*sasl\\.jaas\\.config$|.*basic\\.auth\\.user\\.info|.*registry\\.auth\\.client-secret";
+    @UriParam(label = LABEL_NAME, defaultValue = ".*secret$|.*password$|.*sasl\\.jaas\\.config$|.*basic\\.auth\\.user\\.info|.*registry\\.auth\\.client-secret|.*credentials\\.json$")
+    private String customSanitizePattern = ".*secret$|.*password$|.*sasl\\.jaas\\.config$|.*basic\\.auth\\.user\\.info|.*registry\\.auth\\.client-secret|.*credentials\\.json$";
     @UriParam(label = LABEL_NAME)
     private String collectionIncludeList;
     @UriParam(label = LABEL_NAME)
@@ -134,6 +136,8 @@ public class MongoDbConnectorEmbeddedDebeziumConfiguration
     private String snapshotIncludeCollectionList;
     @UriParam(label = LABEL_NAME, defaultValue = "false")
     private boolean snapshotModeConfigurationBasedStartStream = false;
+    @UriParam(label = LABEL_NAME, defaultValue = "true")
+    private boolean statisticsMetricsEnabled = true;
     @UriParam(label = LABEL_NAME, defaultValue = "0")
     private long maxQueueSizeInBytes = 0;
     @UriParam(label = LABEL_NAME, defaultValue = "false")
@@ -400,6 +404,22 @@ public class MongoDbConnectorEmbeddedDebeziumConfiguration
 
     public int getSnapshotFetchSize() {
         return snapshotFetchSize;
+    }
+
+    /**
+     * The factor used to scale the number of snapshot chunks per table. The
+     * default behavior is to take 'row_count/snapshot.max.threads' to compute
+     * the number of rows per chunks. This may not be ideal for larger tables,
+     * and using the multiplier, the formula is adjusted to increase the number
+     * of chunks by using 'row_count/(snapshot.max.threads *
+     * snapshot.max.threads.multiplier).
+     */
+    public void setSnapshotMaxThreadsMultiplier(int snapshotMaxThreadsMultiplier) {
+        this.snapshotMaxThreadsMultiplier = snapshotMaxThreadsMultiplier;
+    }
+
+    public int getSnapshotMaxThreadsMultiplier() {
+        return snapshotMaxThreadsMultiplier;
     }
 
     /**
@@ -910,6 +930,19 @@ public class MongoDbConnectorEmbeddedDebeziumConfiguration
     }
 
     /**
+     * Enable to collect various kind of statistics, like latencies in record
+     * processing, and derived data like quantiles. By default collecting
+     * statistics is enabled.
+     */
+    public void setStatisticsMetricsEnabled(boolean statisticsMetricsEnabled) {
+        this.statisticsMetricsEnabled = statisticsMetricsEnabled;
+    }
+
+    public boolean isStatisticsMetricsEnabled() {
+        return statisticsMetricsEnabled;
+    }
+
+    /**
      * Maximum size of the queue in bytes for change events read from the
      * database log but not yet recorded or forwarded. Defaults to 0. Mean the
      * feature is not enabled
@@ -1128,6 +1161,7 @@ public class MongoDbConnectorEmbeddedDebeziumConfiguration
         addPropertyIfNotNull(configBuilder, "heartbeat.topics.prefix", heartbeatTopicsPrefix);
         addPropertyIfNotNull(configBuilder, "mongodb.connect.timeout.ms", mongodbConnectTimeoutMs);
         addPropertyIfNotNull(configBuilder, "snapshot.fetch.size", snapshotFetchSize);
+        addPropertyIfNotNull(configBuilder, "snapshot.max.threads.multiplier", snapshotMaxThreadsMultiplier);
         addPropertyIfNotNull(configBuilder, "openlineage.integration.job.tags", openlineageIntegrationJobTags);
         addPropertyIfNotNull(configBuilder, "mongodb.poll.interval.ms", mongodbPollIntervalMs);
         addPropertyIfNotNull(configBuilder, "incremental.snapshot.watermarking.strategy", incrementalSnapshotWatermarkingStrategy);
@@ -1167,6 +1201,7 @@ public class MongoDbConnectorEmbeddedDebeziumConfiguration
         addPropertyIfNotNull(configBuilder, "openlineage.integration.enabled", openlineageIntegrationEnabled);
         addPropertyIfNotNull(configBuilder, "snapshot.include.collection.list", snapshotIncludeCollectionList);
         addPropertyIfNotNull(configBuilder, "snapshot.mode.configuration.based.start.stream", snapshotModeConfigurationBasedStartStream);
+        addPropertyIfNotNull(configBuilder, "statistics.metrics.enabled", statisticsMetricsEnabled);
         addPropertyIfNotNull(configBuilder, "max.queue.size.in.bytes", maxQueueSizeInBytes);
         addPropertyIfNotNull(configBuilder, "snapshot.mode.configuration.based.snapshot.schema", snapshotModeConfigurationBasedSnapshotSchema);
         addPropertyIfNotNull(configBuilder, "signal.poll.interval.ms", signalPollIntervalMs);

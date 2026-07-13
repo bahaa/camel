@@ -46,6 +46,7 @@ import org.apache.camel.component.zeebe.model.ProcessResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Deprecated(since = "4.19.0")
 public class ZeebeService {
     private static final Logger LOG = LoggerFactory.getLogger(ZeebeService.class);
 
@@ -61,8 +62,15 @@ public class ZeebeService {
     private String oAuthAPI;
 
     public ZeebeService(String gatewayHost, int gatewayPort) {
+        this(gatewayHost, gatewayPort, null, null, null);
+    }
+
+    public ZeebeService(String gatewayHost, int gatewayPort, String clientId, String clientSecret, String oAuthAPI) {
         this.gatewayHost = gatewayHost;
         this.gatewayPort = gatewayPort;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
+        this.oAuthAPI = oAuthAPI;
 
         objectMapper = new ObjectMapper();
     }

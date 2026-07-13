@@ -1,7 +1,7 @@
 = Multicast EIP
 :doctitle: Multicast
 :shortname: multicast
-:description: Routes the same message to multiple paths either sequentially or in parallel.
+:description: Sends a copy of the message to multiple fixed endpoints, processing them sequentially or in parallel, and optionally aggregating their replies
 :since: 
 :supportlevel: Stable
 :tabs-sync-option:
@@ -59,6 +59,24 @@ XML::
     </multicast>
 </route>
 ----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:a
+      steps:
+        - multicast:
+            steps:
+              - to:
+                  uri: direct:b
+              - to:
+                  uri: direct:c
+              - to:
+                  uri: direct:d
+----
 ====
 
 By default, Multicast EIP runs in single threaded mode, which means
@@ -97,6 +115,25 @@ XML::
         <to uri="direct:d"/>
     </multicast>
 </route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:a
+      steps:
+        - multicast:
+            parallelProcessing: "true"
+            steps:
+              - to:
+                  uri: direct:b
+              - to:
+                  uri: direct:c
+              - to:
+                  uri: direct:d
 ----
 ====
 
@@ -147,6 +184,27 @@ XML::
     <to uri="mock:result"/>
 </route>
 ----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:a
+      steps:
+        - multicast:
+            parallelProcessing: "true"
+            steps:
+              - to:
+                  uri: direct:b
+              - to:
+                  uri: direct:c
+              - to:
+                  uri: direct:d
+        - to:
+            uri: mock:result
+----
 ====
 
 === Aggregating
@@ -180,13 +238,36 @@ We can refer to the FQN class name with `#class:` syntax as shown below:
 <route>
     <from uri="direct:a"/>
     <multicast parallelProcessing="true" timeout="5000"
-               aggreationStrategy="#class:com.foo.MyAggregationStrategy">
+               aggregationStrategy="#class:com.foo.MyAggregationStrategy">
         <to uri="direct:b"/>
         <to uri="direct:c"/>
         <to uri="direct:d"/>
     </multicast>
     <to uri="mock:result"/>
 </route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:a
+      steps:
+        - multicast:
+            aggregationStrategy: "#class:com.foo.MyAggregationStrategy"
+            timeout: 5000
+            parallelProcessing: "true"
+            steps:
+              - to:
+                  uri: direct:b
+              - to:
+                  uri: direct:c
+              - to:
+                  uri: direct:d
+        - to:
+            uri: mock:result
 ----
 ====
 
@@ -265,6 +346,47 @@ XML::
         <to uri="mock:baz"/>
     </route>
 </routes>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:start
+      steps:
+        - multicast:
+            stopOnException: "true"
+            steps:
+              - to:
+                  uri: direct:foo
+              - to:
+                  uri: direct:bar
+              - to:
+                  uri: direct:baz
+        - to:
+            uri: mock:result
+- route:
+    from:
+      uri: direct:foo
+      steps:
+        - to:
+            uri: mock:foo
+- route:
+    from:
+      uri: direct:bar
+      steps:
+        - process:
+            ref: myProcessor
+        - to:
+            uri: mock:bar
+- route:
+    from:
+      uri: direct:baz
+      steps:
+        - to:
+            uri: mock:baz
 ----
 ====
 

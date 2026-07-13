@@ -34,7 +34,6 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
 public class VertxPlatformHttpEngineWithTypeConverterTest {
-
     @Test
     public void testByteBufferConversion() throws Exception {
         final CamelContext context = VertxPlatformHttpEngineTest.createCamelContext();
@@ -52,7 +51,7 @@ public class VertxPlatformHttpEngineWithTypeConverterTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()
@@ -82,7 +81,7 @@ public class VertxPlatformHttpEngineWithTypeConverterTest {
                 }
             });
 
-            context.start();
+            VertxPlatformHttpEngineTest.startCamelContext(context);
 
             given()
                     .when()

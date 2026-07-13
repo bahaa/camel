@@ -366,6 +366,27 @@ public interface DebeziumOracleComponentBuilderFactory {
             return this;
         }
     
+        
+        /**
+         * Specifies the capture mode used to capture streaming changes from
+         * Oracle'primary' (the default) captures changes from the primary,
+         * specified by database. configurations, 'physical_standby' captures
+         * changes from a read-only physical standby, specified by secondary.
+         * configurations.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: primary
+         * Group: oracle
+         * 
+         * @param captureMode the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder captureMode(java.lang.String captureMode) {
+            doSetProperty("captureMode", captureMode);
+            return this;
+        }
+    
         /**
          * Regular expressions matching columns to exclude from change events.
          * 
@@ -477,7 +498,7 @@ public interface DebeziumOracleComponentBuilderFactory {
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
          * Default:
-         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret
+         * .*secret$|.*password$|.*sasl\.jaas\.config$|.*basic\.auth\.user\.info|.*registry\.auth\.client-secret|.*credentials\.json$
          * Group: oracle
          * 
          * @param customSanitizePattern the value to set
@@ -491,8 +512,11 @@ public interface DebeziumOracleComponentBuilderFactory {
         
         /**
          * The adapter to use when capturing changes from the database. Options
-         * include: 'logminer': (the default) to capture changes using native
-         * Oracle LogMiner; 'xstream' to capture changes using Oracle XStreams.
+         * include: 'LogMiner': (the default) to capture changes using native
+         * Oracle LogMiner with buffered transactions; 'LogMiner_Unbuffered': to
+         * capture changes using native Oracle LogMiner without buffering;
+         * 'XStream': to capture changes using Oracle XStreams; 'OLR': to
+         * capture changes using OpenLogReplicator.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -539,7 +563,7 @@ public interface DebeziumOracleComponentBuilderFactory {
         }
     
         /**
-         * Name of the XStream Out server to connect to.
+         * Name of the XStream Outbound server to connect to.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -1023,73 +1047,43 @@ public interface DebeziumOracleComponentBuilderFactory {
     
         
         /**
-         * The starting SCN interval size that the connector will use for
-         * reading data from redo/archive logs.
+         * Duration in milliseconds to retain deferred transaction metadata for
+         * transactions that never emit a DML event. By default, deferred
+         * transaction metadata is retained for 24 hours. This is independent of
+         * log.mining.transaction.retention.ms which governs cached transactions
+         * with events.
          * 
          * The option is a: &lt;code&gt;long&lt;/code&gt; type.
          * 
-         * Default: 20000
+         * Default: 1d
          * Group: oracle
          * 
-         * @param logMiningBatchSizeDefault the value to set
+         * @param logMiningBufferDeferredTransactionRetentionMs the value to set
          * @return the dsl builder
          */
-        default DebeziumOracleComponentBuilder logMiningBatchSizeDefault(long logMiningBatchSizeDefault) {
-            doSetProperty("logMiningBatchSizeDefault", logMiningBatchSizeDefault);
+        default DebeziumOracleComponentBuilder logMiningBufferDeferredTransactionRetentionMs(long logMiningBufferDeferredTransactionRetentionMs) {
+            doSetProperty("logMiningBufferDeferredTransactionRetentionMs", logMiningBufferDeferredTransactionRetentionMs);
             return this;
         }
     
         
         /**
-         * Active batch size will be also increased/decreased by this amount for
-         * tuning connector throughput when needed.
+         * Controls whether transaction start events are deferred when using
+         * buffered LogMiner. When enabled, transaction start events are stored
+         * in a lightweight metadata map. Transactions are only promoted to the
+         * transaction cache when a DML event is observed. The mining window is
+         * not pinned by transactions, allowing a block-by-block sliding window.
          * 
-         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
          * 
-         * Default: 20000
+         * Default: false
          * Group: oracle
          * 
-         * @param logMiningBatchSizeIncrement the value to set
+         * @param logMiningBufferDeferredTransactionStart the value to set
          * @return the dsl builder
          */
-        default DebeziumOracleComponentBuilder logMiningBatchSizeIncrement(long logMiningBatchSizeIncrement) {
-            doSetProperty("logMiningBatchSizeIncrement", logMiningBatchSizeIncrement);
-            return this;
-        }
-    
-        
-        /**
-         * The maximum SCN interval size that this connector will use when
-         * reading from redo/archive logs.
-         * 
-         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
-         * 
-         * Default: 100000
-         * Group: oracle
-         * 
-         * @param logMiningBatchSizeMax the value to set
-         * @return the dsl builder
-         */
-        default DebeziumOracleComponentBuilder logMiningBatchSizeMax(long logMiningBatchSizeMax) {
-            doSetProperty("logMiningBatchSizeMax", logMiningBatchSizeMax);
-            return this;
-        }
-    
-        
-        /**
-         * The minimum SCN interval size that this connector will try to read
-         * from redo/archive logs.
-         * 
-         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
-         * 
-         * Default: 1000
-         * Group: oracle
-         * 
-         * @param logMiningBatchSizeMin the value to set
-         * @return the dsl builder
-         */
-        default DebeziumOracleComponentBuilder logMiningBatchSizeMin(long logMiningBatchSizeMin) {
-            doSetProperty("logMiningBatchSizeMin", logMiningBatchSizeMin);
+        default DebeziumOracleComponentBuilder logMiningBufferDeferredTransactionStart(boolean logMiningBufferDeferredTransactionStart) {
+            doSetProperty("logMiningBufferDeferredTransactionStart", logMiningBufferDeferredTransactionStart);
             return this;
         }
     
@@ -1161,6 +1155,23 @@ public interface DebeziumOracleComponentBuilderFactory {
          */
         default DebeziumOracleComponentBuilder logMiningBufferEhcacheProcessedtransactionsConfig(java.lang.String logMiningBufferEhcacheProcessedtransactionsConfig) {
             doSetProperty("logMiningBufferEhcacheProcessedtransactionsConfig", logMiningBufferEhcacheProcessedtransactionsConfig);
+            return this;
+        }
+    
+        /**
+         * Specifies the inner body the Ehcache tag for the rollbacks cache, but
+         * should not include the nor the attributes as these are managed by
+         * Debezium.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: oracle
+         * 
+         * @param logMiningBufferEhcacheRollbacksConfig the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningBufferEhcacheRollbacksConfig(java.lang.String logMiningBufferEhcacheRollbacksConfig) {
+            doSetProperty("logMiningBufferEhcacheRollbacksConfig", logMiningBufferEhcacheRollbacksConfig);
             return this;
         }
     
@@ -1247,6 +1258,21 @@ public interface DebeziumOracleComponentBuilderFactory {
         }
     
         /**
+         * Specifies the XML configuration for the Infinispan 'rollbacks' cache.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: oracle
+         * 
+         * @param logMiningBufferInfinispanCacheRollbacks the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningBufferInfinispanCacheRollbacks(java.lang.String logMiningBufferInfinispanCacheRollbacks) {
+            doSetProperty("logMiningBufferInfinispanCacheRollbacks", logMiningBufferInfinispanCacheRollbacks);
+            return this;
+        }
+    
+        /**
          * Specifies the XML configuration for the Infinispan 'schema-changes'
          * cache.
          * 
@@ -1275,6 +1301,134 @@ public interface DebeziumOracleComponentBuilderFactory {
          */
         default DebeziumOracleComponentBuilder logMiningBufferInfinispanCacheTransactions(java.lang.String logMiningBufferInfinispanCacheTransactions) {
             doSetProperty("logMiningBufferInfinispanCacheTransactions", logMiningBufferInfinispanCacheTransactions);
+            return this;
+        }
+    
+        
+        /**
+         * Controls whether transaction start events are deferred when using
+         * buffered LogMiner. When enabled, transaction start events are stored
+         * in a lightweight metadata map. Transactions are only promoted to the
+         * transaction cache when a DML event is observed. The mining window is
+         * not pinned by transactions, allowing a block-by-block sliding window.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: oracle
+         * 
+         * @param logMiningBufferMemoryLegacyTransactionStart the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningBufferMemoryLegacyTransactionStart(boolean logMiningBufferMemoryLegacyTransactionStart) {
+            doSetProperty("logMiningBufferMemoryLegacyTransactionStart", logMiningBufferMemoryLegacyTransactionStart);
+            return this;
+        }
+    
+        
+        /**
+         * This controls whether the 'CLIENT_ID' column values are tracked. When
+         * set to true (the default), the 'CLIENT_ID' values are buffered and
+         * provided in events when available. When set to false, the 'CLIENT_ID'
+         * column is excluded from the LogMiner query and its values are not
+         * buffered, reducing both the memory footprint and query bandwidth.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: oracle
+         * 
+         * @param logMiningBufferTrackClientId the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningBufferTrackClientId(boolean logMiningBufferTrackClientId) {
+            doSetProperty("logMiningBufferTrackClientId", logMiningBufferTrackClientId);
+            return this;
+        }
+    
+        
+        /**
+         * This controls whether the 'COMMIT_TIMESTAMP' column values are
+         * tracked. When set to true (the default), the 'COMMIT_TIMESTAMP'
+         * values are buffered and provided in events when available. When set
+         * to false, the 'COMMIT_TIMESTAMP' column is excluded from the LogMiner
+         * query and its values are not buffered, reducing both the memory
+         * footprint and query bandwidth.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: oracle
+         * 
+         * @param logMiningBufferTrackCommitTimestamp the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningBufferTrackCommitTimestamp(boolean logMiningBufferTrackCommitTimestamp) {
+            doSetProperty("logMiningBufferTrackCommitTimestamp", logMiningBufferTrackCommitTimestamp);
+            return this;
+        }
+    
+        
+        /**
+         * This controls whether the 'RS_ID' column values are tracked. When set
+         * to true (the default), the 'RS_ID' values are buffered and provided
+         * in events when available. When set to false, the 'RS_ID' column is
+         * excluded from the LogMiner query and its values are not buffered,
+         * reducing both the memory footprint and query bandwidth.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: oracle
+         * 
+         * @param logMiningBufferTrackRsId the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningBufferTrackRsId(boolean logMiningBufferTrackRsId) {
+            doSetProperty("logMiningBufferTrackRsId", logMiningBufferTrackRsId);
+            return this;
+        }
+    
+        
+        /**
+         * This controls whether the 'START_TIMESTAMP' column values are
+         * tracked. When set to true (the default), the 'START_TIMESTAMP' values
+         * are buffered and provided in events when available. When set to
+         * false, the 'START_TIMESTAMP' column is excluded from the LogMiner
+         * query and its values are not buffered, reducing both the memory
+         * footprint and query bandwidth.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: oracle
+         * 
+         * @param logMiningBufferTrackStartTimestamp the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningBufferTrackStartTimestamp(boolean logMiningBufferTrackStartTimestamp) {
+            doSetProperty("logMiningBufferTrackStartTimestamp", logMiningBufferTrackStartTimestamp);
+            return this;
+        }
+    
+        
+        /**
+         * This controls whether the 'USERNAME' column values are tracked. When
+         * set to true (the default), the 'USERNAME' values are buffered and
+         * provided in events when available. When set to false, the 'USERNAME'
+         * column is excluded from the LogMiner query and its values are not
+         * buffered, reducing both the memory footprint and query bandwidth.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: oracle
+         * 
+         * @param logMiningBufferTrackUsername the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningBufferTrackUsername(boolean logMiningBufferTrackUsername) {
+            doSetProperty("logMiningBufferTrackUsername", logMiningBufferTrackUsername);
             return this;
         }
     
@@ -1386,6 +1540,25 @@ public interface DebeziumOracleComponentBuilderFactory {
             return this;
         }
     
+        
+        /**
+         * Specifies the minimum number of logs to mine per redo thread. Setting
+         * this to 0 disables the cap, and all available logs are mined in a
+         * single pass.
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Default: 2
+         * Group: oracle
+         * 
+         * @param logMiningLogCountMin the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningLogCountMin(int logMiningLogCountMin) {
+            doSetProperty("logMiningLogCountMin", logMiningLogCountMin);
+            return this;
+        }
+    
         /**
          * This is required when using the connector against a read-only
          * database replica.
@@ -1424,9 +1597,26 @@ public interface DebeziumOracleComponentBuilderFactory {
             return this;
         }
     
+        
         /**
-         * The hostname the connector will use to connect and perform read-only
-         * operations for the the replica.
+         * When set to 'true', the connector will not attempt to flush the LGWR
+         * buffer to disk, allowing connecting to read-only databases.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: false
+         * Group: oracle
+         * 
+         * @param logMiningReadOnly the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningReadOnly(boolean logMiningReadOnly) {
+            doSetProperty("logMiningReadOnly", logMiningReadOnly);
+            return this;
+        }
+    
+        /**
+         * The secondary Oracle instance where changes will be streamed.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -1464,48 +1654,6 @@ public interface DebeziumOracleComponentBuilderFactory {
     
         
         /**
-         * Used for SCN gap detection, if the difference between current SCN and
-         * previous end SCN is bigger than this value, and the time difference
-         * of current SCN and previous end SCN is smaller than
-         * log.mining.scn.gap.detection.time.interval.max.ms, consider it a SCN
-         * gap.
-         * 
-         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
-         * 
-         * Default: 1000000
-         * Group: oracle
-         * 
-         * @param logMiningScnGapDetectionGapSizeMin the value to set
-         * @return the dsl builder
-         */
-        default DebeziumOracleComponentBuilder logMiningScnGapDetectionGapSizeMin(long logMiningScnGapDetectionGapSizeMin) {
-            doSetProperty("logMiningScnGapDetectionGapSizeMin", logMiningScnGapDetectionGapSizeMin);
-            return this;
-        }
-    
-        
-        /**
-         * Used for SCN gap detection, if the difference between current SCN and
-         * previous end SCN is bigger than
-         * log.mining.scn.gap.detection.gap.size.min, and the time difference of
-         * current SCN and previous end SCN is smaller than this value, consider
-         * it a SCN gap.
-         * 
-         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
-         * 
-         * Default: 20s
-         * Group: oracle
-         * 
-         * @param logMiningScnGapDetectionTimeIntervalMaxMs the value to set
-         * @return the dsl builder
-         */
-        default DebeziumOracleComponentBuilder logMiningScnGapDetectionTimeIntervalMaxMs(long logMiningScnGapDetectionTimeIntervalMaxMs) {
-            doSetProperty("logMiningScnGapDetectionTimeIntervalMaxMs", logMiningScnGapDetectionTimeIntervalMaxMs);
-            return this;
-        }
-    
-        
-        /**
          * The maximum number of milliseconds that a LogMiner session lives for
          * before being restarted. Defaults to 0 (indefinite until a log switch
          * occurs).
@@ -1525,85 +1673,13 @@ public interface DebeziumOracleComponentBuilderFactory {
     
         
         /**
-         * The amount of time that the connector will sleep after reading data
-         * from redo/archive logs and before starting reading data again. Value
-         * is in milliseconds.
-         * 
-         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
-         * 
-         * Default: 1s
-         * Group: oracle
-         * 
-         * @param logMiningSleepTimeDefaultMs the value to set
-         * @return the dsl builder
-         */
-        default DebeziumOracleComponentBuilder logMiningSleepTimeDefaultMs(long logMiningSleepTimeDefaultMs) {
-            doSetProperty("logMiningSleepTimeDefaultMs", logMiningSleepTimeDefaultMs);
-            return this;
-        }
-    
-        
-        /**
-         * The maximum amount of time that the connector will use to tune the
-         * optimal sleep time when reading data from LogMiner. Value is in
-         * milliseconds.
-         * 
-         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
-         * 
-         * Default: 200ms
-         * Group: oracle
-         * 
-         * @param logMiningSleepTimeIncrementMs the value to set
-         * @return the dsl builder
-         */
-        default DebeziumOracleComponentBuilder logMiningSleepTimeIncrementMs(long logMiningSleepTimeIncrementMs) {
-            doSetProperty("logMiningSleepTimeIncrementMs", logMiningSleepTimeIncrementMs);
-            return this;
-        }
-    
-        
-        /**
-         * The maximum amount of time that the connector will sleep after
-         * reading data from redo/archive logs and before starting reading data
-         * again. Value is in milliseconds.
-         * 
-         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
-         * 
-         * Default: 3s
-         * Group: oracle
-         * 
-         * @param logMiningSleepTimeMaxMs the value to set
-         * @return the dsl builder
-         */
-        default DebeziumOracleComponentBuilder logMiningSleepTimeMaxMs(long logMiningSleepTimeMaxMs) {
-            doSetProperty("logMiningSleepTimeMaxMs", logMiningSleepTimeMaxMs);
-            return this;
-        }
-    
-        
-        /**
-         * The minimum amount of time that the connector will sleep after
-         * reading data from redo/archive logs and before starting reading data
-         * again. Value is in milliseconds.
-         * 
-         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
-         * 
-         * Default: 0ms
-         * Group: oracle
-         * 
-         * @param logMiningSleepTimeMinMs the value to set
-         * @return the dsl builder
-         */
-        default DebeziumOracleComponentBuilder logMiningSleepTimeMinMs(long logMiningSleepTimeMinMs) {
-            doSetProperty("logMiningSleepTimeMinMs", logMiningSleepTimeMinMs);
-            return this;
-        }
-    
-        
-        /**
-         * There are strategies: Online catalog with faster mining but no
-         * captured DDL. Another - with data dictionary loaded into REDO LOG
-         * files.
+         * Defines the mining strategy and LogMiner session characteristics:
+         * 'redo_log_catalog' writes the data dictionary to the redo logs, is
+         * deprecated and will be removed in 3.7, 'online_catalog' uses the
+         * existing data dictionary and operates faster than 'redo_log_catalog'
+         * but requires schema changes in lock-step, 'hybrid' uses the existing
+         * data dictionary, operates faster than 'redo_log_catalog', and
+         * supports interleaved schema changes.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -1669,6 +1745,26 @@ public interface DebeziumOracleComponentBuilderFactory {
     
         
         /**
+         * The maximum number of milliseconds that the mining window can span.
+         * If a transaction remains open for longer than this duration, the
+         * mining window start SCN will be advanced to minimize the window size,
+         * preventing it from growing indefinitely. Defaults to 0 (disabled).
+         * 
+         * The option is a: &lt;code&gt;long&lt;/code&gt; type.
+         * 
+         * Default: 0ms
+         * Group: oracle
+         * 
+         * @param logMiningWindowMaxMs the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder logMiningWindowMaxMs(long logMiningWindowMaxMs) {
+            doSetProperty("logMiningWindowMaxMs", logMiningWindowMaxMs);
+            return this;
+        }
+    
+        
+        /**
          * Maximum size of each batch of source records. Defaults to 2048.
          * 
          * The option is a: &lt;code&gt;int&lt;/code&gt; type.
@@ -1717,6 +1813,48 @@ public interface DebeziumOracleComponentBuilderFactory {
          */
         default DebeziumOracleComponentBuilder maxQueueSizeInBytes(long maxQueueSizeInBytes) {
             doSetProperty("maxQueueSizeInBytes", maxQueueSizeInBytes);
+            return this;
+        }
+    
+        
+        /**
+         * The fully-qualified class name of the storage implementation for
+         * schema metadata. The class must implement
+         * io.debezium.relational.TableMappingStorage. Defaults to
+         * io.debezium.relational.ConcurrentMapTableMappingStorage for in-memory
+         * storage.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: io.debezium.relational.ConcurrentMapTableMappingStorage
+         * Group: oracle
+         * 
+         * @param memoryManagementSchemasClass the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder memoryManagementSchemasClass(java.lang.String memoryManagementSchemasClass) {
+            doSetProperty("memoryManagementSchemasClass", memoryManagementSchemasClass);
+            return this;
+        }
+    
+        
+        /**
+         * The fully-qualified class name of the storage implementation for
+         * table metadata. The class must implement
+         * io.debezium.relational.TableMappingStorage. Defaults to
+         * io.debezium.relational.ConcurrentMapTableMappingStorage for in-memory
+         * storage.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Default: io.debezium.relational.ConcurrentMapTableMappingStorage
+         * Group: oracle
+         * 
+         * @param memoryManagementTablesClass the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder memoryManagementTablesClass(java.lang.String memoryManagementTablesClass) {
+            doSetProperty("memoryManagementTablesClass", memoryManagementTablesClass);
             return this;
         }
     
@@ -2161,6 +2299,70 @@ public interface DebeziumOracleComponentBuilderFactory {
         }
     
         /**
+         * The secondary Oracle instance database name, if different from
+         * primary.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: oracle
+         * 
+         * @param secondaryDbname the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder secondaryDbname(java.lang.String secondaryDbname) {
+            doSetProperty("secondaryDbname", secondaryDbname);
+            return this;
+        }
+    
+        /**
+         * The secondary Oracle instance where changes will be streamed.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: oracle
+         * 
+         * @param secondaryHostname the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder secondaryHostname(java.lang.String secondaryHostname) {
+            doSetProperty("secondaryHostname", secondaryHostname);
+            return this;
+        }
+    
+        
+        /**
+         * The secondary Oracle instance port where changes will be streamed.
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Default: 1528
+         * Group: oracle
+         * 
+         * @param secondaryPort the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder secondaryPort(int secondaryPort) {
+            doSetProperty("secondaryPort", secondaryPort);
+            return this;
+        }
+    
+        /**
+         * The secondary Oracle instance connection string URL where changes
+         * will be streamed.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: oracle
+         * 
+         * @param secondaryUrl the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder secondaryUrl(java.lang.String secondaryUrl) {
+            doSetProperty("secondaryUrl", secondaryUrl);
+            return this;
+        }
+    
+        /**
          * The name of the data collection that is used to send signals/commands
          * to Debezium. For multi-partition mode connectors, multiple signal
          * data collections can be specified as a comma-separated list.
@@ -2360,6 +2562,28 @@ public interface DebeziumOracleComponentBuilderFactory {
          */
         default DebeziumOracleComponentBuilder snapshotMaxThreads(int snapshotMaxThreads) {
             doSetProperty("snapshotMaxThreads", snapshotMaxThreads);
+            return this;
+        }
+    
+        
+        /**
+         * The factor used to scale the number of snapshot chunks per table. The
+         * default behavior is to take 'row_count/snapshot.max.threads' to
+         * compute the number of rows per chunks. This may not be ideal for
+         * larger tables, and using the multiplier, the formula is adjusted to
+         * increase the number of chunks by using
+         * 'row_count/(snapshot.max.threads snapshot.max.threads.multiplier).
+         * 
+         * The option is a: &lt;code&gt;int&lt;/code&gt; type.
+         * 
+         * Default: 1
+         * Group: oracle
+         * 
+         * @param snapshotMaxThreadsMultiplier the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder snapshotMaxThreadsMultiplier(int snapshotMaxThreadsMultiplier) {
+            doSetProperty("snapshotMaxThreadsMultiplier", snapshotMaxThreadsMultiplier);
             return this;
         }
     
@@ -2580,6 +2804,25 @@ public interface DebeziumOracleComponentBuilderFactory {
     
         
         /**
+         * Enable to collect various kind of statistics, like latencies in
+         * record processing, and derived data like quantiles. By default
+         * collecting statistics is enabled.
+         * 
+         * The option is a: &lt;code&gt;boolean&lt;/code&gt; type.
+         * 
+         * Default: true
+         * Group: oracle
+         * 
+         * @param statisticsMetricsEnabled the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder statisticsMetricsEnabled(boolean statisticsMetricsEnabled) {
+            doSetProperty("statisticsMetricsEnabled", statisticsMetricsEnabled);
+            return this;
+        }
+    
+        
+        /**
          * A delay period after the snapshot is completed and the streaming
          * begins, given in milliseconds. Defaults to 0 ms.
          * 
@@ -2636,7 +2879,12 @@ public interface DebeziumOracleComponentBuilderFactory {
          * TIME fields always use microseconds precision; 'connect' always
          * represents time, date, and timestamp values using Kafka Connect's
          * built-in representations for Time, Date, and Timestamp, which uses
-         * millisecond precision regardless of the database columns' precision.
+         * millisecond precision regardless of the database columns' precision;
+         * 'isostring' represents time, date, and timestamp values as ISO-8601
+         * formatted strings at the UTC time zone; 'microseconds' always
+         * represents time, date, and timestamp values using microsecond
+         * precision; 'nanoseconds' always represents time, date, and timestamp
+         * values using nanosecond precision.
          * 
          * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
          * 
@@ -2747,6 +2995,21 @@ public interface DebeziumOracleComponentBuilderFactory {
             doSetProperty("unavailableValuePlaceholder", unavailableValuePlaceholder);
             return this;
         }
+    
+        /**
+         * Name of the XStream Outbound server to connect to.
+         * 
+         * The option is a: &lt;code&gt;java.lang.String&lt;/code&gt; type.
+         * 
+         * Group: oracle
+         * 
+         * @param xstreamOutServerName the value to set
+         * @return the dsl builder
+         */
+        default DebeziumOracleComponentBuilder xstreamOutServerName(java.lang.String xstreamOutServerName) {
+            doSetProperty("xstreamOutServerName", xstreamOutServerName);
+            return this;
+        }
     }
 
     class DebeziumOracleComponentBuilderImpl
@@ -2785,6 +3048,7 @@ public interface DebeziumOracleComponentBuilderFactory {
             case "archiveDestinationName": getOrCreateConfiguration((DebeziumOracleComponent) component).setArchiveDestinationName((java.lang.String) value); return true;
             case "archiveLogHours": getOrCreateConfiguration((DebeziumOracleComponent) component).setArchiveLogHours((long) value); return true;
             case "binaryHandlingMode": getOrCreateConfiguration((DebeziumOracleComponent) component).setBinaryHandlingMode((java.lang.String) value); return true;
+            case "captureMode": getOrCreateConfiguration((DebeziumOracleComponent) component).setCaptureMode((java.lang.String) value); return true;
             case "columnExcludeList": getOrCreateConfiguration((DebeziumOracleComponent) component).setColumnExcludeList((java.lang.String) value); return true;
             case "columnIncludeList": getOrCreateConfiguration((DebeziumOracleComponent) component).setColumnIncludeList((java.lang.String) value); return true;
             case "columnPropagateSourceType": getOrCreateConfiguration((DebeziumOracleComponent) component).setColumnPropagateSourceType((java.lang.String) value); return true;
@@ -2821,45 +3085,50 @@ public interface DebeziumOracleComponentBuilderFactory {
             case "lobEnabled": getOrCreateConfiguration((DebeziumOracleComponent) component).setLobEnabled((boolean) value); return true;
             case "logMiningArchiveLogOnlyMode": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningArchiveLogOnlyMode((boolean) value); return true;
             case "logMiningArchiveLogOnlyScnPollIntervalMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningArchiveLogOnlyScnPollIntervalMs((long) value); return true;
-            case "logMiningBatchSizeDefault": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBatchSizeDefault((long) value); return true;
-            case "logMiningBatchSizeIncrement": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBatchSizeIncrement((long) value); return true;
-            case "logMiningBatchSizeMax": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBatchSizeMax((long) value); return true;
-            case "logMiningBatchSizeMin": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBatchSizeMin((long) value); return true;
+            case "logMiningBufferDeferredTransactionRetentionMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferDeferredTransactionRetentionMs((long) value); return true;
+            case "logMiningBufferDeferredTransactionStart": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferDeferredTransactionStart((boolean) value); return true;
             case "logMiningBufferDropOnStop": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferDropOnStop((boolean) value); return true;
             case "logMiningBufferEhcacheEventsConfig": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferEhcacheEventsConfig((java.lang.String) value); return true;
             case "logMiningBufferEhcacheGlobalConfig": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferEhcacheGlobalConfig((java.lang.String) value); return true;
             case "logMiningBufferEhcacheProcessedtransactionsConfig": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferEhcacheProcessedtransactionsConfig((java.lang.String) value); return true;
+            case "logMiningBufferEhcacheRollbacksConfig": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferEhcacheRollbacksConfig((java.lang.String) value); return true;
             case "logMiningBufferEhcacheSchemachangesConfig": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferEhcacheSchemachangesConfig((java.lang.String) value); return true;
             case "logMiningBufferEhcacheTransactionsConfig": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferEhcacheTransactionsConfig((java.lang.String) value); return true;
             case "logMiningBufferInfinispanCacheEvents": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferInfinispanCacheEvents((java.lang.String) value); return true;
             case "logMiningBufferInfinispanCacheGlobal": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferInfinispanCacheGlobal((java.lang.String) value); return true;
             case "logMiningBufferInfinispanCacheProcessedTransactions": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferInfinispanCacheProcessedTransactions((java.lang.String) value); return true;
+            case "logMiningBufferInfinispanCacheRollbacks": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferInfinispanCacheRollbacks((java.lang.String) value); return true;
             case "logMiningBufferInfinispanCacheSchemaChanges": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferInfinispanCacheSchemaChanges((java.lang.String) value); return true;
             case "logMiningBufferInfinispanCacheTransactions": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferInfinispanCacheTransactions((java.lang.String) value); return true;
+            case "logMiningBufferMemoryLegacyTransactionStart": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferMemoryLegacyTransactionStart((boolean) value); return true;
+            case "logMiningBufferTrackClientId": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferTrackClientId((boolean) value); return true;
+            case "logMiningBufferTrackCommitTimestamp": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferTrackCommitTimestamp((boolean) value); return true;
+            case "logMiningBufferTrackRsId": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferTrackRsId((boolean) value); return true;
+            case "logMiningBufferTrackStartTimestamp": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferTrackStartTimestamp((boolean) value); return true;
+            case "logMiningBufferTrackUsername": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferTrackUsername((boolean) value); return true;
             case "logMiningBufferTransactionEventsThreshold": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferTransactionEventsThreshold((long) value); return true;
             case "logMiningBufferType": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningBufferType((java.lang.String) value); return true;
             case "logMiningClientidExcludeList": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningClientidExcludeList((java.lang.String) value); return true;
             case "logMiningClientidIncludeList": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningClientidIncludeList((java.lang.String) value); return true;
             case "logMiningFlushTableName": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningFlushTableName((java.lang.String) value); return true;
             case "logMiningIncludeRedoSql": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningIncludeRedoSql((boolean) value); return true;
+            case "logMiningLogCountMin": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningLogCountMin((int) value); return true;
             case "logMiningPathDictionary": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningPathDictionary((java.lang.String) value); return true;
             case "logMiningQueryFilterMode": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningQueryFilterMode((java.lang.String) value); return true;
+            case "logMiningReadOnly": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningReadOnly((boolean) value); return true;
             case "logMiningReadonlyHostname": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningReadonlyHostname((java.lang.String) value); return true;
             case "logMiningRestartConnection": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningRestartConnection((boolean) value); return true;
-            case "logMiningScnGapDetectionGapSizeMin": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningScnGapDetectionGapSizeMin((long) value); return true;
-            case "logMiningScnGapDetectionTimeIntervalMaxMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningScnGapDetectionTimeIntervalMaxMs((long) value); return true;
             case "logMiningSessionMaxMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningSessionMaxMs((long) value); return true;
-            case "logMiningSleepTimeDefaultMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningSleepTimeDefaultMs((long) value); return true;
-            case "logMiningSleepTimeIncrementMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningSleepTimeIncrementMs((long) value); return true;
-            case "logMiningSleepTimeMaxMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningSleepTimeMaxMs((long) value); return true;
-            case "logMiningSleepTimeMinMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningSleepTimeMinMs((long) value); return true;
             case "logMiningStrategy": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningStrategy((java.lang.String) value); return true;
             case "logMiningTransactionRetentionMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningTransactionRetentionMs((long) value); return true;
             case "logMiningUsernameExcludeList": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningUsernameExcludeList((java.lang.String) value); return true;
             case "logMiningUsernameIncludeList": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningUsernameIncludeList((java.lang.String) value); return true;
+            case "logMiningWindowMaxMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setLogMiningWindowMaxMs((long) value); return true;
             case "maxBatchSize": getOrCreateConfiguration((DebeziumOracleComponent) component).setMaxBatchSize((int) value); return true;
             case "maxQueueSize": getOrCreateConfiguration((DebeziumOracleComponent) component).setMaxQueueSize((int) value); return true;
             case "maxQueueSizeInBytes": getOrCreateConfiguration((DebeziumOracleComponent) component).setMaxQueueSizeInBytes((long) value); return true;
+            case "memoryManagementSchemasClass": getOrCreateConfiguration((DebeziumOracleComponent) component).setMemoryManagementSchemasClass((java.lang.String) value); return true;
+            case "memoryManagementTablesClass": getOrCreateConfiguration((DebeziumOracleComponent) component).setMemoryManagementTablesClass((java.lang.String) value); return true;
             case "messageKeyColumns": getOrCreateConfiguration((DebeziumOracleComponent) component).setMessageKeyColumns((java.lang.String) value); return true;
             case "notificationEnabledChannels": getOrCreateConfiguration((DebeziumOracleComponent) component).setNotificationEnabledChannels((java.lang.String) value); return true;
             case "notificationSinkTopicName": getOrCreateConfiguration((DebeziumOracleComponent) component).setNotificationSinkTopicName((java.lang.String) value); return true;
@@ -2885,6 +3154,10 @@ public interface DebeziumOracleComponentBuilderFactory {
             case "schemaHistoryInternalStoreOnlyCapturedDatabasesDdl": getOrCreateConfiguration((DebeziumOracleComponent) component).setSchemaHistoryInternalStoreOnlyCapturedDatabasesDdl((boolean) value); return true;
             case "schemaHistoryInternalStoreOnlyCapturedTablesDdl": getOrCreateConfiguration((DebeziumOracleComponent) component).setSchemaHistoryInternalStoreOnlyCapturedTablesDdl((boolean) value); return true;
             case "schemaNameAdjustmentMode": getOrCreateConfiguration((DebeziumOracleComponent) component).setSchemaNameAdjustmentMode((java.lang.String) value); return true;
+            case "secondaryDbname": getOrCreateConfiguration((DebeziumOracleComponent) component).setSecondaryDbname((java.lang.String) value); return true;
+            case "secondaryHostname": getOrCreateConfiguration((DebeziumOracleComponent) component).setSecondaryHostname((java.lang.String) value); return true;
+            case "secondaryPort": getOrCreateConfiguration((DebeziumOracleComponent) component).setSecondaryPort((int) value); return true;
+            case "secondaryUrl": getOrCreateConfiguration((DebeziumOracleComponent) component).setSecondaryUrl((java.lang.String) value); return true;
             case "signalDataCollection": getOrCreateConfiguration((DebeziumOracleComponent) component).setSignalDataCollection((java.lang.String) value); return true;
             case "signalEnabledChannels": getOrCreateConfiguration((DebeziumOracleComponent) component).setSignalEnabledChannels((java.lang.String) value); return true;
             case "signalPollIntervalMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setSignalPollIntervalMs((long) value); return true;
@@ -2896,6 +3169,7 @@ public interface DebeziumOracleComponentBuilderFactory {
             case "snapshotLockingMode": getOrCreateConfiguration((DebeziumOracleComponent) component).setSnapshotLockingMode((java.lang.String) value); return true;
             case "snapshotLockTimeoutMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setSnapshotLockTimeoutMs((long) value); return true;
             case "snapshotMaxThreads": getOrCreateConfiguration((DebeziumOracleComponent) component).setSnapshotMaxThreads((int) value); return true;
+            case "snapshotMaxThreadsMultiplier": getOrCreateConfiguration((DebeziumOracleComponent) component).setSnapshotMaxThreadsMultiplier((int) value); return true;
             case "snapshotMode": getOrCreateConfiguration((DebeziumOracleComponent) component).setSnapshotMode((java.lang.String) value); return true;
             case "snapshotModeConfigurationBasedSnapshotData": getOrCreateConfiguration((DebeziumOracleComponent) component).setSnapshotModeConfigurationBasedSnapshotData((boolean) value); return true;
             case "snapshotModeConfigurationBasedSnapshotOnDataError": getOrCreateConfiguration((DebeziumOracleComponent) component).setSnapshotModeConfigurationBasedSnapshotOnDataError((boolean) value); return true;
@@ -2906,6 +3180,7 @@ public interface DebeziumOracleComponentBuilderFactory {
             case "snapshotSelectStatementOverrides": getOrCreateConfiguration((DebeziumOracleComponent) component).setSnapshotSelectStatementOverrides((java.lang.String) value); return true;
             case "snapshotTablesOrderByRowCount": getOrCreateConfiguration((DebeziumOracleComponent) component).setSnapshotTablesOrderByRowCount((java.lang.String) value); return true;
             case "sourceinfoStructMaker": getOrCreateConfiguration((DebeziumOracleComponent) component).setSourceinfoStructMaker((java.lang.String) value); return true;
+            case "statisticsMetricsEnabled": getOrCreateConfiguration((DebeziumOracleComponent) component).setStatisticsMetricsEnabled((boolean) value); return true;
             case "streamingDelayMs": getOrCreateConfiguration((DebeziumOracleComponent) component).setStreamingDelayMs((long) value); return true;
             case "tableExcludeList": getOrCreateConfiguration((DebeziumOracleComponent) component).setTableExcludeList((java.lang.String) value); return true;
             case "tableIncludeList": getOrCreateConfiguration((DebeziumOracleComponent) component).setTableIncludeList((java.lang.String) value); return true;
@@ -2915,6 +3190,7 @@ public interface DebeziumOracleComponentBuilderFactory {
             case "topicPrefix": getOrCreateConfiguration((DebeziumOracleComponent) component).setTopicPrefix((java.lang.String) value); return true;
             case "transactionMetadataFactory": getOrCreateConfiguration((DebeziumOracleComponent) component).setTransactionMetadataFactory((java.lang.String) value); return true;
             case "unavailableValuePlaceholder": getOrCreateConfiguration((DebeziumOracleComponent) component).setUnavailableValuePlaceholder((java.lang.String) value); return true;
+            case "xstreamOutServerName": getOrCreateConfiguration((DebeziumOracleComponent) component).setXstreamOutServerName((java.lang.String) value); return true;
             default: return false;
             }
         }

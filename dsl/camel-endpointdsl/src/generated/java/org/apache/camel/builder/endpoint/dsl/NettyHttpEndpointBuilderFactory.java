@@ -323,7 +323,7 @@ public interface NettyHttpEndpointBuilderFactory {
          * 
          * The option is a: <code>boolean</code> type.
          * 
-         * Default: false
+         * Default: true
          * Group: consumer
          * 
          * @param muteException the value to set
@@ -339,7 +339,7 @@ public interface NettyHttpEndpointBuilderFactory {
          * 
          * The option will be converted to a <code>boolean</code> type.
          * 
-         * Default: false
+         * Default: true
          * Group: consumer
          * 
          * @param muteException the value to set
@@ -526,6 +526,25 @@ public interface NettyHttpEndpointBuilderFactory {
          */
         default NettyHttpEndpointConsumerBuilder needClientAuth(String needClientAuth) {
             doSetProperty("needClientAuth", needClientAuth);
+            return this;
+        }
+        /**
+         * OAuth profile name for validating incoming Authorization: Bearer
+         * tokens. When set, the request is authenticated before the route is
+         * processed. This requires an OAuthTokenValidationFactory; camel-oauth
+         * provides the default implementation. Requires
+         * usingExecutorService=true and sync=true (the defaults), and is not
+         * supported with nettySharedHttpServer.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param oauthProfile the value to set
+         * @return the dsl builder
+         */
+        default NettyHttpEndpointConsumerBuilder oauthProfile(String oauthProfile) {
+            doSetProperty("oauthProfile", oauthProfile);
             return this;
         }
         /**
@@ -2233,6 +2252,27 @@ public interface NettyHttpEndpointBuilderFactory {
          */
         default AdvancedNettyHttpEndpointConsumerBuilder workerGroup(String workerGroup) {
             doSetProperty("workerGroup", workerGroup);
+            return this;
+        }
+        /**
+         * Sets an ObjectInputFilter pattern (jdk.serialFilter syntax) applied
+         * when deserializing Java objects from HTTP responses with Content-Type
+         * application/x-java-serialized-object. This is used when
+         * transferException is enabled and the remote side returns a serialized
+         * exception. When not set, the filter configured via the JVM system
+         * property jdk.serialFilter is used when present; otherwise a
+         * conservative default filter denying java.net. and otherwise allowing
+         * java., javax. and org.apache.camel. packages is applied.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param deserializationFilter the value to set
+         * @return the dsl builder
+         */
+        default AdvancedNettyHttpEndpointConsumerBuilder deserializationFilter(String deserializationFilter) {
+            doSetProperty("deserializationFilter", deserializationFilter);
             return this;
         }
     }
@@ -3965,6 +4005,27 @@ public interface NettyHttpEndpointBuilderFactory {
             doSetProperty("workerGroup", workerGroup);
             return this;
         }
+        /**
+         * Sets an ObjectInputFilter pattern (jdk.serialFilter syntax) applied
+         * when deserializing Java objects from HTTP responses with Content-Type
+         * application/x-java-serialized-object. This is used when
+         * transferException is enabled and the remote side returns a serialized
+         * exception. When not set, the filter configured via the JVM system
+         * property jdk.serialFilter is used when present; otherwise a
+         * conservative default filter denying java.net. and otherwise allowing
+         * java., javax. and org.apache.camel. packages is applied.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param deserializationFilter the value to set
+         * @return the dsl builder
+         */
+        default AdvancedNettyHttpEndpointProducerBuilder deserializationFilter(String deserializationFilter) {
+            doSetProperty("deserializationFilter", deserializationFilter);
+            return this;
+        }
     }
 
     /**
@@ -5153,6 +5214,27 @@ public interface NettyHttpEndpointBuilderFactory {
             doSetProperty("workerGroup", workerGroup);
             return this;
         }
+        /**
+         * Sets an ObjectInputFilter pattern (jdk.serialFilter syntax) applied
+         * when deserializing Java objects from HTTP responses with Content-Type
+         * application/x-java-serialized-object. This is used when
+         * transferException is enabled and the remote side returns a serialized
+         * exception. When not set, the filter configured via the JVM system
+         * property jdk.serialFilter is used when present; otherwise a
+         * conservative default filter denying java.net. and otherwise allowing
+         * java., javax. and org.apache.camel. packages is applied.
+         * 
+         * The option is a: <code>java.lang.String</code> type.
+         * 
+         * Group: security
+         * 
+         * @param deserializationFilter the value to set
+         * @return the dsl builder
+         */
+        default AdvancedNettyHttpEndpointBuilder deserializationFilter(String deserializationFilter) {
+            doSetProperty("deserializationFilter", deserializationFilter);
+            return this;
+        }
     }
 
     public interface NettyHttpBuilders {
@@ -5243,7 +5325,7 @@ public interface NettyHttpEndpointBuilderFactory {
          * The internal instance of the builder used to access to all the
          * methods representing the name of headers.
          */
-        private static final NettyHttpHeaderNameBuilder INSTANCE = new NettyHttpHeaderNameBuilder();
+        public static final NettyHttpHeaderNameBuilder INSTANCE = new NettyHttpHeaderNameBuilder();
 
         /**
          * If the user was authenticated using HTTP Basic then this header is

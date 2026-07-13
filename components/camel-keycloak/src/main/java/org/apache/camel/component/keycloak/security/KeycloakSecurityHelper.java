@@ -18,8 +18,10 @@ package org.apache.camel.component.keycloak.security;
 
 import java.io.IOException;
 import java.security.PublicKey;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.keycloak.TokenVerifier;
 import org.keycloak.common.VerificationException;
+import org.keycloak.jose.jws.JWSInput;
 import org.keycloak.representations.AccessToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,19 +42,86 @@ public final class KeycloakSecurityHelper {
         // Utility class
     }
 
-    public static AccessToken parseAccessToken(String tokenString) throws VerificationException {
-        return parseAccessToken(tokenString, null);
+    /**
+     * Extracts the key ID ({@code kid}) from the JWT header, so the matching JWKS key can be selected.
+     *
+     * @param  tokenString the serialized JWT
+     * @return             the {@code kid} from the JWS header, or {@code null} if it is absent or the token cannot be
+     *                     parsed
+     */
+    public static String extractKeyId(String tokenString) {
+        try {
+            return new JWSInput(tokenString).getHeader().getKeyId();
+        } catch (Exception e) {
+            LOG.debug("Could not extract kid from token header: {}", e.getMessage());
+            return null;
+        }
     }
 
-    public static AccessToken parseAccessToken(String tokenString, PublicKey publicKey) throws VerificationException {
-        if (publicKey != null) {
-            return TokenVerifier.create(tokenString, AccessToken.class)
-                    .publicKey(publicKey)
-                    .verify()
-                    .getToken();
-        } else {
-            return TokenVerifier.create(tokenString, AccessToken.class).getToken();
+    /**
+     * Parses and fully verifies an access token including signature and issuer validation. This is the recommended
+     * method for secure token validation.
+     *
+     * @param  tokenString           the JWT token string
+     * @param  publicKey             the public key for signature verification
+     * @param  expectedIssuer        the expected issuer URL (e.g., "http://localhost:8080/realms/myrealm")
+     * @return                       the verified access token
+     * @throws VerificationException if verification fails (invalid signature, wrong issuer, expired, etc.)
+     */
+    public static AccessToken parseAndVerifyAccessToken(String tokenString, PublicKey publicKey, String expectedIssuer)
+            throws VerificationException {
+        return parseAndVerifyAccessToken(tokenString, publicKey, expectedIssuer, null);
+    }
+
+    /**
+     * Parses and fully verifies an access token including signature, issuer and, optionally, audience validation. This
+     * is the recommended method for secure token validation.
+     *
+     * @param  tokenString           the JWT token string
+     * @param  publicKey             the public key for signature verification
+     * @param  expectedIssuer        the expected issuer URL (e.g., "http://localhost:8080/realms/myrealm")
+     * @param  expectedAudiences     the expected audiences; when non-empty, the token's "aud" claim must contain every
+     *                               one of them (matching Keycloak's own {@link TokenVerifier#audience(String...)}
+     *                               check). Pass null or an empty list to skip audience validation.
+     * @return                       the verified access token
+     * @throws VerificationException if verification fails (invalid signature, wrong issuer, expired, missing/wrong
+     *                               audience, etc.)
+     */
+    public static AccessToken parseAndVerifyAccessToken(
+            String tokenString, PublicKey publicKey, String expectedIssuer, List<String> expectedAudiences)
+            throws VerificationException {
+        if (publicKey == null) {
+            throw new VerificationException("Public key is required for secure token verification");
         }
+        if (expectedIssuer == null || expectedIssuer.isEmpty()) {
+            throw new VerificationException("Expected issuer is required for secure token verification");
+        }
+
+        boolean checkAudience = expectedAudiences != null && !expectedAudiences.isEmpty();
+
+        TokenVerifier<AccessToken> verifier = TokenVerifier.create(tokenString, AccessToken.class)
+                .publicKey(publicKey)
+                .withChecks(
+                        TokenVerifier.SUBJECT_EXISTS_CHECK,
+                        TokenVerifier.IS_ACTIVE,
+                        new TokenVerifier.RealmUrlCheck(expectedIssuer));
+
+        if (checkAudience) {
+            verifier.audience(expectedAudiences.toArray(new String[0]));
+        }
+
+        AccessToken token = verifier.verify().getToken();
+
+        // Additional explicit issuer check for defense in depth
+        String actualIssuer = token.getIssuer();
+        if (!expectedIssuer.equals(actualIssuer)) {
+            LOG.error("SECURITY: Token issuer mismatch - expected '{}' but got '{}'", expectedIssuer, actualIssuer);
+            throw new VerificationException(
+                    String.format("Token issuer mismatch: expected '%s' but got '%s'", expectedIssuer, actualIssuer));
+        }
+
+        LOG.debug("Token successfully verified for issuer: {}", expectedIssuer);
+        return token;
     }
 
     public static Set<String> extractRoles(AccessToken token, String realm, String clientId) {
@@ -129,18 +199,19 @@ public final class KeycloakSecurityHelper {
 
         // Extract permissions from custom claims (primary approach for simple setups)
         Object permissionsClaim = token.getOtherClaims().get("permissions");
-        if (permissionsClaim instanceof java.util.Collection<?>) {
-            @SuppressWarnings("unchecked")
-            java.util.Collection<String> permissionsCollection = (java.util.Collection<String>) permissionsClaim;
-            permissions.addAll(permissionsCollection);
+        if (permissionsClaim instanceof Collection<?> permissionsCollection) {
+            for (Object perm : permissionsCollection) {
+                if (perm instanceof String s) {
+                    permissions.add(s);
+                }
+            }
         }
 
         // Also check for scope-based permissions
         Object scopesClaim = token.getOtherClaims().get("scope");
-        if (scopesClaim instanceof String) {
-            String scopesString = (String) scopesClaim;
+        if (scopesClaim instanceof String scopesString) {
             if (!scopesString.isEmpty()) {
-                permissions.addAll(java.util.Arrays.asList(scopesString.split(" ")));
+                permissions.addAll(Arrays.asList(scopesString.split(" ")));
             }
         }
 
@@ -176,31 +247,29 @@ public final class KeycloakSecurityHelper {
 
         // Extract roles from realm_access claim
         Object realmAccess = introspectionResult.getClaim("realm_access");
-        if (realmAccess instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> realmAccessMap = (Map<String, Object>) realmAccess;
+        if (realmAccess instanceof Map<?, ?> realmAccessMap) {
             Object realmRoles = realmAccessMap.get("roles");
-            if (realmRoles instanceof Collection) {
-                @SuppressWarnings("unchecked")
-                Collection<String> realmRolesCollection = (Collection<String>) realmRoles;
-                roles.addAll(realmRolesCollection);
+            if (realmRoles instanceof Collection<?> realmRolesCollection) {
+                for (Object role : realmRolesCollection) {
+                    if (role instanceof String s) {
+                        roles.add(s);
+                    }
+                }
             }
         }
 
         // Extract client roles from resource_access claim
         Object resourceAccess = introspectionResult.getClaim("resource_access");
-        if (resourceAccess instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> resourceAccessMap = (Map<String, Object>) resourceAccess;
+        if (resourceAccess instanceof Map<?, ?> resourceAccessMap) {
             Object clientAccess = resourceAccessMap.get(clientId);
-            if (clientAccess instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> clientAccessMap = (Map<String, Object>) clientAccess;
+            if (clientAccess instanceof Map<?, ?> clientAccessMap) {
                 Object clientRoles = clientAccessMap.get("roles");
-                if (clientRoles instanceof Collection) {
-                    @SuppressWarnings("unchecked")
-                    Collection<String> clientRolesCollection = (Collection<String>) clientRoles;
-                    roles.addAll(clientRolesCollection);
+                if (clientRoles instanceof Collection<?> clientRolesCollection) {
+                    for (Object role : clientRolesCollection) {
+                        if (role instanceof String s) {
+                            roles.add(s);
+                        }
+                    }
                 }
             }
         }
@@ -220,16 +289,18 @@ public final class KeycloakSecurityHelper {
 
         // Extract permissions from custom claims
         Object permissionsClaim = introspectionResult.getClaim("permissions");
-        if (permissionsClaim instanceof Collection) {
-            @SuppressWarnings("unchecked")
-            Collection<String> permissionsCollection = (Collection<String>) permissionsClaim;
-            permissions.addAll(permissionsCollection);
+        if (permissionsClaim instanceof Collection<?> permissionsCollection) {
+            for (Object perm : permissionsCollection) {
+                if (perm instanceof String s) {
+                    permissions.add(s);
+                }
+            }
         }
 
         // Also check for scope-based permissions
         String scope = introspectionResult.getScope();
         if (scope != null && !scope.isEmpty()) {
-            permissions.addAll(java.util.Arrays.asList(scope.split(" ")));
+            permissions.addAll(Arrays.asList(scope.split(" ")));
         }
 
         return permissions;

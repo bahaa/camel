@@ -39,7 +39,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.jira.JiraComponent;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.spi.Registry;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -54,9 +54,9 @@ import static org.apache.camel.component.jira.JiraTestConstants.JIRA_CREDENTIALS
 import static org.apache.camel.component.jira.Utils.createIssueWithComments;
 import static org.apache.camel.component.jira.Utils.createIssueWithWorkLogs;
 import static org.apache.camel.component.jira.Utils.newWorkLog;
-import static org.apache.camel.test.junit5.TestSupport.assertIsInstanceOf;
-import static org.apache.camel.test.junit5.TestSupport.assertStringContains;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.apache.camel.test.junit6.TestSupport.assertIsInstanceOf;
+import static org.apache.camel.test.junit6.TestSupport.assertStringContains;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -150,13 +150,10 @@ public class AddWorkLogProducerTest extends CamelTestSupport {
         headers.put(MINUTES_SPENT, minutesSpent);
         String comment = "A new test comment " + new Date();
 
-        try {
-            template.sendBodyAndHeaders(comment, headers);
-            fail("Should have thrown an exception");
-        } catch (CamelExecutionException e) {
-            IllegalArgumentException cause = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
-            assertStringContains(cause.getMessage(), ISSUE_KEY);
-        }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.sendBodyAndHeaders(comment, headers));
+        IllegalArgumentException cause = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
+        assertStringContains(cause.getMessage(), ISSUE_KEY);
 
         mockResult.expectedMessageCount(0);
         mockResult.assertIsSatisfied();
@@ -171,13 +168,10 @@ public class AddWorkLogProducerTest extends CamelTestSupport {
         headers.put(ISSUE_KEY, backendIssue.getKey());
         String comment = "A new test comment " + new Date();
 
-        try {
-            template.sendBodyAndHeaders(comment, headers);
-            fail("Should have thrown an exception");
-        } catch (CamelExecutionException e) {
-            IllegalArgumentException cause = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
-            assertStringContains(cause.getMessage(), MINUTES_SPENT);
-        }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.sendBodyAndHeaders(comment, headers));
+        IllegalArgumentException cause = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
+        assertStringContains(cause.getMessage(), MINUTES_SPENT);
 
         mockResult.expectedMessageCount(0);
         mockResult.assertIsSatisfied();
@@ -193,13 +187,10 @@ public class AddWorkLogProducerTest extends CamelTestSupport {
         headers.put(ISSUE_KEY, backendIssue.getKey());
         headers.put(MINUTES_SPENT, minutesSpent);
 
-        try {
-            template.sendBodyAndHeaders(null, headers);
-            fail("Should have thrown an exception");
-        } catch (CamelExecutionException e) {
-            IllegalArgumentException cause = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
-            assertStringContains(cause.getMessage(), "Missing exchange body");
-        }
+        CamelExecutionException e = assertThrows(CamelExecutionException.class,
+                () -> template.sendBodyAndHeaders(null, headers));
+        IllegalArgumentException cause = assertIsInstanceOf(IllegalArgumentException.class, e.getCause());
+        assertStringContains(cause.getMessage(), "Missing exchange body");
 
         mockResult.expectedMessageCount(0);
         mockResult.assertIsSatisfied();

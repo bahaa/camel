@@ -16,6 +16,7 @@
  */
 package org.apache.camel.dsl.jbang.core.commands.action;
 
+import java.awt.image.BufferedImage;
 import java.io.LineNumberReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,8 +25,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,7 +39,17 @@ import com.github.freva.asciitable.HorizontalAlign;
 import com.github.freva.asciitable.OverflowBehaviour;
 import org.apache.camel.catalog.CamelCatalog;
 import org.apache.camel.catalog.DefaultCamelCatalog;
+import org.apache.camel.diagram.RouteDiagramAsciiRenderer;
+import org.apache.camel.diagram.RouteDiagramHelper;
+import org.apache.camel.diagram.RouteDiagramLayoutEngine;
+import org.apache.camel.diagram.RouteDiagramLayoutEngine.LayoutRoute;
+import org.apache.camel.diagram.RouteDiagramLayoutEngine.NodeLabelMode;
+import org.apache.camel.diagram.RouteDiagramLayoutEngine.RouteInfo;
+import org.apache.camel.diagram.RouteDiagramRenderer;
+import org.apache.camel.diagram.RouteDiagramRenderer.DiagramColors;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
+import org.apache.camel.dsl.jbang.core.common.PathUtils;
+import org.apache.camel.dsl.jbang.core.common.TerminalWidthHelper;
 import org.apache.camel.support.LoggerHelper;
 import org.apache.camel.tooling.model.ComponentModel;
 import org.apache.camel.tooling.model.EipModel;
@@ -48,9 +61,13 @@ import org.apache.camel.util.URISupport;
 import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 import org.apache.camel.util.json.Jsoner;
-import org.fusesource.jansi.Ansi;
+import org.jline.jansi.Ansi;
 import org.jline.keymap.KeyMap;
 import org.jline.terminal.Size;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+import org.jline.terminal.impl.TerminalGraphics;
+import org.jline.terminal.impl.TerminalGraphicsManager;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
 import org.jline.utils.InfoCmp;
@@ -120,6 +137,14 @@ public class CamelHistoryAction extends ActionWatchCommand {
     @CommandLine.Option(names = { "--logging-color" }, defaultValue = "true", description = "Use colored logging")
     boolean loggingColor = true;
 
+    @CommandLine.Option(names = { "--diagram" },
+                        description = "Display a route diagram with the message path highlighted")
+    boolean diagram;
+
+    @CommandLine.Option(names = { "--theme" }, defaultValue = "unicode",
+                        description = "Diagram color theme (ascii, unicode, dark, light, transparent, or custom)")
+    String theme = "unicode";
+
     private MessageTableHelper tableHelper;
     private final CamelCatalog camelCatalog = new DefaultCamelCatalog(true);
 
@@ -145,10 +170,19 @@ public class CamelHistoryAction extends ActionWatchCommand {
         List<List<Row>> pids = loadRows();
 
         if (!pids.isEmpty()) {
+            if (diagram) {
+                if (pids.size() > 1) {
+                    printer().println("Diagram mode only operate on a single Camel application");
+                    return 1;
+                }
+                List<Row> rows = pids.get(0);
+                long pid = rows.get(0).pid;
+                return doDiagramCall(pid, rows);
+            }
             if (it) {
                 if (pids.size() > 1) {
                     printer().println("Interactive mode only operate on a single Camel application");
-                    return 0;
+                    return 1;
                 }
                 return doInteractiveCall(pids.get(0));
             }
@@ -165,6 +199,13 @@ public class CamelHistoryAction extends ActionWatchCommand {
                         first.exchangeId, status, elapsed, ago, first.pid, first.name);
                 printer().println(s);
 
+                int tw = terminalWidth();
+                int fixedWidth = 6 + 20 + 10 + 12; // direction + ID + ELAPSED + EXCHANGE
+                int borderOverhead = TerminalWidthHelper.noBorderOverhead(6);
+                int flexTotal = tw - fixedWidth - borderOverhead;
+                int processorWidth = TerminalWidthHelper.flexWidth(tw, fixedWidth + 60, borderOverhead, 20, 55);
+                int messageWidth = TerminalWidthHelper.flexWidth(tw, fixedWidth + processorWidth, borderOverhead, 20, 60);
+
                 printer().println(AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
                         new Column().header("").dataAlign(HorizontalAlign.LEFT)
                                 .minWidth(6).maxWidth(6)
@@ -173,7 +214,7 @@ public class CamelHistoryAction extends ActionWatchCommand {
                                 .minWidth(10).maxWidth(20, OverflowBehaviour.ELLIPSIS_RIGHT)
                                 .with(this::getId),
                         new Column().header("PROCESSOR").dataAlign(HorizontalAlign.LEFT)
-                                .minWidth(40).maxWidth(55, OverflowBehaviour.ELLIPSIS_RIGHT)
+                                .minWidth(20).maxWidth(processorWidth, OverflowBehaviour.ELLIPSIS_RIGHT)
                                 .with(this::getProcessor),
                         new Column().header("ELAPSED").dataAlign(HorizontalAlign.RIGHT)
                                 .maxWidth(10, OverflowBehaviour.ELLIPSIS_RIGHT)
@@ -182,7 +223,7 @@ public class CamelHistoryAction extends ActionWatchCommand {
                                 .maxWidth(12, OverflowBehaviour.ELLIPSIS_RIGHT)
                                 .with(this::getExchangeId),
                         new Column().header("").dataAlign(HorizontalAlign.LEFT)
-                                .maxWidth(60, OverflowBehaviour.NEWLINE)
+                                .maxWidth(messageWidth, OverflowBehaviour.NEWLINE)
                                 .with(this::getMessage))));
 
                 JsonObject cause = last.exception;
@@ -294,6 +335,166 @@ public class CamelHistoryAction extends ActionWatchCommand {
         return 0;
     }
 
+    private Integer doDiagramCall(long pid, List<Row> rows) throws Exception {
+        System.setProperty("java.awt.headless", "true");
+
+        // extract node IDs and route order from history
+        Set<String> nodeIds = new LinkedHashSet<>();
+        Set<String> routeOrderSet = new LinkedHashSet<>();
+        for (Row r : rows) {
+            if (r.nodeId != null) {
+                nodeIds.add(r.nodeId);
+            }
+            if (r.routeId != null) {
+                routeOrderSet.add(r.routeId);
+            }
+        }
+
+        if (nodeIds.isEmpty()) {
+            printer().println("No node IDs found in message history");
+            return 1;
+        }
+
+        // auto-detect style from exchange status
+        Row last = rows.get(rows.size() - 1);
+        RouteDiagramHelper.HighlightStyle hlStyle = last.failed
+                ? RouteDiagramHelper.HighlightStyle.FAIL
+                : RouteDiagramHelper.HighlightStyle.SUCCESS;
+
+        // request route structure from the running process
+        String pidStr = Long.toString(pid);
+        Path outputFile = getOutputFile(pidStr);
+        PathUtils.deleteFile(outputFile);
+
+        JsonObject action = new JsonObject();
+        action.put("action", "route-structure");
+        action.put("filter", "*");
+        action.put("brief", false);
+        action.put("metric", false);
+        Path actionFile = getActionFile(pidStr);
+        try {
+            Files.writeString(actionFile, action.toJson());
+        } catch (Exception e) {
+            // ignore
+        }
+
+        JsonObject structureJson = getJsonObject(outputFile);
+        if (structureJson == null) {
+            printer().println("Response from running Camel with PID " + pid + " not received within 10 seconds");
+            return 1;
+        }
+
+        try {
+            List<RouteInfo> routes = RouteDiagramHelper.parseRoutes(structureJson);
+            if (routes.isEmpty()) {
+                printer().println("No routes found");
+                return 1;
+            }
+
+            // add structural parent node IDs for each route that has highlighted nodes
+            // (the history trace only has processor nodeIds, not structural route/from
+            // or scope EIP nodes like circuitBreaker, filter, split, doTry, etc.)
+            for (RouteInfo route : routes) {
+                boolean routeHasHighlight = route.nodes.stream().anyMatch(n -> n.id != null && nodeIds.contains(n.id));
+                if (routeHasHighlight) {
+                    addParentNodes(route.nodes, nodeIds);
+                }
+            }
+
+            // filter and order routes by highlighted path
+            RouteDiagramHelper.HighlightInfo highlightInfo
+                    = new RouteDiagramHelper.HighlightInfo(nodeIds, new ArrayList<>(routeOrderSet), hlStyle);
+            routes = RouteDiagramHelper.filterAndOrderRoutes(routes, highlightInfo);
+            if (routes.isEmpty()) {
+                printer().println("No routes contain highlighted nodes from message history");
+                return 1;
+            }
+
+            // layout
+            RouteDiagramLayoutEngine engine
+                    = new RouteDiagramLayoutEngine(180, 12, NodeLabelMode.BOTH);
+
+            List<LayoutRoute> layoutRoutes = new ArrayList<>();
+            int currentY = RouteDiagramLayoutEngine.PADDING;
+            for (RouteInfo route : routes) {
+                LayoutRoute lr = engine.layoutRoute(route, currentY);
+                layoutRoutes.add(lr);
+                currentY = lr.maxY + RouteDiagramLayoutEngine.V_GAP;
+            }
+
+            boolean textMode = isTextTheme();
+            if (textMode) {
+                RouteDiagramAsciiRenderer asciiRenderer
+                        = new RouteDiagramAsciiRenderer(engine.getNodeWidth(), isUnicodeTheme());
+                String ascii = asciiRenderer.renderDiagramAnsi(layoutRoutes, currentY, nodeIds, hlStyle);
+                printer().println(ascii);
+            } else {
+                DiagramColors colors = DiagramColors.parse(theme);
+                RouteDiagramRenderer renderer = new RouteDiagramRenderer(
+                        engine.getNodeWidth(), 12 * RouteDiagramLayoutEngine.SCALE, engine.getNodeTextPadding(), false);
+
+                BufferedImage image;
+                try {
+                    image = renderer.renderDiagram(layoutRoutes, currentY, colors, nodeIds, hlStyle);
+                } catch (IllegalStateException e) {
+                    printer().println(e.getMessage());
+                    return 1;
+                }
+
+                try (Terminal terminal = TerminalBuilder.builder().system(true).build()) {
+                    TerminalGraphics tg = TerminalGraphicsManager.getBestProtocol(terminal).orElse(null);
+                    if (tg == null) {
+                        printer().println(
+                                "Terminal does not support graphics. Use --theme=ascii or --theme=unicode for text output.");
+                        return 1;
+                    }
+                    TerminalGraphics.ImageOptions opts = new TerminalGraphics.ImageOptions().preserveAspectRatio(true);
+                    tg.displayImage(terminal, image, opts);
+                    terminal.writer().println();
+                    terminal.flush();
+                }
+            }
+            return 0;
+        } finally {
+            PathUtils.deleteFile(outputFile);
+        }
+    }
+
+    private static void addParentNodes(List<RouteDiagramLayoutEngine.NodeInfo> nodes, Set<String> nodeIds) {
+        // walk the flat node list and add any parent node whose children contain highlighted nodes
+        // this bridges gaps in the arrow chain for scope EIPs (circuitBreaker, filter, split, etc.)
+        // and structural nodes (route, from)
+        for (int i = 0; i < nodes.size(); i++) {
+            RouteDiagramLayoutEngine.NodeInfo node = nodes.get(i);
+            if (node.id == null || nodeIds.contains(node.id)) {
+                continue;
+            }
+            // check if any child (higher level following this node) is highlighted
+            boolean hasHighlightedChild = false;
+            for (int j = i + 1; j < nodes.size(); j++) {
+                RouteDiagramLayoutEngine.NodeInfo child = nodes.get(j);
+                if (child.level <= node.level) {
+                    break;
+                }
+                if (child.id != null && nodeIds.contains(child.id)) {
+                    hasHighlightedChild = true;
+                    break;
+                }
+            }
+            if (hasHighlightedChild) {
+                nodeIds.add(node.id);
+            }
+        }
+    }
+
+    private boolean isTextTheme() {
+        return "ascii".equalsIgnoreCase(theme) || "unicode".equalsIgnoreCase(theme);
+    }
+
+    private boolean isUnicodeTheme() {
+        return "unicode".equalsIgnoreCase(theme);
+    }
+
     private List<AttributedString> interactiveContent(
             List<Row> rows, AtomicInteger rowIndex, AtomicInteger pageIndex, Size size) {
         List<AttributedString> answer = new ArrayList<>();
@@ -313,6 +514,11 @@ public class CamelHistoryAction extends ActionWatchCommand {
         answer.add(new AttributedString(""));
 
         // build full table with all data so the table sizing are always the same when scrolling
+        int tw = terminalWidth();
+        int itFixedWidth = 6 + 20 + 10 + 12; // direction + ID + ELAPSED + EXCHANGE
+        int itBorderOverhead = TerminalWidthHelper.noBorderOverhead(6);
+        int itProcessorWidth = TerminalWidthHelper.flexWidth(tw, itFixedWidth, itBorderOverhead, 20, 55);
+
         String table = AsciiTable.getTable(AsciiTable.NO_BORDERS, rows, Arrays.asList(
                 new Column().header("").dataAlign(HorizontalAlign.LEFT)
                         .minWidth(6).maxWidth(6)
@@ -321,7 +527,7 @@ public class CamelHistoryAction extends ActionWatchCommand {
                         .minWidth(10).maxWidth(20, OverflowBehaviour.ELLIPSIS_RIGHT)
                         .with(this::getId),
                 new Column().header("PROCESSOR").dataAlign(HorizontalAlign.LEFT)
-                        .minWidth(40).maxWidth(55, OverflowBehaviour.ELLIPSIS_RIGHT)
+                        .minWidth(20).maxWidth(itProcessorWidth, OverflowBehaviour.ELLIPSIS_RIGHT)
                         .with(this::getProcessor),
                 new Column().header("ELAPSED").dataAlign(HorizontalAlign.RIGHT)
                         .maxWidth(10, OverflowBehaviour.ELLIPSIS_RIGHT)
@@ -533,16 +739,18 @@ public class CamelHistoryAction extends ActionWatchCommand {
 
     private String getStatus(Row r) {
         boolean remote = r.endpoint != null && r.endpoint.getBooleanOrDefault("remote", false);
+        boolean original = r.fromRouteId != null && r.fromRouteId.equals(r.routeId);
 
         if (r.first) {
-            String s = "Created";
+            String s = original ? "Created" : remote ? "Sent" : "Processed";
             if (loggingColor) {
                 return Ansi.ansi().fg(Ansi.Color.GREEN).a(s).reset().toString();
             } else {
                 return s;
             }
         } else if (r.last) {
-            String done = r.exception != null ? "Completed (exception)" : "Completed (success)";
+            String s = original ? "Completed" : remote ? "Sent" : "Processed";
+            String done = r.exception != null ? s + " (exception)" : s + " (success)";
             if (loggingColor) {
                 return Ansi.ansi().fg(r.failed ? Ansi.Color.RED : Ansi.Color.GREEN).a(done).reset().toString();
             } else {
@@ -610,7 +818,9 @@ public class CamelHistoryAction extends ActionWatchCommand {
         if (source && r.location != null) {
             answer = r.location;
         } else {
-            if (r.nodeId == null) {
+            if (r.routeId != null && r.nodeId != null) {
+                answer = r.routeId + "/" + r.nodeId;
+            } else if (r.nodeId == null) {
                 answer = r.routeId;
             } else {
                 answer = r.nodeId;
@@ -630,10 +840,11 @@ public class CamelHistoryAction extends ActionWatchCommand {
     }
 
     private String getDirection(Row r) {
+        boolean original = r.routeId != null && r.routeId.equals(r.fromRouteId);
         if (r.first) {
-            return "*-->";
+            return original ? "*-->" : " -->";
         } else if (r.last) {
-            return "*<--";
+            return original ? "*<--" : " <--";
         } else {
             return null;
         }
@@ -654,10 +865,11 @@ public class CamelHistoryAction extends ActionWatchCommand {
     }
 
     private String getMessage(Row r) {
+        boolean original = r.routeId != null && r.routeId.equals(r.fromRouteId);
         if (r.failed && !r.last) {
             return "Exception: " + r.exception.getString("message");
         }
-        if (r.last) {
+        if (r.last && original) {
             return r.failed ? "Failed" : "Success";
         }
         return r.summary;
@@ -714,6 +926,7 @@ public class CamelHistoryAction extends ActionWatchCommand {
                     row.first = jo.getBoolean("first");
                     row.last = jo.getBoolean("last");
                     row.location = jo.getString("location");
+                    row.fromRouteId = jo.getString("fromRouteId");
                     row.routeId = jo.getString("routeId");
                     row.nodeId = jo.getString("nodeId");
                     row.nodeParentId = jo.getString("nodeParentId");
@@ -919,6 +1132,7 @@ public class CamelHistoryAction extends ActionWatchCommand {
         String exchangePattern;
         String threadName;
         String location;
+        String fromRouteId;
         String routeId;
         String nodeId;
         String nodeParentId;

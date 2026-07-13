@@ -23,7 +23,7 @@ import org.apache.camel.builder.ExpressionBuilder;
 import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.test.junit5.CamelTestSupport;
+import org.apache.camel.test.junit6.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
 public class JsonPathStreamCachingCBRTest extends CamelTestSupport {
@@ -37,7 +37,7 @@ public class JsonPathStreamCachingCBRTest extends CamelTestSupport {
                 context.getStreamCachingStrategy().setSpoolThreshold(-1);
 
                 from("direct:start")
-                        .streamCaching()
+                        .streamCache(true)
                         .choice()
                         .when().jsonpath("$.store.book[?(@.price < 10)]")
                         .to("mock:cheap")
@@ -47,7 +47,7 @@ public class JsonPathStreamCachingCBRTest extends CamelTestSupport {
                         .to("mock:expensive");
 
                 from("direct:bicycle")
-                        .streamCaching()
+                        .streamCache(true)
                         .choice()
                         .when().method(new BeanPredicate())
                         .to("mock:cheap")
@@ -55,7 +55,7 @@ public class JsonPathStreamCachingCBRTest extends CamelTestSupport {
                         .to("mock:expensive");
 
                 from("direct:bicycle2")
-                        .streamCaching()
+                        .streamCache(true)
                         .choice()
                         .when(PredicateBuilder.isLessThan(
                                 ExpressionBuilder.languageExpression("jsonpath", "$.store.bicycle.price"),

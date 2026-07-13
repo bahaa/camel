@@ -4,12 +4,11 @@
 :artifactid: camel-google-vertexai
 :description: Interact with Google Cloud Vertex AI generative models.
 :since: 4.17
-:supportlevel: Preview
+:supportlevel: Stable
 :tabs-sync-option:
 :component-header: Only producer is supported
 //Manually maintained attributes
 :group: Google
-:camel-spring-boot-name: google-vertexai
 
 *Since Camel {since}*
 
@@ -78,13 +77,25 @@ Use these operations with Gemini, Imagen, and other Google models:
 |`generateChat`
 |Generate chat responses
 
+|`generateChatStreaming`
+|Generate streaming chat responses (accumulated text returned with chunk count)
+
 |`generateCode`
 |Generate code from a description
+
+|`generateImage`
+|Generate images using Imagen models
+
+|`generateEmbeddings`
+|Generate text embeddings using embedding models (single text or batch)
+
+|`generateMultimodal`
+|Generate content from multimodal inputs (text + images/video/audio)
 |===
 
 === Partner Models
 
-Use `rawPredict` for Claude, Llama, and Mistral models:
+Use `rawPredict` and `streamRawPredict` for Claude, Llama, and Mistral models:
 
 [cols="1,3"]
 |===
@@ -92,6 +103,9 @@ Use `rawPredict` for Claude, Llama, and Mistral models:
 
 |`rawPredict`
 |Send requests to partner models via the Prediction Service API
+
+|`streamRawPredict`
+|Send streaming requests to partner models (accumulated response with chunk count)
 |===
 
 Partner models require the `publisher` parameter: `anthropic`, `meta`, or `mistralai`.
@@ -100,6 +114,10 @@ Partner models require the `publisher` parameter: `anthropic`, `meta`, or `mistr
 
 === Text Generation with Gemini
 
+[tabs]
+====
+Java::
++
 [source,java]
 ----
 from("direct:prompt")
@@ -108,32 +126,398 @@ from("direct:prompt")
     .log("${body}");
 ----
 
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:prompt"/>
+  <setBody>
+    <constant>Explain quantum computing briefly</constant>
+  </setBody>
+  <to uri="google-vertexai:my-project:us-central1:gemini-2.0-flash"/>
+  <log message="${body}"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:prompt
+      steps:
+        - setBody:
+            constant: Explain quantum computing briefly
+        - to:
+            uri: google-vertexai:my-project:us-central1:gemini-2.0-flash
+        - log:
+            message: "${body}"
+----
+====
+
 === Using a Service Account
 
+[tabs]
+====
+Java::
++
 [source,java]
 ----
 from("direct:prompt")
-    .to("google-vertexai:my-project:us-central1:gemini-2.0-flash"
-        + "?serviceAccountKey=file:/path/to/key.json")
+    .to("google-vertexai:my-project:us-central1:gemini-2.0-flash?serviceAccountKey=file:/path/to/key.json")
     .log("${body}");
 ----
 
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:prompt"/>
+  <to uri="google-vertexai:my-project:us-central1:gemini-2.0-flash?serviceAccountKey=file:/path/to/key.json"/>
+  <log message="${body}"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:prompt
+      steps:
+        - to:
+            uri: google-vertexai:my-project:us-central1:gemini-2.0-flash
+            parameters:
+              serviceAccountKey: "file:/path/to/key.json"
+        - log:
+            message: "${body}"
+----
+====
+
 === Calling Claude with rawPredict
 
+[tabs]
+====
+Java::
++
 [source,java]
 ----
 from("direct:claude")
     .setBody(constant("What is Apache Camel?"))
-    .to("google-vertexai:my-project:us-east5:claude-sonnet-4@20250514"
-        + "?operation=rawPredict&publisher=anthropic")
+    .to("google-vertexai:my-project:us-east5:claude-sonnet-4@20250514?operation=rawPredict&publisher=anthropic")
     .log("${body}");
 ----
 
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:claude"/>
+  <setBody>
+    <constant>What is Apache Camel?</constant>
+  </setBody>
+  <to uri="google-vertexai:my-project:us-east5:claude-sonnet-4@20250514?operation=rawPredict&amp;publisher=anthropic"/>
+  <log message="${body}"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:claude
+      steps:
+        - setBody:
+            constant: What is Apache Camel?
+        - to:
+            uri: "google-vertexai:my-project:us-east5:claude-sonnet-4@20250514"
+            parameters:
+              operation: rawPredict
+              publisher: anthropic
+        - log:
+            message: "${body}"
+----
+====
+
 The component automatically wraps simple text prompts in the required Anthropic format.
+
+=== Streaming Chat with Gemini
+
+[tabs]
+====
+Java::
++
+[source,java]
+----
+from("direct:streaming")
+    .setBody(constant("Tell me a story"))
+    .to("google-vertexai:my-project:us-central1:gemini-2.0-flash?operation=generateChatStreaming&maxOutputTokens=512")
+    .log("Response: ${body}, Chunks: ${header.CamelGoogleVertexAIChunkCount}");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:streaming"/>
+  <setBody>
+    <constant>Tell me a story</constant>
+  </setBody>
+  <to uri="google-vertexai:my-project:us-central1:gemini-2.0-flash?operation=generateChatStreaming&amp;maxOutputTokens=512"/>
+  <log message="Response: ${body}, Chunks: ${header.CamelGoogleVertexAIChunkCount}"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:streaming
+      steps:
+        - setBody:
+            constant: Tell me a story
+        - to:
+            uri: google-vertexai:my-project:us-central1:gemini-2.0-flash
+            parameters:
+              operation: generateChatStreaming
+              maxOutputTokens: 512
+        - log:
+            message: "Response: ${body}, Chunks: ${header.CamelGoogleVertexAIChunkCount}"
+----
+====
+
+=== Image Generation with Imagen
+
+[tabs]
+====
+Java::
++
+[source,java]
+----
+from("direct:image")
+    .setBody(constant("A sunset over mountains"))
+    .setHeader("CamelGoogleVertexAIImageNumberOfImages", constant(1))
+    .to("google-vertexai:my-project:us-central1:imagen-3.0-generate-002?operation=generateImage")
+    .log("Generated ${body.size()} image(s)");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:image"/>
+  <setBody>
+    <constant>A sunset over mountains</constant>
+  </setBody>
+  <setHeader name="CamelGoogleVertexAIImageNumberOfImages">
+    <constant resultType="java.lang.Integer">1</constant>
+  </setHeader>
+  <to uri="google-vertexai:my-project:us-central1:imagen-3.0-generate-002?operation=generateImage"/>
+  <log message="Generated ${body.size()} image(s)"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:image
+      steps:
+        - setBody:
+            constant: A sunset over mountains
+        - setHeader:
+            name: CamelGoogleVertexAIImageNumberOfImages
+            constant: 1
+        - to:
+            uri: google-vertexai:my-project:us-central1:imagen-3.0-generate-002
+            parameters:
+              operation: generateImage
+        - log:
+            message: "Generated ${body.size()} image(s)"
+----
+====
+
+The body will contain a `List<Image>` with the generated images. Each `Image` has `imageBytes()` and `mimeType()` methods.
+
+=== Text Embeddings
+
+[tabs]
+====
+Java::
++
+[source,java]
+----
+from("direct:embed")
+    .setBody(constant("Apache Camel is an integration framework"))
+    .to("google-vertexai:my-project:us-central1:text-embedding-005?operation=generateEmbeddings")
+    .log("Embedding dimensions: ${body[0].size()}");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:embed"/>
+  <setBody>
+    <constant>Apache Camel is an integration framework</constant>
+  </setBody>
+  <to uri="google-vertexai:my-project:us-central1:text-embedding-005?operation=generateEmbeddings"/>
+  <log message="Embedding dimensions: ${body[0].size()}"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:embed
+      steps:
+        - setBody:
+            constant: Apache Camel is an integration framework
+        - to:
+            uri: google-vertexai:my-project:us-central1:text-embedding-005
+            parameters:
+              operation: generateEmbeddings
+        - log:
+            message: "Embedding dimensions: ${body[0].size()}"
+----
+====
+
+The body will contain a `List<List<Float>>` — one embedding vector per input text. For batch embeddings, pass a `List<String>` as the body.
+
+=== Multimodal Input (Image + Text)
+
+[tabs]
+====
+Java::
++
+[source,java]
+----
+from("direct:multimodal")
+    .setHeader("CamelGoogleVertexAIPrompt", constant("Describe this image"))
+    .setHeader("CamelGoogleVertexAIMediaGcsUri", constant("gs://my-bucket/photo.jpg"))
+    .setHeader("CamelGoogleVertexAIMediaMimeType", constant("image/jpeg"))
+    .to("google-vertexai:my-project:us-central1:gemini-2.0-flash?operation=generateMultimodal")
+    .log("${body}");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:multimodal"/>
+  <setHeader name="CamelGoogleVertexAIPrompt">
+    <constant>Describe this image</constant>
+  </setHeader>
+  <setHeader name="CamelGoogleVertexAIMediaGcsUri">
+    <constant>gs://my-bucket/photo.jpg</constant>
+  </setHeader>
+  <setHeader name="CamelGoogleVertexAIMediaMimeType">
+    <constant>image/jpeg</constant>
+  </setHeader>
+  <to uri="google-vertexai:my-project:us-central1:gemini-2.0-flash?operation=generateMultimodal"/>
+  <log message="${body}"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:multimodal
+      steps:
+        - setHeader:
+            name: CamelGoogleVertexAIPrompt
+            constant: Describe this image
+        - setHeader:
+            name: CamelGoogleVertexAIMediaGcsUri
+            constant: "gs://my-bucket/photo.jpg"
+        - setHeader:
+            name: CamelGoogleVertexAIMediaMimeType
+            constant: image/jpeg
+        - to:
+            uri: google-vertexai:my-project:us-central1:gemini-2.0-flash
+            parameters:
+              operation: generateMultimodal
+        - log:
+            message: "${body}"
+----
+====
+
+You can also pass inline image bytes via the `CamelGoogleVertexAIMediaData` header instead of a GCS URI.
+
+=== Streaming Claude with streamRawPredict
+
+[tabs]
+====
+Java::
++
+[source,java]
+----
+from("direct:stream-claude")
+    .setBody(constant("What is Apache Camel?"))
+    .to("google-vertexai:my-project:us-east5:claude-sonnet-4@20250514?operation=streamRawPredict&publisher=anthropic")
+    .log("${body}");
+----
+
+XML::
++
+[source,xml]
+----
+<route>
+  <from uri="direct:stream-claude"/>
+  <setBody>
+    <constant>What is Apache Camel?</constant>
+  </setBody>
+  <to uri="google-vertexai:my-project:us-east5:claude-sonnet-4@20250514?operation=streamRawPredict&amp;publisher=anthropic"/>
+  <log message="${body}"/>
+</route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:stream-claude
+      steps:
+        - setBody:
+            constant: What is Apache Camel?
+        - to:
+            uri: "google-vertexai:my-project:us-east5:claude-sonnet-4@20250514"
+            parameters:
+              operation: streamRawPredict
+              publisher: anthropic
+        - log:
+            message: "${body}"
+----
+====
 
 === Claude with Custom Request
 
-For more control, pass a JSON or Map body:
+For more control, pass a JSON body:
+
+._Java-only: requires Java text block for JSON request body_
 
 [source,java]
 ----
@@ -148,8 +532,7 @@ from("direct:claude")
             """;
         exchange.getMessage().setBody(json);
     })
-    .to("google-vertexai:my-project:us-east5:claude-sonnet-4@20250514"
-        + "?operation=rawPredict&publisher=anthropic")
+    .to("google-vertexai:my-project:us-east5:claude-sonnet-4@20250514?operation=rawPredict&publisher=anthropic")
     .log("${body}");
 ----
 
@@ -157,7 +540,7 @@ from("direct:claude")
 
 === Google Models
 
-Use with `generateText`, `generateChat`, or `generateCode`:
+Use with `generateText`, `generateChat`, `generateChatStreaming`, `generateCode`, `generateImage`, `generateEmbeddings`, or `generateMultimodal`:
 
 * *Gemini*: `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-1.5-flash`
 * *Imagen*: `imagen-4.0-generate-preview-05-20`, `imagen-3.0-generate-002`
@@ -166,7 +549,7 @@ Use with `generateText`, `generateChat`, or `generateCode`:
 
 === Partner Models
 
-Use with `rawPredict` and the appropriate `publisher`:
+Use with `rawPredict` or `streamRawPredict` and the appropriate `publisher`:
 
 [cols="1,2,2"]
 |===
@@ -200,4 +583,3 @@ Add the following dependency:
 </dependency>
 ----
 
-include::spring-boot:partial$starter.adoc[]

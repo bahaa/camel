@@ -24,6 +24,7 @@ import java.util.Set;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.net.ProxyType;
+import io.vertx.core.tracing.TracingPolicy;
 import io.vertx.ext.web.client.WebClientOptions;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Endpoint;
@@ -52,9 +53,9 @@ public class VertxHttpComponent extends HeaderFilterStrategyComponent
 
     @Metadata(label = "security")
     private String basicAuthUsername;
-    @Metadata(label = "security")
+    @Metadata(label = "security", security = "secret")
     private String basicAuthPassword;
-    @Metadata(label = "security")
+    @Metadata(label = "security", security = "secret")
     private String bearerToken;
     @Metadata(label = "security")
     private SSLContextParameters sslContextParameters;
@@ -66,7 +67,7 @@ public class VertxHttpComponent extends HeaderFilterStrategyComponent
     private ProxyType proxyType;
     @Metadata(label = "proxy")
     private String proxyUsername;
-    @Metadata(label = "proxy")
+    @Metadata(label = "proxy", security = "secret")
     private String proxyPassword;
 
     @Metadata(label = "advanced")
@@ -77,12 +78,14 @@ public class VertxHttpComponent extends HeaderFilterStrategyComponent
     private VertxHttpBinding vertxHttpBinding;
     @Metadata(label = "security", defaultValue = "false")
     private boolean useGlobalSslContextParameters;
-    @Metadata(label = "advanced")
+    @Metadata(label = "advanced", security = "insecure:serialization")
     private boolean allowJavaSerializedObject;
     @Metadata(label = "producer", defaultValue = "true")
     private boolean responsePayloadAsByteArray = true;
     @Metadata(label = "advanced")
     private WebClientOptions webClientOptions;
+    @Metadata(label = "advanced")
+    private TracingPolicy tracingPolicy;
 
     @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
@@ -132,6 +135,9 @@ public class VertxHttpComponent extends HeaderFilterStrategyComponent
         }
         if (configuration.getWebClientOptions() == null) {
             configuration.setWebClientOptions(getWebClientOptions());
+        }
+        if (configuration.getTracingPolicy() == null) {
+            configuration.setTracingPolicy(getTracingPolicy());
         }
 
         // Recreate the http uri with the remaining parameters which the endpoint did not use
@@ -429,5 +435,17 @@ public class VertxHttpComponent extends HeaderFilterStrategyComponent
      */
     public void setWebClientOptions(WebClientOptions webClientOptions) {
         this.webClientOptions = webClientOptions;
+    }
+
+    /**
+     * The tracing policy used by the HTTP client when integrating with observability frameworks such as OpenTelemetry.
+     * If not specified the HTTP client applies a default tracing policy of PROPAGATE.
+     */
+    public void setTracingPolicy(TracingPolicy tracingPolicy) {
+        this.tracingPolicy = tracingPolicy;
+    }
+
+    public TracingPolicy getTracingPolicy() {
+        return tracingPolicy;
     }
 }

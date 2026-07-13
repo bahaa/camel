@@ -1,7 +1,7 @@
 = Sticky Load Balancer EIP
 :doctitle: Sticky Load Balancer
 :shortname: stickyLoadBalancer
-:description: Sticky load balancing using an expression to calculate a correlation key to perform the sticky load balancing.
+:description: Load balancer that routes messages to the same endpoint based on a correlation expression, ensuring session affinity
 :since: 
 :supportlevel: Stable
 :tabs-sync-option:
@@ -58,5 +58,27 @@ XML::
        <to uri="seda:z"/>       
     </loadBalance> 
 </route>
+----
+
+YAML::
++
+[source,yaml]
+----
+- route:
+    from:
+      uri: direct:start
+      steps:
+        - loadBalance:
+            steps:
+              - stickyLoadBalancer:
+                  correlationExpression:
+                    header:
+                      expression: myKey
+              - to:
+                  uri: seda:x
+              - to:
+                  uri: seda:y
+              - to:
+                  uri: seda:z
 ----
 ====

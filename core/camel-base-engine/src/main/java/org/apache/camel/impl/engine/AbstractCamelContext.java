@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
@@ -116,6 +117,7 @@ import org.apache.camel.spi.DumpRoutesStrategy;
 import org.apache.camel.spi.EndpointRegistry;
 import org.apache.camel.spi.EndpointServiceRegistry;
 import org.apache.camel.spi.EndpointStrategy;
+import org.apache.camel.spi.ErrorRegistry;
 import org.apache.camel.spi.EventNotifier;
 import org.apache.camel.spi.ExchangeFactory;
 import org.apache.camel.spi.ExchangeFactoryManager;
@@ -135,7 +137,9 @@ import org.apache.camel.spi.LifecycleStrategy;
 import org.apache.camel.spi.ManagementNameStrategy;
 import org.apache.camel.spi.ManagementStrategy;
 import org.apache.camel.spi.MessageHistoryFactory;
+import org.apache.camel.spi.MessageSizeStrategy;
 import org.apache.camel.spi.ModelJAXBContextFactory;
+import org.apache.camel.spi.ModelToJavaDumper;
 import org.apache.camel.spi.ModelToStructureDumper;
 import org.apache.camel.spi.ModelToXMLDumper;
 import org.apache.camel.spi.ModelToYAMLDumper;
@@ -159,14 +163,17 @@ import org.apache.camel.spi.RestConfiguration;
 import org.apache.camel.spi.RestRegistry;
 import org.apache.camel.spi.RestRegistryFactory;
 import org.apache.camel.spi.RouteController;
+import org.apache.camel.spi.RouteDiagramDumper;
 import org.apache.camel.spi.RouteError.Phase;
 import org.apache.camel.spi.RouteFactory;
 import org.apache.camel.spi.RoutePolicyFactory;
 import org.apache.camel.spi.RouteStartupOrder;
 import org.apache.camel.spi.RouteTemplateParameterSource;
+import org.apache.camel.spi.RouteTopologyDumper;
 import org.apache.camel.spi.RoutesLoader;
 import org.apache.camel.spi.RuntimeEndpointRegistry;
 import org.apache.camel.spi.ShutdownStrategy;
+import org.apache.camel.spi.SimpleFunctionRegistry;
 import org.apache.camel.spi.StartupConditionStrategy;
 import org.apache.camel.spi.StartupStepRecorder;
 import org.apache.camel.spi.StreamCachingStrategy;
@@ -205,6 +212,7 @@ import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.StringHelper;
 import org.apache.camel.util.TimeUtils;
 import org.apache.camel.util.URISupport;
+import org.apache.camel.util.concurrent.ContextValue;
 import org.apache.camel.vault.VaultConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -233,8 +241,8 @@ public abstract class AbstractCamelContext extends BaseService
     private final Map<String, Language> languages = new ConcurrentHashMap<>();
     private final Map<String, DataFormat> dataformats = new ConcurrentHashMap<>();
     private final List<LifecycleStrategy> lifecycleStrategies = new CopyOnWriteArrayList<>();
-    private final ThreadLocal<Boolean> isStartingRoutes = new ThreadLocal<>();
-    private final ThreadLocal<Boolean> isLockModel = new ThreadLocal<>();
+    private final ContextValue<Boolean> isStartingRoutes = ContextValue.newInstance("isStartingRoutes");
+    private final ContextValue<Boolean> isLockModel = ContextValue.newInstance("isLockModel");
     private final Map<String, RouteService> routeServices = new LinkedHashMap<>();
     private final Map<String, RouteService> suspendedRouteServices = new LinkedHashMap<>();
     private final InternalRouteStartupManager internalRouteStartupManager = new InternalRouteStartupManager();
@@ -273,6 +281,7 @@ public abstract class AbstractCamelContext extends BaseService
     private Boolean logMask = Boolean.FALSE;
     private Boolean logExhaustedMessageBody = Boolean.FALSE;
     private Boolean streamCache = Boolean.TRUE;
+    private Boolean messageSize = Boolean.FALSE;
     private Boolean disableJMX = Boolean.FALSE;
     private Boolean loadTypeConverters = Boolean.FALSE;
     private Boolean loadHealthChecks = Boolean.FALSE;
@@ -280,7 +289,9 @@ public abstract class AbstractCamelContext extends BaseService
     private Boolean sourceLocationEnabled = Boolean.FALSE;
     private Boolean typeConverterStatisticsEnabled = Boolean.FALSE;
     private String dumpRoutes;
+    @Deprecated(since = "4.19.0")
     private Boolean useMDCLogging = Boolean.FALSE;
+    @Deprecated(since = "4.19.0")
     private String mdcLoggingKeysPattern;
     private Boolean useDataType = Boolean.FALSE;
     private Boolean useBreadcrumb = Boolean.FALSE;
@@ -395,6 +406,7 @@ public abstract class AbstractCamelContext extends BaseService
         camelContextExtension.lazyAddContextPlugin(BeanProcessorFactory.class, this::createBeanProcessorFactory);
         camelContextExtension.lazyAddContextPlugin(ModelToXMLDumper.class, this::createModelToXMLDumper);
         camelContextExtension.lazyAddContextPlugin(ModelToYAMLDumper.class, this::createModelToYAMLDumper);
+        camelContextExtension.lazyAddContextPlugin(ModelToJavaDumper.class, this::createModelToJavaDumper);
         camelContextExtension.lazyAddContextPlugin(ModelToStructureDumper.class, this::createModelToStructureDumper);
         camelContextExtension.lazyAddContextPlugin(DeferServiceFactory.class, this::createDeferServiceFactory);
         camelContextExtension.lazyAddContextPlugin(AnnotationBasedProcessorFactory.class,
@@ -402,6 +414,10 @@ public abstract class AbstractCamelContext extends BaseService
         camelContextExtension.lazyAddContextPlugin(DumpRoutesStrategy.class, this::createDumpRoutesStrategy);
         camelContextExtension.lazyAddContextPlugin(BackOffTimerFactory.class, this::createBackOffTimerFactory);
         camelContextExtension.lazyAddContextPlugin(GroovyScriptCompiler.class, this::createGroovyScriptCompiler);
+        camelContextExtension.lazyAddContextPlugin(SimpleFunctionRegistry.class, this::createSimpleFunctionRegistry);
+        camelContextExtension.lazyAddContextPlugin(RestRegistry.class, this::createRestRegistry);
+        camelContextExtension.lazyAddContextPlugin(RouteDiagramDumper.class, this::createRouteDiagramDumper);
+        camelContextExtension.lazyAddContextPlugin(RouteTopologyDumper.class, this::createRouteTopologyDumper);
     }
 
     protected static <T> T lookup(CamelContext context, String ref, Class<T> type) {
@@ -1121,10 +1137,10 @@ public abstract class AbstractCamelContext extends BaseService
     }
 
     public boolean isStartingRoutes() {
-        Boolean answer = isStartingRoutes.get();
-        return answer != null && answer;
+        return Boolean.TRUE.equals(isStartingRoutes.orElse(false));
     }
 
+    @Deprecated(since = "4.20.0")
     public void setStartingRoutes(boolean starting) {
         if (starting) {
             isStartingRoutes.set(true);
@@ -1133,17 +1149,61 @@ public abstract class AbstractCamelContext extends BaseService
         }
     }
 
-    public boolean isLockModel() {
-        Boolean answer = isLockModel.get();
-        return answer != null && answer;
+    /**
+     * Executes the given operation within a "starting routes" context.
+     */
+    public void startingRoutes(Runnable operation) {
+        ContextValue.where(isStartingRoutes, true, operation);
     }
 
+    /**
+     * Executes the given operation within a "starting routes" context.
+     */
+    public <T> T startingRoutes(Callable<T> callable) throws Exception {
+        return ContextValue.where(isStartingRoutes, true, () -> {
+            try {
+                return callable.call();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    public boolean isLockModel() {
+        return Boolean.TRUE.equals(isLockModel.orElse(false));
+    }
+
+    @Deprecated(since = "4.20.0")
     public void setLockModel(boolean lockModel) {
         if (lockModel) {
             isLockModel.set(true);
         } else {
             isLockModel.remove();
         }
+    }
+
+    /**
+     * Executes the given operation within a "lock model" context.
+     */
+    public void lockModel(Runnable operation) {
+        ContextValue.where(isLockModel, true, operation);
+    }
+
+    /**
+     * Executes the given operation within a "lock model" context.
+     */
+    public <T> T lockModel(Callable<T> callable) throws Exception {
+        return ContextValue.where(isLockModel, true, () -> {
+            try {
+                return callable.call();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public void startAllRoutes() throws Exception {
@@ -1956,6 +2016,16 @@ public abstract class AbstractCamelContext extends BaseService
     }
 
     @Override
+    public void setMessageSize(Boolean messageSize) {
+        this.messageSize = messageSize;
+    }
+
+    @Override
+    public Boolean isMessageSize() {
+        return messageSize;
+    }
+
+    @Override
     public void setTracing(Boolean tracing) {
         this.trace = tracing;
     }
@@ -2340,8 +2410,8 @@ public abstract class AbstractCamelContext extends BaseService
         StartupStepRecorder startupStepRecorder = camelContextExtension.getStartupStepRecorder();
         // NOTE: only check the specific class, not any subclass
         if (startupStepRecorder.getClass() == DefaultStartupStepRecorder.class) { // NOSONAR
-            StartupStepRecorder fr = camelContextExtension.getBootstrapFactoryFinder()
-                    .newInstance(StartupStepRecorder.FACTORY, StartupStepRecorder.class).orElse(null);
+            StartupStepRecorder fr
+                    = ResolverHelper.resolveService(this, StartupStepRecorder.FACTORY, StartupStepRecorder.class).orElse(null);
             if (fr != null) {
                 LOG.debug("Discovered startup recorder: {} from classpath", fr);
                 camelContextExtension.setStartupStepRecorder(fr);
@@ -2525,8 +2595,7 @@ public abstract class AbstractCamelContext extends BaseService
         boolean debuggerDetected = false;
         if (getDebugger() == null && hasService(BacklogDebugger.class) == null) {
             // detect if camel-debug is on classpath that enables debugging
-            DebuggerFactory df = getCamelContextExtension().getBootstrapFactoryFinder()
-                    .newInstance(Debugger.FACTORY, DebuggerFactory.class).orElse(null);
+            DebuggerFactory df = ResolverHelper.resolveService(this, Debugger.FACTORY, DebuggerFactory.class).orElse(null);
             if (df != null) {
                 debuggerDetected = true;
                 LOG.info("Detected: {} JAR (Enabling Camel Debugging)", df);
@@ -2605,10 +2674,16 @@ public abstract class AbstractCamelContext extends BaseService
             }
         }
         if (runtimeEndpointRegistry != null) {
-            if (runtimeEndpointRegistry instanceof EventNotifier && getManagementStrategy() != null) {
-                getManagementStrategy().addEventNotifier((EventNotifier) runtimeEndpointRegistry);
+            if (runtimeEndpointRegistry instanceof EventNotifier en && getManagementStrategy() != null) {
+                getManagementStrategy().addEventNotifier(en);
             }
             addService(runtimeEndpointRegistry, true, true);
+        }
+
+        // register error registry as event notifier so it captures exchange failure events
+        ErrorRegistry errorRegistry = getErrorRegistry();
+        if (errorRegistry instanceof EventNotifier en && getManagementStrategy() != null) {
+            getManagementStrategy().addEventNotifier(en);
         }
 
         bindDataFormats();
@@ -2976,6 +3051,7 @@ public abstract class AbstractCamelContext extends BaseService
             LOG.info("Tracing is enabled on CamelContext: {}", camelContextExtension.getName());
         }
         if (isUseMDCLogging()) {
+            LOG.info("Tracing is enabled on CamelContext: {}", camelContextExtension.getName());
             // log if MDC has been enabled
             String pattern = getMDCLoggingKeysPattern();
             if (pattern != null) {
@@ -2984,6 +3060,8 @@ public abstract class AbstractCamelContext extends BaseService
             } else {
                 LOG.info("MDC logging is enabled on CamelContext: {}", camelContextExtension.getName());
             }
+            LOG.warn("The MDC core logging is deprecated and may be removed in future versions. " +
+                     "Please, use camel-mdc component instead.");
         }
         if (getDelayer() != null && getDelayer() > 0) {
             LOG.info("Delayer is enabled with: {} ms. on CamelContext: {}", getDelayer(), camelContextExtension.getName());
@@ -3074,6 +3152,10 @@ public abstract class AbstractCamelContext extends BaseService
                       + " See more details at https://camel.apache.org/stream-caching.html");
         }
 
+        if (isMessageSizeInUse()) {
+            getMessageSizeStrategy().setEnabled(true);
+        }
+
         if (isAllowUseOriginalMessage()) {
             LOG.debug("AllowUseOriginalMessage enabled because UseOriginalMessage is in use");
         }
@@ -3114,6 +3196,8 @@ public abstract class AbstractCamelContext extends BaseService
             LOG.debug("Skip starting routes as CamelContext has been configured with autoStartup=false");
         }
 
+        // dump routes when as we have model before creating the runtime models, which can help during troubleshooting
+        // when routes have problems starting
         if (getDumpRoutes() != null && !"false".equals(getDumpRoutes())) {
             doDumpRoutes();
         }
@@ -3498,6 +3582,10 @@ public abstract class AbstractCamelContext extends BaseService
         return isStreamCaching();
     }
 
+    protected boolean isMessageSizeInUse() throws Exception {
+        return isMessageSize();
+    }
+
     protected void bindDataFormats() throws Exception {
     }
 
@@ -3546,14 +3634,7 @@ public abstract class AbstractCamelContext extends BaseService
     public void startRouteService(RouteService routeService, boolean addingRoutes) throws Exception {
         lock.lock();
         try {
-            // we may already be starting routes so remember this, so we can unset
-            // accordingly in finally block
-            boolean alreadyStartingRoutes = isStartingRoutes();
-            if (!alreadyStartingRoutes) {
-                setStartingRoutes(true);
-            }
-
-            try {
+            startingRoutes(() -> {
                 // the route service could have been suspended, and if so then
                 // resume it instead
                 if (routeService.getStatus().isSuspended()) {
@@ -3583,11 +3664,8 @@ public abstract class AbstractCamelContext extends BaseService
                         startupStepRecorder.endStep(step);
                     }
                 }
-            } finally {
-                if (!alreadyStartingRoutes) {
-                    setStartingRoutes(false);
-                }
-            }
+                return null;
+            });
         } finally {
             lock.unlock();
         }
@@ -3871,6 +3949,16 @@ public abstract class AbstractCamelContext extends BaseService
     }
 
     @Override
+    public ErrorRegistry getErrorRegistry() {
+        return camelContextExtension.getErrorRegistry();
+    }
+
+    @Override
+    public void setErrorRegistry(ErrorRegistry errorRegistry) {
+        camelContextExtension.setErrorRegistry(errorRegistry);
+    }
+
+    @Override
     public void setAutoStartup(Boolean autoStartup) {
         this.autoStartup = autoStartup;
     }
@@ -3960,21 +4048,25 @@ public abstract class AbstractCamelContext extends BaseService
         this.dumpRoutes = dumpRoutes;
     }
 
+    @Deprecated(since = "4.19.0")
     @Override
     public Boolean isUseMDCLogging() {
         return useMDCLogging != null && useMDCLogging;
     }
 
+    @Deprecated(since = "4.19.0")
     @Override
     public void setUseMDCLogging(Boolean useMDCLogging) {
         this.useMDCLogging = useMDCLogging;
     }
 
+    @Deprecated(since = "4.19.0")
     @Override
     public String getMDCLoggingKeysPattern() {
         return mdcLoggingKeysPattern;
     }
 
+    @Deprecated(since = "4.19.0")
     @Override
     public void setMDCLoggingKeysPattern(String pattern) {
         this.mdcLoggingKeysPattern = pattern;
@@ -4269,18 +4361,45 @@ public abstract class AbstractCamelContext extends BaseService
     }
 
     @Override
+    public MessageSizeStrategy getMessageSizeStrategy() {
+        return camelContextExtension.getMessageSizeStrategy();
+    }
+
+    @Override
+    public void setMessageSizeStrategy(MessageSizeStrategy messageSizeStrategy) {
+        camelContextExtension.setMessageSizeStrategy(messageSizeStrategy);
+    }
+
+    @Override
     public RestRegistry getRestRegistry() {
-        return camelContextExtension.getRestRegistry();
+        return PluginHelper.getRestRegistry(this);
     }
 
     @Override
     public void setRestRegistry(RestRegistry restRegistry) {
-        camelContextExtension.setRestRegistry(restRegistry);
+        throw new UnsupportedOperationException("Not in use");
     }
 
     protected RestRegistry createRestRegistry() {
         RestRegistryFactory factory = camelContextExtension.getRestRegistryFactory();
+        if (factory == null) {
+            return null;
+        }
         return factory.createRegistry();
+    }
+
+    protected RouteDiagramDumper createRouteDiagramDumper() {
+        return ResolverHelper.resolveMandatoryService(getCamelContextReference(),
+                RouteDiagramDumper.FACTORY,
+                RouteDiagramDumper.class,
+                "camel-diagram");
+    }
+
+    protected RouteTopologyDumper createRouteTopologyDumper() {
+        return ResolverHelper.resolveMandatoryService(getCamelContextReference(),
+                RouteTopologyDumper.FACTORY,
+                RouteTopologyDumper.class,
+                "camel-core-engine");
     }
 
     @Override
@@ -4377,6 +4496,8 @@ public abstract class AbstractCamelContext extends BaseService
 
     protected abstract StreamCachingStrategy createStreamCachingStrategy();
 
+    protected abstract MessageSizeStrategy createMessageSizeStrategy();
+
     protected abstract TypeConverter createTypeConverter();
 
     protected abstract TypeConverterRegistry createTypeConverterRegistry();
@@ -4429,6 +4550,8 @@ public abstract class AbstractCamelContext extends BaseService
 
     protected abstract InflightRepository createInflightRepository();
 
+    protected abstract ErrorRegistry createErrorRegistry();
+
     protected abstract AsyncProcessorAwaitManager createAsyncProcessorAwaitManager();
 
     protected abstract RouteController createRouteController();
@@ -4451,6 +4574,8 @@ public abstract class AbstractCamelContext extends BaseService
 
     protected abstract GroovyScriptCompiler createGroovyScriptCompiler();
 
+    protected abstract SimpleFunctionRegistry createSimpleFunctionRegistry();
+
     protected abstract BeanProxyFactory createBeanProxyFactory();
 
     protected abstract AnnotationBasedProcessorFactory createAnnotationBasedProcessorFactory();
@@ -4468,6 +4593,8 @@ public abstract class AbstractCamelContext extends BaseService
     protected abstract ModelToXMLDumper createModelToXMLDumper();
 
     protected abstract ModelToYAMLDumper createModelToYAMLDumper();
+
+    protected abstract ModelToJavaDumper createModelToJavaDumper();
 
     protected abstract ModelToStructureDumper createModelToStructureDumper();
 
@@ -4572,6 +4699,7 @@ public abstract class AbstractCamelContext extends BaseService
         return status;
     }
 
+    @Deprecated(since = "4.19.0")
     class LifecycleHelper implements AutoCloseable {
         final Map<String, String> originalContextMap;
         final ClassLoader tccl;

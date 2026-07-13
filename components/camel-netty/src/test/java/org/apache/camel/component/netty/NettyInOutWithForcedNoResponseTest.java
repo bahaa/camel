@@ -21,8 +21,8 @@ import org.apache.camel.builder.RouteBuilder;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class NettyInOutWithForcedNoResponseTest extends BaseNettyTest {
 
@@ -34,12 +34,10 @@ public class NettyInOutWithForcedNoResponseTest extends BaseNettyTest {
 
     @Test
     public void testNoResponse() {
-        try {
-            template.requestBody("netty:tcp://localhost:{{port}}", "London");
-            fail("Should throw an exception");
-        } catch (RuntimeCamelException e) {
-            assertTrue(e.getCause().getMessage().startsWith("No response"));
-        }
+        RuntimeCamelException e = assertThrows(RuntimeCamelException.class,
+                () -> template.requestBody("netty:tcp://localhost:{{port}}", "London"),
+                "Should throw an exception");
+        assertTrue(e.getCause().getMessage().startsWith("No response"));
     }
 
     @Override
@@ -49,7 +47,7 @@ public class NettyInOutWithForcedNoResponseTest extends BaseNettyTest {
                 from("netty:tcp://localhost:{{port}}")
                         .choice()
                         .when(body().isEqualTo("Copenhagen")).transform(constant("Hello Claus"))
-                        .otherwise().transform(constant(null));
+                        .otherwise().transform(constant((Object) null));
             }
         };
     }
